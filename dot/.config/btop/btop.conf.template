@@ -1,0 +1,12 @@
+# ~/.config/btop/btop.conf
+# Theme: ${DEVBASE_THEME}
+
+# Use official everforest themes downloaded from btop repo
+color_theme = "${BTOP_THEME}"
+
+# Basic settings
+vim_keys = true
+rounded_corners = true
+graph_symbol = "braille"
+shown_boxes = "proc cpu mem net"
+update_ms = 2000

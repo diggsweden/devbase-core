@@ -1,0 +1,14 @@
+[Unit]
+Description=Run ClamAV Daily Scan
+Requires=clamav-daily-scan.service
+
+[Timer]
+# Run at 2 AM every day (during typical sleep hours)
+OnCalendar=*-*-* 02:00:00
+# Add random delay up to 2 hours to avoid system load spikes (2-4 AM window)
+RandomizedDelaySec=7200
+# Run missed scans on next boot
+Persistent=true
+
+[Install]
+WantedBy=timers.target

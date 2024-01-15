@@ -1,0 +1,53 @@
+mirrors:
+  mirror:
+    id: internal-maven-central
+    name: Internal Maven Central Mirror
+    url: ${DEVBASE_REGISTRY_URL}/repository/maven-public/
+    mirrorOf: central
+profiles:
+  profile:
+    - id: internal-repositories
+      repositories:
+        repository:
+          - id: central-snapshots
+            name: Maven Central Snapshots (via Internal Mirror)
+            url: ${DEVBASE_REGISTRY_URL}/repository/com-sonartype-central-snapshots/
+            releases:
+              enabled: "false"
+            snapshots:
+              enabled: "true"
+              updatePolicy: always
+          - id: internal-releases
+            name: Internal Releases
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-releases/
+            releases:
+              enabled: "true"
+            snapshots:
+              enabled: "false"
+          - id: internal-snapshots
+            name: Internal Snapshots
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-snapshots/
+            releases:
+              enabled: "false"
+            snapshots:
+              enabled: "true"
+              updatePolicy: always
+      pluginRepositories:
+        pluginRepository:
+          - id: central
+            name: Maven Central Plugins (via Internal Mirror)
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-public/
+            releases:
+              enabled: "true"
+            snapshots:
+              enabled: "false"
+          - id: internal-releases
+            name: Internal Plugin Releases
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-releases/
+            releases:
+              enabled: "true"
+            snapshots:
+              enabled: "false"
+activeProfiles:
+  activeProfile:
+    - internal-repositories

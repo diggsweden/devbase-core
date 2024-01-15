@@ -1,0 +1,11 @@
+default_shell "fish"
+copy_command "${ZELLIJ_COPY_COMMAND}"
+theme "${ZELLIJ_THEME}"
+mouse_mode true
+
+keybinds {
+    normal {
+        bind "Alt d" { NewPane "Down"; }
+        bind "Alt r" { NewPane "Right"; }
+    }
+}

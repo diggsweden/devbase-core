@@ -1,0 +1,22 @@
+# Tool versions for mise (https://mise.jdx.dev/)
+# Install all tools: mise install
+# Activate in shell: eval "$(mise activate bash)"
+
+[settings]
+experimental = true  # Enable experimental features (required for ubi backend)
+paranoid = true      # Enable strict security checks and verification
+
+[tools]
+"aqua:casey/just" = "1.43.0"
+"ubi:rvben/rumdl" = "v0.0.147"
+"aqua:google/yamlfmt" = "v0.17.2"
+"aqua:rhysd/actionlint" = "v1.7.8"
+"aqua:zricethezav/gitleaks" = "v8.18.1"
+"aqua:siderolabs/conform" = "v0.1.0-alpha.30"
+"aqua:koalaman/shellcheck" = "v0.11.0"
+"aqua:mvdan/sh" = "v3.8.0"  # shfmt - Shell formatter
+"aqua:hadolint/hadolint" = "v2.14.0"
+"aqua:sharkdp/fd" = "v10.2.0"
+"aqua:BurntSushi/ripgrep" = "14.1.1"
+"aqua:tldr-pages/tlrc" = "v1.9.3"
+yq = "latest"  # YAML/XML processor for Maven settings generation

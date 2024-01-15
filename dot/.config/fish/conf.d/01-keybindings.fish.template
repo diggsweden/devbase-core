@@ -1,0 +1,38 @@
+# Fish key bindings configuration
+# Sets vi or emacs mode based on EDITOR preference
+
+# Check if user prefers vim/neovim based on EDITOR variable
+if test "$EDITOR" = "nvim"; or test "$EDITOR" = "vim"; or test "$EDITOR" = "vi"
+    # Enable vi key bindings
+    fish_vi_key_bindings
+    
+    # Optional: Set cursor shapes for vi mode
+    # Block cursor in normal mode, line cursor in insert mode
+    set fish_cursor_default block
+    set fish_cursor_insert line
+    set fish_cursor_replace_one underscore
+    set fish_cursor_visual block
+    
+    # Show mode indicator in prompt
+    function fish_mode_prompt
+        switch $fish_bind_mode
+            case default
+                echo -n '(N) '
+            case insert
+                echo -n '(I) '
+            case replace_one
+                echo -n '(R) '
+            case visual
+                echo -n '(V) '
+        end
+    end
+    
+    # Add Alt+Y to accept autosuggestion in vi mode (for insert mode)
+    bind -M insert \ey accept-autosuggestion
+else
+    # Use default emacs key bindings
+    fish_default_key_bindings
+    
+    # Add Alt+Y to accept autosuggestion in emacs mode
+    bind \ey accept-autosuggestion
+end
