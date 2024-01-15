@@ -1,0 +1,14 @@
+proxies:
+  proxy:
+    - id: devbase-proxy-http
+      active: "true"
+      protocol: http
+      host: ${DEVBASE_PROXY_HOST}
+      port: "${DEVBASE_PROXY_PORT}"
+      nonProxyHosts: ${DEVBASE_NO_PROXY_JAVA}
+    - id: devbase-proxy-https
+      active: "true"
+      protocol: https
+      host: ${DEVBASE_PROXY_HOST}
+      port: "${DEVBASE_PROXY_PORT}"
+      nonProxyHosts: ${DEVBASE_NO_PROXY_JAVA}

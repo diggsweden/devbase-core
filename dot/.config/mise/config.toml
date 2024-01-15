@@ -1,0 +1,106 @@
+[settings]
+# Enable experimental features (new backends, tools, etc.)
+experimental = true
+
+# Disable reading legacy version files like .nvmrc, .python-version
+# Set to true if you want mise to read these files automatically
+legacy_version_file = false
+
+# Disable asdf compatibility mode - mise runs in native mode
+# Set to true if you need compatibility with asdf plugins
+asdf_compat = false
+
+# Number of parallel jobs for installations (6 cores)
+# Adjust based on your system capabilities
+jobs = 6
+
+# Auto-answer "yes" to all prompts during installations
+# Useful for automated scripts and CI/CD
+yes = true
+
+# HTTP timeout for downloads (90 seconds for corporate proxies)
+# Increase if experiencing timeouts during tool downloads
+http_timeout = "90s"
+
+# Note: verify_downloads was deprecated in newer mise versions
+# Checksums are now verified automatically when available
+
+[env]
+# Configure ruby-build to use system OpenSSL instead of compiling from source
+RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
+
+[tools]
+# Core Languages & Runtimes (from versions.yaml)
+node = "20.18.1"
+go = "1.25.1"
+python = "3.12"
+ruby = "3.3.6"
+rust = "1.90.0"
+java = "temurin-21"
+maven = "3.9.6"
+gradle = "8.12"
+
+# Development and build tools
+"aqua:casey/just" = "1.43.0"
+"ubi:rvben/rumdl" = "v0.0.147"
+jq = "jq-1.8.1"
+"aqua:mikefarah/yq" = "v4.47.2"
+"aqua:mike-engel/jwt-cli" = "6.2.0"
+
+# Shell and terminal enhancements
+"aqua:junegunn/fzf" = "v0.65.2"
+"aqua:eza-community/eza" = "v0.23.3"
+"aqua:sharkdp/bat" = "v0.25.0"
+"aqua:sharkdp/vivid" = "v0.10.1"
+"aqua:starship/starship" = "v1.23.0"
+"aqua:zellij-org/zellij" = "v0.43.1"
+
+# Git and development tools
+"aqua:dandavison/delta" = "0.18.2"
+"aqua:orhun/git-cliff" = "v2.10.1"
+"aqua:neovim/neovim" = "v0.11.4"
+
+# Container and Kubernetes tools
+"aqua:docker/compose" = "v2.39.4"
+"aqua:derailed/k9s" = "v0.50.12"
+"aqua:grafana/k6" = "v1.3.0"
+"aqua:argoproj/argo-cd" = "v3.1.7"
+"aqua:bitnami-labs/sealed-secrets" = "v0.32.2"
+"aqua:tektoncd/cli" = "v0.38.0"  # Tekton CLI (tkn)
+
+# Code quality and formatting
+"aqua:google/yamlfmt" = "v0.17.2"
+"aqua:rhysd/actionlint" = "v1.7.7"
+"github:pmd/pmd" = "pmd_releases/7.17.0"
+"ubi:checkstyle/checkstyle" = "checkstyle-11.0.1"
+"aqua:hadolint/hadolint" = "v2.14.0"
+"aqua:koalaman/shellcheck" = "v0.11.0"
+"aqua:mvdan/sh" = "v3.8.0"  # shfmt - Shell formatter
+
+# Security scanning
+"aqua:zricethezav/gitleaks" = "v8.18.1"
+"aqua:anchore/syft" = "v1.33.0"
+# Lynis is installed via APT (see libs/install-apt.sh)
+"aqua:ossf/scorecard" = "v5.2.1"
+
+# Verification tools (for verifying other tools)
+"aqua:sigstore/cosign" = "2.4.1"
+"github:slsa-framework/slsa-verifier" = "v2.7.1"
+
+# Git commit standards
+"aqua:siderolabs/conform" = "v0.1.0-alpha.30"
+
+# Public code validation (for Swedish/EU public sector)
+"github:italia/publiccode-parser-go" = "v4.3.7"
+
+# Additional development tools
+"aqua:BurntSushi/ripgrep" = "14.1.1"
+"aqua:sharkdp/fd" = "v10.2.0"
+"aqua:tldr-pages/tlrc" = "v1.9.3"
+"aqua:jesseduffield/lazygit" = "v0.55.1"
+"aqua:aristocratos/btop" = "v1.4.5"
+"aqua:cli/cli" = "v2.80.0"           # GitHub CLI (gh)
+"ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"    # GitLab CLI (glab)
+
+# File managers
+"aqua:gokcehan/lf" = "r38"

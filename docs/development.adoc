@@ -1,0 +1,287 @@
+= Development Guide
+
+== Project Tools for Development
+
+- shellcheck, shfmt - Shell linting/formatting
+- hadolint - Dockerfile linting
+- yamlfmt - YAML formatting
+- actionlint - GitHub Actions linting
+- conform - Commit message validation
+
+Managed by mise (see `.mise.toml`):
+
+.setup
+[source,bash]
+----
+# Install mise and tools
+curl https://mise.run | sh
+eval "$(mise activate bash)" # or zsh or fish instead of bash - whatever you are installing from
+mise install
+
+# Run checks
+just verify
+----
+== Commands
+
+Run `just` to see all available commands, or use these common recipes:
+
+=== Quality Verification
+
+[source,bash]
+----
+just verify                 # Run all quality verifications with summary
+just devbase-install-verify # Verify installation is complete and working
+----
+
+=== Linting (Individual)
+
+[source,bash]
+----
+just lint-markdown          # Lint markdown files with rumdl
+just lint-yaml              # Lint YAML files with yamlfmt
+just lint-shell             # Lint shell scripts with shellcheck
+just lint-shell-fmt         # Check shell script formatting with shfmt
+just lint-actions           # Lint GitHub Actions workflows with actionlint
+just lint-secrets           # Check for secrets and sensitive data with gitleaks
+just lint-commit            # Validate commit messages with conform
+----
+
+=== Fixing Issues
+
+[source,bash]
+----
+just lint-fix               # Fix all auto-fixable issues
+just lint-markdown-fix      # Fix markdown issues with rumdl
+just lint-yaml-fix          # Fix YAML formatting with yamlfmt
+just lint-shell-fmt-fix     # Fix shell script formatting with shfmt
+----
+
+=== Development Tools
+
+[source,bash]
+----
+just dev-tools-deps-verify  # Verify required development tools are installed
+just dev-tools-install      # Install project development tools (from .mise.toml)
+just dev-tools-update       # Update devbase tools
+----
+
+== Testing Changes
+
+=== Test with Clean User Account
+
+Testing with a fresh user account simulates a real installation without affecting your main account:
+
+[source,bash]
+----
+# Create test user with sudo privileges
+sudo adduser testuser
+sudo usermod -aG sudo testuser
+
+# Switch to test user (clean environment)
+su -l testuser
+
+# Verify you're logged in as testuser
+whoami
+# Output: testuser
+
+# As testuser, install as regular
+
+#....
+
+# When done testing, exit back to your user
+exit
+
+# Cleanup (optional - removes test user)
+sudo deluser --remove-home testuser
+----
+
+TIP: The `-l` flag in `su -l testuser` provides a clean login shell, simulating a fresh user session with no environment passing.
+
+==== WSL-Specific Testing Notes
+
+When testing in WSL with `su -l`, you may encounter issues running Windows executables (like VS Code) because WSL interop is disabled by default. To preserve WSL interoperability while switching users:
+
+[source,bash]
+----
+# Switch to test user with preserved WSL environment
+su -l testuser \
+  --whitelist-environment=WSL_INTEROP,WSLENV,WSL_DISTRO_NAME,WSL2_GUI_APPS_ENABLED,LANG
+
+# Now Windows executables will work from the test user context
+# For example, VS Code extension installation will work properly
+----
+
+The `--whitelist-environment` option preserves the specified environment variables even with `-l` (login shell), maintaining Windows interoperability while still getting a proper login shell environment.
+
+After Installation, also manually verify that VS Code Extensions are used you will have to make the Remote VS Code Server load from you non default WSL testuser.
+Currently the only way to make this happen is to
+
+[source,bash]
+----
+# Set the user when launching a distribution with WSL.
+[user]
+default=testuser
+
+# Shutdown WSL
+wsl --shutdown
+
+# Restart
+----
+
+== Code Quality
+
+Before PR:
+
+1. `just verify` must pass
+2. Commits must follow Conventional Commits
+3. Sign commits: `git commit -s -S`
+4. Update documentation if needed
+5. Test your features with a testuser
+
+== Conventions
+
+- Bash scripts use `set -uo pipefail` (not -e as we don't want to exit directly)
+- XDG Base Directory compliance
+- `just verify` must pass
+
+== Debugging
+
+[source,bash]
+----
+# Show paths, custom config detection, and proxy settings
+export DEBUG=1
+./setup.sh
+----
+
+== Project Structure
+
+=== Root Directory
+
+[source]
+----
+setup.sh                 # Entry point - user interaction
+justfile                # Developer commands (lint, test)
+.mise.toml              # Project tool versions
+libs/                   # Installation and configuration scripts
+dot/                    # User config templates (XDG compliant)
+devbase_files/          # Additional resources (systemd units, fish functions)
+environments/           # Environment variable templates
+docs/                   # Documentation (AsciiDoc)
+verify/                 # Verification scripts
+development/            # Development utilities
+  just/                 # Just task runner recipes (linters, checks)
+  devcerts/             # Local development certificates (mkcert)
+----
+
+=== Scripts (libs/)
+
+[source]
+----
+# Core utilities
+utils.sh                      # Shared functions (logging, errors, backups)
+define-colors.sh              # Color definitions
+ui-helpers.sh                 # Progress display functions
+handle-network.sh             # Download and proxy handling
+
+# Pre-installation
+check-requirements.sh         # OS/disk/sudo/network checks
+collect-user-preferences.sh   # Interactive prompts
+
+# Installation
+install.sh                    # Main orchestrator
+install-apt.sh                # APT packages (security, containers, etc.)
+install-snap.sh               # Snap packages (ghostty, firefox, chromium)
+install-mise.sh               # mise tool manager
+install-custom.sh             # Custom binaries (oc, kubectl, dbeaver, intellij, etc.)
+install-certificates.sh       # CA certificate installation
+
+# Configuration
+process-templates.sh          # Template variable substitution
+configure-ssh-git.sh          # SSH keys, git config, GPG signing
+configure-shell.sh            # Fish shell setup
+configure-completions.sh      # Shell completions (kubectl, gh, etc.)
+configure-theme.sh            # Theme application (8 themes across 4 families)
+configure-services.sh         # Systemd user services
+setup-vscode.sh               # VSCode/Cursor configuration
+----
+
+=== Configurations (dot/)
+
+[source]
+----
+.config/
+├── devbase/            # DevBase metadata (version, versions.yaml)
+├── fish/               # Fish shell configuration
+│   ├── config.fish     # Main configuration
+│   ├── conf.d/         # Configuration directory
+│   │   ├── 00-*.fish   # DevBase managed (overwritten)
+│   │   ├── 01-*.fish   # DevBase managed (overwritten)
+│   │   ├── 02-*.fish   # DevBase managed (overwritten)
+│   │   └── 10-*.fish   # User personal configs (preserved)
+│   └── functions/      # Fish functions
+├── git/                # Git global config
+│   ├── config          # Global git configuration
+│   └── .gitignore      # Global gitignore
+├── ssh/                # SSH config layering
+│   ├── custom.config   # Organization-provided hosts
+│   └── user.config     # User personal hosts (highest priority)
+├── nvim/               # Neovim/LazyVim configuration
+├── starship/           # Starship prompt theme
+├── zellij/             # Terminal multiplexer config
+├── mise/               # Tool version management (config.toml)
+├── btop/               # System monitor theme
+├── delta/              # Git diff viewer themes
+├── eza/                # Modern ls replacement config
+├── lazygit/            # Git TUI configuration
+├── devtools/           # Development tools settings
+└── systemd/user/       # User systemd services
+
+.local/
+├── bin/                # User binaries (in PATH)
+└── share/
+    └── devbase/
+        └── backup/     # Automatic backups before overwriting
+
+.ssh/
+├── config              # SSH client main config (includes custom.config, user.config)
+└── known_hosts         # Pre-populated known hosts
+----
+
+=== Additional Resources (devbase_files/)
+
+[source]
+----
+devbase_files/
+├── systemd/            # Systemd unit files
+│   └── user/           # User services (podman, wayland-socket-symlink)
+├── fish-functions/     # Conditionally installed Fish functions
+│   └── proxy.fish      # Proxy management (only if DEVBASE_PROXY_URL set)
+├── certificates-example/ # Example CA certificates
+├── sudo-keep-proxyenv/ # Sudoers config for proxy preservation
+├── systemd/            # Systemd unit files
+│   └── user/           # User services (podman, wayland-socket-symlink)
+└── unattended-upgrades-debian/ # Security update configuration
+----
+
+=== Custom Configuration (devbase-custom-config/)
+
+Optional organization overlay structure:
+
+[source]
+----
+devbase-custom-config/  # Optional organization overlay
+├── config/
+│   └── org.env         # Organization environment variables
+├── certificates/       # Organization CA certificates
+│   ├── *.crt           # Certificate files
+│   └── README.md       # Installation instructions
+├── templates/          # Configuration overrides
+│   ├── .config/        # XDG config overrides
+│   └── .ssh/           # SSH config overrides
+├── ssh/                # SSH keys and config
+│   └── custom.config   # Organization SSH hosts
+└── hooks/              # Lifecycle hooks
+    ├── pre-install.sh        # Before installation
+    ├── post-configuration.sh # After config, before tools
+    └── post-install.sh       # After everything
+----

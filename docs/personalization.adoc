@@ -1,0 +1,472 @@
+= Personalization Guide
+
+== Preserving Customizations
+
+DevBase ships config files with names starting with `00-`, `01-`, and `02-` (e.g., `00-environment.fish`, `01-keybindings.fish`, `02-aliases.fish`). These files are overwritten during reinstalls.
+
+To preserve your personal customizations, create files with different names like `10-personal.fish` or `20-work.fish`. These won't conflict with DevBase files and will be preserved across reinstalls.
+
+== Fish Shell
+
+=== Default Aliases
+
+DevBase provides these default aliases:
+
+- `docker` → `podman` (container management)
+- `vim`, `vi` → `nvim` (Neovim)
+- `ls` → `eza --icons` (better ls)
+- `top` → `btop` (better top)
+- `grep` → `grep --color=auto` (colored output)
+
+=== Custom Aliases
+
+[source,bash]
+----
+# Add to ~/.config/fish/conf.d/10-personal.fish
+alias ll='ls -la'
+alias dc='docker compose'
+alias gs='git status'
+----
+
+=== Fish Abbreviations (Recommended)
+
+Abbreviations expand in the command line and show in history (better than aliases):
+
+[source,bash]
+----
+# Add abbreviations
+abbr -a gco 'git checkout'
+abbr -a gp 'git pull'
+abbr -a dc 'docker compose'
+abbr -a ll 'ls -la'
+
+# List all abbreviations
+abbr --show
+
+# Remove an abbreviation
+abbr -e gco
+----
+
+=== Custom Functions
+
+[source,bash]
+----
+# Create function in ~/.config/fish/functions/gpr.fish
+function gpr
+    git pull --rebase $argv
+end
+----
+
+== Git Configuration
+
+Personal git config in `~/.gitconfig` (preserved):
+
+[source,bash]
+----
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global pull.rebase true
+----
+
+== SSH Configuration
+
+DevBase uses a layered SSH configuration system:
+
+1. **System defaults** (`~/.ssh/config`) - DevBase-managed base settings
+2. **Organization config** (`~/.config/ssh/custom.config`) - Organization-provided hosts
+3. **User config** (`~/.config/ssh/user.config`) - Your personal hosts (highest priority)
+
+=== Adding Personal Hosts
+
+Add to `~/.config/ssh/user.config`:
+
+[source,ssh]
+----
+Host myserver
+    HostName 192.168.1.100
+    User myuser
+    Port 2222
+
+Host github-work
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ecdsa_nistp521_work
+----
+
+=== Overriding Organization Settings
+
+User config is loaded last and wins:
+
+[source,ssh]
+----
+# Organization provides (in custom.config):
+Host github.com
+  ProxyCommand nc -X connect -x proxy.company.com:8080 %h %p
+
+# You override (in user.config):
+Host github.com
+  ProxyCommand none  # Direct connection without proxy
+----
+
+NOTE: `user.config` is never modified by DevBase - safe to edit and changes persist across reinstalls.
+
+== Language/Locale Configuration
+
+DevBase respects your system's existing locale by default. Organizations can configure their preferred locale through custom configuration.
+
+=== Change System-Wide Locale
+
+[source,bash]
+----
+# Change to English (US)
+sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+# Change to English (UK)  
+sudo update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
+
+# Change back to Swedish
+sudo update-locale LANG=sv_SE.UTF-8 LC_ALL=sv_SE.UTF-8
+
+# Apply changes (logout/login or reboot required)
+----
+
+=== User-Specific Locale
+
+Override for your user only without affecting system:
+
+[source,bash]
+----
+# Add to ~/.config/fish/conf.d/10-locale.fish
+set -gx LANG en_US.UTF-8
+set -gx LC_ALL en_US.UTF-8
+
+# Or for bash users, add to ~/.bashrc
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+----
+
+=== Temporary Locale Change
+
+For a single session or command:
+
+[source,bash]
+----
+# Single command with different locale
+LANG=en_US.UTF-8 date
+
+# New shell with different locale
+LANG=en_US.UTF-8 fish
+----
+
+=== Available Locales
+
+[source,bash]
+----
+# List installed locales
+locale -a
+
+# DevBase generates the locale you configure
+# Organizations can set their preferred locale in org.env
+----
+
+NOTE: Language packs and translated manpages are only installed when a specific locale is configured (typically through organization settings).
+
+== Theme Switching
+
+Use the `devbase-theme` command to switch themes:
+
+[source,bash]
+----
+# Everforest (default)
+devbase-theme everforest-dark
+devbase-theme everforest-light
+
+# Catppuccin
+devbase-theme catppuccin-mocha   # Dark
+devbase-theme catppuccin-latte   # Light
+
+# Tokyo Night
+devbase-theme tokyonight-night   # Dark
+devbase-theme tokyonight-day     # Light
+
+# Gruvbox
+devbase-theme gruvbox-dark
+devbase-theme gruvbox-light
+
+# Restart terminal for all changes to take effect
+----
+
+The theme setting persists across terminal sessions and affects: bat, delta, btop, k9s, FZF, Neovim, and vifm. File manager lf uses LS_COLORS which is already themed via eza/dircolors.
+
+=== Bundled Themes
+
+**btop themes:**
+
+DevBase bundles the following btop themes in `~/.config/btop/themes/`:
+
+- `everforest-dark-hard.theme` - Everforest dark variant
+- `everforest-light-medium.theme` - Everforest light variant
+- `catppuccin_mocha.theme` - Catppuccin dark theme
+- `catppuccin_latte.theme` - Catppuccin light theme
+- `gruvbox_dark.theme` - Gruvbox dark (uses underscore, not dash)
+- `gruvbox_light.theme` - Gruvbox light (uses underscore, not dash)
+- `tokyo-night.theme` - Tokyo Night dark theme
+- `tokyo-storm.theme` - Tokyo Storm (used as fallback for tokyo-day)
+
+NOTE: Tokyo Day theme doesn't exist in btop, so tokyo-storm is used as a fallback. Gruvbox themes use underscores (gruvbox_dark) not dashes in btop.
+
+**k9s skins:**
+
+DevBase bundles the following k9s skins in `~/.config/k9s/skins/`:
+
+- `everforest-dark.yaml` - Everforest dark theme
+- `everforest-light.yaml` - Everforest light theme
+- `catppuccin-mocha.yaml` - Catppuccin dark theme
+- `catppuccin-latte.yaml` - Catppuccin light theme
+- `gruvbox-dark.yaml` - Gruvbox dark theme
+- `gruvbox-light.yaml` - Gruvbox light theme
+
+When you run `devbase-theme`, the `skin:` setting in `~/.config/k9s/config.yaml` is updated to reference the appropriate skin file.
+
+How k9s finds skins:
+1. `$XDG_CONFIG_HOME/k9s/skins/` (usually `~/.config/k9s/skins/`)
+2. `$HOME/.config/k9s/skins/`
+3. `$HOME/.k9s/skins/`
+
+The skin is referenced by name (without `.yaml` extension) in config.yaml:
+[source,yaml]
+----
+k9s:
+  skin: everforest-dark
+----
+
+NOTE: Tokyo Night themes are not available for k9s, so fallbacks are used: `tokyonight-night` → `gruvbox-dark`, `tokyonight-day` → `everforest-light`
+
+Theme sources:
+- btop: https://github.com/aristocratos/btop/tree/main/themes
+- k9s: Community contributed skins
+
+=== WSL Windows Terminal Integration
+
+TIP: DevBase now *automatically updates* Windows Terminal color schemes when you change themes!
+
+When you run `devbase-theme`, it will:
+
+1. Update all CLI application themes (bat, FZF, vifm, Neovim, etc.)
+2. Automatically update Windows Terminal color scheme
+   - *Dark themes* → "One Half Dark"
+   - *Light themes* → "One Half Light"
+3. Changes apply immediately (no terminal restart needed)
+
+*Requirements:*
+
+- jq installed (usually included in DevBase)
+- Windows Terminal (Microsoft Store version)
+
+*Manual Windows Terminal theme change (if needed):*
+
+1. Open Windows Terminal Settings (Ctrl+,)
+2. Navigate to: Your Ubuntu profile → Appearance → Color scheme
+3. Select any available scheme
+
+NOTE: For exact color matching beyond built-in schemes, you can create custom color schemes in Settings → Color schemes.
+
+This automatic integration only applies to WSL. On native Ubuntu, terminal emulators (Ghostty, Alacritty, etc.) use their own theming systems.
+
+== Neovim
+
+DevBase installs LazyVim. Add custom configurations:
+
+[source,lua]
+----
+-- Add/override plugins in ~/.config/nvim/lua/plugins/custom.lua
+return {
+  { "github/copilot.vim" },
+}
+
+-- Add custom keymaps to existing ~/.config/nvim/lua/config/keymaps.lua
+-- (Edit the file, don't replace it)
+vim.keymap.set('n', '<leader>q', ':qa<CR>')
+
+-- Or use standard Neovim after directory
+-- ~/.config/nvim/after/plugin/custom.lua
+vim.opt.relativenumber = false
+----
+
+NOTE: LazyVim creates default config files during installation. Edit existing files rather than creating new ones.
+
+See link:https://www.lazyvim.org/configuration[LazyVim documentation] for more customization options.
+
+== Starship Prompt
+
+Edit `~/.config/starship/starship.toml` to customize your prompt:
+
+[source,toml]
+----
+# Add or modify sections
+[directory]
+truncation_length = 5
+truncate_to_repo = false
+
+[git_status]
+disabled = false
+----
+
+Changes take effect in new terminal sessions.
+
+== mise Tool Versions
+
+Project-specific:
+[source,bash]
+----
+cd myproject
+mise use node@18
+mise use python@3.11
+----
+
+Global:
+[source,bash]
+----
+mise global node@20
+mise global python@3.12
+----
+
+== Zellij Terminal Multiplexer
+
+Enable or disable automatic Zellij startup:
+
+[source,bash]
+----
+# Create personal config if it doesn't exist
+touch ~/.config/fish/conf.d/10-personal.fish
+
+# Enable Zellij autostart (edit the file to add this line)
+echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "true"' >> ~/.config/fish/conf.d/10-personal.fish
+
+# Or disable Zellij autostart
+# echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "false"' >> ~/.config/fish/conf.d/10-personal.fish
+
+# Reload config
+exec fish
+----
+
+TIP: To avoid duplicates, edit `10-personal.fish` directly instead of appending.
+
+== Editor Preference
+
+Change your default editor after installation:
+
+[source,bash]
+----
+# Edit ~/.config/fish/conf.d/10-personal.fish and add:
+
+# For Neovim:
+set -gx EDITOR nvim
+set -gx VISUAL nvim
+
+# For nano:
+set -gx EDITOR nano
+set -gx VISUAL nano
+
+# Reload config
+exec fish
+----
+
+== Environment Variables
+
+Add custom environment variables to `~/.config/fish/conf.d/10-env.fish`:
+
+[source,bash]
+----
+# XDG_RUNTIME_DIR is already set by DevBase
+set -gx DOCKER_HOST "unix://$XDG_RUNTIME_DIR/podman/podman.sock"
+set -gx JAVA_HOME "/usr/lib/jvm/java-21-openjdk"
+set -gx MY_CUSTOM_VAR "value"
+----
+
+NOTE: DevBase sets `XDG_RUNTIME_DIR` to `/run/user/(id -u)` automatically.
+
+== Fish Greeting
+
+Customize the Fish shell greeting:
+
+[source,bash]
+----
+# Add to ~/.config/fish/conf.d/10-personal.fish
+
+# Custom greeting
+set -g fish_greeting "Welcome back, $USER!"
+
+# Or disable greeting completely (DevBase default)
+set -g fish_greeting ''
+----
+
+== Backup Before Reinstall
+
+[source,bash]
+----
+# Backup personal configs
+tar czf ~/devbase-backup-$(date +%Y%m%d).tar.gz \
+    ~/.config/fish/conf.d/[1-9]*.fish \
+    ~/.config/fish/functions/ \
+    ~/.config/starship/starship.toml \
+    ~/.config/nvim/lua/plugins/ \
+    ~/.config/nvim/lua/config/ \
+    ~/.config/nvim/after/ \
+    ~/.config/ssh/user.config \
+    ~/.gitconfig \
+    2>/dev/null
+
+echo "Backup saved to ~/devbase-backup-$(date +%Y%m%d).tar.gz"
+----
+
+NOTE: DevBase automatically backs up files before overwriting them to `~/.local/share/devbase/backup/`.
+
+== Configuration File Locations
+
+DevBase configuration files are located in:
+
+=== Fish Shell
+- Main config: `~/.config/fish/config.fish`
+- Custom functions: `~/.config/fish/functions/`
+- Configuration directory: `~/.config/fish/conf.d/`
+  * `00-*.fish` - DevBase managed (overwritten on reinstall)
+  * `01-*.fish` - DevBase managed (overwritten on reinstall)
+  * `02-*.fish` - DevBase managed (overwritten on reinstall)
+  * `10-*.fish` - Your personal configs (preserved)
+  * `20-*.fish` - Your personal configs (preserved)
+
+=== Git
+- Global config: `~/.config/git/config` (DevBase managed)
+- Personal overrides: `~/.gitconfig` (preserved)
+- Global gitignore: `~/.config/git/.gitignore`
+- Allowed signers: `~/.ssh/allowed_signers`
+
+=== SSH
+- Main config: `~/.ssh/config` (DevBase managed)
+- Organization config: `~/.config/ssh/custom.config` (organization provided)
+- User config: `~/.config/ssh/user.config` (your personal hosts, preserved)
+- Allowed signers: `~/.config/ssh/allowed_signers`
+
+=== Neovim
+- Config directory: `~/.config/nvim/`
+- Custom plugins: `~/.config/nvim/lua/plugins/`
+- Keymaps: `~/.config/nvim/lua/config/keymaps.lua`
+- Options: `~/.config/nvim/lua/config/options.lua`
+- After directory: `~/.config/nvim/after/` (for personal overrides)
+
+=== Terminal & Shell Tools
+- Starship: `~/.config/starship/starship.toml`
+- Zellij: `~/.config/zellij/config.kdl`
+- btop: `~/.config/btop/btop.conf`
+- Delta themes: `~/.config/delta/themes.config`
+
+=== Development Tools
+- mise: `~/.config/mise/config.toml`
+- Lazygit: `~/.config/lazygit/config.yml`
+- Podman/Containers: `~/.config/containers/registries.conf` (created from custom templates if provided)
+
+=== User Binaries
+- Personal scripts: `~/.local/bin/` (in PATH)
+
+TIP: Files in `~/.config/fish/conf.d/` with names `10-*` through `98-*` are never touched by DevBase - perfect for personal customizations.

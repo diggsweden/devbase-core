@@ -1,0 +1,27 @@
+// Gradle initialization script for internal repositories
+// This file is processed during devbase setup and installed to ~/.gradle/init.gradle
+// Applies repository configuration globally to all Gradle projects
+// Assumes Nexus-style repository structure
+
+// Configure plugin repositories (for build plugins)
+beforeSettings { settings ->
+    settings.pluginManagement {
+        repositories {
+            maven {
+                name = "InternalGradlePlugins"
+                url = "${DEVBASE_REGISTRY_URL}/repository/gradle-plugins/"
+            }
+        }
+    }
+}
+
+// Configure dependency repositories (for project dependencies)
+allprojects {
+    repositories {
+        // Internal Maven Central Mirror
+        maven {
+            name = "InternalMavenCentral"
+            url = "${DEVBASE_REGISTRY_URL}/repository/maven-public/"
+        }
+    }
+}

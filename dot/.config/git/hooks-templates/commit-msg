@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Commit-msg hook dispatcher
+# Runs all executable scripts in commit-msg.d/
+
+set -e
+
+script_dir="$(cd -- "$(dirname -- "$0")" >/dev/null 2>&1 && pwd -P)"
+hooks_dir="$script_dir/commit-msg.d"
+
+if [[ ! -d "$hooks_dir" ]]; then
+  exit 0
+fi
+
+# Check if any executable scripts exist
+shopt -s nullglob
+scripts=("$hooks_dir"/*.sh)
+shopt -u nullglob
+
+if [[ ${#scripts[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+# Sort scripts to ensure consistent execution order
+IFS=$'\n' scripts=($(sort <<<"${scripts[*]}"))
+unset IFS
+
+# Run all executable scripts in commit-msg.d/ (in sorted order)
+# Pass commit message file as first argument
+for script in "${scripts[@]}"; do
+  if [[ -x "$script" ]]; then
+    "$script" "$@" || {
+      echo "✗ Hook failed: $(basename "$script")" >&2
+      exit 1
+    }
+  fi
+done
+
+exit 0

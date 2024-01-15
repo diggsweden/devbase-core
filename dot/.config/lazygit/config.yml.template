@@ -1,0 +1,6 @@
+# ~/.config/lazygit/config.yml  
+# Theme: ${DEVBASE_THEME}
+
+gui:
+  theme:
+    lightTheme: ${LAZYGIT_LIGHT_THEME}

@@ -1,0 +1,40 @@
+name: Test Installation
+on:
+  pull_request:
+    paths:
+      - 'setup.sh'
+      - 'libs/**'
+      - 'dot/**'
+      - 'environments/**'
+      - '.github/workflows/test-install.yml'
+  workflow_dispatch:
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-latest
+    name: Test on Ubuntu ${{ matrix.version }}
+    strategy:
+      matrix:
+        version: ['24.04']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_NAME: DevBase CI
+          GIT_EMAIL: ci@devbase.test
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          export CI=true
+          ./setup.sh --non-interactive
+      - name: Verify installation
+        run: |
+          sudo -v
+          ./verify/verify-install-check.sh
+      - name: Upload installation summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-summary-${{ matrix.version }}
+          path: ~/.config/devbase/install-summary.txt
+          retention-days: 7
