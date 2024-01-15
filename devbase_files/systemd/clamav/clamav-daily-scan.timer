@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ClamAV Daily Scan
+Requires=clamav-daily-scan.service
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

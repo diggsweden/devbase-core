@@ -1,0 +1,119 @@
+= Contributing
+:toc:
+
+Welcome to the devbase-core project!
+There are some things you might need to know, so please browse the following:
+
+[[pull-request]]
+== Merge/Pull Request Lifecycle
+
+Work in a feature-branch of main, until you are passing the Definition-of-Done for your feature. At that point, you submit a Merge/Pull Request.
+
+Here is how your contribution process would look like:
+
+. Clone this repo, and create a feature branch from the main branch.
+..
++
+[source,shell]
+----
+$ git clone <your-repository-url>/devbase-core.git
+$ git checkout -b feature/<NAME-OF-YOUR-BRANCH>
+----
+. Work in your feature branch until you are meeting the Definition-of-Done for your task.
++
+[source,shell]
+----
+$ git add .
+$ git commit --signoff --gpg-sign -m 'wip: add feature'
+$ git push -u origin feature/<NAME-OF-YOUR-BRANCH>
+#repeat and ........ repeat
+----
+. Rebase your work into one, or a few feature commits, follow the <<commit-guidelines, Commit Guidelines>>.
++
+[source,shell]
+----
+$ git log # to see your commit hashes in your feature branch
+$ git rebase -i --signoff --gpg-sign <sha-hash of latest commit before you started your feature branch>.
+# out of scope for this guide, find a good rebase tutorial, but use f and r to sqush your commits
+$ git push --force-with-lease # only ever do this to your feature branch, or you will be sad, and colleagues to
+----
+. Check that your feature branch passed the projects <<code-quality, Code Quality>> tests.
+. Open a Merge/Pull Request to `main` and proudly tell your colleagues that you are ready for a code review.
+
+[[commit-guidelines]]
+== Commit Guidelines
+
+We are rather picky on commit messages as we use these to auto generate Changelogs, and to trace features.
+
+=== Signoff and Signing a Commit
+
+NOTE: Signoff and signing: Two similar terms for two different things +
+*_A Signoff adds traceability_* +
+*_A Sign assures that the commit came from you_*
+
+==== Signoff
+
+Technically, this is done by supplying the `-s`/`--signoff` flag to your Git commits:
+
+Example:
+[source,shell]
+----
+$ git commit --signoff -m 'fix: add fix for superbug x'
+----
+
+==== Sign
+
+You can also sign the commit with `-S`/`--gpg-sign`.
+Besides extra trust, it also gives your commit a nice verified button in the UI on most Git platforms and further assures trust.
+
+[source,shell]
+----
+$ git commit --signoff --gpg-sign -m "fix: add fix for the bug"
+----
+
+NOTE: If you have used a newer version of the setup script, you should already have SSH signing and tagging defined as standard.
+
+TIP: Older versions of Git requires that you have a GPG keypair set up, see https://docs.gitlab.com/ee/user/project/repository/gpg_signed_commits/[Sign commit on GitLab with GPG key].
+For newer versions you can use SSH for signing https://docs.gitlab.com/ee/user/project/repository/ssh_signed_commits/[Sign commit on GitLab with SSH key].
+
+=== Commit Standard
+
+Aim for a clear human readable commit history:
+
+* Sign and sign-off your commits.
+* Follow the the https://www.conventionalcommits.org[Conventional Commit standard].
+
+TIP: A Conventional Commit example: +
+        _fix: add a null pointer check to MyMethod parameter_ +
+        Would be read as 'When this fix is applied it will add a null pointer check to MyMethod parameter'
+
+[[code-quality]]
+== Code Quality - mandatory before a Merge/Pull Request
+
+Before you submit your Merge/Pull Request you are expected to run a quick quality test.
+(And fix any problems you might find;).
+
+* Project quality tooling:
+* https://github.com/siderolabs/conform[conform] (commit check)
+* shellcheck, shfmt, hadolint, yamlfmt (via mise)
+
+=== Code quality tools and test coverage
+
+Run the code quality tooling:
+
+[source,shell]
+----
+$ just veriyf    # Run all checks
+$ just lint      # Only linting
+$ just commits   # Only commit message check
+----
+
+
+TIP: The linters can be integrated into VSCode for real-time feedback during development.
+
+[[development]]
+== Development Guidelines
+
+For further guidance on how to get started with Development, see the link:./docs/guides/development.adoc[Development Guide].
+
+*_Happy contributing!_*

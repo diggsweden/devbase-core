@@ -1,0 +1,628 @@
+= Custom Configuration
+
+Custom configurations can be seen as overlaying the DevBase core configuration with customizations. For example:
+
+* You require a proxy for internet access
+* You need custom CA certificates
+* You need to configure container/package registries
+* You want to share SSH configurations
+
+This guide shows how to create a `devbase-custom-config/` directory to configure DevBase for your organization.
+
+== Overview
+
+Organizations can customize via a `devbase-custom-config/` directory overlay:
+
+[source]
+----
+devbase-custom-config/
+├── config/
+│   └── org.env                # Organization variables
+├── certificates/              # CA certificates (*.crt)
+├── templates/                 # Config templates
+├── ssh/                       # SSH configuration
+│   └── custom.config          # Organization SSH hosts
+├── git-hooks/                 # Custom git hooks
+│   ├── pre-commit.d/
+│   └── commit-msg.d/
+├── hooks/                     # Installation lifecycle hooks
+│   ├── pre-install.sh         # Before installation
+│   ├── post-configuration.sh  # After config, before tools
+│   └── post-install.sh        # After everything
+└── verification/              # Custom verification
+    └── verify-custom.sh
+----
+
+== Usage
+
+[source,bash]
+----
+# Method 1: Auto-detect sibling directory
+cd devbase-core
+./setup.sh  # Finds ../devbase-custom-config/
+
+# Method 2: Explicit path
+export DEVBASE_CUSTOM_DIR=/path/to/custom
+./setup.sh
+----
+
+== Organization Variables (config/org.env)
+
+.Example
+[source,bash]
+----
+# Email domain (pre-fills during installation)
+DEVBASE_EMAIL_DOMAIN="@company.com"
+
+# Network - Proxy configuration
+DEVBASE_PROXY_URL="http://proxy.company.com:8080"
+DEVBASE_NO_PROXY_DOMAINS="*.company.com,localhost"
+
+# Container registry (optional)
+DEVBASE_REGISTRY_URL="https://registry.company.com"
+----
+
+NOTE: Configure `/etc/hosts` manually if you need custom host entries. Use hooks for automation.
+
+=== Proxy Configuration
+
+When `DEVBASE_PROXY_URL` is set, DevBase automatically:
+
+1. **Configures environment variables:**
+   - Sets standard proxy variables: `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` (and lowercase variants)
+   - Creates Fish shell configuration: `~/.config/fish/conf.d/00-proxy.fish`
+
+2. **Configures development tools:**
+   - **Java**: Sets `JAVA_TOOL_OPTIONS` with proxy settings (host, port, nonProxyHosts)
+   - **Gradle**: Sets `GRADLE_OPTS` with proxy settings
+   - **Git**: Configures `http.proxy` and `https.proxy` globally
+   - **Snap**: Configures system-wide Snap proxy settings
+
+3. **Configures system:**
+   - **Sudo**: Preserves proxy environment variables when using sudo
+   - Creates `/etc/sudoers.d/devbase-keep-proxy-env`
+
+4. **Installs proxy management function:**
+   - Installs `devbase-proxy.fish` function to `~/.config/fish/functions/`
+   - Provides interactive proxy control: `devbase-proxy on|off|status`
+   - Manages APT and Snap proxy settings dynamically
+
+**Proxy management commands:**
+
+[source,bash]
+----
+devbase-proxy status   # Show current proxy status
+devbase-proxy on       # Enable proxy for current session
+devbase-proxy off      # Disable proxy for current session
+----
+
+
+== Certificates
+
+Place organization certificates in `devbase-custom-config/certificates/`:
+
+[source]
+----
+devbase-custom-config/
+└── certificates/
+    ├── root-ca.crt              # Your organization's root CA
+    ├── intermediate-ca.crt      # Intermediate CA if needed
+    ├── gitlab.example.com.crt   # Git server certificate
+    └── registry.example.com.crt # Container registry certificate
+----
+
+**What happens:**
+
+1. All `.crt` files are automatically copied to `/usr/local/share/ca-certificates/`
+2. Registered with the system certificate store via `update-ca-certificates`
+3. Available to all applications (Git, curl, browsers, etc.)
+
+**Certificate requirements:**
+
+- Must be in PEM format with `.crt` extension
+- Files must be in the root of `certificates/` directory (subdirectories not processed)
+
+**Certificate format example:**
+[source]
+----
+-----BEGIN CERTIFICATE-----
+MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF
+...
+-----END CERTIFICATE-----
+----
+
+**Validation:**
+
+DevBase validates certificates before installation:
+[source,bash]
+----
+openssl x509 -in certificate.crt -noout  # Rejects invalid certificates
+----
+
+== SSH Configuration
+
+Provide organization SSH hosts in `devbase-custom-config/ssh/custom.config`:
+
+[source,ssh]
+----
+# Organization SSH Configuration
+
+Host github.com
+  ProxyCommand nc -X connect -x proxy.company.com:8080 %h %p
+
+Host gitlab.internal.company.com
+  HostName gitlab.internal.company.com
+  IdentityFile ~/.ssh/id_ecdsa_nistp521_devbase
+  ProxyCommand none
+
+Host *.internal.company.com
+  ProxyCommand none
+----
+
+**Best practices:**
+
+- Only include hosts users actually need
+- Use wildcards for patterns (e.g., `*.company.com`)
+- Keep minimal - users need flexibility
+- Users can override these settings in their personal `user.config`
+
+== Templates
+
+Place files in `devbase-custom-config/templates/`. DevBase processes different file types automatically.
+
+=== Overriding DevBase Templates
+
+DevBase ships with default templates.
+Override any template by creating a file with the same name in `devbase-custom-config/templates/`:
+
+**Available DevBase templates:**
+
+Shell & Terminal:
+
+- `00-environment.fish.template` (Fish)
+- `01-keybindings.fish.template` (Fish)
+- `02-aliases.fish.template` (Fish)
+- `starship.toml.template` (Starship)
+- `config.kdl.template` (Zellij)
+
+Development Tools:
+
+- `config.template` (Git)
+- `config.yml.template` (LazyGit)
+- `colorscheme.lua.template` (Neovim)
+- `btop.conf.template` (btop)
+
+To see all available templates: `find dot/ -name "*.template" -type f`
+
+**How overrides work:**
+
+1. DevBase validates: custom template filename matches a vanilla template
+2. If match found: custom template replaces vanilla
+3. If no match: warning shown, template skipped
+
+=== Custom Templates (Organization-Specific)
+
+Create organization-specific templates to override DevBase defaults or add new configurations.
+
+**Built-in Templates** (automatically configured from `devbase-core`):
+
+Maven (YAML-based, conditionally processed based on registry/proxy configuration):
+- Generated from YAML fragments → `~/.m2/settings.xml`
+- Base fragments in `devbase_files/maven-templates/yaml/`
+- Custom repositories via `maven-repos.yaml` in templates/ (optional)
+
+**Maven YAML Template System:**
+
+Instead of maintaining multiple monolithic XML templates, Maven settings are composed from YAML fragments:
+
+Files:
+- `base.yaml` - XML namespaces and document structure
+- `proxy.yaml` - HTTP/HTTPS proxy configuration (included if `DEVBASE_PROXY_URL` set)
+- `registry.yaml` - Internal registry mirrors (included if `DEVBASE_REGISTRY_URL` set)
+
+How it works:
+1. Fragments selected based on environment variables
+2. Environment variables substituted using `envsubst`
+3. YAML fragments merged using `yq eval-all`
+4. Merged YAML converted to XML with `yq -o=xml`
+
+Benefits:
+- ✓ No duplication - Each setting defined once
+- ✓ Clean separation - Organization repos in custom config
+- ✓ All combinations - Handles proxy-only, registry-only, or both
+- ✓ Readable - YAML easier to edit than XML
+
+**Custom Maven Repositories:**
+
+In `devbase-custom-config/templates/maven-repos.yaml`:
+
+[source,yaml]
+----
+profiles:
+  profile:
+    - id: org-repos
+      repositories:
+        repository:
+          - id: org-snapshots
+            name: Organization Snapshots
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-snapshots/
+            snapshots:
+              enabled: "true"
+          - id: org-releases
+            name: Organization Releases
+            url: ${DEVBASE_REGISTRY_URL}/repository/maven-releases/
+            releases:
+              enabled: "true"
+
+activeProfiles:
+  activeProfile:
+    - org-repos
+----
+
+Requirements: `yq` (mikefarah/yq) version 4.x or later with XML output support (installed via mise)
+
+Fallback: If custom XML templates exist in `devbase-custom-config/templates/`, the legacy XML-based approach is used instead
+
+Gradle (only if registry configured):
+- `init.gradle.template` → `~/.gradle/init.gradle`
+
+Container Registry (only if registry configured):
+- `registries.conf.template` → `~/.config/containers/registries.conf`
+
+**Custom Configuration Templates** (`.template` suffix - variable substitution with `envsubst`):
+
+You can override built-in templates or add your own:
+
+- `maven-repos.yaml` → Merged into `~/.m2/settings.xml` (organization-specific Maven repositories)
+- `init.gradle.template` → `~/.gradle/init.gradle` (override built-in)
+- `registries.conf.template` → `~/.config/containers/registries.conf` (override built-in)
+- `npmrc.template` → `~/.npmrc` (NPM registry configuration)
+- `gradle.properties.template` → `~/.gradle/gradle.properties` (Gradle properties)
+
+Generic:
+
+- `{name}.template` → `~/.{name}` (Any other dotfile - uses filename as-is)
+
+**Append Files** (`.append` suffix - content appended to existing files):
+
+- `known_hosts.append` → `~/.ssh/known_hosts` (SSH known hosts)
+- `bashrc.append` → `~/.bashrc` (Bash configuration)
+
+**Other File Types:**
+
+- `*.service` → `~/.config/systemd/user/` (systemd user services)
+- `*.conf` or `*.config` → `~/.config/{filename}` (config files, copied as-is)
+- Files with extensions → `~/.{filename}` (dotfiles, copied as-is)
+- Files without extensions → `~/.local/bin/{filename}` (executable scripts)
+
+=== Variable Substitution
+
+Templates support environment variable substitution:
+
+[source,bash]
+----
+# Available variables
+${DEVBASE_PROXY_URL}          # Organization proxy
+${DEVBASE_REGISTRY_URL}       # Container registry
+${DEVBASE_EMAIL_DOMAIN}       # Email domain
+${USER}                       # Username
+${HOME}                       # Home directory
+
+# Syntax
+${VARIABLE_NAME}              # Replaced with value
+${VARIABLE_NAME:-default}     # Use default if not set
+----
+
+Variables from `org.env` are automatically available.
+
+== Git Hooks
+
+DevBase supports global git hooks using a dispatcher pattern.
+When enabled during installation, hooks are configured to run automatically on git operations.
+
+NOTE: Git hooks are **opt-in** during installation (default: No). Existing hooks are backed up to `${XDG_DATA_HOME}/devbase/backup/git-hooks/` before installation.
+
+=== Architecture
+
+Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corresponding `.d/` directory:
+
+[source]
+----
+~/.config/git/git-hooks/
+├── pre-commit                     # Dispatcher
+├── pre-commit.d/
+│   ├── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
+│   ├── 02-shellcheck.sh          # Active: Shell script linting
+│   └── 03-hadolint.sh            # Active: Dockerfile linting
+├── commit-msg                     # Dispatcher
+├── commit-msg.d/
+│   └── 01-conventional-commits.sh # Active: Conventional commits validation
+├── prepare-commit-msg             # Dispatcher
+├── prepare-commit-msg.d/
+│   └── 01-add-issue-ref.sh       # Active: Auto-add Refs: from branch
+├── post-commit                    # Dispatcher (no active hooks)
+├── post-commit.d/
+├── pre-push                       # Dispatcher
+└── pre-push.d/
+    └── 01-verify-signatures.sh   # Active: GPG signature verification
+----
+
+=== Active Hooks
+
+See link:usage-guide.md#git[Git Usage Guide] for descriptions of what each hook does.
+
+=== How It Works
+
+When you run `git commit`:
+
+1. **pre-commit** dispatcher runs all executable `.sh` files in `pre-commit.d/` (sorted order)
+2. If any check fails → commit is blocked
+3. **prepare-commit-msg** prepares the commit message template
+4. User edits commit message
+5. **commit-msg** validates the message format
+6. Git creates and signs the commit
+7. **post-commit** runs (if any hooks present)
+
+When you run `git push`:
+
+1. **pre-push** dispatcher runs all checks in `pre-push.d/`
+2. If any check fails → push is blocked
+3. Otherwise push proceeds
+
+=== Adding Custom Hooks
+
+**Personal hooks:**
+[source,bash]
+----
+cd ~/.config/git/git-hooks/pre-commit.d/
+nano 10-my-custom-check.sh
+chmod +x 10-my-custom-check.sh
+----
+
+**Organization hooks:**
+
+Place scripts in `devbase-custom-config/git-hooks/`:
+
+[source]
+----
+devbase-custom-config/
+└── git-hooks/
+    ├── pre-commit.d/
+    │   └── 99-company-policy.sh
+    └── commit-msg.d/
+        └── 99-jira-integration.sh
+----
+
+These are automatically overlaid during installation.
+
+WARNING: Existing hooks from templates (01-*, 02-*, 03-*) are **overwritten** on re-install to ensure updates. User-added hooks (10-*, 99-*) are preserved.
+
+=== Execution Order
+
+Scripts run in sorted alphabetical order. Use numeric prefixes:
+
+- `01-03` - DevBase core checks (updated on re-install)
+- `10-99` - User/team custom checks (preserved on re-install)
+
+=== Disabling Hooks
+
+**Globally:**
+[source,bash]
+----
+git config --global --unset core.hooksPath
+----
+
+**Per repository:**
+[source,bash]
+----
+cd your-repo
+git config --unset core.hooksPath
+----
+
+**Bypass once:**
+[source,bash]
+----
+git commit --no-verify  # Skips pre-commit and commit-msg
+git push --no-verify    # Skips pre-push
+----
+
+=== During Rebase
+
+NOTE: During non-interactive rebase (`git rebase main`), pre-commit and commit-msg hooks do **not** re-run on existing commits. However, **pre-push** hooks **will** validate all commits when you push.
+
+**Interactive rebase** (`git rebase -i`):
+- Hooks run when you **edit** or **reword** commits
+- Hooks do **not** run for commits you **pick**
+
+**Enforcement:** The pre-push GPG verification is the critical enforcement point that catches any issues missed during rebase.
+
+== Installation Hooks
+
+Custom hooks allow a user to run scripts at specific points during installation. Hooks must:
+
+- Be executable (`chmod +x`)
+- Have a proper shebang (`#!/usr/bin/env bash`)
+- Be valid bash syntax
+
+Place hooks in `devbase-custom-config/hooks/`:
+
+=== pre-install.sh
+
+Runs **before** main installation starts.
+
+**Use for:**
+- Validating prerequisites
+- Setting environment variables
+- Checking organization requirements
+
+**Example:**
+[source,bash]
+----
+#!/usr/bin/env bash
+# Check for required network access
+if ! curl -s https://internal.company.com > /dev/null; then
+  echo "ERROR: Cannot reach internal network"
+  exit 1
+fi
+----
+
+=== post-configuration.sh
+
+Runs **after** system configuration, **before** finalization.
+
+**Use for:**
+- Modifying installed configurations
+- Setting up organization-specific services
+- Configuring tools that were just installed
+
+=== post-install.sh
+
+Runs **after** everything is installed and finalized.
+
+**Use for:**
+- Final organization-specific configurations
+- Starting custom services
+- Running verification checks
+- Sending installation notifications
+
+== Custom Verification
+
+A user can add custom verification checks to ensure organization-specific requirements are met.
+
+=== Creating Custom Verification
+
+Create `devbase-custom-config/verification/verify-custom.sh`:
+
+[source,bash]
+----
+#!/usr/bin/env bash
+set -uo pipefail
+
+# Organization Custom Verification Script
+#
+# IMPORTANT: This script is sourced by the main verification script.
+# Follow these conventions:
+# - Use 'local' for all internal variables
+# - Use 'return' not 'exit' in functions
+# - Only modify: PASSED_CHECKS, FAILED_CHECKS, WARNING_CHECKS, TOTAL_CHECKS
+
+# Load base verification library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${DEVBASE_ROOT:-}" ]]; then
+  VERIFY_LIB="${DEVBASE_ROOT}/verify/verify-base-lib.sh"
+else
+  VERIFY_LIB="${SCRIPT_DIR}/../../devbase-core/verify/verify-base-lib.sh"
+fi
+
+if [[ -f "$VERIFY_LIB" ]]; then
+  source "$VERIFY_LIB"
+else
+  echo "Error: verify-base-lib.sh not found at $VERIFY_LIB"
+  return 1
+fi
+
+# Your custom checks here
+check_proxy_configuration() {
+  print_header "Organization Proxy Configuration"
+  
+  local npm_proxy=$(npm config get proxy 2>/dev/null)
+  if [[ "$npm_proxy" == *"company.com"* ]]; then
+    print_check "pass" "NPM proxy: $npm_proxy"
+  else
+    print_check "fail" "NPM proxy not configured for organization"
+  fi
+}
+
+check_internal_certificates() {
+  print_header "Organization Certificates"
+  
+  local certs=("CompanyRootCA.crt" "CompanyInternalCA.crt")
+  for cert in "${certs[@]}"; do
+    if [[ -f "/usr/local/share/ca-certificates/$cert" ]]; then
+      print_check "pass" "$cert installed"
+    else
+      print_check "fail" "$cert missing"
+    fi
+  done
+}
+
+main() {
+  check_proxy_configuration
+  check_internal_certificates
+  
+  if [[ ${FAILED_CHECKS:-0} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# Handle both sourced and direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+  exit $?
+else
+  main "$@"
+fi
+----
+
+Make it executable:
+[source,bash]
+----
+chmod +x devbase-custom-config/verification/verify-custom.sh
+----
+
+**Important conventions:**
+
+* The script is **sourced** by the main verification, not run as a subprocess
+* Use `return` instead of `exit` in all functions (exit would kill the parent process)
+* Always declare variables with `local` to avoid namespace pollution
+* The script automatically contributes to the overall verification summary counters
+
+=== Running Verification
+
+After installation, run:
+
+[source,bash]
+----
+./verify/verify-install-check.sh
+----
+
+The main verification script will automatically discover and run your custom verification if it exists at `devbase-custom-config/verification/verify-custom.sh`.
+
+=== Available Library Functions
+
+The `verify-base-lib.sh` library provides these functions, which a customization could use:
+
+**Display Functions:**
+
+* `print_header "Section Title"` - Print section header
+* `print_subheader "Subsection"` - Print subsection header  
+* `print_check "pass|fail|warn|info" "message"` - Print check result
+* `display_file_box "file" [width]` - Display file contents in a box
+
+**File Operations:**
+
+* `file_exists "path"` - Check if file exists
+* `dir_exists "path"` - Check if directory exists
+* `check_file_content "file" "pattern" "success_msg" "fail_msg"` - Check file contains pattern
+
+**Environment:**
+
+* `check_env_var "VAR_NAME" [max_length] [mask_password]` - Check and display environment variable
+* `has_command "cmd"` - Check if command exists
+
+**Proxy Checks:**
+
+* `check_npm_proxy` - Verify NPM proxy configuration
+* `check_git_proxy` - Verify Git proxy configuration
+* `check_maven_proxy` - Verify Maven proxy configuration
+* `check_gradle_proxy` - Verify Gradle proxy configuration
+
+**Counters:**
+
+The library maintains global counters that your custom checks update automatically:
+
+* `TOTAL_CHECKS` - Total number of checks run
+* `PASSED_CHECKS` - Number of passed checks
+* `FAILED_CHECKS` - Number of failed checks
+* `WARNING_CHECKS` - Number of warnings
