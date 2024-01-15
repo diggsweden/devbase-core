@@ -1,0 +1,142 @@
+# Container Registry Configuration for Podman/Buildah/Skopeo
+# Generated from DEVBASE_REGISTRY_URL during devbase installation
+# See containers-registries.conf(5) for detailed syntax documentation
+#
+# This configuration:
+# 1. Prioritizes organization's internal registry for all container operations
+# 2. Mirrors public registries (docker.io, ghcr.io, quay.io) through internal cache
+# 3. Falls back to public registries if image not available internally
+#
+# Security: All connections use HTTPS with system certificates installed by devbase
+
+# Unqualified image search order (e.g., "podman pull nginx" without registry prefix)
+# Images are searched in this order until found
+#
+# The internal registry (port 5050) is a Docker group registry that aggregates
+# all proxy repositories, allowing unqualified pulls to check cached images first.
+#
+# RECOMMENDATION: Use qualified registry names when you know the source:
+#   - docker.io/library/nginx    (for Docker Hub images)
+#   - quay.io/argoproj/argocd    (for Quay images)
+#   - ghcr.io/aquaproj/aqua      (for GitHub images)
+#
+unqualified-search-registries = [
+  "${DEVBASE_REGISTRY_CONTAINER}",  # 1. Internal registry (private + cached public images)
+  "docker.io",                       # 2. Docker Hub (fallback)
+  "quay.io",                         # 3. Quay.io (fallback)
+  "registry.redhat.io",              # 4. Red Hat Container Catalog (fallback)
+  "ghcr.io"                          # 5. GitHub Container Registry (fallback)
+]
+
+# organization Internal Container Registry (primary source)
+# Serves: Internal images, cached public images, proxy mirrors
+[[registry]]
+prefix = "${DEVBASE_REGISTRY_CONTAINER}"
+location = "${DEVBASE_REGISTRY_CONTAINER}"
+insecure = false  # Use HTTPS with system-installed certificates
+
+# Docker Hub Configuration
+# Registry: docker.io (Docker Hub)
+# Strategy: Try internal mirror first, fall back to docker.io
+# Nexus repository: dockerhub-docker-registry
+[[registry]]
+prefix = "docker.io"
+location = "docker.io"
+insecure = false
+
+  # Internal mirror/cache for Docker Hub
+  # Nexus proxy repository that caches docker.io images
+  # First pull: Fetches from docker.io and caches
+  # Subsequent pulls: Serves from cache (fast, internal network)
+  [[registry.mirror]]
+  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/dockerhub-docker-registry"
+  insecure = false
+
+# GitHub Container Registry Configuration
+# Registry: ghcr.io
+# Strategy: Try internal mirror first, fall back to ghcr.io
+# Nexus repository: github-docker-registry
+[[registry]]
+prefix = "ghcr.io"
+location = "ghcr.io"
+insecure = false
+
+  # Internal mirror/cache for GitHub Container Registry
+  [[registry.mirror]]
+  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/github-docker-registry"
+  insecure = false
+
+# Quay.io Configuration
+# Registry: quay.io (Red Hat Quay)
+# Strategy: Try internal mirror first, fall back to quay.io
+# Nexus repository: quay-docker-registry
+[[registry]]
+prefix = "quay.io"
+location = "quay.io"
+insecure = false
+
+  # Internal mirror/cache for Quay.io
+  [[registry.mirror]]
+  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/quay-docker-registry"
+  insecure = false
+
+# Red Hat Container Catalog Configuration
+# Registry: registry.redhat.io (Red Hat official images)
+# Strategy: Try internal mirror first, fall back to registry.redhat.io
+# Nexus repository: redhat-docker-registry
+# Note: Red Hat registry requires authentication for most images
+[[registry]]
+prefix = "registry.redhat.io"
+location = "registry.redhat.io"
+insecure = false
+
+  # Internal mirror/cache for Red Hat Container Catalog
+  [[registry.mirror]]
+  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/redhat-docker-registry"
+  insecure = false
+
+# Usage Examples:
+#
+# 1. Docker Hub pull (tries internal mirror first, falls back to docker.io)
+#    $ podman pull docker.io/library/nginx
+#    Tries: registry.digg.se/repository/dockerhub-docker-registry/library/nginx
+#    Falls back: docker.io/library/nginx
+#
+# 2. Unqualified pull (searches docker.io → quay.io → registry.redhat.io → ghcr.io)
+#    $ podman pull nginx
+#    Tries: docker.io/library/nginx (via organization mirror) → quay.io/nginx → registry.redhat.io/nginx → ghcr.io/nginx
+#
+# 3. Quay.io pull (tries internal mirror first)
+#    $ podman pull quay.io/argoproj/argocd:latest
+#    Tries: registry.digg.se/repository/quay-docker-registry/argoproj/argocd:latest
+#    Falls back: quay.io/argoproj/argocd:latest
+#
+# 4. GitHub Container Registry pull (tries internal mirror first)
+#    $ podman pull ghcr.io/aquaproj/aqua:latest
+#    Tries: registry.digg.se/repository/github-docker-registry/aquaproj/aqua:latest
+#    Falls back: ghcr.io/aquaproj/aqua:latest
+#
+# 5. Red Hat image pull (tries internal mirror first)
+#    $ podman pull registry.redhat.io/ubi9/ubi:latest
+#    Tries: registry.digg.se/repository/redhat-docker-registry/ubi9/ubi:latest
+#    Falls back: registry.redhat.io/ubi9/ubi:latest
+#    Note: May require login - use: podman login registry.redhat.io
+#
+# 6. Internal-only image (direct access, fully qualified)
+#    $ podman pull registry.digg.se/my-internal-app:v1.0.0
+#    Uses: registry.digg.se/my-internal-app:v1.0.0 directly
+#
+# Mirror Behavior:
+# - If image exists in mirror → Fast download from internal network
+# - If image not in mirror → Downloads from upstream, Nexus caches it for next time
+# - Mirror failures → Automatic fallback to upstream registry
+#
+# Security:
+# - All connections use HTTPS
+# - SSL certificates verified using system trust store (/etc/ssl/certs/ca-certificates.crt)
+# - organization's registry certificate installed during devbase setup
+#
+# Performance:
+# - Internal pulls: ~30 seconds (gigabit internal network)
+# - First external pull: ~5 minutes (through proxy, then cached)
+# - Cached external pulls: ~30 seconds (from internal mirror)
