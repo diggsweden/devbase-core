@@ -1,0 +1,10 @@
+[Unit]
+Description=ClamAV Daily Scan
+After=network.target clamav-freshclam.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/mkdir -p /var/log/clamav
+ExecStart=/usr/bin/clamscan -r / --exclude-dir="^/sys" --exclude-dir="^/proc" --exclude-dir="^/dev" --log=/var/log/clamav/daily-scan.log --quiet
+Nice=19
+IOSchedulingClass=idle

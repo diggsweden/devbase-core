@@ -1,0 +1,127 @@
+= Environment Variables
+
+== Overview
+
+This document covers:
+
+- **A) Variables that persist AFTER installation** in your shell environment
+- **B) Variables for non-interactive installation** (CI/automation)
+
+For interactive installation, the installer prompts for required values (Git, theme, editor).
+
+== A) Post-Installation Variables (Persistent)
+
+These are exported in your Fish shell after installation:
+
+[cols="2,2,3", options="header"]
+|===
+| Variable | Default | Description
+
+| `BAT_THEME`
+| _(theme-based)_
+| Syntax highlighter theme for `bat`
+
+| `DEVBASE_THEME`
+| `everforest-dark`
+| Current theme
+
+| `DEVBASE_ZELLIJ_AUTOSTART`
+| `false`
+| Auto-start Zellij terminal multiplexer
+
+| `EDITOR`
+| `nvim`
+| Default text editor
+
+| `FZF_DEFAULT_OPTS`
+| _(theme-based)_
+| Fuzzy finder colors for `fzf`
+
+| `VISUAL`
+| `nvim`
+| Visual editor (same as EDITOR)
+|===
+
+=== Modifying After Installation
+
+Edit `~/.config/fish/conf.d/10-personal.fish`:
+
+[source,fish]
+----
+# Switch to light theme (use devbase-theme command instead)
+devbase-theme everforest-light
+
+# Enable Zellij autostart
+set -gx DEVBASE_ZELLIJ_AUTOSTART "true"
+
+# Change editor
+set -gx EDITOR "nvim"
+set -gx VISUAL "nvim"
+----
+
+== B) Non-Interactive Installation Variables
+
+For CI/automation, set these with `./setup.sh --non-interactive`:
+
+[cols="2,2,3", options="header"]
+|===
+| Variable | Default | Description
+
+| `DEVBASE_THEME`
+| `everforest-dark`
+| Theme: `everforest-dark` or `everforest-light`
+
+| `EDITOR_CHOICE`
+| `nvim`
+| Editor: `nano` or `nvim`
+
+| `GIT_EMAIL`
+| `$USER@$(hostname)`
+| Git user.email (e.g., "jane@example.com")
+
+| `GIT_NAME`
+| `DevBase User`
+| Git user.name (e.g., "Jane Doe")
+
+| `SSH_KEY_PASSPHRASE`
+| _(auto-generated)_
+| SSH key passphrase
+|===
+
+=== Example: CI/Automation
+
+[source,bash]
+----
+export GIT_NAME="CI Bot"
+export GIT_EMAIL="ci@example.com"
+export DEVBASE_THEME="everforest-dark"
+export EDITOR_CHOICE="nano"
+./setup.sh --non-interactive
+----
+
+== Custom Config Variables (org.env)
+
+Set in `devbase-custom-config/config/org.env` - affects installation behavior:
+
+[cols="2,2,3", options="header"]
+|===
+| Variable | Default | Description
+
+| `DEVBASE_EMAIL_DOMAIN`
+| `@`
+| Pre-fill email domain (e.g., `@company.com`)
+
+| `DEVBASE_NO_PROXY_DOMAINS`
+| `localhost,127.0.0.1`
+| Domains to bypass proxy
+
+| `DEVBASE_PROXY_URL`
+| _(none)_
+| Organization proxy URL
+
+| `DEVBASE_REGISTRY_URL`
+| _(none)_
+| Internal package registry
+|===
+
+These variables affect installation but are NOT exported to your shell.

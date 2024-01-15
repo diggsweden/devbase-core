@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Pre-commit hook dispatcher
+# Runs all executable scripts in pre-commit.d/
+
+set -e
+
+script_dir="$(cd -- "$(dirname -- "$0")" >/dev/null 2>&1 && pwd -P)"
+hooks_dir="$script_dir/pre-commit.d"
+
+if [[ ! -d "$hooks_dir" ]]; then
+  exit 0
+fi
+
+# Check if any executable scripts exist
+shopt -s nullglob
+scripts=("$hooks_dir"/*.sh)
+shopt -u nullglob
+
+if [[ ${#scripts[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+# Sort scripts to ensure consistent execution order
+IFS=$'\n' scripts=($(sort <<<"${scripts[*]}"))
+unset IFS
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo "Running pre-commit checks..."
+
+# Run all executable scripts in pre-commit.d/ (in sorted order)
+for script in "${scripts[@]}"; do
+  if [[ -x "$script" ]]; then
+    "$script" || {
+      echo -e "${RED}✗${NC} Hook failed: $(basename "$script")" >&2
+      exit 1
+    }
+  fi
+done
+
+echo -e "${GREEN}✓${NC} All pre-commit checks passed"
+exit 0
