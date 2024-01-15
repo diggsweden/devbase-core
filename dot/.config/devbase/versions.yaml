@@ -1,0 +1,54 @@
+# Tool versions for development environment
+# This file contains ONLY tools NOT managed by mise
+# For mise-managed tools (node, python, aqua packages, etc.), see: ~/.config/mise/config.toml
+# Automatically updated by Renovate Bot
+
+# Bootstrap tool (installs itself - must bootstrap before mise can run)
+mise: v2025.9.20 # renovate: datasource=github-releases depName=jdx/mise
+
+# Fish shell plugins (installed via Fisher, not mise)
+fisher: 4.4.5 # renovate: datasource=github-releases depName=jorgebucaran/fisher
+fzf_fish: v10.3 # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
+
+# Snap packages (optional GUI tools, not in mise)
+ghostty: 1.2.0 # renovate: datasource=github-releases depName=ghostty-org/ghostty
+
+# Neovim config (git ref - commit hash)
+lazyvim_starter: 803bc18 # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter lookupName=main
+
+# Custom datasources (not available in mise/aqua)
+oc: 4.15.33 # renovate: datasource=custom depName=openshift/oc
+k3s: v1.32.4+k3s1 # renovate: datasource=github-releases depName=k3s-io/k3s
+
+# Java development tools (custom installers with complex logic)
+keystore_explorer: v5.6.0 # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
+jdk_mission_control: 9.0.0 # renovate: datasource=custom depName=oracle/jmc
+dbeaver: 25.2.1 # renovate: datasource=github-releases depName=dbeaver/dbeaver extractVersion=^v?(?<version>\d+\.\d+\.\d+)$
+intellij_idea: 2025.2.3 # renovate: datasource=github-releases depName=JetBrains/intellij-community extractVersion=^idea/(?<version>.+)$
+
+# VS Code (custom installer with WSL-specific logic)
+vscode: 1.105.1 # renovate: datasource=github-releases depName=microsoft/vscode
+
+# VS Code Extensions (installed via setup-vscode.sh)
+vscode_ext_asciidoctor: 3.4.2 # renovate: datasource=npm depName=asciidoctor.asciidoctor-vscode
+vscode_ext_tailwindcss: 0.14.11 # renovate: datasource=npm depName=bradlc.vscode-tailwindcss
+vscode_ext_eslint: 3.0.10 # renovate: datasource=npm depName=dbaeumer.vscode-eslint
+vscode_ext_prettier: 11.0.0 # renovate: datasource=npm depName=esbenp.prettier-vscode
+vscode_ext_i18n_ally: 2.13.1 # renovate: datasource=npm depName=lokalise.i18n-ally
+vscode_ext_material_icons: 5.20.0 # renovate: datasource=npm depName=pkief.material-icon-theme
+vscode_ext_everforest: 0.3.0 # renovate: datasource=npm depName=sainnhe.everforest
+vscode_ext_catppuccin: 3.20.0 # renovate: datasource=npm depName=catppuccin.catppuccin-vsc
+vscode_ext_tokyonight: 1.0.6 # renovate: datasource=npm depName=enkia.tokyo-night
+vscode_ext_gruvbox: 1.18.0 # renovate: datasource=npm depName=jdinhlife.gruvbox
+vscode_ext_java: 1.40.0 # renovate: datasource=npm depName=redhat.java
+vscode_ext_yaml: 1.17.0 # renovate: datasource=npm depName=redhat.vscode-yaml
+vscode_ext_checkstyle: 1.4.2 # renovate: datasource=npm depName=shengchen.vscode-checkstyle
+vscode_ext_sonarlint: 4.18.0 # renovate: datasource=npm depName=sonarsource.sonarlint-vscode
+vscode_ext_java_debug: 0.58.1 # renovate: datasource=npm depName=vscjava.vscode-java-debug
+vscode_ext_java_dependency: 0.24.1 # renovate: datasource=npm depName=vscjava.vscode-java-dependency
+vscode_ext_java_test: 0.43.0 # renovate: datasource=npm depName=vscjava.vscode-java-test
+vscode_ext_maven: 0.44.0 # renovate: datasource=npm depName=vscjava.vscode-maven
+vscode_ext_java_pack: 0.29.0 # renovate: datasource=npm depName=vscjava.vscode-java-pack
+vscode_ext_volar: 2.2.8 # renovate: datasource=npm depName=vue.volar
+vscode_ext_neovim: 1.18.13 # renovate: datasource=npm depName=asvetliakov.vscode-neovim
+vscode_ext_sarif_viewer: 3.4.5 # renovate: datasource=github-releases depName=microsoft/sarif-vscode-extension

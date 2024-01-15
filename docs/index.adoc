@@ -1,0 +1,38 @@
+= Documentation Index
+:toc:
+:toc-placement: macro
+:toclevels: 2
+
+toc::[]
+
+== Getting Started
+
+=== Installation Modes
+
+DevBase works in two modes:
+
+* *Base Mode (Default)* - Clone and run `./setup.sh`. No additional configuration needed. Gets you a complete development environment with sensible defaults.
+* *Custom Mode* - Add a `devbase-custom-config/` directory for overlaying custom settings. See link:customization.adoc[Custom Configuration].
+
+
+== Configuration
+
+=== Basic Configuration
+
+* link:environment.adoc[*Environment Variables*] - Complete environment variable reference
+* link:personalization.adoc[*Personalization*] - Customize themes, shells, and personal preferences after installation
+* link:customization.adoc[*Customization*] - Configure custom setup (proxy, certificates, repositories) before installation
+
+== User Guides
+
+* link:usage-guide.md[*Usage Guide*] - Usage guide for all devbase tools with commands and examples
+* link:editor-setup.adoc[*Editor Setup*] - Configure VS Code, Neovim, and other editors
+* link:development.adoc[*Development Guide*] - Contributing to devbase-core
+* link:faq.adoc[*FAQ*] - Frequently asked questions
+
+== Reference
+
+* link:tools-matrix.adoc[*Tools Matrix*] - Matrix with proxy/registry support and security scores
+* link:security.md[*Security Overview*] - Comprehensive security documentation and verification
+* https://canonical.com/academy/self-study[Ubuntu and Linux learning Resources] - If just learning, or a bit rusty in Linux basics
+
