@@ -1,0 +1,102 @@
+# APT System Packages for DevBase
+# This file contains system packages installed via APT (not managed by mise)
+# One package per line, comments with # are ignored
+#
+# Tags (inline comments):
+#   @skip-wsl - Skip this package on WSL environments
+#
+# Example:
+#   git           # Regular package
+#   tlp  # @skip-wsl Power management (not needed on WSL)
+#
+# Automatically read by: libs/install-apt.sh
+
+# Core system utilities
+apt-utils
+curl
+git
+locales
+wget
+
+# Build tools and compilers
+build-essential
+python3-dev
+
+# Shell and terminal tools
+bash-completion
+fish
+tree
+vifm
+
+# Container and virtualization
+buildah
+containernetworking-plugins
+podman
+skopeo
+
+# Security tools
+clamav
+clamav-daemon
+gufw
+lynis
+ufw
+unattended-upgrades
+
+# Desktop and GUI libraries
+dbus-user-session
+desktop-file-utils
+libfontconfig
+libgbm1
+libgtk-3-bin
+libxi6
+libxrender1
+libxtst6
+mesa-utils
+tar
+xdg-desktop-portal-gtk
+
+# Development utilities
+dnsutils
+e2fsprogs
+jq
+pandoc
+parallel
+pwgen
+w3m
+yadm
+
+# Java development
+default-jdk
+default-jre
+visualvm
+
+# SSH and certificates
+libnss3-tools
+mkcert
+openssh-client
+ssh-askpass
+
+# Python development
+python3
+python3-venv
+
+# Ruby development libraries
+libffi-dev
+libgdbm-dev
+libncurses-dev
+libreadline-dev
+libssl-dev
+libyaml-dev
+zlib1g-dev
+
+# Rust development libraries
+libsqlite3-dev
+pkg-config
+
+# Non-WSL specific packages (power management, encryption)
+dislocker  # @skip-wsl BitLocker drive support (NTFS encrypted volumes)
+tlp        # @skip-wsl Power management for laptops
+tlp-rdw    # @skip-wsl Power management daemon
+
+# Additional utilities
+bleachbit

@@ -1,0 +1,131 @@
+= FAQ
+
+== General
+
+=== What does this install?
+
+See link:tools-matrix.adoc[Tools Matrix] - ~90+ development tools.
+
+=== Which Ubuntu versions does it support?
+
+24.04 LTS or newer. WSL2 or native.
+
+=== Can I run this multiple times?
+
+Yes. One-time backs up configs, preserves SSH keys and git settings, respects numbered config files (10-99).
+
+=== How often should I run updates?
+
+Monthly or as needed. Run `./setup.sh` to update everything.
+
+=== Can I uninstall everything?
+
+No uninstaller provided for now.
+
+=== How do I migrate softly from my old existing user on my system?
+
+Just create a new user, and start using that, slowly migrating what you need.
+
+[source,bash]
+----
+sudo adduser <newuser>
+sudo usermod -aG sudo <newuser>
+----
+
+NOTE: If on WSL, we also can keep the old default user, but set a new default
+
+[source,bash]
+----
+
+sudo vim /etc/wsl.conf
+
+# Set the default user when launching a distribution with WSL.
+[user]
+default=<newuser>
+
+# Shutdown WSL and restart to take effect
+wsl --shutdown
+----
+
+== Customization
+
+=== Does the install create lots of custom shortcuts and aliases?
+
+No, everything is as standard as can be.
+There are a few small cases, like alt+y in fish shell.
+These are documented in the usage docs.
+
+=== How do themes work on WSL?
+
+Run devbase-theme and find out
+
+=== How do I personalize without losing changes on update?
+
+Add your customizations to separate files: `~/.config/fish/conf.d/10-personal.fish`
+
+Devbase provides 00-09 system files. User files 10-99 won't be overwritten since they don't exist in the template.
+
+=== Can I skip certain components?
+
+No. The installer runs all components. Fork and modify if you need selective installation.
+
+For organization-specific customization, see link:customization.adoc[Custom Configuration].
+
+=== Is this a distro?
+
+No. This is a bootstrap script - not a package manager, not a CLI tool, maybe it could be called a dotfiles + script.
+
+== Operations
+
+=== How do I update everything?
+
+[source,bash]
+----
+
+cd devbase-core
+git pull --rebase
+./setup.sh  # Safe to run multiple times
+----
+
+=== How do I switch tool versions?
+
+[source,bash]
+----
+mise global python@3.11 # System-wide
+mise list              # Show installed versions
+----
+
+=== How do I check my installation?
+
+[source,bash]
+----
+just devbase-install-verify # After installation, and reboot, from the devbase-core dir
+cat ~/.config/devbase/version  # Installation metadata
+which fish                     # Verify shell
+mise doctor                    # Check mise setup
+----
+
+== Technical
+
+=== Where are tools installed?
+
+- System packages: `/usr/bin/`, `/usr/local/bin/`
+- User tools: `~/.local/bin/`
+- Language versions: `~/.local/share/mise/`
+- Configurations: `~/.config/`
+
+=== Which shell is set as default?
+
+Fish for interactive shells. Fall back to bash with: `bash`.
+
+=== How do I see what's happening during installation?
+
+Most output is shown in the terminal. Use `DEBUG=1 ./setup.sh` for additional details.
+
+=== What's the difference between mise and asdf?
+
+mise is a Rust rewrite of asdf with better performance, additional backends (aqua, ubi), and improved security. 
+
+=== Why Podman instead of Docker?
+
+Rootless by default, no daemon, Docker-compatible.

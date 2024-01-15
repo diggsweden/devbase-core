@@ -1,0 +1,36 @@
+# VSCode Extensions for DevBase
+# This file contains VSCode extension IDs and versions
+# Format: extension-id: version  # renovate comment
+# Automatically read by: libs/setup-vscode.sh
+# Managed by Renovate Bot for automatic updates
+# Language Support - Documentation and Markup
+asciidoctor.asciidoctor-vscode: 3.4.2 # renovate: datasource=npm
+redhat.vscode-yaml: 1.17.0 # renovate: datasource=npm
+# Language Support - Web Development
+bradlc.vscode-tailwindcss: 0.14.11 # renovate: datasource=npm
+vue.volar: 2.2.8 # renovate: datasource=npm
+# Code Quality - Linters and Formatters
+dbaeumer.vscode-eslint: 3.0.10 # renovate: datasource=npm
+esbenp.prettier-vscode: 11.0.0 # renovate: datasource=npm
+# Code Quality - Analysis
+sonarsource.sonarlint-vscode: 4.18.0 # renovate: datasource=npm
+MS-SarifVSCode.sarif-viewer: 3.4.5 # renovate: datasource=github-releases packageName=microsoft/sarif-vscode-extension
+# Internationalization
+lokalise.i18n-ally: 2.13.1 # renovate: datasource=npm
+# Icons
+pkief.material-icon-theme: 5.20.0 # renovate: datasource=npm
+# Color Themes
+sainnhe.everforest: 0.3.0 # renovate: datasource=npm
+catppuccin.catppuccin-vsc: 3.20.0 # renovate: datasource=npm
+enkia.tokyo-night: 1.0.6 # renovate: datasource=npm
+jdinhlife.gruvbox: 1.18.0 # renovate: datasource=npm
+# Java Development
+redhat.java: 1.40.0 # renovate: datasource=npm
+shengchen.vscode-checkstyle: 1.4.2 # renovate: datasource=npm
+vscjava.vscode-java-debug: 0.58.1 # renovate: datasource=npm
+vscjava.vscode-java-dependency: 0.24.1 # renovate: datasource=npm
+vscjava.vscode-java-test: 0.43.0 # renovate: datasource=npm
+vscjava.vscode-maven: 0.44.0 # renovate: datasource=npm
+vscjava.vscode-java-pack: 0.29.0 # renovate: datasource=npm
+# Editor Integration
+asvetliakov.vscode-neovim: 1.18.13 # renovate: datasource=npm

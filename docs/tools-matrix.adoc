@@ -1,0 +1,1195 @@
+= DevBase Tools Matrix
+:toc:
+:toc-placement: macro
+
+A matrix of ALL tools installed by DevBase, systematically verified from source files.
+
+toc::[]
+
+== Legend
+
+[cols="1,4", options="header"]
+|===
+|Abbreviation |Description
+
+|INST
+|Installation Method (apt, snap, snap/classic, mise/aqua, mise/ubi, mise/native, mise/github, binary/tar, binary/deb, special)
+
+|LICENSE
+|License type (MIT, Apache-2.0, GPL, BSD, etc.)
+
+|P
+|Proxy Support (✓ = supported, empty = not supported)
+
+|REG
+|Registry Support (✓ = supported, empty = not supported)
+
+|T
+|Theme Support (✓ = Everforest theme configurable, empty = no theme support)
+
+|XDG
+|XDG Spec Support (✓ = follows XDG Base Directory spec, empty = uses other locations)
+
+|SSF
+|OpenSSF Scorecard (security score 0-10, empty = N/A) *Note: Scores may be outdated*
+|===
+
+== Core Development Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://packages.ubuntu.com/apt-utils[apt-utils]
+|APT utility programs
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://packages.ubuntu.com/build-essential[build-essential]
+|Compiler collection (gcc, g++, make, libc-dev, dpkg-dev)
+|apt
+|Various GPL
+|✓
+|
+|
+|
+|
+
+|link:https://curl.se/[curl]
+|Command line HTTP client
+|apt
+|curl
+|✓
+|
+|
+|
+|
+
+|link:https://git-scm.com/[git]
+|Distributed version control system
+|apt
+|GPL-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://www.python.org/[python3-dev]
+|Python development headers
+|apt
+|PSF-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.sudo.ws/[sudo]
+|Execute commands as another user
+|apt
+|ISC
+|✓
+|
+|
+|
+|
+
+|link:https://www.gnu.org/software/wget/[wget]
+|Network downloader
+|apt
+|GPL-3.0+
+|✓
+|
+|
+|
+|
+|===
+
+== Programming Languages & Runtimes
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://openjdk.org/[default-jdk]
+|Default Java Development Kit
+|apt
+|GPL-2.0 with Classpath
+|✓
+|
+|
+|
+|
+
+|link:https://openjdk.org/[default-jre]
+|Default Java Runtime Environment
+|apt
+|GPL-2.0 with Classpath
+|✓
+|
+|
+|
+|
+
+|link:https://go.dev/[go]
+|Go programming language
+|mise/native
+|BSD-3-Clause
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://adoptium.net/[java]
+|Eclipse Temurin JDK
+|mise/native
+|GPL-2.0 with Classpath
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://maven.apache.org/[maven]
+|Java build tool
+|mise/native
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://nodejs.org/[node]
+|JavaScript runtime (includes npm)
+|mise/native
+|MIT
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://www.python.org/[python]
+|Python programming language
+|mise/native
+|PSF-2.0
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://www.python.org/[python3]
+|Python 3 interpreter (system)
+|apt
+|PSF-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.python.org/[python3-venv]
+|Python virtual environment support
+|apt
+|PSF-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.ruby-lang.org/[ruby]
+|Ruby programming language
+|mise/native
+|Ruby License
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://www.rust-lang.org/[rust]
+|Rust programming language
+|mise/native
+|Apache-2.0/MIT
+|✓
+|✓
+|
+|✓
+|
+|===
+
+== Shell & Terminal Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://github.com/scop/bash-completion[bash-completion]
+|Programmable completion for bash
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://fishshell.com/[fish]
+|Friendly interactive shell
+|apt
+|GPL-2.0
+|✓
+|
+|✓
+|✓
+|
+
+|link:https://github.com/gokcehan/lf[lf]
+|Fast file manager with vim keys
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://vifm.info/[vifm]
+|Vim-like file manager
+|apt
+|GPL-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://starship.rs/[starship]
+|Cross-shell prompt
+|mise/aqua
+|ISC
+|✓
+|✓
+|✓
+|✓
+|8.0
+
+|link:http://mama.indstate.edu/users/ice/tree/[tree]
+|Directory structure viewer
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://zellij.dev/[zellij]
+|Terminal workspace multiplexer
+|mise/aqua
+|MIT
+|✓
+|✓
+|✓
+|✓
+|7.3
+|===
+
+== Modern CLI Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://github.com/sharkdp/bat[bat]
+|Cat with syntax highlighting
+|mise/aqua
+|Apache-2.0/MIT
+|✓
+|✓
+|✓
+|✓
+|8.3
+
+|link:https://github.com/aristocratos/btop[btop]
+|Resource monitor
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|✓
+|✓
+|7.7
+
+|link:https://github.com/dandavison/delta[delta]
+|Better git diff viewer
+|mise/aqua
+|MIT
+|✓
+|✓
+|✓
+|✓
+|7.7
+
+|link:https://github.com/eza-community/eza[eza]
+|Modern ls replacement
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|7.7
+
+|link:https://github.com/junegunn/fzf[fzf]
+|Fuzzy finder
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|8.3
+
+|link:https://github.com/jorgebucaran/fisher[fisher]
+|Fish plugin manager
+|Fish function
+|MIT
+|✓
+|✓
+|
+|✓
+|6.0
+
+|link:https://github.com/PatrickF1/fzf.fish[fzf.fish]
+|FZF Fish integration with keybindings (Ctrl+R history, Ctrl+Alt+F files, Ctrl+Alt+L git log, etc)
+|Fisher plugin
+|MIT
+|✓
+|
+|
+|✓
+|
+
+|link:https://jqlang.github.io/jq/[jq]
+|JSON processor
+|mise/native
+|MIT
+|✓
+|✓
+|
+|✓
+|8.0
+
+|link:https://github.com/casey/just[just]
+|Command runner
+|mise/aqua
+|CC0-1.0
+|✓
+|✓
+|
+|
+|7.7
+
+|link:https://github.com/mike-engel/jwt-cli[jwt-cli]
+|JWT token tool
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://github.com/jesseduffield/lazygit[lazygit]
+|Terminal UI for git
+|mise/aqua
+|MIT
+|✓
+|✓
+|✓
+|✓
+|8.3
+
+|link:https://pandoc.org/[pandoc]
+|Universal document converter
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|✓
+|
+
+|link:https://www.gnu.org/software/parallel/[parallel]
+|Execute jobs in parallel
+|apt
+|GPL-3.0+
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/BurntSushi/ripgrep[ripgrep]
+|Fast grep alternative
+|mise/aqua
+|MIT/Unlicense
+|✓
+|✓
+|
+|✓
+|9.0
+
+|link:https://www.shellcheck.net/[shellcheck]
+|Shell script linter
+|mise/aqua
+|GPL-3.0
+|✓
+|✓
+|
+|✓
+|7.5
+
+|link:https://github.com/mikefarah/yq[yq]
+|YAML processor
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|7.3
+|===
+
+== Container & Kubernetes Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://argo-cd.readthedocs.io/[argo]
+|ArgoCD CLI
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|7.5
+
+|link:https://buildah.io/[buildah]
+|Container image builder
+|apt
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://github.com/containernetworking/plugins[containernetworking-plugins]
+|CNI network plugins
+|apt
+|Apache-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/docker/compose[docker-compose]
+|Docker Compose
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://k6.io/[k6]
+|Load testing tool
+|mise/aqua
+|AGPL-3.0
+|✓
+|✓
+|
+|
+|7.7
+
+|link:https://k9scli.io/[k9s]
+|Kubernetes TUI manager
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|7.3
+
+|link:https://k3s.io/[k3s]
+|Lightweight Kubernetes distribution
+|script
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://microk8s.io/[microk8s]
+|Lightweight Kubernetes from Canonical
+|apt
+|Apache-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://kubernetes.io/docs/reference/kubectl/[kubectl]
+|Kubernetes CLI (extracted from oc)
+|binary/tar
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://sealed-secrets.netlify.app/[kubeseal]
+|Kubernetes sealed secrets
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|
+|6.3
+
+|link:https://www.openshift.com/[oc]
+|OpenShift CLI
+|binary/tar
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://podman.io/[podman]
+|Container runtime (Docker alternative)
+|apt
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://github.com/containers/skopeo[skopeo]
+|Container image operations
+|apt
+|Apache-2.0
+|✓
+|
+|
+|✓
+|
+
+|link:https://tekton.dev/[tkn]
+|Tekton Pipelines CLI
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|
+|7.3
+|===
+
+== Security & Quality Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://github.com/rhysd/actionlint[actionlint]
+|GitHub Actions linter
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|
+|7.0
+
+|link:https://checkstyle.org/[checkstyle]
+|Java code style checker
+|mise/ubi
+|LGPL-2.1
+|✓
+|✓
+|
+|
+|7.0
+
+|link:https://www.clamav.net/[clamav]
+|Antivirus scanner
+|apt
+|GPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.clamav.net/[clamav-daemon]
+|ClamAV daemon
+|apt
+|GPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/siderolabs/conform[conform]
+|Git commit policy enforcement
+|mise/aqua
+|MPL-2.0
+|✓
+|✓
+|
+|✓
+|
+
+|link:https://github.com/sigstore/cosign[cosign]
+|Container signing and verification
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|8.7
+
+|link:https://github.com/gitleaks/gitleaks[gitleaks]
+|Scan for secrets in git repos
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|7.7
+
+|link:https://github.com/hadolint/hadolint[hadolint]
+|Dockerfile linter
+|mise/aqua
+|GPL-3.0
+|✓
+|✓
+|
+|✓
+|7.3
+
+|link:https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS[libnss3-tools]
+|NSS security tools
+|apt
+|MPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://cisofy.com/lynis/[lynis]
+|Security auditing tool
+|apt
+|GPL-3.0
+|✓
+|
+|
+|
+|
+
+|link:https://launchpad.net/ufw[ufw]
+|Uncomplicated Firewall
+|apt
+|GPL-3.0
+|✓
+|
+|
+|
+|
+
+|link:http://gufw.org/[gufw]
+|Graphical frontend for UFW
+|apt
+|GPL-3.0
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/FiloSottile/mkcert[mkcert]
+|Local development certificates
+|apt
+|BSD-3-Clause
+|✓
+|
+|
+|
+|
+
+|link:https://www.openssh.com/[openssh-client]
+|SSH client
+|apt
+|BSD
+|✓
+|
+|
+|
+|
+
+|link:https://pmd.github.io/[pmd]
+|Source code analyzer
+|mise/github
+|BSD-2-Clause
+|✓
+|✓
+|
+|
+|6.7
+
+|link:https://github.com/italia/publiccode-parser-go[publiccode-parser-go]
+|PublicCode.yml validator
+|mise/github
+|BSD-3-Clause
+|✓
+|✓
+|
+|
+|
+
+|link:https://github.com/ossf/scorecard[scorecard]
+|Security scorecards for OSS
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|8.3
+
+|link:https://github.com/slsa-framework/slsa-verifier[slsa-verifier]
+|SLSA provenance verification
+|mise/github
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|7.7
+
+|link:https://github.com/theseal/ssh-askpass[ssh-askpass]
+|SSH password GUI helper
+|apt
+|BSD
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/anchore/syft[syft]
+|SBOM generator
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|8.3
+
+|link:https://wiki.debian.org/UnattendedUpgrades[unattended-upgrades]
+|Automatic security updates
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/google/yamlfmt[yamlfmt]
+|YAML formatter
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|
+|✓
+|
+|===
+
+== Version Control & Git Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://cli.github.com/[gh]
+|GitHub CLI
+|mise/aqua
+|MIT
+|✓
+|✓
+|
+|✓
+|8.3
+
+|link:https://github.com/orhun/git-cliff[git-cliff]
+|Changelog generator
+|mise/aqua
+|Apache-2.0/MIT
+|✓
+|✓
+|
+|✓
+|7.3
+
+|link:https://gitlab.com/gitlab-org/cli[glab]
+|GitLab CLI
+|mise/ubi
+|MIT
+|✓
+|✓
+|
+|✓
+|7.0
+
+|link:https://github.com/rvben/rumdl[rumdl]
+|Documentation linter
+|mise/ubi
+|MIT
+|✓
+|✓
+|
+|
+|
+
+|link:https://yadm.io/[yadm]
+|Yet Another Dotfiles Manager
+|apt
+|GPL-3.0
+|✓
+|
+|
+|✓
+|6.7
+
+|link:http://w3m.sourceforge.net/[w3m]
+|Text-based web browser
+|apt
+|MIT
+|✓
+|
+|
+|
+|
+|===
+
+== Java Development Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://dbeaver.io/[dbeaver]
+|Universal database tool
+|binary/deb
+|Apache-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.jetbrains.com/toolbox-app/[jetbrains-toolbox]
+|JetBrains IDE manager
+|binary/tar
+|Proprietary
+|✓
+|
+|
+|
+|6.3
+
+|link:https://www.oracle.com/java/technologies/jdk-mission-control.html[jmc]
+|JDK Mission Control (optional)
+|special
+|UPL-1.0
+|✓
+|
+|
+|
+|
+
+|link:https://keystore-explorer.org/[keystore-explorer] (kse)
+|Java KeyStore GUI manager
+|binary/deb
+|GPL-3.0
+|✓
+|
+|
+|
+|
+
+|link:https://visualvm.github.io/[visualvm]
+|Java profiling and monitoring
+|apt
+|GPL-2.0 with Classpath
+|✓
+|
+|
+|
+|
+|===
+
+== Editor & IDE Tools
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://neovim.io/[neovim]
+|Modern vim editor
+|mise/aqua
+|Apache-2.0
+|✓
+|✓
+|✓
+|✓
+|7.7
+|===
+
+== Snap Packages
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://chromium.woolyss.com/[chromium]
+|Chromium web browser
+|snap
+|BSD-3-Clause
+|✓
+|
+|
+|
+|
+
+|link:https://www.mozilla.org/firefox/[firefox]
+|Firefox web browser
+|snap
+|MPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://ghostty.org/[ghostty]
+|GPU-accelerated terminal emulator
+|snap/classic
+|MIT
+|✓
+|
+|✓
+|✓
+|
+|===
+
+== System Utilities
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://github.com/Aorimn/dislocker[dislocker]
+|BitLocker encryption for Linux
+|apt
+|GPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.isc.org/bind/[dnsutils]
+|DNS utilities (dig, nslookup)
+|apt
+|ISC
+|✓
+|
+|
+|
+|
+
+|link:http://e2fsprogs.sourceforge.net/[e2fsprogs]
+|Ext2/3/4 filesystem tools
+|apt
+|GPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://sourceforge.net/projects/pwgen/[pwgen]
+|Password generator
+|apt
+|GPL-2.0
+|✓
+|
+|
+|
+|
+
+|link:https://www.bleachbit.org/[bleachbit]
+|System cleaner and privacy tool
+|apt
+|GPL-3.0
+|✓
+|
+|
+|
+|
+|===
+
+== GUI/Desktop Integration
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://www.freedesktop.org/wiki/Software/desktop-file-utils/[desktop-file-utils]
+|Desktop file utilities
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://gitlab.freedesktop.org/mesa/mesa[libgbm1]
+|Graphics buffer manager
+|apt
+|MIT
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/bugaevc/wl-clipboard[wl-clipboard]
+|Wayland clipboard utilities (conditional on Wayland display server)
+|apt
+|GPL-3.0
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/astrand/xclip[xclip]
+|X11 clipboard tool (conditional on X11 display server)
+|apt
+|GPL-2.0+
+|✓
+|
+|
+|
+|
+
+|link:https://github.com/flatpak/xdg-desktop-portal-gtk[xdg-desktop-portal-gtk]
+|Desktop integration portal
+|apt
+|LGPL-2.1+
+|✓
+|
+|
+|
+|
+
+|link:http://www.vergenet.net/~conrad/software/xsel/[xsel]
+|X11 selection tool (conditional on X11 display server)
+|apt
+|MIT
+|✓
+|
+|
+|
+|
+|===
+
+== Version Management
+
+[cols="2,3,1,2,1,1,1,1,1", options="header"]
+|===
+|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+
+|link:https://mise.jdx.dev/[mise]
+|Multi-runtime version manager
+|special
+|MIT
+|✓
+|✓
+|
+|✓
+|7.7
+|===
+
+=== Source Verification
+Every tool listed has been systematically verified from:
+* `libs/install-apt.sh` - APT package definitions
+* `libs/install-snap.sh` - Snap package definitions
+* `dot/.config/mise/config.toml` - Mise managed tools
+* `libs/install-custom.sh` - Custom installations (LazyVim, JMC)
+* `dot/.config/devbase/custom-tools.yaml` - Custom tool version specifications
+* `dot/.config/devbase/apt-packages.txt` - APT package list
+* `dot/.config/devbase/vscode-extensions.yaml` - VSCode extension specifications
+
+=== Conditional Installations
+Some tools are installed conditionally based on the display server:
+* **Wayland**: `wl-clipboard` is installed if Wayland display server is detected
+* **X11**: `xclip` and `xsel` are installed if X11 display server is detected
+
+
+
+=== Installation Methods Detail
+* **apt**: System package manager (respects APT proxy configuration)
+* **snap**: Snap package (respects snap proxy configuration)
+* **snap/classic**: Snap package with classic confinement
+* **mise/aqua**: Installed via mise using aqua backend (GitHub releases)
+* **mise/ubi**: Installed via mise using ubi backend (Universal Binary Installer)
+* **mise/native**: Installed via mise native backends (node, python, java, go, maven, jq)
+* **mise/github**: Installed via mise directly from GitHub
+* **binary/tar**: Downloaded as tar archive and extracted to ~/.local/bin
+* **binary/deb**: Downloaded as .deb package and installed via dpkg
+* **special**: Custom installation logic (mise self-install, jmc with prompt, lazyvim git clone)

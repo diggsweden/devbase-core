@@ -1,0 +1,60 @@
+[alias]
+  cs = commit --signoff
+  retris = rebase -i --signoff --gpg-sign
+  pull-re = pull --rebase
+  push-force = push --force-with-lease
+  gc-aggressive = !git stash clear && git reflog expire --expire=now --all && git gc --prune=now --aggressive
+  date-now = commit --amend --date=now --no-edit
+
+[apply]
+	whitespace = nowarn
+
+[core]
+	excludesfile = ~/.config/git/.gitignore
+	editor = nvim
+	pager = delta
+
+[delta] # delta pager configuration - theme set via DEVBASE_THEME
+	navigate = true # use n and N to move between diff sections  
+  side-by-side = true
+  features = ${DELTA_FEATURES}
+  syntax-theme = ${DELTA_SYNTAX_THEME}
+  dark = ${DELTA_DARK}
+
+[diff] # enable git to show moved coloring
+    colorMoved = default
+
+[interactive] # needed for delta pager
+	diffFilter = delta --color-only
+
+[include] #include delta themes
+  path = ~/.config/delta/themes.config
+
+[init] # Instead of by default creating the older master convention, auto create modern convention main as default
+	defaultBranch = main
+
+[merge] # Use the improved conflict style
+	conflictstyle = diff3
+
+[mergetool] # don't autocreate .orig files on merge
+	keepBackup = false
+
+[difftool] # dont enable the prompt on every diff call
+	prompt = false
+
+[pager] # lets use delta for diffs
+  diff = delta
+
+[push] # only push the current branch, and refuse to push if upstreams branch differs from current one
+	default = simple
+
+# instead of gpg key, use ssh key for signing (needs git.2.34+ which should come with Ubuntu 22.+)
+# Saves the user of setting up an extra gpg key for signing
+[gpg]
+  format = ssh
+[commit]
+  gpgsign = true
+[tag]
+  gpgsign = true
+[gpg "ssh"] # the sign with ssh standard expects this, it should containt pub keys of people you trust
+  allowedSignersFile = ~/.config/git/allowed_signers
