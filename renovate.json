@@ -4,12 +4,16 @@
     "github>diggsweden/.github//renovate-base.json"
   ],
   "mise": {
-    "fileMatch": ["(^|/)dot/\\.config/mise/config\\.toml$"]
+    "managerFilePatterns": [
+      "/(^|/)dot/\\.config/mise/config\\.toml$/"
+    ]
   },
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(^|/)dot/\\.config/devbase/versions\\.yaml$"],
+      "managerFilePatterns": [
+        "/(^|/)dot/\\.config/devbase/versions\\.yaml$/"
+      ],
       "matchStrings": [
         "[a-z_]+:\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+lookupName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
