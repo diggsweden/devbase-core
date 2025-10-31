@@ -52,4 +52,4 @@ vscode_ext_maven: 0.44.0 # renovate: datasource=npm depName=vscjava.vscode-maven
 vscode_ext_java_pack: 0.29.0 # renovate: datasource=npm depName=vscjava.vscode-java-pack
 vscode_ext_volar: 2.2.8 # renovate: datasource=npm depName=vue.volar
 vscode_ext_neovim: 1.18.13 # renovate: datasource=npm depName=asvetliakov.vscode-neovim
-vscode_ext_sarif_viewer: 3.4.7 # renovate: datasource=npm depName=ms-sarifvscode.sarif-viewer
+vscode_ext_sarif_viewer: 3.4.5 # renovate: datasource=github-releases depName=microsoft/sarif-vscode-extension
