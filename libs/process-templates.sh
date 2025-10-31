@@ -56,7 +56,7 @@ count_custom_overlays() {
     echo 0
     return 0
   }
-  [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES}" ]] && {
+  [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && {
     echo 0
     return 0
   }
@@ -74,7 +74,7 @@ apply_customizations() {
   validate_not_empty "$temp_dotfiles" "temp_dotfiles parameter" || return 1
   validate_dir_exists "$temp_dotfiles" "Temp dotfiles directory" || return 1
 
-  if [[ -n "${DEVBASE_CUSTOM_TEMPLATES}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]]; then
     copy_custom_templates_to_temp "${temp_dotfiles}"
   fi
 
@@ -103,7 +103,7 @@ process_templates_and_tools() {
 # Returns: 0 always
 # Side-effects: Processes custom config files, prints count
 apply_custom_configs() {
-  [[ ! -n "${DEVBASE_CUSTOM_TEMPLATES}" ]] || [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES}" ]] && return 0
+  [[ ! -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] || [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && return 0
 
   show_progress info "Applying custom organization configs..."
   local custom_configs
@@ -647,9 +647,9 @@ process_maven_templates_yaml() {
   fi
 
   # Add custom repos if available
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" ]]; then
+  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/maven-repos.yaml" ]]; then
     local custom_processed="${temp_dir}/maven-repos.yaml"
-    envsubst_preserve_undefined "${DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
+    envsubst_preserve_undefined "${DEVBASE_CUSTOM_TEMPLATES:-}/maven-repos.yaml" "$custom_processed"
     yaml_fragments+=("$custom_processed")
     config_desc="${config_desc:+$config_desc + }custom repos"
   fi
@@ -705,8 +705,8 @@ process_gradle_templates() {
   mkdir -p "${HOME}/.gradle"
 
   # Check custom first, then core
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template" ]]; then
-    template_to_use="${DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template"
+  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/init.gradle.template" ]]; then
+    template_to_use="${DEVBASE_CUSTOM_TEMPLATES:-}/init.gradle.template"
     show_progress info "Configuring Gradle with custom repository settings"
   elif [[ -f "${gradle_templates_dir}/init.gradle.template" ]]; then
     template_to_use="${gradle_templates_dir}/init.gradle.template"
@@ -749,8 +749,8 @@ process_container_templates() {
   fi
 
   # Check custom first, then core
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template" ]]; then
-    template_to_use="${DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template"
+  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/registries.conf.template" ]]; then
+    template_to_use="${DEVBASE_CUSTOM_TEMPLATES:-}/registries.conf.template"
     show_progress info "Configuring container registry with custom settings"
   elif [[ -f "${container_templates_dir}/registries.conf.template" ]]; then
     template_to_use="${container_templates_dir}/registries.conf.template"
@@ -764,7 +764,7 @@ process_container_templates() {
 }
 
 process_custom_templates() {
-  [[ -n "${DEVBASE_CUSTOM_TEMPLATES}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]] || return 0
+  [[ -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]] || return 0
 
   local file_count
   file_count=$(find "${DEVBASE_CUSTOM_TEMPLATES}" -type f -name "*" ! -name "README*" 2>/dev/null | wc -l)

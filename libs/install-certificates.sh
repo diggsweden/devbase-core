@@ -13,7 +13,7 @@ fi
 # Side-effects: Copies certs to system, updates trust store, configures Git
 install_certificates() {
   [[ -z "${DEVBASE_CUSTOM_CERTS:-}" ]] && return 0
-  [[ ! -d "${DEVBASE_CUSTOM_CERTS}" ]] && return 0
+  [[ ! -d "${DEVBASE_CUSTOM_CERTS:-}" ]] && return 0
 
   local cert_src="${DEVBASE_CUSTOM_CERTS}"
 

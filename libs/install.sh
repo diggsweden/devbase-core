@@ -622,14 +622,14 @@ perform_installation() {
   printf "\n%bConfiguring system services...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   configure_system_and_shell
 
-  if [[ -n "${DEVBASE_CUSTOM_HOOKS}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_HOOKS:-}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
     run_custom_hook "post-configuration" || show_progress warning "Post-configuration hook failed"
   fi
 
   printf "\n%bFinalizing installation...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   finalize_installation
 
-  if [[ -n "${DEVBASE_CUSTOM_HOOKS}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_HOOKS:-}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
     run_custom_hook "post-install" || show_progress warning "Post-install hook failed, continuing..."
   fi
 }
@@ -665,7 +665,7 @@ run_custom_hook() {
 
   validate_not_empty "$hook_name" "Hook name" || return 1
 
-  if [[ -z "${DEVBASE_CUSTOM_HOOKS}" ]]; then
+  if [[ -z "${DEVBASE_CUSTOM_HOOKS:-}" ]]; then
     return 0 # No custom hooks directory configured
   fi
 

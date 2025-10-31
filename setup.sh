@@ -232,7 +232,7 @@ find_custom_directory() {
 
 load_environment_configuration() {
   # Determine environment file to use
-  if [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
     _DEVBASE_ENV_FILE="${DEVBASE_CUSTOM_DIR}/config/org.env"
     show_progress step "Using custom environment: ${_DEVBASE_ENV_FILE}"
   else
@@ -354,7 +354,7 @@ display_custom_settings() {
 # Returns: 0 always
 # Side-effects: Displays info message if hooks found
 display_custom_hooks() {
-  [[ ! -d "${DEVBASE_CUSTOM_HOOKS}" ]] && return 0
+  [[ ! -d "${DEVBASE_CUSTOM_HOOKS:-}" ]] && return 0
 
   local hooks=()
   for hook in pre-install post-configuration post-install; do
@@ -370,7 +370,7 @@ display_custom_hooks() {
 # Returns: 0 always
 # Side-effects: Displays info message if proxied hosts found
 display_ssh_proxy_configuration() {
-  [[ ! -f "${DEVBASE_CUSTOM_SSH}/custom.config" ]] && return 0
+  [[ ! -f "${DEVBASE_CUSTOM_SSH:-}/custom.config" ]] && return 0
 
   local ssh_proxied_hosts
   ssh_proxied_hosts=$(awk '/^Host / {host=$2} /ProxyCommand/ && host {print host; host=""}' \
@@ -388,7 +388,7 @@ display_ssh_proxy_configuration() {
 # Returns: 0 always
 # Side-effects: Displays validation status and configuration info
 validate_custom_config() {
-  [[ -z "${DEVBASE_CUSTOM_DIR}" ]] && return 0
+  [[ -z "${DEVBASE_CUSTOM_DIR:-}" ]] && return 0
 
   show_progress step "Validating custom configuration"
 
@@ -401,7 +401,7 @@ validate_custom_config() {
 
 run_pre_install_hook() {
   # Run pre-install hook if it exists (organization-specific)
-  if [[ -f "${DEVBASE_CUSTOM_HOOKS}/pre-install.sh" ]]; then
+  if [[ -f "${DEVBASE_CUSTOM_HOOKS:-}/pre-install.sh" ]]; then
     show_progress step "Running pre-install hook"
     # Run in subprocess for isolation (hooks can't pollute main script)
     bash "${DEVBASE_CUSTOM_HOOKS}/pre-install.sh" || {

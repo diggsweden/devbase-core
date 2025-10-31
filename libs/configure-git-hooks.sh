@@ -27,7 +27,7 @@ configure_git_hooks() {
   local hooks_dir="${XDG_CONFIG_HOME}/git/git-hooks"
   # shellcheck disable=SC2153 # DEVBASE_DOT is exported in setup.sh
   local templates_dir="${DEVBASE_DOT}/.config/git/hooks-templates"
-  local custom_hooks_dir="${DEVBASE_CUSTOM_DIR}/git-hooks"
+  local custom_hooks_dir="${DEVBASE_CUSTOM_DIR:-}/git-hooks"
   local backup_dir="${DEVBASE_BACKUP_DIR}/git-hooks"
 
   # Backup existing hooks if directory exists and contains files
