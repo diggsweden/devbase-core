@@ -1,128 +1,55 @@
 # Tool versions for development environment
+# This file contains ONLY tools NOT managed by mise
+# For mise-managed tools (node, python, aqua packages, etc.), see: ~/.config/mise/config.toml
 # Automatically updated by Renovate Bot
-# Version Manager
+
+# Bootstrap tool (installs itself - must bootstrap before mise can run)
 mise: v2025.9.20 # renovate: datasource=github-releases depName=jdx/mise
-# Core Languages & Runtimes
-nodejs: 20.18.1 # renovate: datasource=node-version
-golang: 1.25.1 # renovate: datasource=golang-version
-python: 3.12 # renovate: datasource=python-version
-java_jdk: temurin-21 # renovate: datasource=adoptium-java
-# Build Tools
-maven: 3.9.6 # renovate: datasource=maven
-gradle: 8.12 # renovate: datasource=gradle-version
-just: 1.42.4 # renovate: datasource=github-releases depName=casey/just
-# Shell & Terminal Tools
-fzf: v0.65.2 # renovate: datasource=github-releases depName=junegunn/fzf
+
+# Fish shell plugins (installed via Fisher, not mise)
 fisher: 4.4.5 # renovate: datasource=github-releases depName=jorgebucaran/fisher
 fzf_fish: v10.3 # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
-eza: v0.23.3 # renovate: datasource=github-releases depName=eza-community/eza
-starship: v1.23.0 # renovate: datasource=github-releases depName=starship/starship
-zellij: v0.43.1 # renovate: datasource=github-releases depName=zellij-org/zellij
+
+# Snap packages (optional GUI tools, not in mise)
 ghostty: 1.2.0 # renovate: datasource=github-releases depName=ghostty-org/ghostty
-# Development Tools
-neovim: v0.11.4 # renovate: datasource=github-releases depName=neovim/neovim
+
+# Neovim config (git ref - commit hash)
 lazyvim_starter: 803bc18 # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter lookupName=main
-delta: 0.18.2 # renovate: datasource=github-releases depName=dandavison/delta
-bat: v0.25.0 # renovate: datasource=github-releases depName=sharkdp/bat
-jq: jq-1.8.1 # renovate: datasource=github-releases depName=jqlang/jq
-yq: v4.47.2 # renovate: datasource=github-releases depName=mikefarah/yq
-jwt-cli: 6.2.0 # renovate: datasource=github-releases depName=mike-engel/jwt-cli
-git-cliff: v2.10.1 # renovate: datasource=github-releases depName=orhun/git-cliff
-# Container & Kubernetes Tools
-docker_compose: v2.39.4 # renovate: datasource=github-releases depName=docker/compose
-k3s: v1.32.4+k3s1 # renovate: datasource=github-releases depName=k3s-io/k3s
-k9s: v0.50.12 # renovate: datasource=github-releases depName=derailed/k9s
-k6: v1.3.0 # renovate: datasource=github-releases depName=grafana/k6
-# OpenShift & CI/CD Tools
-argo: v3.1.7 # renovate: datasource=github-releases depName=argoproj/argo-cd
-kubeseal: v0.32.2 # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
+
+# Custom datasources (not available in mise/aqua)
 oc: 4.15.33 # renovate: datasource=custom depName=openshift/oc
-# tkn: moved to mise config (aqua:tektoncd/cli)
-# Java Tools
+k3s: v1.32.4+k3s1 # renovate: datasource=github-releases depName=k3s-io/k3s
+
+# Java development tools (custom installers with complex logic)
 keystore_explorer: v5.6.0 # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
 jdk_mission_control: 9.0.0 # renovate: datasource=custom depName=oracle/jmc
 dbeaver: 25.2.1 # renovate: datasource=github-releases depName=dbeaver/dbeaver extractVersion=^v?(?<version>\d+\.\d+\.\d+)$
 intellij_idea: 2025.2.3 # renovate: datasource=github-releases depName=JetBrains/intellij-community extractVersion=^idea/(?<version>.+)$
 flyway: 11.15.0 # renovate: datasource=github-releases depName=flyway/flyway extractVersion=^flyway-(?<version>.+)$
-# Code Quality Tools
-pmd: pmd_releases/7.17.0 # renovate: datasource=github-releases depName=pmd/pmd
-checkstyle: checkstyle-11.0.1 # renovate: datasource=github-releases depName=checkstyle/checkstyle
-hadolint: v2.14.0 # renovate: datasource=github-releases depName=hadolint/hadolint
-shellcheck: v0.11.0 # renovate: datasource=github-releases depName=koalaman/shellcheck
-shfmt: v3.8.0 # renovate: datasource=github-releases depName=mvdan/sh
-# Security
-syft: v1.33.0 # renovate: datasource=github-releases depName=anchore/syft
-# lynis: Installed via APT (see libs/install-apt.sh)
-# ufw: Installed via APT (see libs/install-apt.sh)
-scorecard: v5.2.1 # renovate: datasource=github-releases depName=ossf/scorecard
-slsa-verifier: v2.7.1 # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
-rumdl: v0.0.146 # renovate: datasource=github-releases depName=rvben/rumdl
-yamlfmt: v0.17.2 # renovate: datasource=github-releases depName=google/yamlfmt
-actionlint: v1.7.7 # renovate: datasource=github-releases depName=rhysd/actionlint
-gitleaks: v8.18.1 # renovate: datasource=github-releases depName=zricethezav/gitleaks
-conform: v0.1.0-alpha.30 # renovate: datasource=github-releases depName=siderolabs/conform
-publiccode-parser-go: v4.3.7 # renovate: datasource=github-releases depName=italia/publiccode-parser-go
-# Additional Development Tools
-ripgrep: 14.1.1 # renovate: datasource=github-releases depName=BurntSushi/ripgrep
-fd: v10.2.0 # renovate: datasource=github-releases depName=sharkdp/fd
-tlrc: v1.9.3 # renovate: datasource=github-releases depName=tldr-pages/tlrc
-lazygit: v0.55.1 # renovate: datasource=github-releases depName=jesseduffield/lazygit
-btop: v1.4.5 # renovate: datasource=github-releases depName=aristocratos/btop
-gh: v2.80.0 # renovate: datasource=github-releases depName=cli/cli
-glab: v1.68.0 # renovate: datasource=gitlab-releases depName=gitlab-org/cli
-# File Managers
-lf: r38 # renovate: datasource=github-releases depName=gokcehan/lf
-# VSCode
-vscode: 1.105.1 # renovate: datasource=github-releases packageName=microsoft/vscode
-# VSCode Extensions - Documentation
-# AsciiDoc support for writing technical documentation
-vscode_ext_asciidoctor: 3.4.2 # renovate: datasource=npm packageName=asciidoctor.asciidoctor-vscode
-# Tailwind CSS IntelliSense for utility-first CSS framework
-vscode_ext_tailwindcss: 0.14.11 # renovate: datasource=npm packageName=bradlc.vscode-tailwindcss
-# ESLint integration for JavaScript/TypeScript linting
-vscode_ext_eslint: 3.0.10 # renovate: datasource=npm packageName=dbaeumer.vscode-eslint
-# Prettier code formatter for consistent code style
-vscode_ext_prettier: 11.0.0 # renovate: datasource=npm packageName=esbenp.prettier-vscode
-# i18n Ally for internationalization (i18n) management
-vscode_ext_i18n_ally: 2.13.1 # renovate: datasource=npm packageName=lokalise.i18n-ally
-# VSCode Extensions - Themes & Icons
-# Material Icon Theme for enhanced file/folder icons
-vscode_ext_material_icons: 5.20.0 # renovate: datasource=npm packageName=pkief.material-icon-theme
-# Everforest theme (dark/light warm forest color scheme)
-vscode_ext_everforest: 0.3.0 # renovate: datasource=npm packageName=sainnhe.everforest
-# Catppuccin theme (pastel color scheme)
-vscode_ext_catppuccin: 3.20.0 # renovate: datasource=npm packageName=catppuccin.catppuccin-vsc
-# Tokyo Night theme (dark/light vibrant color scheme)
-vscode_ext_tokyonight: 1.0.6 # renovate: datasource=npm packageName=enkia.tokyo-night
-# Gruvbox theme (retro warm color scheme)
-vscode_ext_gruvbox: 1.18.0 # renovate: datasource=npm packageName=jdinhlife.gruvbox
-# VSCode Extensions - Java Development
-# Java language support (Red Hat)
-vscode_ext_java: 1.40.0 # renovate: datasource=npm packageName=redhat.java
-# YAML language support with schema validation
-vscode_ext_yaml: 1.17.0 # renovate: datasource=npm packageName=redhat.vscode-yaml
-# Checkstyle integration for Java code style checking
-vscode_ext_checkstyle: 1.4.2 # renovate: datasource=npm packageName=shengchen.vscode-checkstyle
-# SonarLint for code quality and security analysis
-vscode_ext_sonarlint: 4.18.0 # renovate: datasource=npm packageName=sonarsource.sonarlint-vscode
-# Java debugger support
-vscode_ext_java_debug: 0.58.1 # renovate: datasource=npm packageName=vscjava.vscode-java-debug
-# Java project dependency viewer
-vscode_ext_java_dependency: 0.24.1 # renovate: datasource=npm packageName=vscjava.vscode-java-dependency
-# Java test runner integration (JUnit/TestNG)
-vscode_ext_java_test: 0.43.0 # renovate: datasource=npm packageName=vscjava.vscode-java-test
-# Maven build tool support
-vscode_ext_maven: 0.44.0 # renovate: datasource=npm packageName=vscjava.vscode-maven
-# Java Extension Pack (bundles multiple Java extensions)
-vscode_ext_java_pack: 0.29.0 # renovate: datasource=npm packageName=vscjava.vscode-java-pack
-# VSCode Extensions - Frontend Development
-# Vue.js language support (Volar)
-vscode_ext_volar: 2.2.8 # renovate: datasource=npm packageName=vue.volar
-# VSCode Extensions - Editor Enhancement
-# Neovim integration for Vim keybindings and modal editing
-vscode_ext_neovim: 1.18.13 # renovate: datasource=npm packageName=asvetliakov.vscode-neovim
-# VSCode Extensions - Security & Analysis
-# SARIF Viewer for viewing static analysis results
-vscode_ext_sarif_viewer: 3.4.7 # renovate: datasource=npm packageName=MS-SarifVSCode.sarif-viewer
 
-# Templates processed using envsubst (built-in)
+# VS Code (custom installer with WSL-specific logic)
+vscode: 1.105.1 # renovate: datasource=github-releases depName=microsoft/vscode
+
+# VS Code Extensions (installed via setup-vscode.sh)
+vscode_ext_asciidoctor: 3.4.2 # renovate: datasource=npm depName=asciidoctor.asciidoctor-vscode
+vscode_ext_tailwindcss: 0.14.11 # renovate: datasource=npm depName=bradlc.vscode-tailwindcss
+vscode_ext_eslint: 3.0.10 # renovate: datasource=npm depName=dbaeumer.vscode-eslint
+vscode_ext_prettier: 11.0.0 # renovate: datasource=npm depName=esbenp.prettier-vscode
+vscode_ext_i18n_ally: 2.13.1 # renovate: datasource=npm depName=lokalise.i18n-ally
+vscode_ext_material_icons: 5.20.0 # renovate: datasource=npm depName=pkief.material-icon-theme
+vscode_ext_everforest: 0.3.0 # renovate: datasource=npm depName=sainnhe.everforest
+vscode_ext_catppuccin: 3.20.0 # renovate: datasource=npm depName=catppuccin.catppuccin-vsc
+vscode_ext_tokyonight: 1.0.6 # renovate: datasource=npm depName=enkia.tokyo-night
+vscode_ext_gruvbox: 1.18.0 # renovate: datasource=npm depName=jdinhlife.gruvbox
+vscode_ext_java: 1.40.0 # renovate: datasource=npm depName=redhat.java
+vscode_ext_yaml: 1.17.0 # renovate: datasource=npm depName=redhat.vscode-yaml
+vscode_ext_checkstyle: 1.4.2 # renovate: datasource=npm depName=shengchen.vscode-checkstyle
+vscode_ext_sonarlint: 4.18.0 # renovate: datasource=npm depName=sonarsource.sonarlint-vscode
+vscode_ext_java_debug: 0.58.1 # renovate: datasource=npm depName=vscjava.vscode-java-debug
+vscode_ext_java_dependency: 0.24.1 # renovate: datasource=npm depName=vscjava.vscode-java-dependency
+vscode_ext_java_test: 0.43.0 # renovate: datasource=npm depName=vscjava.vscode-java-test
+vscode_ext_maven: 0.44.0 # renovate: datasource=npm depName=vscjava.vscode-maven
+vscode_ext_java_pack: 0.29.0 # renovate: datasource=npm depName=vscjava.vscode-java-pack
+vscode_ext_volar: 2.2.8 # renovate: datasource=npm depName=vue.volar
+vscode_ext_neovim: 1.18.13 # renovate: datasource=npm depName=asvetliakov.vscode-neovim
+vscode_ext_sarif_viewer: 3.4.7 # renovate: datasource=npm depName=MS-SarifVSCode.sarif-viewer

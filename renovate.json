@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>diggsweden/.github//renovate-base.json"
+  ],
+  "mise": {
+    "fileMatch": ["^dot/\\.config/mise/config\\.toml$"]
+  },
+  "regexManagers": [
+    {
+      "description": "All tools in versions.yaml (consistent format)",
+      "fileMatch": ["^dot/\\.config/devbase/versions\\.yaml$"],
+      "matchStrings": [
+        "\\s*(?<depName>\\w+):\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<packageName>\\S+)(?:\\s+lookupName=(?<lookupName>\\S+))?(?:\\s+extractVersion=(?<extractVersion>.+?))?\\s*$"
+      ],
+      "depNameTemplate": "{{{packageName}}}"
+    }
+  ]
+}
