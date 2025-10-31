@@ -9,9 +9,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["(^|/)dot/\\.config/devbase/versions\\.yaml$"],
+      "fileMatch": ["(^|/)dot/\\.config/devbase/versions\\.yaml$"],
       "matchStrings": [
-        "(?<depName>\\w+):\\s*(?<currentValue>\\S+)\\s*#\\s*renovate:\\s*datasource=(?<datasource>\\S+)(?:\\s+depName=(?<packageName>\\S+))?(?:\\s+lookupName=(?<lookupName>\\S+))?(?:\\s+extractVersion=(?<extractVersion>\\S+))?"
+        "[a-z_]+:\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+lookupName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
     }
   ]
