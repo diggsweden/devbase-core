@@ -141,6 +141,9 @@ verify_mise_checksum() {
     return 0
   fi
 
+  # Strip 'v' prefix if present
+  version="${version#v}"
+
   local checksums_url="https://github.com/jdx/mise/releases/download/v${version}/SHASUMS256.txt"
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
@@ -210,6 +213,9 @@ install_mise() {
 
     mise_path="${HOME}/.local/bin/mise"
   fi
+
+  # Add mise binary directory to PATH first
+  export PATH="${HOME}/.local/bin:${PATH}"
 
   # Use shims instead of activating mise directly
   export PATH="${HOME}/.local/share/mise/shims:${PATH}"
