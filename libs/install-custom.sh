@@ -41,6 +41,30 @@ get_vscode_checksum() {
   return 1
 }
 
+# Brief: Fetch OpenShift CLI package SHA256 checksum from official mirror
+# Params: $1 - version (e.g. "4.15.33")
+# Uses: validate_not_empty (function)
+# Returns: 0 with checksum on stdout if found, 1 if not found
+# Side-effects: Makes curl request to mirror.openshift.com
+get_oc_checksum() {
+  local version="$1"
+  
+  validate_not_empty "$version" "OpenShift version" || return 1
+  
+  local checksum_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${version}/sha256sum.txt"
+  local checksum
+  
+  # Download checksum file and extract the checksum for openshift-client-linux tarball
+  if checksum=$(curl -fsSL "$checksum_url" 2>/dev/null | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}' 2>/dev/null); then
+    if [[ -n "$checksum" ]]; then
+      echo "$checksum"
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
 # Brief: Install LazyVim Neovim configuration with theme integration
 # Params: None
 # Uses: XDG_CONFIG_HOME, DEVBASE_THEME, DEVBASE_DOT, TOOL_VERSIONS, validate_var_set, show_progress, envsubst_preserve_undefined (globals/functions)
@@ -184,10 +208,16 @@ install_oc_kubectl() {
   show_progress info "Installing OpenShift CLI (oc) and kubectl..."
   local oc_version="${TOOL_VERSIONS[oc]}"
   local oc_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${oc_version}/openshift-client-linux.tar.gz"
-  local oc_checksum_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${oc_version}/sha256sum.txt"
   local oc_tar="${_DEVBASE_TEMP}/openshift-client.tar.gz"
 
-  if retry_command download_file "$oc_url" "$oc_tar" "$oc_checksum_url"; then
+  # Get expected checksum using helper function
+  local expected_checksum=""
+  if ! expected_checksum=$(get_oc_checksum "$oc_version"); then
+    show_progress warning "Could not fetch OpenShift CLI checksum"
+    expected_checksum=""
+  fi
+
+  if retry_command download_file "$oc_url" "$oc_tar" "" "$expected_checksum"; then
     tar -C "${_DEVBASE_TEMP}" -xzf "$oc_tar"
 
     if [[ -f "${_DEVBASE_TEMP}/oc" ]]; then
@@ -202,7 +232,14 @@ install_oc_kubectl() {
       show_progress success "kubectl installed"
     fi
   else
-    show_progress warning "OpenShift CLI download failed - skipping"
+    # Check if failure was due to checksum mismatch (security issue) vs download failure
+    if [[ -n "$expected_checksum" ]] && [[ ! -f "$oc_tar" ]]; then
+      show_progress error "OpenShift CLI download/verification FAILED - SECURITY RISK"
+      show_progress warning "Possible causes: MITM attack, corrupted mirror, or network issue"
+      show_progress warning "Skipping OpenShift CLI installation for safety"
+    else
+      show_progress warning "OpenShift CLI download failed - skipping"
+    fi
   fi
 }
 
@@ -447,7 +484,14 @@ install_vscode() {
         cp "$vscode_deb" "${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
       fi
     else
-      show_progress warning "VS Code download failed - skipping"
+      # Check if failure was due to checksum mismatch (security issue)
+      if [[ -n "$vscode_checksum" ]] && [[ ! -f "$vscode_deb" ]]; then
+        show_progress error "VS Code download/verification FAILED - SECURITY RISK"
+        show_progress warning "Possible causes: MITM attack, corrupted mirror, or network issue"
+        show_progress warning "Skipping VS Code installation for safety"
+      else
+        show_progress warning "VS Code download failed - skipping"
+      fi
       return 1
     fi
   fi

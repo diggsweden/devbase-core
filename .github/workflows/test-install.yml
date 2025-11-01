@@ -17,10 +17,10 @@ jobs:
         version: ['24.04']
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       
       - name: Cache Mise tools
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.local/share/mise/installs
@@ -30,7 +30,7 @@ jobs:
             mise-${{ runner.os }}-
       
       - name: Cache VS Code extensions
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             ~/.vscode/extensions
@@ -40,7 +40,7 @@ jobs:
             vscode-ext-${{ runner.os }}-
       
       - name: Cache binary downloads
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: ~/.cache/devbase/debs
           key: binary-downloads-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/versions.yaml') }}
@@ -66,7 +66,7 @@ jobs:
           ./verify/verify-install-check.sh
       - name: Upload installation summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: install-summary-${{ matrix.version }}
           path: ~/.config/devbase/install-summary.txt

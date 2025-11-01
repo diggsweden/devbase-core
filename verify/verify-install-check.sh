@@ -1291,16 +1291,16 @@ check_apt_packages() {
 check_mise_tools() {
   print_subheader "Mise Tools"
 
-  # Read expected tools from versions.yaml
-  local versions_file="$DEVBASE_CONFIG/versions.yaml"
-  if ! file_exists "$versions_file"; then
-    versions_file="${DEVBASE_ROOT:-$(pwd)}/dot/.config/devbase/versions.yaml"
+  # Read expected tools from mise config.toml (not versions.yaml)
+  local mise_config="$CONFIG_HOME/mise/config.toml"
+  if ! file_exists "$mise_config"; then
+    mise_config="${DEVBASE_ROOT:-$(pwd)}/dot/.config/mise/config.toml"
   fi
 
   local mise_installed=0
   local mise_total=0
 
-  if file_exists "$versions_file" && command -v mise &>/dev/null; then
+  if file_exists "$mise_config" && command -v mise &>/dev/null; then
     # Get installed mise tools formatted as "tool@version"
     local installed_tools=$(mise list 2>/dev/null |
       awk '{print $1 "@" $2}')
@@ -1309,36 +1309,34 @@ check_mise_tools() {
     declare -A tool_info
     declare -a tool_names
 
-    # Parse versions.yaml for expected tools
-    # Format: "toolname: version # optional comment"
-    while IFS=: read -r tool version_line; do
-      # Skip comments and empty lines
-      [[ "$tool" =~ ^#.*$ ]] && continue
+    # Parse config.toml for expected tools
+    # Format: tool = "version" OR "prefix:org/tool" = "version"
+    while IFS='=' read -r tool_spec version_spec; do
+      # Skip comments, empty lines, and config settings
+      [[ "$tool_spec" =~ ^#.*$ ]] && continue
+      [[ -z "$tool_spec" ]] && continue
+      [[ "$tool_spec" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
+
+      # Clean up tool_spec (handle quotes and brackets)
+      local tool=$(echo "$tool_spec" | tr -d '"' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
+      # Clean up version_spec (handle quotes and comments)
+      local expected_version=$(echo "$version_spec" | tr -d '"' | awk '{print $1}' | sed 's/^[[:space:]]*//')
+
+      # Extract short name from aqua/ubi/github prefixes
+      # "aqua:org/tool" -> "tool"
+      # "ubi:tool/tool[options]" -> "tool"  
+      # "github:org/tool" -> "tool"
+      if [[ "$tool" =~ : ]]; then
+        tool=$(echo "$tool" | sed 's/.*://' | sed 's/.*\///' | sed 's/\[.*//')
+      fi
+
+      # Skip empty or invalid entries
       [[ -z "$tool" ]] && continue
-
-      # Clean up tool name and extract version (first field, trimmed)
-      tool=$(echo "$tool" | xargs)
-      local expected_version=$(awk '{print $1}' <<<"$version_line" | xargs)
-
-      # Skip VS Code extensions and non-mise tools (custom installs)
-      case "$tool" in
-      vscode_ext_* | vscode | jdk_mission_control | keystore_explorer | dbeaver | ghostty | firefox | chromium | lazyvim_starter | tkn | mise | intellij_idea | fisher | fzf_fish)
-        continue
-        ;;
-      # Map versions.yaml names to mise tool names
-      nodejs) tool="node" ;;
-      golang) tool="go" ;;
-      java_jdk) tool="java" ;;
-      docker_compose) tool="compose" ;;
-      esac
+      [[ -z "$expected_version" ]] && continue
 
       tool_info["$tool"]="$expected_version"
       tool_names+=("$tool")
-      # Read tool definitions from versions.yaml (excluding comments and VSCode extensions)
-      # Format: toolname: version
-    done < <(grep -E "^[a-z_]+:" "$versions_file" |
-      grep -v "^#" |
-      grep -v "^vscode_ext_")
+    done < <(grep -E "^[a-z\"]+.*=" "$mise_config" | grep -v "^#")
 
     # Sort tool names
     local sorted_tools
@@ -1477,6 +1475,15 @@ check_custom_tools() {
     custom_installed=$((custom_installed + 1))
   else
     print_check "info" "KeyStore Explorer (optional, not installed)"
+  fi
+
+  # OpenShift CLI (oc) and kubectl
+  custom_total=$((custom_total + 1))
+  if has_command "oc" && has_command "kubectl"; then
+    print_check "pass" "OpenShift CLI (oc) and kubectl"
+    custom_installed=$((custom_installed + 1))
+  else
+    print_check "info" "OpenShift CLI (oc) and kubectl (optional, not installed)"
   fi
 
   CUSTOM_INSTALLED_COUNT=$custom_installed

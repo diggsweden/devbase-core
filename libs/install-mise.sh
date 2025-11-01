@@ -269,39 +269,57 @@ install_mise_tools() {
   tools_before=${tools_before:-0}
   tools_to_install=${tools_to_install:-0}
 
-  run_mise_from_home_dir install --yes
+  # Capture stderr to check for checksum failures
+  local mise_stderr="${_DEVBASE_TEMP}/mise_install_stderr.txt"
+  run_mise_from_home_dir install --yes 2>"$mise_stderr"
   local mise_status=$?
 
-  if [[ $mise_status -eq 0 ]]; then
-    local total_tools
-    total_tools=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
-
-    local critical_tools=("node" "python" "go" "java")
-    local verified_count=0
-    local missing=()
-
-    for tool in "${critical_tools[@]}"; do
-      if run_mise_from_home_dir which "$tool" &>/dev/null; then
-        verified_count=$((verified_count + 1))
-      else
-        missing+=("$tool")
-      fi
-    done
-
-    if [[ ${#missing[@]} -gt 0 ]]; then
-      die "Missing critical tools: ${missing[*]}"
-    else
-      local msg="Development tools ready ($total_tools total"
-      [[ $tools_to_install -gt 0 ]] && msg="${msg}, $tools_to_install new"
-      [[ $tools_before -gt 0 ]] && msg="${msg}, $tools_before cached"
-      [[ $verified_count -gt 0 ]] && msg="${msg}, $verified_count runtimes verified"
-      msg="${msg})"
-      printf "\n"
-      show_progress success "$msg"
-    fi
-  else
-    die "Failed to install required development tools"
+  # Check for checksum failures in stderr - these are SECURITY CRITICAL
+  if grep -iE "(checksum|sha256|hash).*(mismatch|fail|invalid|incorrect)" "$mise_stderr" 2>/dev/null; then
+    echo "" >&2
+    show_progress error "SECURITY: Checksum verification failed during mise tool installation" >&2
+    show_progress warning "This indicates potential security risks:" >&2
+    show_progress warning "  - Man-in-the-middle attack" >&2
+    show_progress warning "  - Corrupted download mirror" >&2
+    show_progress warning "  - Tampered package" >&2
+    echo "" >&2
+    show_progress info "Error details:" >&2
+    cat "$mise_stderr" >&2
+    die "Aborting installation due to checksum verification failure"
   fi
+
+  # Verify critical tools are present
+  local critical_tools=("node" "python" "go" "java")
+  local verified_count=0
+  local missing=()
+
+  for tool in "${critical_tools[@]}"; do
+    if run_mise_from_home_dir which "$tool" &>/dev/null; then
+      verified_count=$((verified_count + 1))
+    else
+      missing+=("$tool")
+    fi
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    die "Missing critical development tools: ${missing[*]}"
+  fi
+
+  # Show summary
+  local total_tools
+  total_tools=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
+  
+  if [[ $mise_status -ne 0 ]]; then
+    show_progress warning "Some optional mise tools failed to install (non-critical)"
+  fi
+
+  local msg="Development tools ready ($total_tools total"
+  [[ $tools_to_install -gt 0 ]] && msg="${msg}, $tools_to_install new"
+  [[ $tools_before -gt 0 ]] && msg="${msg}, $tools_before cached"
+  [[ $verified_count -gt 0 ]] && msg="${msg}, $verified_count runtimes verified"
+  msg="${msg})"
+  printf "\n"
+  show_progress success "$msg"
 }
 
 # Brief: Install mise and all development tools (main entry point)
