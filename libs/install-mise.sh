@@ -178,7 +178,7 @@ verify_mise_checksum() {
 # Params: None
 # Uses: _DEVBASE_TEMP, HOME (globals)
 # Returns: 0 on success, calls die() on failure
-# Side-effects: Downloads and installs mise, configures shims
+# Side-effects: Downloads and installs mise, activates it for current shell
 install_mise() {
   show_progress info "Installing mise (tool version manager)..."
 
@@ -230,18 +230,20 @@ install_mise() {
   # Add mise binary directory to PATH first
   export PATH="${HOME}/.local/bin:${PATH}"
 
-  # Use shims instead of activating mise directly
-  export PATH="${HOME}/.local/share/mise/shims:${PATH}"
-
-  if ! command_exists mise; then
-    die "Mise installation failed - not found in PATH"
+  # Activate mise for current shell session
+  # This sets up PATH and environment properly
+  if [[ -x "${HOME}/.local/bin/mise" ]]; then
+    eval "$("${HOME}/.local/bin/mise" activate bash)"
+  else
+    die "Mise installation failed - binary not found at ${HOME}/.local/bin/mise"
   fi
 
-  mise trust --all || true
+  # Verify mise is now in PATH
+  if ! command -v mise &>/dev/null; then
+    die "Mise installation failed - not found in PATH after activation"
+  fi
 
-  # Ensure shims are created
-  run_mise_from_home_dir reshim
-  show_progress success "Mise ready at $mise_path with shims"
+  show_progress success "Mise ready at $mise_path"
 }
 
 install_mise_tools() {
@@ -253,6 +255,9 @@ install_mise_tools() {
   else
     die "Mise config not found in ${DEVBASE_DOT}/.config/mise/config.toml"
   fi
+
+  # Trust the config file we just copied
+  mise trust --all || true
 
   local tools_before
   tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
