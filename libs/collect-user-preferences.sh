@@ -29,8 +29,9 @@ setup_non_interactive_mode() {
     chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  export GIT_NAME="${GIT_NAME:-DevBase User}"
-  export GIT_EMAIL="${GIT_EMAIL:-$USER@$(hostname)}"
+  export DEVBASE_GIT_AUTHOR="${GIT_NAME:-DevBase User}"
+  export DEVBASE_GIT_EMAIL="${GIT_EMAIL:-$USER@$(hostname)}"
+  export DEVBASE_GIT_DEFAULT_BRANCH="${DEVBASE_GIT_DEFAULT_BRANCH:-main}"
   export EDITOR_CHOICE="${EDITOR_CHOICE:-nvim}"
   export DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}"
   export DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"
@@ -39,8 +40,8 @@ setup_non_interactive_mode() {
   export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
   export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
 
-  printf "  Git Name: %s\n" "$GIT_NAME"
-  printf "  Git Email: %s\n" "$GIT_EMAIL"
+  printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
+  printf "  Git Email: %s\n" "$DEVBASE_GIT_EMAIL"
   printf "  Theme: %s\n" "$DEVBASE_THEME"
   printf "  Environment: %s\n" "$DEVBASE_ENV_NAME"
   if [[ "${GENERATED_SSH_PASSPHRASE:-false}" == "true" ]]; then
