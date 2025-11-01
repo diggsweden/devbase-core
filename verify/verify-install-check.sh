@@ -1199,16 +1199,20 @@ check_shell_integrations() {
       "Starship integrated with fish (~/.config/fish/config.fish)" \
       "Starship not integrated with fish" "warn"
 
-    # Check Zellij autostart configuration (now in config.fish)
-    if grep -q 'DEVBASE_ZELLIJ_AUTOSTART' "$FISH_CONFIG" 2>/dev/null; then
-      # Check the actual environment variable
-      if [[ "${DEVBASE_ZELLIJ_AUTOSTART:-}" == "true" ]]; then
-        print_check "pass" "Zellij autostart enabled in ~/.config/fish/config.fish"
+    # Check Zellij autostart configuration (set in 00-environment.fish)
+    local env_fish="$CONFIG_HOME/fish/conf.d/00-environment.fish"
+    if [[ -f "$env_fish" ]]; then
+      # Read the actual value from the generated config
+      local zellij_autostart
+      zellij_autostart=$(grep 'set -gx DEVBASE_ZELLIJ_AUTOSTART' "$env_fish" 2>/dev/null | awk '{print $4}' | tr -d '"')
+      
+      if [[ "$zellij_autostart" == "true" ]]; then
+        print_check "pass" "Zellij autostart enabled"
       else
-        print_check "info" "Zellij autostart disabled (DEVBASE_ZELLIJ_AUTOSTART=${DEVBASE_ZELLIJ_AUTOSTART:-not set})"
+        print_check "info" "Zellij autostart disabled (DEVBASE_ZELLIJ_AUTOSTART=$zellij_autostart)"
       fi
     else
-      print_check "warn" "Zellij autostart not configured in ~/.config/fish/config.fish"
+      print_check "warn" "Zellij autostart not configured (00-environment.fish not found)"
     fi
 
     # Check if fish functions exist

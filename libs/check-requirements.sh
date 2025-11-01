@@ -91,6 +91,40 @@ is_wsl() {
   return 1
 }
 
+# Brief: Get WSL version if running on WSL
+# Params: None
+# Returns: Echoes WSL version (e.g. "2.6.0") or empty string if not WSL or cannot determine
+# Side-effects: Calls wsl.exe on Windows to get version
+get_wsl_version() {
+  if ! is_wsl; then
+    echo ""
+    return 0
+  fi
+
+  # Try to get WSL version from wsl.exe --version
+  if [[ -x /mnt/c/Windows/System32/wsl.exe ]]; then
+    local wsl_version_output
+    wsl_version_output=$(/mnt/c/Windows/System32/wsl.exe --version 2>/dev/null | grep "WSL version:" | head -1 | awk '{print $3}' | tr -d '\r')
+    if [[ -n "$wsl_version_output" ]]; then
+      echo "$wsl_version_output"
+      return 0
+    fi
+  fi
+
+  # Fallback: check kernel for WSL2 vs WSL1
+  local kernel_version
+  kernel_version=$(uname -r 2>/dev/null || echo "")
+  
+  if [[ "$kernel_version" =~ WSL2|microsoft-standard-WSL2 ]]; then
+    echo "2.0.0"  # Unknown WSL2 version, assume 2.0.0
+    return 0
+  fi
+
+  # If on WSL but no WSL2 indicators, assume WSL1
+  echo "1.0.0"
+  return 0
+}
+
 # Brief: Check if running on Ubuntu Linux
 # Params: None
 # Uses: get_os_type (function)
@@ -166,6 +200,26 @@ detect_environment() {
 
   if is_wsl; then
     export _DEVBASE_ENV="wsl-ubuntu"
+    
+    # Check WSL version and require >= 2.6.0
+    local wsl_version
+    wsl_version=$(get_wsl_version)
+    
+    if [[ -n "$wsl_version" ]]; then
+      local major minor
+      major=$(echo "$wsl_version" | cut -d. -f1)
+      minor=$(echo "$wsl_version" | cut -d. -f2)
+      
+      if [[ "$major" -lt 2 ]] || { [[ "$major" -eq 2 ]] && [[ "$minor" -lt 6 ]]; }; then
+        show_progress error "WSL version $wsl_version detected - version 2.6.0 or higher is required"
+        show_progress info "To upgrade WSL, run in Windows PowerShell:"
+        show_progress info "  wsl --update"
+        show_progress info "Then restart your WSL distribution"
+        show_progress info "See: https://learn.microsoft.com/en-us/windows/wsl/install"
+        printf "\n"
+        die "WSL version too old. Please upgrade to WSL 2.6.0 or higher and try again."
+      fi
+    fi
   else
     export _DEVBASE_ENV="ubuntu"
   fi
@@ -357,6 +411,7 @@ export -f get_os_version
 export -f get_os_name
 export -f get_os_version_full
 export -f is_wsl
+export -f get_wsl_version
 export -f is_ubuntu
 export -f display_os_info
 export -f check_required_tools
