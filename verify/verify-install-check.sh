@@ -1599,9 +1599,18 @@ check_vscode_extensions() {
     fi
   fi
 
-  # Fallback 2: List extension directories directly (works in su -l sessions where Windows PATH isn't available)
+  # Fallback 2: List extension directories directly from vscode-server (works in su -l sessions where Windows PATH isn't available)
   if [[ -z "$installed_extensions" ]] && [[ -d "$HOME/.vscode-server/extensions" ]]; then
     installed_extensions=$(ls -1 "$HOME/.vscode-server/extensions" 2>/dev/null | 
+      grep -v "^extensions.json$" | 
+      sed 's/-[0-9].*//' | 
+      sort -u)
+    [[ -n "$installed_extensions" ]] && extensions_found_via_fallback=true
+  fi
+
+  # Fallback 3: List extension directories from native VS Code install (~/.vscode/extensions)
+  if [[ -z "$installed_extensions" ]] && [[ -d "$HOME/.vscode/extensions" ]]; then
+    installed_extensions=$(ls -1 "$HOME/.vscode/extensions" 2>/dev/null | 
       grep -v "^extensions.json$" | 
       sed 's/-[0-9].*//' | 
       sort -u)
