@@ -368,7 +368,7 @@ install_vscode_extensions() {
   while IFS=: read -r key version_line; do
     if [[ "$key" =~ ^vscode_ext_ ]]; then
       local ext_id
-      ext_id=$(echo "$version_line" | grep -o 'packageName=[^ ]*' | cut -d= -f2)
+      ext_id=$(echo "$version_line" | grep -o 'depName=[^ ]*' | cut -d= -f2)
 
       if [[ -n "$ext_id" ]]; then
         local ext_desc
