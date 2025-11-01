@@ -168,7 +168,9 @@ devbase_files/          # Additional resources (systemd units, fish functions)
 environments/           # Environment variable templates
 docs/                   # Documentation (AsciiDoc)
 verify/                 # Verification scripts
-development/            # Development utilities (just recipes)
+development/            # Development utilities
+  just/                 # Just task runner recipes (linters, checks)
+  devcerts/             # Local development certificates (mkcert)
 ----
 
 === Scripts (libs/)

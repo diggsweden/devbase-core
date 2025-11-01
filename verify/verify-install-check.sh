@@ -641,6 +641,8 @@ check_user_directories() {
     "$DEV_HOME/bitbucket.org"
     "$DEV_HOME/codeberg.org"
     "$DEV_HOME/code.europa.eu"
+    "$DEV_HOME/just"
+    "$DEV_HOME/devcerts"
     "$NOTES_HOME"
     "$MAVEN_HOME"
     "$GRADLE_HOME"

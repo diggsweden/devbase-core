@@ -52,7 +52,12 @@ set -gx STARSHIP_CONFIG "$XDG_CONFIG_HOME/starship/starship.toml"
 
 # Runtime theme variables (for apps that read from environment)
 set -gx BAT_THEME "${BAT_THEME}"
-set -gx FZF_DEFAULT_OPTS "${FZF_DEFAULT_OPTS}"
+
+# FZF theme colors - apply on shell startup based on DEVBASE_THEME
+# Uses set-fzf-theme function to apply theme-specific color palettes
+if functions -q set-fzf-theme; and test -n "$DEVBASE_THEME"
+    set-fzf-theme
+end
 
 # Zellij auto-start configuration
 set -gx DEVBASE_ZELLIJ_AUTOSTART "${DEVBASE_ZELLIJ_AUTOSTART}"

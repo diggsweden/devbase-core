@@ -1760,15 +1760,14 @@ Enables testing HTTPS locally without self-signed certificate errors or security
 
 #### Mkcert Key Commands
 
-- **Create cert**: `mkcert example.com "*.example.com"`
-- **Create for localhost**: `mkcert localhost 127.0.0.1`
-- **Install CA**: `mkcert -install`
-- **PKCS12 format**: `mkcert -pkcs12 example.com`
-- **Show CA location**: `mkcert -CAROOT`
-
-**Learn more**:
-
-- Documentation: [Mkcert Documentation](https://github.com/FiloSottile/mkcert)
+- **Install CA** (one-time): `mkcert -install`
+- **Create cert** (run from `~/development/devcerts/`):
+  - `mkcert localhost 127.0.0.1`
+  - `mkcert example.com "*.example.com"`
+  - `mkcert -pkcs12 localhost` (for Java/Spring Boot)
+- **Note**: mkcert creates files in current directory 
+- Documentation: [Mkcert GitHub](https://github.com/FiloSottile/mkcert)
+- Man page: `man mkcert`
 - Examples: `tldr mkcert`
 
 ### PMD
