@@ -351,12 +351,8 @@ apply_configurations() {
   # Setup VS Code extensions if VS Code is installed or available
   # On WSL: installs Remote-WSL extension and sets up vscode-server extensions
   # On native: installs extensions to local VS Code
-  show_progress info "DEBUG: DEVBASE_VSCODE_INSTALL=${DEVBASE_VSCODE_INSTALL:-not set}, code available=$(command -v code &>/dev/null && echo yes || echo no)"
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]] || command -v code &>/dev/null; then
-    show_progress info "DEBUG: Calling setup_vscode"
     setup_vscode || show_progress warning "VSCode setup skipped or failed (continuing)"
-  else
-    show_progress info "DEBUG: Skipping setup_vscode"
   fi
 
   return 0

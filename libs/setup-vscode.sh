@@ -17,7 +17,6 @@ setup_vscode() {
   validate_var_set "DEVBASE_DOT" || return 1
 
   show_progress info "Setting up VS Code extensions..."
-  show_progress info "DEVBASE_VSCODE_EXTENSIONS=${DEVBASE_VSCODE_EXTENSIONS:-not set}"
 
   local code_command=""
   local remote_flag=""
@@ -102,7 +101,12 @@ setup_vscode() {
     fi
   else
     # Not WSL - check for native code command
-    if command -v code &>/dev/null; then
+    # Try multiple locations where code might be installed
+    if [[ -x /usr/bin/code ]]; then
+      code_command="/usr/bin/code"
+    elif [[ -x /usr/local/bin/code ]]; then
+      code_command="/usr/local/bin/code"
+    elif command -v code &>/dev/null; then
       code_command="code"
     fi
   fi # End of is_wsl block
