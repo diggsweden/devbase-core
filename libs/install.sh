@@ -348,8 +348,10 @@ apply_configurations() {
   configure_git || die "Failed to configure Git"
   configure_git_hooks || die "Failed to configure git hooks"
 
-  # Setup VS Code extensions if VS Code is installed
-  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
+  # Setup VS Code extensions if VS Code is installed or available
+  # On WSL: installs Remote-WSL extension and sets up vscode-server extensions
+  # On native: installs extensions to local VS Code
+  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]] || command -v code &>/dev/null; then
     setup_vscode || show_progress warning "VSCode setup skipped or failed (continuing)"
   fi
 
