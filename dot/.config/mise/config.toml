@@ -102,5 +102,8 @@ jq = "jq-1.8.1"
 "aqua:cli/cli" = "v2.80.0"           # GitHub CLI (gh)
 "ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"    # GitLab CLI (glab)
 
+# Database tools
+"ubi:flyway/flyway" = "flyway-11.15.0"  # Database migration tool (CLI)
+
 # File managers
 "aqua:gokcehan/lf" = "r38"

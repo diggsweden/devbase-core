@@ -1461,6 +1461,24 @@ check_custom_tools() {
     print_check "info" "IntelliJ IDEA Ultimate (optional, not installed)"
   fi
 
+  # DBeaver
+  custom_total=$((custom_total + 1))
+  if has_command "dbeaver" || [[ -f "${HOME}/.local/bin/dbeaver" ]]; then
+    print_check "pass" "DBeaver (Database tool)"
+    custom_installed=$((custom_installed + 1))
+  else
+    print_check "info" "DBeaver (optional, not installed)"
+  fi
+
+  # KeyStore Explorer
+  custom_total=$((custom_total + 1))
+  if has_command "kse" || [[ -f "${HOME}/.local/bin/kse" ]]; then
+    print_check "pass" "KeyStore Explorer (Java keystore tool)"
+    custom_installed=$((custom_installed + 1))
+  else
+    print_check "info" "KeyStore Explorer (optional, not installed)"
+  fi
+
   CUSTOM_INSTALLED_COUNT=$custom_installed
   CUSTOM_TOTAL_COUNT=$custom_total
 }
@@ -1925,8 +1943,16 @@ main() {
   print_summary
 
   # Return exit code based on check results
-  if [[ $FAILED_CHECKS -gt 0 ]]; then
-    return 1
+  # In CI mode (NON_INTERACTIVE=true), treat warnings as failures
+  if [[ "${NON_INTERACTIVE:-false}" == "true" ]]; then
+    if [[ $FAILED_CHECKS -gt 0 ]] || [[ $WARNING_CHECKS -gt 0 ]]; then
+      return 1
+    fi
+  else
+    # Interactive mode: only fail on actual failures
+    if [[ $FAILED_CHECKS -gt 0 ]]; then
+      return 1
+    fi
   fi
   return 0
 }

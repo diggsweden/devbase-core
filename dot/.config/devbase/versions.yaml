@@ -25,7 +25,6 @@ keystore_explorer: v5.6.0 # renovate: datasource=github-releases depName=kaikram
 jdk_mission_control: 9.0.0 # renovate: datasource=custom depName=oracle/jmc
 dbeaver: 25.2.1 # renovate: datasource=github-releases depName=dbeaver/dbeaver extractVersion=^v?(?<version>\d+\.\d+\.\d+)$
 intellij_idea: 2025.2.3 # renovate: datasource=github-releases depName=JetBrains/intellij-community extractVersion=^idea/(?<version>.+)$
-flyway: 11.15.0 # renovate: datasource=github-releases depName=flyway/flyway extractVersion=^flyway-(?<version>.+)$
 
 # VS Code (custom installer with WSL-specific logic)
 vscode: 1.105.1 # renovate: datasource=github-releases depName=microsoft/vscode

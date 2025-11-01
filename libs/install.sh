@@ -349,7 +349,7 @@ apply_configurations() {
   configure_git_hooks || die "Failed to configure git hooks"
 
   # Setup VS Code extensions if VS Code is installed
-  if [[ "${DEVBASE_VSCODE_INSTALL:-true}" == "true" ]]; then
+  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
     setup_vscode || show_progress warning "VSCode setup skipped or failed (continuing)"
   fi
 
@@ -483,11 +483,11 @@ display_configuration_summary() {
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 
   print_box_line "IDE & Editor Extensions:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  if [[ "${DEVBASE_VSCODE_INSTALL:-true}" == "true" ]]; then
+  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
     print_box_line "  • VS Code: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    if [[ "${DEVBASE_VSCODE_EXTENSIONS:-true}" == "true" ]]; then
+    if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
       print_box_line "    - Extensions: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-      if [[ "${DEVBASE_VSCODE_NEOVIM:-false}" == "true" ]]; then
+      if [[ "${DEVBASE_VSCODE_NEOVIM}" == "true" ]]; then
         print_box_line "    - Neovim extension: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
       else
         print_box_line "    - Neovim extension: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"

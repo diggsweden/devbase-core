@@ -40,7 +40,25 @@ setup_non_interactive_mode() {
   export DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"
   export DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"
   export DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"
-  export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
+  
+  # Set VS Code installation based on environment
+  # WSL: Skip (should be installed on Windows side)
+  # Native Ubuntu: Install by default
+  if [[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]]; then
+    export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
+  else
+    export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-true}"
+  fi
+  
+  # Set VS Code extensions defaults based on whether VS Code is being installed
+  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
+    export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-true}"
+    export DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-true}"
+  else
+    export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-false}"
+    export DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-false}"
+  fi
+  
   export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
 
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
@@ -476,9 +494,9 @@ editor:
   shell_bindings: $([ "${EDITOR:-nvim}" == "nvim" ] && echo "vim" || echo "emacs")
 
 vscode:
-  install: ${DEVBASE_VSCODE_INSTALL:-true}
-  extensions: ${DEVBASE_VSCODE_EXTENSIONS:-true}
-  neovim_extension: ${DEVBASE_VSCODE_NEOVIM:-true}
+  install: ${DEVBASE_VSCODE_INSTALL}
+  extensions: ${DEVBASE_VSCODE_EXTENSIONS}
+  neovim_extension: ${DEVBASE_VSCODE_NEOVIM}
 
 ide:
   lazyvim: ${DEVBASE_INSTALL_LAZYVIM:-true}

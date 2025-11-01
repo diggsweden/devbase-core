@@ -107,7 +107,7 @@ setup_vscode() {
   fi # End of is_wsl block
 
   printf "\n"
-  if [[ "${DEVBASE_VSCODE_EXTENSIONS:-true}" == "true" ]]; then
+  if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
     show_progress info "Installing VS Code extensions..."
 
     if [[ -n "$code_command" ]]; then
@@ -140,7 +140,7 @@ configure_vscode_settings() {
 
   show_progress info "Configuring VS Code settings..."
 
-  local configure_neovim="${DEVBASE_VSCODE_NEOVIM:-true}"
+  local configure_neovim="${DEVBASE_VSCODE_NEOVIM}"
 
   local settings_template="${DEVBASE_DOT}/.config/vscode/settings.json"
   local vscode_settings_dir=""
@@ -374,7 +374,7 @@ install_vscode_extensions() {
         fi
 
         # Skip neovim extension if user opted out
-        if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM:-true}" != "true" ]]; then
+        if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM}" != "true" ]]; then
           show_progress info "$display_name (skipped by user preference)"
           continue
         fi
