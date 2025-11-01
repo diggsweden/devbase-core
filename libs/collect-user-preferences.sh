@@ -37,6 +37,7 @@ setup_non_interactive_mode() {
   export DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"
   export DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"
   export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
+  export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
 
   printf "  Git Name: %s\n" "$GIT_NAME"
   printf "  Git Email: %s\n" "$GIT_EMAIL"

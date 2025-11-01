@@ -85,8 +85,10 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 
 | `SSH_KEY_PASSPHRASE`
 | _(auto-generated)_
-| SSH key passphrase
+| SSH key passphrase (displayed at end of installation if auto-generated)
 |===
+
+NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.
 
 === Example: CI/Automation
 
