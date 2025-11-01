@@ -18,11 +18,44 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Cache Mise tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/mise/installs
+            ~/.local/share/mise/downloads
+          key: mise-${{ runner.os }}-${{ hashFiles('dot/.config/mise/config.toml') }}
+          restore-keys: |
+            mise-${{ runner.os }}-
+      
+      - name: Cache VS Code extensions
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.vscode/extensions
+            ~/.config/Code/User
+          key: vscode-ext-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/versions.yaml') }}
+          restore-keys: |
+            vscode-ext-${{ runner.os }}-
+      
+      - name: Cache binary downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/devbase/debs
+          key: binary-downloads-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/versions.yaml') }}
+          restore-keys: |
+            binary-downloads-${{ runner.os }}-
+      
+      - name: Prepare binary cache directory
+        run: mkdir -p ~/.cache/devbase/debs
+      
       - name: Run installation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_NAME: DevBase CI
           GIT_EMAIL: ci@devbase.test
+          DEVBASE_DEB_CACHE: ~/.cache/devbase/debs
         run: |
           export DEBIAN_FRONTEND=noninteractive
           export CI=true

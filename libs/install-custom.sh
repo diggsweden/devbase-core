@@ -131,7 +131,25 @@ install_jmc() {
       local jmc_url="${JMC_DOWNLOAD:-https://download.oracle.com/java/GA}/jmc/${jmc_version}/jmc-${jmc_version}_linux-x64.tar.gz"
       local jmc_tar="${_DEVBASE_TEMP}/jmc.tar.gz"
 
-      if retry_command download_file "$jmc_url" "$jmc_tar"; then
+      # Check cache first if DEVBASE_DEB_CACHE is set (reusing same cache dir for all binaries)
+      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+        local cached_tar="${DEVBASE_DEB_CACHE}/jmc-${jmc_version}.tar.gz"
+        if [[ -f "$cached_tar" ]]; then
+          show_progress info "Using cached JMC package"
+          cp "$cached_tar" "$jmc_tar"
+        elif retry_command download_file "$jmc_url" "$jmc_tar"; then
+          mkdir -p "${DEVBASE_DEB_CACHE}"
+          cp "$jmc_tar" "$cached_tar"
+        else
+          show_progress warning "JMC download failed - skipping"
+          return 0
+        fi
+      elif ! retry_command download_file "$jmc_url" "$jmc_tar"; then
+        show_progress warning "JMC download failed - skipping"
+        return 0
+      fi
+
+      if [[ -f "$jmc_tar" ]]; then
         tar -C "${_DEVBASE_TEMP}" -xzf "$jmc_tar"
         backup_if_exists "${XDG_DATA_HOME}/JDK Mission Control" "jmc-old"
 
@@ -210,7 +228,25 @@ install_dbeaver() {
   local dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
   local dbeaver_deb="${_DEVBASE_TEMP}/dbeaver.deb"
 
-  if retry_command download_file "$dbeaver_url" "$dbeaver_deb"; then
+  # Check cache first if DEVBASE_DEB_CACHE is set
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+    local cached_deb="${DEVBASE_DEB_CACHE}/dbeaver-${dbeaver_version}.deb"
+    if [[ -f "$cached_deb" ]]; then
+      show_progress info "Using cached DBeaver package"
+      cp "$cached_deb" "$dbeaver_deb"
+    elif retry_command download_file "$dbeaver_url" "$dbeaver_deb"; then
+      mkdir -p "${DEVBASE_DEB_CACHE}"
+      cp "$dbeaver_deb" "$cached_deb"
+    else
+      show_progress warning "DBeaver download failed - skipping"
+      return 0
+    fi
+  elif ! retry_command download_file "$dbeaver_url" "$dbeaver_deb"; then
+    show_progress warning "DBeaver download failed - skipping"
+    return 0
+  fi
+
+  if [[ -f "$dbeaver_deb" ]]; then
     if sudo dpkg -i "$dbeaver_deb"; then
       show_progress success "DBeaver installed"
     else
@@ -245,7 +281,25 @@ install_keystore_explorer() {
   local kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse_${kse_version#v}_all.deb"
   local kse_deb="${_DEVBASE_TEMP}/keystore-explorer.deb"
 
-  if retry_command download_file "$kse_url" "$kse_deb"; then
+  # Check cache first if DEVBASE_DEB_CACHE is set
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+    local cached_deb="${DEVBASE_DEB_CACHE}/kse-${kse_version}.deb"
+    if [[ -f "$cached_deb" ]]; then
+      show_progress info "Using cached KeyStore Explorer package"
+      cp "$cached_deb" "$kse_deb"
+    elif retry_command download_file "$kse_url" "$kse_deb"; then
+      mkdir -p "${DEVBASE_DEB_CACHE}"
+      cp "$kse_deb" "$cached_deb"
+    else
+      show_progress warning "KeyStore Explorer download failed - skipping"
+      return 0
+    fi
+  elif ! retry_command download_file "$kse_url" "$kse_deb"; then
+    show_progress warning "KeyStore Explorer download failed - skipping"
+    return 0
+  fi
+
+  if [[ -f "$kse_deb" ]]; then
     if sudo dpkg -i "$kse_deb"; then
       show_progress success "KeyStore Explorer installed"
     else
@@ -374,7 +428,31 @@ install_vscode() {
     vscode_checksum=""
   fi
 
-  if retry_command download_file "$vscode_url" "$vscode_deb" "" "$vscode_checksum"; then
+  # Check cache first if DEVBASE_DEB_CACHE is set
+  local download_needed=true
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+    local cached_deb="${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
+    if [[ -f "$cached_deb" ]]; then
+      show_progress info "Using cached VS Code package"
+      cp "$cached_deb" "$vscode_deb"
+      download_needed=false
+    fi
+  fi
+
+  if [[ "$download_needed" == "true" ]]; then
+    if retry_command download_file "$vscode_url" "$vscode_deb" "" "$vscode_checksum"; then
+      # Save to cache if DEVBASE_DEB_CACHE is set
+      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+        mkdir -p "${DEVBASE_DEB_CACHE}"
+        cp "$vscode_deb" "${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
+      fi
+    else
+      show_progress warning "VS Code download failed - skipping"
+      return 1
+    fi
+  fi
+
+  if [[ -f "$vscode_deb" ]]; then
     if sudo dpkg -i "$vscode_deb" 2>/dev/null; then
       show_progress success "VS Code installed ($version)"
     else
@@ -414,7 +492,31 @@ install_intellij_idea() {
   local idea_tar="${_DEVBASE_TEMP}/intellij-idea.tar.gz"
   local extract_dir="$HOME/.local/share/JetBrains"
 
-  if retry_command download_file "$idea_url" "$idea_tar" "$idea_checksum_url"; then
+  # Check cache first if DEVBASE_DEB_CACHE is set (reusing same cache dir for all binaries)
+  local download_needed=true
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+    local cached_tar="${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
+    if [[ -f "$cached_tar" ]]; then
+      show_progress info "Using cached IntelliJ IDEA package"
+      cp "$cached_tar" "$idea_tar"
+      download_needed=false
+    fi
+  fi
+
+  if [[ "$download_needed" == "true" ]]; then
+    if retry_command download_file "$idea_url" "$idea_tar" "$idea_checksum_url"; then
+      # Save to cache if DEVBASE_DEB_CACHE is set
+      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+        mkdir -p "${DEVBASE_DEB_CACHE}"
+        cp "$idea_tar" "${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
+      fi
+    else
+      show_progress warning "IntelliJ IDEA download failed - skipping"
+      return 1
+    fi
+  fi
+
+  if [[ -f "$idea_tar" ]]; then
     mkdir -p "$extract_dir"
     if tar -xzf "$idea_tar" -C "$extract_dir" 2>/dev/null; then
       local idea_dir
