@@ -17,6 +17,7 @@ setup_vscode() {
   validate_var_set "DEVBASE_DOT" || return 1
 
   show_progress info "Setting up VS Code extensions..."
+  show_progress info "DEVBASE_VSCODE_EXTENSIONS=${DEVBASE_VSCODE_EXTENSIONS:-not set}"
 
   local code_command=""
   local remote_flag=""
