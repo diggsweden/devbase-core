@@ -345,6 +345,7 @@ ensure_user_dirs() {
     "$HOME/development/bitbucket.org"
     "$HOME/development/codeberg.org"
     "$HOME/development/code.europa.eu"
+    "$HOME/development/devcerts" # Development certificates
     "$HOME/notes" # Notes directory
   )
 

@@ -60,6 +60,10 @@ setup_non_interactive_mode() {
   fi
   
   export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
+  export DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"
+  export DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-yes}"
+  export DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-no}"
+  export DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-no}"
 
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
   printf "  Git Email: %s\n" "$DEVBASE_GIT_EMAIL"

@@ -4,6 +4,14 @@ set -uo pipefail
 # DevBase Installation Verification Script
 # Run after installation to verify all components are properly set up
 
+# Auto-detect CI environment if NON_INTERACTIVE not already set
+# This ensures warnings cause failures in CI (requires 100% pass rate)
+if [[ -z "${NON_INTERACTIVE:-}" ]]; then
+  if [[ "${CI:-false}" == "true" ]] || [[ "${GITHUB_ACTIONS:-false}" == "true" ]] || [[ -n "${JENKINS_URL:-}" ]] || [[ -n "${GITLAB_CI:-}" ]]; then
+    export NON_INTERACTIVE=true
+  fi
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -f "${SCRIPT_DIR}/verify-base-lib.sh" ]]; then
@@ -641,7 +649,6 @@ check_user_directories() {
     "$DEV_HOME/bitbucket.org"
     "$DEV_HOME/codeberg.org"
     "$DEV_HOME/code.europa.eu"
-    "$DEV_HOME/just"
     "$DEV_HOME/devcerts"
     "$NOTES_HOME"
     "$MAVEN_HOME"
@@ -1033,8 +1040,8 @@ check_ssh_includes() {
 
       # Determine severity based on file type
       if [[ "$include_pattern" == *"custom.config"* ]]; then
-        # custom.config is optional (only exists if org provides it)
-        printf "  %b%s%b File not found (optional - only if organization provides it)%b\n" "${GRAY}" "$INFO" "${NC}" "${NC}"
+        # custom.config is optional (only exists if customization provides it)
+        printf "  %b%s%b File not found (optional - only if customization provides it)%b\n" "${GRAY}" "$INFO" "${NC}" "${NC}"
       elif [[ "$include_pattern" == *"user.config"* ]]; then
         # user.config is optional (created empty, user adds hosts)
         printf "  %b%s%b File not found (optional - for personal SSH hosts)%b\n" "${GRAY}" "$INFO" "${NC}" "${NC}"
@@ -1311,11 +1318,15 @@ check_mise_tools() {
 
     # Parse config.toml for expected tools
     # Format: tool = "version" OR "prefix:org/tool" = "version"
-    while IFS='=' read -r tool_spec version_spec; do
+    while IFS= read -r line; do
       # Skip comments, empty lines, and config settings
-      [[ "$tool_spec" =~ ^#.*$ ]] && continue
-      [[ -z "$tool_spec" ]] && continue
-      [[ "$tool_spec" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
+      [[ "$line" =~ ^#.*$ ]] && continue
+      [[ -z "$line" ]] && continue
+      [[ "$line" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
+
+      # Split on first = only (avoid splitting on = inside brackets like [provider=gitlab,exe=glab])
+      local tool_spec="${line%%=*}"
+      local version_spec="${line#*=}"
 
       # Clean up tool_spec (handle quotes and brackets)
       local tool=$(echo "$tool_spec" | tr -d '"' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
@@ -1424,7 +1435,7 @@ check_custom_tools() {
 
   # fzf.fish (Fisher plugin)
   custom_total=$((custom_total + 1))
-  if has_command fish && fish -c "fisher list" 2>/dev/null | grep -q "PatrickF1/fzf.fish"; then
+  if has_command fish && fish -c "fisher list" 2>/dev/null | grep -iq "fzf.fish"; then
     print_check "pass" "fzf.fish (FZF Fish integration)"
     custom_installed=$((custom_installed + 1))
   else
@@ -1457,6 +1468,15 @@ check_custom_tools() {
     custom_installed=$((custom_installed + 1))
   else
     print_check "info" "IntelliJ IDEA Ultimate (optional, not installed)"
+  fi
+
+  # VS Code
+  custom_total=$((custom_total + 1))
+  if has_command "code"; then
+    print_check "pass" "VS Code (Code editor)"
+    custom_installed=$((custom_installed + 1))
+  else
+    print_check "info" "VS Code (optional, not installed)"
   fi
 
   # DBeaver
@@ -1519,6 +1539,9 @@ check_vscode_extensions() {
 
   if command -v code &>/dev/null; then
     code_cmd="code"
+  elif [[ -f "/usr/bin/code" ]]; then
+    # VS Code installed via .deb but not yet in PATH
+    code_cmd="/usr/bin/code"
   elif dir_exists "$HOME/.vscode-server/bin"; then
     # VS Code Server (for remote/WSL connections)
     if is_wsl; then
