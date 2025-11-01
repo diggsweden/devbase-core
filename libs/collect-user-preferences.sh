@@ -20,12 +20,15 @@ setup_non_interactive_mode() {
   printf "\n"
   printf "%bRunning in non-interactive mode with defaults...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
 
+  # Map SSH_KEY_PASSPHRASE (user-facing) to DEVBASE_SSH_PASSPHRASE (internal)
+  DEVBASE_SSH_PASSPHRASE="${SSH_KEY_PASSPHRASE:-$(generate_ssh_passphrase)}"
+  export DEVBASE_SSH_PASSPHRASE
+  
+  # If passphrase was auto-generated (user didn't provide SSH_KEY_PASSPHRASE)
   if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
-    SSH_KEY_PASSPHRASE=$(generate_ssh_passphrase)
-    export SSH_KEY_PASSPHRASE
     export GENERATED_SSH_PASSPHRASE="true"
     mkdir -p "${DEVBASE_CONFIG_DIR}"
-    echo "$SSH_KEY_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
+    echo "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
     chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
