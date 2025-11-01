@@ -203,8 +203,21 @@ install_mise() {
       die "Downloaded file doesn't appear to be Mise installer"
     fi
 
-    # Ensure mise installs to ~/.local/bin
+    # Get mise version from versions.yaml
+    local mise_version="${TOOL_VERSIONS[mise]:-}"
+    if [[ -z "$mise_version" ]]; then
+      # Fallback: read directly from versions.yaml if TOOL_VERSIONS not populated yet
+      local versions_file="${DEVBASE_DOT}/.config/devbase/versions.yaml"
+      if [[ -f "$versions_file" ]]; then
+        mise_version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
+      fi
+    fi
+
+    # Ensure mise installs to ~/.local/bin with specified version
     export MISE_INSTALL_PATH="${HOME}/.local/bin/mise"
+    if [[ -n "$mise_version" ]]; then
+      export MISE_VERSION="$mise_version"
+    fi
     bash "$mise_installer" || die "Failed to install Mise"
 
     if ! verify_mise_checksum; then
