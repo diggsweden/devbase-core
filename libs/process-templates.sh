@@ -720,16 +720,17 @@ process_gradle_templates() {
 }
 
 process_container_templates() {
-  # Skip if no registry configured
-  if [[ -z "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] && [[ -z "${DEVBASE_REGISTRY_URL:-}" ]]; then
-    return 0
-  fi
-
   local container_templates_dir="${DEVBASE_FILES}/container-templates"
   local target_file="${XDG_CONFIG_HOME}/containers/registries.conf"
   local template_to_use=""
 
+  # Always create containers config directory (used by podman/buildah/skopeo)
   mkdir -p "$(dirname "$target_file")"
+
+  # Skip registries.conf generation if no registry configured
+  if [[ -z "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] && [[ -z "${DEVBASE_REGISTRY_URL:-}" ]]; then
+    return 0
+  fi
 
   # Derive DEVBASE_REGISTRY_CONTAINER if not set
   # Extract host:port from registry URL (without protocol and path)
