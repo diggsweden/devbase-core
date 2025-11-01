@@ -217,45 +217,111 @@ DEVBASE INSTALLATION SUMMARY
 ============================
 Installation Date: $(date)
 Environment: ${_DEVBASE_ENV:-unknown}
+OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
 Theme: ${DEVBASE_THEME:-everforest-dark}
+DevBase Version: $(cat "${DEVBASE_CONFIG_DIR}/version" 2>/dev/null || echo "unknown")
+$(if is_wsl; then echo "WSL Version: $(get_wsl_version 2>/dev/null || echo "unknown")"; fi)
 
-INSTALLED TOOLS
-===============
-Development Languages:
-  • Node.js: $(command -v node >/dev/null && node --version | sed 's/^v//' || echo "20.18.1")
-  • Python: $(command -v python >/dev/null && python --version 2>&1 | cut -d' ' -f2 || echo "3.12")
-  • Go: $(command -v go >/dev/null && go version | cut -d' ' -f3 | sed 's/go//' || echo "1.23.4")
-  • Java: $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo "temurin-21")
+SYSTEM CONFIGURATION
+====================
+User: ${USER}
+Home: ${HOME}
+Shell: ${SHELL}
+XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}
+XDG_DATA_HOME: ${XDG_DATA_HOME}
 
-Shell & Terminal:
-  • Fish: $(fish --version 2>/dev/null | cut -d' ' -f3 || echo "3.7+")
-  • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "1.21.1")
-  • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "0.41.2")
-  • Clipboard: ${ZELLIJ_COPY_COMMAND:-not detected}
+DEVELOPMENT LANGUAGES (mise-managed)
+====================================
+  • Node.js: $(command -v node >/dev/null && node --version | sed 's/^v//' || echo "not found")
+  • Python: $(command -v python >/dev/null && python --version 2>&1 | cut -d' ' -f2 || echo "not found")
+  • Go: $(command -v go >/dev/null && go version | cut -d' ' -f3 | sed 's/go//' || echo "not found")
+  • Ruby: $(command -v ruby >/dev/null && ruby --version | cut -d' ' -f2 || echo "not found")
+  • Rust: $(command -v rustc >/dev/null && rustc --version | cut -d' ' -f2 || echo "not found")
+  • Java: $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo "not found")
+  • Maven: $(command -v mvn >/dev/null && mvn --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not found")
+  • Gradle: $(command -v gradle >/dev/null && gradle --version 2>&1 | grep Gradle | cut -d' ' -f2 || echo "not found")
 
-Development Tools:
-  • Neovim: $(nvim --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "0.10.3")
-  • Lazygit: $(lazygit --version 2>/dev/null | grep -oP 'version=\K[^,]+' || echo "0.55.0")
+SHELL & TERMINAL
+================
+  • Fish: $(fish --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
+  • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
+  • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "not found")
+  • Zellij Autostart: ${DEVBASE_ZELLIJ_AUTOSTART:-not set}
+
+DEVELOPMENT TOOLS
+=================
   • Git: $(git --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+  • Neovim: $(nvim --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
+  • LazyVim: $([ -d ~/.config/nvim ] && echo "installed" || echo "not installed")
+  • VS Code: $(code --version 2>/dev/null | head -1 || echo "not found")
+  • Lazygit: $(lazygit --version 2>/dev/null | grep -oP 'version=\K[^,]+' || echo "not found")
+  • Ripgrep: $(rg --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
+  • Fd: $(fd --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
+  • Fzf: $(fzf --version 2>/dev/null | cut -d' ' -f1 || echo "not found")
+  • Eza: $(eza --version 2>/dev/null | head -1 | grep -o 'v[0-9.]*' || echo "not found")
+  • Bat: $(bat --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
+  • Delta: $(delta --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
+  • Jq: $(jq --version 2>/dev/null | sed 's/jq-//' || echo "not found")
+  • Yq: $(yq --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
 
-Container Tools:
-  • Podman: $(command -v podman &>/dev/null && echo "installed" || echo "not installed")
-  • Buildah: $(command -v buildah &>/dev/null && echo "installed" || echo "not installed")
+CONTAINER TOOLS
+===============
+  • Podman: $(podman --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
+  • Buildah: $(buildah --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
+  • Skopeo: $(skopeo --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
 
-Optional Tools:
-  • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed (optional)")
+CLOUD & KUBERNETES
+==================
+  • kubectl: $(kubectl version --client 2>/dev/null | grep -o 'v[0-9.]*' | head -1 || echo "not found")
+  • oc: $(oc version --client 2>/dev/null | grep -o '[0-9.]*' | head -1 || echo "not found")
+  • k9s: $(k9s version 2>/dev/null | grep Version | cut -d' ' -f2 || echo "not found")
 
-CONFIGURATION
-=============
-Git Config:
+OPTIONAL TOOLS
+==============
+  • DBeaver: $([ -f ~/.local/bin/dbeaver ] && echo "installed" || echo "not installed")
+  • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
+  • IntelliJ IDEA: $([ -d ~/.local/share/JetBrains/IntelliJIdea* ] && echo "installed" || echo "not installed")
+  • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
+
+GIT CONFIGURATION
+=================
   • Name: $(git config --global user.name 2>/dev/null || echo "not configured")
   • Email: $(git config --global user.email 2>/dev/null || echo "not configured")
+  • Default Branch: $(git config --global init.defaultBranch 2>/dev/null || echo "not configured")
+  • GPG Sign: $(git config --global commit.gpgsign 2>/dev/null || echo "not configured")
+  • SSH Sign: $(git config --global gpg.format 2>/dev/null || echo "not configured")
 
-SSH Key:
-  • Key exists: $([ -f ~/.ssh/id_ecdsa_nistp521_devbase ] && echo "yes" || echo "no")
+SSH CONFIGURATION
+=================
+  • Key Type: ECDSA P-521
+  • Key Path: ~/.ssh/id_ecdsa_nistp521_devbase
+  • Key Exists: $([ -f ~/.ssh/id_ecdsa_nistp521_devbase ] && echo "yes" || echo "no")
+  • Public Key Exists: $([ -f ~/.ssh/id_ecdsa_nistp521_devbase.pub ] && echo "yes" || echo "no")
+  • SSH Agent: $([ -n "${SSH_AUTH_SOCK:-}" ] && echo "configured" || echo "not configured")
 
-Proxy Settings:
+NETWORK CONFIGURATION
+=====================
   • Proxy: $(if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then echo "${DEVBASE_PROXY_URL}" | sed 's|://[^@]*@|://***:***@|'; else echo "not configured"; fi)
+  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then echo "${DEVBASE_REGISTRY_URL}"; else echo "not configured"; fi)
+  • Container Registry: $(if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]]; then echo "${DEVBASE_CONTAINERS_REGISTRY}"; else echo "not configured"; fi)
+
+MISE ACTIVATION
+===============
+  • Mise Version: $(mise --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
+  • Config File: $([ -f ~/.config/mise/config.toml ] && echo "exists" || echo "missing")
+  • Activation: Run 'eval "\$(mise activate bash)"' or restart shell
+
+CUSTOM CONFIGURATION
+====================
+  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
+  • Custom Env: $(if [[ -n "${DEVBASE_CUSTOM_ENV:-}" ]]; then echo "loaded"; else echo "not loaded"; fi)
+
+NEXT STEPS
+==========
+1. Restart your shell or run: exec fish
+2. Verify installation: ./verify/verify-install-check.sh
+
+For help and documentation: https://github.com/diggsweden/devbase-core
 EOF
 
   return 0
