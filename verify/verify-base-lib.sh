@@ -34,6 +34,10 @@ export PASSED_CHECKS=0
 export FAILED_CHECKS=0
 export WARNING_CHECKS=0
 
+# Arrays to track failed and warning messages
+declare -a FAILED_MESSAGES=()
+declare -a WARNING_MESSAGES=()
+
 has_command() {
   command -v "$1" &>/dev/null
 }
@@ -116,10 +120,12 @@ print_check() {
   fail)
     printf "  %b%s%b %s\n" "${RED}" "$CROSS" "${NC}" "$message"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
+    FAILED_MESSAGES+=("$message")
     ;;
   warn)
     printf "  %b%s%b %s\n" "${YELLOW}" "$WARN" "${NC}" "$message"
     WARNING_CHECKS=$((WARNING_CHECKS + 1))
+    WARNING_MESSAGES+=("$message")
     ;;
   info)
     printf "  %b%s%b %s\n" "${CYAN}" "$INFO" "${NC}" "$message"

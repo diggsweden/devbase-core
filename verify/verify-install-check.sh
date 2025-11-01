@@ -1877,6 +1877,22 @@ print_summary() {
   fi
   printf "  Pass Rate:      %d%%\n" "$pass_rate"
 
+  # List warnings if any
+  if [[ ${#WARNING_MESSAGES[@]} -gt 0 ]]; then
+    printf "\n  %bWarnings:%b\n" "${YELLOW}" "${NC}"
+    for msg in "${WARNING_MESSAGES[@]}"; do
+      printf "    %b‼%b %s\n" "${YELLOW}" "${NC}" "$msg"
+    done
+  fi
+
+  # List failures if any
+  if [[ ${#FAILED_MESSAGES[@]} -gt 0 ]]; then
+    printf "\n  %bFailures:%b\n" "${RED}" "${NC}"
+    for msg in "${FAILED_MESSAGES[@]}"; do
+      printf "    %b✗%b %s\n" "${RED}" "${NC}" "$msg"
+    done
+  fi
+
   printf "\n"
   if [[ $pass_rate -eq 100 ]]; then
     printf "%b✅ Installation complete - all checks passed!%b\n" "${GREEN}" "${NC}"
