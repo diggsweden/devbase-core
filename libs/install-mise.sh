@@ -130,8 +130,13 @@ verify_mise_checksum() {
   fi
 
   local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
+  local version
 
-  if ! [[ -f "$versions_file" ]]; then
+  if [[ -f "$versions_file" ]]; then
+    version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
+  fi
+
+  if [[ -z "$version" ]]; then
     echo "Warning: Could not determine expected mise version from custom-tools.yaml" >&2
     return 0
   fi
@@ -199,8 +204,10 @@ install_mise() {
     fi
 
     # Get mise version from custom-tools.yaml
-    local expected_mise_version=""
+    local mise_version=""
     if [[ -n "${TOOL_VERSIONS[mise]:-}" ]]; then
+      mise_version="${TOOL_VERSIONS[mise]}"
+    else
       # Fallback: read directly from custom-tools.yaml if TOOL_VERSIONS not populated yet
       local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
       if [[ -f "$versions_file" ]]; then
