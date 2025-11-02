@@ -346,7 +346,7 @@ ensure_user_dirs() {
     "$HOME/development/codeberg.org"
     "$HOME/development/code.europa.eu"
     "$HOME/development/devcerts" # Development certificates
-    "$HOME/notes" # Notes directory
+    "$HOME/notes"                # Notes directory
   )
 
   local created_count=0

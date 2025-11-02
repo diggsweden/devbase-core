@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Activate mise if available
+# Activate mise if available (set PROMPT_COMMAND to avoid unbound variable error)
 if command -v mise >/dev/null 2>&1; then
+  PROMPT_COMMAND="${PROMPT_COMMAND:-}"
   eval "$(mise activate bash)"
 fi
 

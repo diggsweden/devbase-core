@@ -30,7 +30,7 @@ http_timeout = "90s"
 RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
 
 [tools]
-# Core Languages & Runtimes (from versions.yaml)
+# Core Languages & Runtimes (managed by mise, auto-updated by Renovate)
 node = "20.18.1"
 go = "1.25.1"
 python = "3.12"

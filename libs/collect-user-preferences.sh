@@ -23,7 +23,7 @@ setup_non_interactive_mode() {
   # Map SSH_KEY_PASSPHRASE (user-facing) to DEVBASE_SSH_PASSPHRASE (internal)
   DEVBASE_SSH_PASSPHRASE="${SSH_KEY_PASSPHRASE:-$(generate_ssh_passphrase)}"
   export DEVBASE_SSH_PASSPHRASE
-  
+
   # If passphrase was auto-generated (user didn't provide SSH_KEY_PASSPHRASE)
   if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
     export GENERATED_SSH_PASSPHRASE="true"
@@ -40,7 +40,7 @@ setup_non_interactive_mode() {
   export DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"
   export DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"
   export DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"
-  
+
   # Set VS Code installation based on environment
   # WSL: Skip (should be installed on Windows side)
   # Native Ubuntu: Install by default
@@ -49,7 +49,7 @@ setup_non_interactive_mode() {
   else
     export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-true}"
   fi
-  
+
   # Set VS Code extensions defaults based on whether VS Code is being installed
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
     export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-true}"
@@ -58,7 +58,7 @@ setup_non_interactive_mode() {
     export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-false}"
     export DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-false}"
   fi
-  
+
   export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
   export DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"
   export DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-yes}"

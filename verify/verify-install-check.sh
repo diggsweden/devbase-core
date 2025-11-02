@@ -767,7 +767,7 @@ check_config_files() {
   printf "\n  %bDevBase Metadata:%b\n" "${BOLD}" "${NC}"
   local devbase_files=(
     "$DEVBASE_CONFIG/version"
-    "$DEVBASE_CONFIG/versions.yaml"
+    "$DEVBASE_CONFIG/custom-tools.yaml"
     "$DEVBASE_CONFIG/install-summary.txt"
   )
 
@@ -1201,7 +1201,7 @@ check_shell_integrations() {
       # Read the actual value from the generated config
       local zellij_autostart
       zellij_autostart=$(grep 'set -gx DEVBASE_ZELLIJ_AUTOSTART' "$env_fish" 2>/dev/null | awk '{print $4}' | tr -d '"')
-      
+
       if [[ "$zellij_autostart" == "true" ]]; then
         print_check "pass" "Zellij autostart enabled"
       else
@@ -1307,7 +1307,7 @@ check_apt_packages() {
 check_mise_tools() {
   print_subheader "Mise Tools"
 
-  # Read expected tools from mise config.toml (not versions.yaml)
+  # Read expected tools from mise config.toml (not custom-tools.yaml)
   local mise_config="$CONFIG_HOME/mise/config.toml"
   if ! file_exists "$mise_config"; then
     mise_config="${DEVBASE_ROOT:-$(pwd)}/dot/.config/mise/config.toml"
@@ -1344,7 +1344,7 @@ check_mise_tools() {
 
       # Extract short name from aqua/ubi/github prefixes
       # "aqua:org/tool" -> "tool"
-      # "ubi:tool/tool[options]" -> "tool"  
+      # "ubi:tool/tool[options]" -> "tool"
       # "github:org/tool" -> "tool"
       if [[ "$tool" =~ : ]]; then
         tool=$(echo "$tool" | sed 's/.*://' | sed 's/.*\///' | sed 's/\[.*//')
@@ -1408,7 +1408,7 @@ check_snap_packages() {
   local snap_installed=0
   local snap_total=0
 
-  # Snap packages are managed by install-snap.sh, not versions.yaml
+  # Snap packages are managed by install-snap.sh, not custom-tools.yaml
   local snap_tools=(ghostty firefox chromium microk8s)
 
   for snap in "${snap_tools[@]}"; do
@@ -1577,21 +1577,21 @@ check_vscode_extensions() {
     code_cmd="/mnt/c/Program Files/Microsoft VS Code/bin/code"
   fi
 
-  # Get expected extensions from versions.yaml
-  local versions_file="$DEVBASE_CONFIG/versions.yaml"
-  if ! file_exists "$versions_file"; then
-    versions_file="${DEVBASE_ROOT:-$(pwd)}/dot/.config/devbase/versions.yaml"
+  # Get expected extensions from vscode-extensions.yaml
+  local extensions_file="$DEVBASE_CONFIG/vscode-extensions.yaml"
+  if ! file_exists "$extensions_file"; then
+    extensions_file="${DEVBASE_ROOT:-$(pwd)}/dot/.config/devbase/vscode-extensions.yaml"
   fi
 
-  if ! file_exists "$versions_file"; then
-    printf "  %b✗%b versions.yaml not found\n" "${RED}" "${NC}"
+  if ! file_exists "$extensions_file"; then
+    printf "  %b✗%b vscode-extensions.yaml not found\n" "${RED}" "${NC}"
     return
   fi
 
   # Get installed extensions if VS Code is available
   local installed_extensions=""
   local extensions_found_via_fallback=false
-  
+
   if [[ -n "$code_cmd" ]]; then
     if [[ -n "$remote_flag" ]]; then
       installed_extensions=$("$code_cmd" "$remote_flag" --list-extensions 2>/dev/null || echo "")
@@ -1610,19 +1610,23 @@ check_vscode_extensions() {
 
   # Fallback 2: List extension directories directly from vscode-server (works in su -l sessions where Windows PATH isn't available)
   if [[ -z "$installed_extensions" ]] && [[ -d "$HOME/.vscode-server/extensions" ]]; then
-    installed_extensions=$(ls -1 "$HOME/.vscode-server/extensions" 2>/dev/null | 
-      grep -v "^extensions.json$" | 
-      sed 's/-[0-9].*//' | 
-      sort -u)
+    installed_extensions=$(
+      for ext in "$HOME/.vscode-server/extensions"/*; do
+        [[ -d "$ext" ]] || continue
+        basename "$ext"
+      done | grep -v "^extensions.json$" | sed 's/-[0-9].*//' | sort -u
+    )
     [[ -n "$installed_extensions" ]] && extensions_found_via_fallback=true
   fi
 
   # Fallback 3: List extension directories from native VS Code install (~/.vscode/extensions)
   if [[ -z "$installed_extensions" ]] && [[ -d "$HOME/.vscode/extensions" ]]; then
-    installed_extensions=$(ls -1 "$HOME/.vscode/extensions" 2>/dev/null | 
-      grep -v "^extensions.json$" | 
-      sed 's/-[0-9].*//' | 
-      sort -u)
+    installed_extensions=$(
+      for ext in "$HOME/.vscode/extensions"/*; do
+        [[ -d "$ext" ]] || continue
+        basename "$ext"
+      done | grep -v "^extensions.json$" | sed 's/-[0-9].*//' | sort -u
+    )
     [[ -n "$installed_extensions" ]] && extensions_found_via_fallback=true
   fi
 
@@ -1632,46 +1636,20 @@ check_vscode_extensions() {
   # Collect all extensions first for sorting
   declare -a extensions_list
 
-  # Parse versions.yaml for VS Code extensions
-  while IFS=: read -r key value_line; do
-    # Extract extension ID from key (vscode_ext_java -> redhat.java)
-    local ext_name="${key#vscode_ext_}"
+  # Parse vscode-extensions.yaml for VS Code extensions
+  while IFS=: read -r ext_id value_line; do
+    # Skip comments and empty lines
+    [[ "$ext_id" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$ext_id" ]] && continue
 
-    # Get the actual extension ID from the comment
-    local ext_id=$(echo "$value_line" | grep -oP 'packageName=\K[^ ]+' || echo "")
+    # Trim leading/trailing whitespace from extension ID
+    ext_id=$(echo "$ext_id" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-    if [[ -z "$ext_id" ]]; then
-      # Try to construct it from the key
-      case "$ext_name" in
-      remote_wsl) continue ;; # Skip - Windows-side extension, not managed by DevBase
-      asciidoctor) ext_id="asciidoctor.asciidoctor-vscode" ;;
-      tailwindcss) ext_id="bradlc.vscode-tailwindcss" ;;
-      eslint) ext_id="dbaeumer.vscode-eslint" ;;
-      prettier) ext_id="esbenp.prettier-vscode" ;;
-      i18n_ally) ext_id="lokalise.i18n-ally" ;;
-      material_icons) ext_id="pkief.material-icon-theme" ;;
-      everforest) ext_id="sainnhe.everforest" ;;
-      catppuccin) ext_id="catppuccin.catppuccin-vsc" ;;
-      tokyonight) ext_id="enkia.tokyo-night" ;;
-      gruvbox) ext_id="jdinhlife.gruvbox" ;;
-      java) ext_id="redhat.java" ;;
-      yaml) ext_id="redhat.vscode-yaml" ;;
-      checkstyle) ext_id="shengchen.vscode-checkstyle" ;;
-      sonarlint) ext_id="sonarsource.sonarlint-vscode" ;;
-      java_debug) ext_id="vscjava.vscode-java-debug" ;;
-      java_dependency) ext_id="vscjava.vscode-java-dependency" ;;
-      java_test) ext_id="vscjava.vscode-java-test" ;;
-      maven) ext_id="vscjava.vscode-maven" ;;
-      java_pack) ext_id="vscjava.vscode-java-pack" ;;
-      volar) ext_id="vue.volar" ;;
-      neovim) ext_id="asvetliakov.vscode-neovim" ;;
-      sarif_viewer) ext_id="MS-SarifVSCode.sarif-viewer" ;;
-      *) continue ;;
-      esac
-    fi
+    # Skip if still empty after trimming
+    [[ -z "$ext_id" ]] && continue
 
     extensions_list+=("$ext_id")
-  done < <(grep "^vscode_ext_" "$versions_file")
+  done <"$extensions_file"
 
   # Sort extensions alphabetically (case-insensitive)
   local sorted_extensions

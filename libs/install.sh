@@ -163,7 +163,7 @@ setup_installation_paths() {
   validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "_DEVBASE_TEMP" || return 1
 
-  _VERSIONS_FILE="${DEVBASE_DOT}/.config/devbase/versions.yaml"
+  _VERSIONS_FILE="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
 
   return 0
 }
@@ -280,7 +280,7 @@ OPTIONAL TOOLS
 ==============
   • DBeaver: $([ -f ~/.local/bin/dbeaver ] && echo "installed" || echo "not installed")
   • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
-  • IntelliJ IDEA: $([ -d ~/.local/share/JetBrains/IntelliJIdea* ] && echo "installed" || echo "not installed")
+  • IntelliJ IDEA: $(compgen -G ~/.local/share/JetBrains/IntelliJIdea* >/dev/null && echo "installed" || echo "not installed")
   • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
 
 GIT CONFIGURATION

@@ -12,10 +12,19 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/(^|/)dot/\\.config/devbase/versions\\.yaml$/"
+        "/(^|/)dot/\\.config/devbase/custom-tools\\.yaml$/"
       ],
       "matchStrings": [
         "[a-z_]+:\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+lookupName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)dot/\\.config/devbase/vscode-extensions\\.yaml$/"
+      ],
+      "matchStrings": [
+        "^(?<depName>[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_.-]+):\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
     }
   ]

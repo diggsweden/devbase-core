@@ -7,88 +7,66 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
-readonly APT_PACKAGES_CORE=(
-  git curl wget apt-utils locales
-)
+# Brief: Read APT package list from configuration file
+# Params: None
+# Uses: DEVBASE_DOT (global)
+# Returns: 0 on success, 1 if file not found or unreadable
+# Outputs: Array of package names to global APT_PACKAGES_ALL
+# Side-effects: Populates APT_PACKAGES_ALL array, filters WSL-specific packages
+load_apt_packages() {
+  local pkg_file="${DEVBASE_DOT}/.config/devbase/apt-packages.txt"
 
-readonly APT_PACKAGES_BUILD=(
-  build-essential python3-dev
-)
+  if [[ ! -f "$pkg_file" ]]; then
+    show_progress error "APT package list not found: $pkg_file"
+    return 1
+  fi
 
-readonly APT_PACKAGES_SHELL=(
-  fish bash-completion vifm tree
-)
+  if [[ ! -r "$pkg_file" ]]; then
+    show_progress error "APT package list not readable: $pkg_file"
+    return 1
+  fi
 
-readonly APT_PACKAGES_CONTAINERS=(
-  podman buildah skopeo containernetworking-plugins
-)
+  # Read packages from file, parse inline tags
+  local packages=()
 
-readonly APT_PACKAGES_SECURITY=(
-  clamav clamav-daemon unattended-upgrades lynis ufw gufw
-)
+  while IFS= read -r line; do
+    # Skip pure comment lines (starting with #)
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
 
-readonly APT_PACKAGES_GUI=(
-  xdg-desktop-portal-gtk desktop-file-utils libgbm1
-  libxi6 libxrender1 libxtst6 mesa-utils libfontconfig libgtk-3-bin tar dbus-user-session
-)
+    # Skip empty lines
+    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
 
-readonly APT_PACKAGES_DEV=(
-  yadm dnsutils e2fsprogs pwgen pandoc parallel jq w3m
-)
+    # Extract package name (everything before #)
+    local pkg="${line%%#*}"
+    pkg="${pkg#"${pkg%%[![:space:]]*}"}" # trim leading whitespace
+    pkg="${pkg%"${pkg##*[![:space:]]}"}" # trim trailing whitespace
 
-readonly APT_PACKAGES_JAVA=(
-  default-jre default-jdk visualvm
-)
+    [[ -z "$pkg" ]] && continue
 
-readonly APT_PACKAGES_SSH=(
-  libnss3-tools mkcert openssh-client ssh-askpass
-)
+    # Extract tags from inline comment (everything after #)
+    local tags=""
+    if [[ "$line" =~ \#[[:space:]]*(.*) ]]; then
+      tags="${BASH_REMATCH[1]}"
+    fi
 
-readonly APT_PACKAGES_PYTHON=(
-  python3 python3-venv
-)
+    # Check for @skip-wsl tag (uses existing is_wsl function)
+    if [[ "$tags" =~ @skip-wsl ]] && is_wsl; then
+      continue
+    fi
 
-readonly APT_PACKAGES_RUBY=(
-  libyaml-dev libffi-dev libreadline-dev zlib1g-dev libgdbm-dev libncurses-dev libssl-dev
-)
+    packages+=("$pkg")
+  done <"$pkg_file"
 
-readonly APT_PACKAGES_RUST=(
-  pkg-config libssl-dev libsqlite3-dev
-)
+  if [[ ${#packages[@]} -eq 0 ]]; then
+    show_progress error "No valid packages found in $pkg_file"
+    return 1
+  fi
 
-readonly APT_PACKAGES_NON_WSL=(
-  tlp tlp-rdw # Power management for laptops
-  dislocker   # BitLocker drive support (NTFS encrypted volumes)
-)
+  # Export as readonly array
+  readonly APT_PACKAGES_ALL=("${packages[@]}")
 
-readonly APT_PACKAGES_OTHER=(
-  bleachbit # System cleaner and privacy tool
-)
-
-# Build package list dynamically based on environment
-APT_PACKAGES_ALL=(
-  "${APT_PACKAGES_CORE[@]}"
-  "${APT_PACKAGES_BUILD[@]}"
-  "${APT_PACKAGES_SHELL[@]}"
-  "${APT_PACKAGES_CONTAINERS[@]}"
-  "${APT_PACKAGES_SECURITY[@]}"
-  "${APT_PACKAGES_GUI[@]}"
-  "${APT_PACKAGES_DEV[@]}"
-  "${APT_PACKAGES_JAVA[@]}"
-  "${APT_PACKAGES_SSH[@]}"
-  "${APT_PACKAGES_PYTHON[@]}"
-  "${APT_PACKAGES_RUBY[@]}"
-  "${APT_PACKAGES_RUST[@]}"
-  "${APT_PACKAGES_OTHER[@]}"
-)
-
-# Add packages for non-WSL systems only
-# WSL accesses Windows drives directly, doesn't need TLP or dislocker
-if ! grep -qi microsoft /proc/version 2>/dev/null; then
-  APT_PACKAGES_ALL+=("${APT_PACKAGES_NON_WSL[@]}")
-fi
-
-readonly APT_PACKAGES_ALL
+  return 0
+}
 
 # Brief: Update APT package cache
 # Params: None
@@ -159,12 +137,20 @@ install_ms_core_fonts() {
 
 # Brief: Install all APT packages, configure locale, and install fonts
 # Params: None
-# Uses: APT_PACKAGES_ALL (global array)
+# Uses: load_apt_packages, APT_PACKAGES_ALL (functions/global array)
 # Returns: 0 on success, 1 on failure
-# Side-effects: Installs packages, configures locale, cleans up
+# Side-effects: Loads package list, installs packages, configures locale, cleans up
 install_apt_packages() {
-  local total_packages=${#APT_PACKAGES_ALL[@]}
   show_progress info "Installing system packages..."
+
+  # Load package list from file
+  if ! load_apt_packages; then
+    show_progress error "Failed to load APT package list"
+    return 1
+  fi
+
+  local total_packages=${#APT_PACKAGES_ALL[@]}
+  show_progress info "Found $total_packages packages to install"
   echo
 
   if ! pkg_update; then

@@ -48,12 +48,12 @@ get_vscode_checksum() {
 # Side-effects: Makes curl request to mirror.openshift.com
 get_oc_checksum() {
   local version="$1"
-  
+
   validate_not_empty "$version" "OpenShift version" || return 1
-  
+
   local checksum_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${version}/sha256sum.txt"
   local checksum
-  
+
   # Download checksum file and extract the checksum for openshift-client-linux tarball
   if checksum=$(curl -fsSL "$checksum_url" 2>/dev/null | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}' 2>/dev/null); then
     if [[ -n "$checksum" ]]; then
@@ -61,7 +61,7 @@ get_oc_checksum() {
       return 0
     fi
   fi
-  
+
   return 1
 }
 

@@ -8,7 +8,7 @@ fi
 
 declare -gA TOOL_VERSIONS
 
-# Brief: Load tool versions from versions.yaml into TOOL_VERSIONS array
+# Brief: Load tool versions from custom-tools.yaml into TOOL_VERSIONS array
 # Params: None
 # Uses: _VERSIONS_FILE (global), modifies TOOL_VERSIONS (global)
 # Returns: 0 on success, calls die() on failure
@@ -61,7 +61,7 @@ validate_critical_versions() {
 
   if [[ ${#missing_versions[@]} -gt 0 ]]; then
     show_progress warning "${missing_versions[*]}"
-    printf "    %b Check versions.yaml format\n" "${DEVBASE_COLORS[DIM]}ℹ${DEVBASE_COLORS[NC]}"
+    printf "    %b Check custom-tools.yaml format\n" "${DEVBASE_COLORS[DIM]}ℹ${DEVBASE_COLORS[NC]}"
   fi
   return 0
 }
@@ -129,15 +129,10 @@ verify_mise_checksum() {
     return 0
   fi
 
-  local versions_file="${DEVBASE_DOT}/.config/devbase/versions.yaml"
-  local version
+  local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
 
-  if [[ -f "$versions_file" ]]; then
-    version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
-  fi
-
-  if [[ -z "$version" ]]; then
-    echo "Warning: Could not determine expected mise version from versions.yaml" >&2
+  if ! [[ -f "$versions_file" ]]; then
+    echo "Warning: Could not determine expected mise version from custom-tools.yaml" >&2
     return 0
   fi
 
@@ -203,11 +198,11 @@ install_mise() {
       die "Downloaded file doesn't appear to be Mise installer"
     fi
 
-    # Get mise version from versions.yaml
-    local mise_version="${TOOL_VERSIONS[mise]:-}"
-    if [[ -z "$mise_version" ]]; then
-      # Fallback: read directly from versions.yaml if TOOL_VERSIONS not populated yet
-      local versions_file="${DEVBASE_DOT}/.config/devbase/versions.yaml"
+    # Get mise version from custom-tools.yaml
+    local expected_mise_version=""
+    if [[ -n "${TOOL_VERSIONS[mise]:-}" ]]; then
+      # Fallback: read directly from custom-tools.yaml if TOOL_VERSIONS not populated yet
+      local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
       if [[ -f "$versions_file" ]]; then
         mise_version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
       fi
@@ -308,7 +303,7 @@ install_mise_tools() {
   # Show summary
   local total_tools
   total_tools=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
-  
+
   if [[ $mise_status -ne 0 ]]; then
     show_progress warning "Some optional mise tools failed to install (non-critical)"
   fi

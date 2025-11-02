@@ -1765,7 +1765,7 @@ Enables testing HTTPS locally without self-signed certificate errors or security
   - `mkcert localhost 127.0.0.1`
   - `mkcert example.com "*.example.com"`
   - `mkcert -pkcs12 localhost` (for Java/Spring Boot)
-- **Note**: mkcert creates files in current directory 
+- **Note**: mkcert creates files in current directory
 - Documentation: [Mkcert GitHub](https://github.com/FiloSottile/mkcert)
 - Man page: `man mkcert`
 - Examples: `tldr mkcert`

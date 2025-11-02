@@ -327,10 +327,10 @@ get_extension_description() {
   esac
 }
 
-# Brief: Install VS Code extensions from versions.yaml
+# Brief: Install VS Code extensions from vscode-extensions.yaml
 # Params: $1 - code_cmd (path to code executable), $2 - remote_flag (optional)
 # Uses: DEVBASE_DOT, DEVBASE_VSCODE_NEOVIM, get_extension_description, show_progress (globals/functions)
-# Returns: 0 on success, 1 if code_cmd fails or versions.yaml not found
+# Returns: 0 on success, 1 if code_cmd fails or vscode-extensions.yaml not found
 # Side-effects: Installs VS Code extensions, prints installation summary
 install_vscode_extensions() {
   local code_cmd="$1"
@@ -339,9 +339,9 @@ install_vscode_extensions() {
   validate_not_empty "$code_cmd" "VS Code command" || return 1
   validate_var_set "DEVBASE_DOT" || return 1
 
-  local versions_file="${DEVBASE_DOT}/.config/devbase/versions.yaml"
+  local extensions_file="${DEVBASE_DOT}/.config/devbase/vscode-extensions.yaml"
 
-  validate_file_exists "$versions_file" "versions.yaml" || return 1
+  validate_file_exists "$extensions_file" "vscode-extensions.yaml" || return 1
 
   # Skip version test if using --remote flag since it would open GUI
   if [[ -z "$remote_flag" ]]; then
@@ -365,52 +365,55 @@ install_vscode_extensions() {
     installed_list=$("$code_cmd" --list-extensions 2>/dev/null || true)
   fi
 
-  while IFS=: read -r key version_line; do
-    if [[ "$key" =~ ^vscode_ext_ ]]; then
-      local ext_id
-      ext_id=$(echo "$version_line" | grep -o 'depName=[^ ]*' | cut -d= -f2)
+  while IFS=: read -r ext_id version_line; do
+    # Skip comments and empty lines
+    [[ "$ext_id" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$ext_id" ]] && continue
 
-      if [[ -n "$ext_id" ]]; then
-        local ext_desc
-        ext_desc=$(get_extension_description "$ext_id")
-        local display_name="$ext_id"
-        if [[ -n "$ext_desc" ]]; then
-          display_name="${ext_desc} (${ext_id})"
-        fi
+    # Trim leading/trailing whitespace from extension ID
+    ext_id=$(echo "$ext_id" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-        # Skip neovim extension if user opted out
-        if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM}" != "true" ]]; then
-          show_progress info "$display_name (skipped by user preference)"
-          continue
-        fi
+    # Skip if still empty after trimming
+    [[ -z "$ext_id" ]] && continue
 
-        if echo "$installed_list" | grep -qi "^${ext_id}$"; then
-          show_progress info "$display_name (already installed)"
-          skipped_count=$((skipped_count + 1))
+    local ext_desc
+    ext_desc=$(get_extension_description "$ext_id")
+    local display_name="$ext_id"
+    if [[ -n "$ext_desc" ]]; then
+      display_name="${ext_desc} (${ext_id})"
+    fi
+
+    # Skip neovim extension if user opted out
+    if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM}" != "true" ]]; then
+      show_progress info "$display_name (skipped by user preference)"
+      continue
+    fi
+
+    if echo "$installed_list" | grep -qi "^${ext_id}$"; then
+      show_progress info "$display_name (already installed)"
+      skipped_count=$((skipped_count + 1))
+    else
+      if [[ -n "$remote_flag" ]]; then
+        if NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt "$code_cmd" "$remote_flag" --install-extension "$ext_id" --force; then
+          show_progress success "$display_name"
+          installed_count=$((installed_count + 1))
         else
-          if [[ -n "$remote_flag" ]]; then
-            if NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt "$code_cmd" "$remote_flag" --install-extension "$ext_id" --force; then
-              show_progress success "$display_name"
-              installed_count=$((installed_count + 1))
-            else
-              show_progress error "Failed: $display_name"
-              failed_count=$((failed_count + 1))
-              failed_extensions+=("$ext_id")
-            fi
-          else
-            if NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt "$code_cmd" --install-extension "$ext_id" --force; then
-              show_progress success "$display_name"
-              installed_count=$((installed_count + 1))
-            else
-              show_progress error "Failed: $display_name"
-              failed_count=$((failed_count + 1))
-              failed_extensions+=("$ext_id")
-            fi
-          fi
+          show_progress error "Failed: $display_name"
+          failed_count=$((failed_count + 1))
+          failed_extensions+=("$ext_id")
+        fi
+      else
+        if NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt "$code_cmd" --install-extension "$ext_id" --force; then
+          show_progress success "$display_name"
+          installed_count=$((installed_count + 1))
+        else
+          show_progress error "Failed: $display_name"
+          failed_count=$((failed_count + 1))
+          failed_extensions+=("$ext_id")
         fi
       fi
     fi
-  done <"${DEVBASE_DOT}/.config/devbase/versions.yaml"
+  done <"$extensions_file"
 
   if [[ $installed_count -gt 0 ]]; then
     show_progress success "Installed $installed_count extensions"

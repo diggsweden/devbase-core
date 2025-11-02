@@ -114,9 +114,9 @@ get_wsl_version() {
   # Fallback: check kernel for WSL2 vs WSL1
   local kernel_version
   kernel_version=$(uname -r 2>/dev/null || echo "")
-  
+
   if [[ "$kernel_version" =~ WSL2|microsoft-standard-WSL2 ]]; then
-    echo "2.0.0"  # Unknown WSL2 version, assume 2.0.0
+    echo "2.0.0" # Unknown WSL2 version, assume 2.0.0
     return 0
   fi
 
@@ -200,16 +200,16 @@ detect_environment() {
 
   if is_wsl; then
     export _DEVBASE_ENV="wsl-ubuntu"
-    
+
     # Check WSL version and require >= 2.6.0
     local wsl_version
     wsl_version=$(get_wsl_version)
-    
+
     if [[ -n "$wsl_version" ]]; then
       local major minor
       major=$(echo "$wsl_version" | cut -d. -f1)
       minor=$(echo "$wsl_version" | cut -d. -f2)
-      
+
       if [[ "$major" -lt 2 ]] || { [[ "$major" -eq 2 ]] && [[ "$minor" -lt 6 ]]; }; then
         show_progress error "WSL version $wsl_version detected - version 2.6.0 or higher is required"
         show_progress info "To upgrade WSL, run in Windows PowerShell:"
