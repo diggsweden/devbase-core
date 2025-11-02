@@ -49,7 +49,7 @@ jq = "jq-1.8.1"
 
 # Shell and terminal enhancements
 "aqua:junegunn/fzf" = "v0.65.2"
-"aqua:eza-community/eza" = "v0.23.3"
+"aqua:eza-community/eza" = "v0.23.4"
 "aqua:sharkdp/bat" = "v0.25.0"
 "aqua:sharkdp/vivid" = "v0.10.1"
 "aqua:starship/starship" = "v1.23.0"
