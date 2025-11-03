@@ -62,7 +62,7 @@ jq = "jq-1.8.1"
 
 # Container and Kubernetes tools
 "aqua:docker/compose" = "v2.39.4"
-"aqua:derailed/k9s" = "v0.50.12"
+"aqua:derailed/k9s" = "v0.50.16"
 "aqua:grafana/k6" = "v1.3.0"
 "aqua:argoproj/argo-cd" = "v3.1.9"
 "aqua:bitnami-labs/sealed-secrets" = "v0.32.2"
