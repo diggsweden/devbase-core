@@ -276,8 +276,6 @@ install_mise_tools() {
 
   # Run mise install with progress bar visible (no stderr redirection)
   # mise handles checksum verification internally and will fail if checksums don't match
-  show_progress info "This may take 5-10 minutes to download and install 50+ tools..."
-  
   if ! run_mise_from_home_dir install --yes; then
     die "Mise tool installation failed"
   fi
