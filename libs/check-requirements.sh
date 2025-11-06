@@ -414,11 +414,8 @@ run_preflight_checks() {
 
   check_mise_github_token || return 1
 
-  printf "%b Please enter your password when prompted\n" "${DEVBASE_COLORS[DIM]}ℹ"
-  if ! sudo -v; then
-    show_progress error "sudo access required"
-    return 1
-  fi
+  # Note: Sudo access check moved to prepare_system() - no need to ask for password
+  # before user configuration questions (better UX, avoids timeout issues)
 
   show_progress success "Pre-flight checks complete"
   return 0

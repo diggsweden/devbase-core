@@ -609,7 +609,7 @@ display_configuration_summary() {
   print_box_line "• Estimated time: 10-15 minutes" 60
   print_box_line "• Disk space required: ~6GB" 60
   print_box_line "• Internet connection required" 60
-  print_box_line "• You may be prompted for sudo password" 60
+  print_box_line "• Sudo password will be requested before install" 60
   print_box_bottom 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
 
   printf "\n"
@@ -619,17 +619,23 @@ display_configuration_summary() {
   fi
 }
 
-# Brief: Prepare system by ensuring user directories and system configuration
+# Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
-# Uses: show_progress, die, ensure_user_dirs, setup_sudo_and_system (globals/functions)
+# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system (globals/functions)
 # Returns: 0 always (dies on failure)
-# Side-effects: Creates user directories, configures sudo for proxy (if needed)
-# Note: Sudo access already validated by run_preflight_checks()
+# Side-effects: Prompts for sudo password, creates user directories, configures sudo for proxy
 prepare_system() {
   # PHASE 1: System Preparation (first actual changes)
-  # Sudo access already validated and cached by run_preflight_checks()
-  # Just refresh the sudo timestamp to ensure it's still valid
-  sudo -v 2>/dev/null || die "Sudo access lost - please re-run installation"
+  # Check/obtain sudo access right before we need it (after user answers questions)
+  if ! sudo -n true 2>/dev/null; then
+    show_progress info "Sudo access required for system package installation"
+    printf "%b Please enter your password when prompted\n" "${DEVBASE_COLORS[DIM]}ℹ"
+    
+    if ! sudo -v; then
+      die "Sudo access required to install system packages"
+    fi
+    show_progress success "Sudo access granted"
+  fi
 
   ensure_user_dirs
 
@@ -673,7 +679,8 @@ main() {
   validate_source_repository
   setup_installation_paths
 
-  # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token, sudo)
+  # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token)
+  # Note: Sudo check happens later in prepare_system() to avoid timeout issues
   printf "\n"
   run_preflight_checks || return 1
 
