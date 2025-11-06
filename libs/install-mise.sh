@@ -144,7 +144,7 @@ verify_mise_checksum() {
   local checksums_url="https://github.com/jdx/mise/releases/download/v${version}/SHASUMS256.txt"
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
-  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file" 2>/dev/null; then
+  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
     echo "Warning: Could not download checksums for mise v${version}" >&2
     return 0
   fi

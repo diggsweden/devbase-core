@@ -14,10 +14,10 @@ fi
 # Side-effects: Creates directory and copies files
 prepare_temp_dotfiles_directory() {
   validate_var_set "_DEVBASE_TEMP" || return 1
+  # shellcheck disable=SC2153 # DEVBASE_DOT is exported in setup.sh
   validate_dir_exists "${DEVBASE_DOT}" "Dotfiles directory" || return 1
 
   local temp_dotfiles="${_DEVBASE_TEMP}/dotfiles"
-  # shellcheck disable=SC2153 # DEVBASE_DOT is exported in setup.sh
   cp -r "${DEVBASE_DOT}" "${temp_dotfiles}"
   echo "$temp_dotfiles"
 }
@@ -667,6 +667,7 @@ process_maven_templates_yaml() {
   if [[ ${#yaml_fragments[@]} -eq 1 ]]; then
     cp "${yaml_fragments[0]}" "$merged_yaml"
   else
+    # shellcheck disable=SC2016 # Single quotes intentional - yq expression, not shell expansion
     yq eval-all '
       . as $item ireduce ({}; 
         .settings = (.settings // {}) * ($item.settings // {}) |
@@ -675,7 +676,7 @@ process_maven_templates_yaml() {
         .settings.profiles.profile = ((.settings.profiles.profile // []) + ($item.profiles.profile // [])) |
         .settings.activeProfiles.activeProfile = ((.settings.activeProfiles.activeProfile // []) + ($item.activeProfiles.activeProfile // []))
       )
-    ' "${yaml_fragments[@]}" >"$merged_yaml" 2>/dev/null
+    ' "${yaml_fragments[@]}" >"$merged_yaml"
 
     if [[ $? -ne 0 ]]; then
       show_progress error "Failed to merge YAML fragments"
@@ -684,9 +685,7 @@ process_maven_templates_yaml() {
   fi
 
   # Convert YAML to XML
-  yq -o=xml "$merged_yaml" >"$target_file" 2>/dev/null
-
-  if [[ $? -eq 0 ]] && [[ -f "$target_file" ]]; then
+  if yq -o=xml "$merged_yaml" >"$target_file"; then
     show_progress success "Maven settings generated from YAML"
   else
     show_progress error "Failed to generate Maven settings.xml"

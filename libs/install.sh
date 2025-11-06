@@ -630,7 +630,7 @@ prepare_system() {
   if ! sudo -n true 2>/dev/null; then
     show_progress info "Sudo access required for system package installation"
     printf "%b Please enter your password when prompted\n" "${DEVBASE_COLORS[DIM]}ℹ"
-    
+
     if ! sudo -v; then
       die "Sudo access required to install system packages"
     fi

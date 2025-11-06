@@ -29,9 +29,9 @@ get_vscode_checksum() {
 
   local sha_api="https://code.visualstudio.com/sha"
   local checksum
-  checksum=$(curl -fsSL "$sha_api" 2>/dev/null |
+  checksum=$(curl -fsSL "$sha_api" |
     jq -r --arg ver "$version" --arg plat "$platform" \
-      '.products[] | select(.productVersion == $ver and .platform.os == $plat and .build == "stable") | .sha256hash' 2>/dev/null)
+      '.products[] | select(.productVersion == $ver and .platform.os == $plat and .build == "stable") | .sha256hash')
 
   if [[ -n "$checksum" ]] && [[ "$checksum" != "null" ]]; then
     echo "$checksum"
@@ -55,7 +55,7 @@ get_oc_checksum() {
   local checksum
 
   # Download checksum file and extract the checksum for openshift-client-linux tarball
-  if checksum=$(curl -fsSL "$checksum_url" 2>/dev/null | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}' 2>/dev/null); then
+  if checksum=$(curl -fsSL "$checksum_url" | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}'); then
     if [[ -n "$checksum" ]]; then
       echo "$checksum"
       return 0
@@ -497,11 +497,11 @@ install_vscode() {
   fi
 
   if [[ -f "$vscode_deb" ]]; then
-    if sudo dpkg -i "$vscode_deb" 2>/dev/null; then
+    if sudo dpkg -i "$vscode_deb"; then
       show_progress success "VS Code installed ($version)"
     else
       show_progress warning "VS Code installation failed - trying to fix dependencies"
-      sudo apt-get install -f -y -q &>/dev/null
+      sudo apt-get install -f -y -q
       show_progress success "VS Code installed ($version, with dependency fixes)"
     fi
   else
@@ -562,7 +562,8 @@ install_intellij_idea() {
 
   if [[ -f "$idea_tar" ]]; then
     mkdir -p "$extract_dir"
-    if tar -xzf "$idea_tar" -C "$extract_dir" 2>/dev/null; then
+    show_progress info "Extracting IntelliJ IDEA (this may take a few minutes)..."
+    if tar -xzf "$idea_tar" -C "$extract_dir"; then
       local idea_dir
       idea_dir=$(find "$extract_dir" -maxdepth 1 -type d -name "idea-IU-*" -o -name "ideaIU-*" | head -1)
       if [[ -n "$idea_dir" ]]; then

@@ -404,14 +404,11 @@ check_mise_github_token() {
 
 # PRE-FLIGHT CHECK
 run_preflight_checks() {
-  show_progress info "Running pre-flight checks..."
+  show_progress step "Running pre-flight checks"
 
   check_ubuntu_version "24.04" || return 1
-
   check_disk_space 5 || return 1
-
   check_path_writable || return 1
-
   check_mise_github_token || return 1
 
   # Note: Sudo access check moved to prepare_system() - no need to ask for password
