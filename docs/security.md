@@ -362,11 +362,13 @@ DevBase extends a shared base configuration from the organization's GitHub repos
 **Base Configuration Location**: `github>diggsweden/.github//renovate-base.json`
 
 **Stability Days**: The base configuration sets a 7-day stability period before updates are proposed. This ensures:
+
 - New releases are tested by the community before adoption
 - Critical bugs in new versions are discovered and fixed
 - Updates are batched to reduce PR noise
 
 **Managed Files**:
+
 - `dot/.config/devbase/custom-tools.yaml` - 12 custom tools
 - `dot/.config/devbase/vscode-extensions.yaml` - 22 VS Code extensions  
 - `dot/.config/mise/config.toml` - 50+ mise-managed tools
@@ -382,6 +384,7 @@ DevBase implements multi-layered automatic updates for both system packages and 
 **Unattended Upgrades** is configured to automatically install security updates from Ubuntu/Debian repositories:
 
 **Allowed Origins** (auto-updated):
+
 - `${distro_id}:${distro_codename}` - Main repository
 - `${distro_id}:${distro_codename}-security` - Security updates
 - `${distro_id}:${distro_codename}-updates` - Stable updates
@@ -389,11 +392,13 @@ DevBase implements multi-layered automatic updates for both system packages and 
 - `${distro_id}ESM:${distro_codename}-infra-security` - Infrastructure security updates
 
 **Configuration**:
+
 - **Location**: `/etc/apt/apt.conf.d/50unattended-upgrades`
 - **Source**: `devbase_files/unattended-upgrades-debian/50unattended-upgrades`
 - **Installed by**: `libs/install.sh:182`
 
 **Key Settings**:
+
 ```bash
 # Only update on AC power (laptops)
 Unattended-Upgrade::OnlyOnACPower "true"
@@ -406,6 +411,7 @@ Unattended-Upgrade::DevRelease "false"
 ```
 
 **Verification**:
+
 ```bash
 # Check unattended-upgrades status
 sudo systemctl status unattended-upgrades
@@ -422,11 +428,13 @@ sudo unattended-upgrade --dry-run --debug
 **Automated Updates** for 84 development tools via Renovate Bot:
 
 **Tool Categories**:
+
 - 50+ mise-managed tools (via Aqua registry)
 - 12 custom tools (specialized installers)
 - 22 VS Code extensions
 
 **Update Flow**:
+
 1. Renovate detects new version
 2. **7-day stability period** (configured in base config)
 3. PR created with version bump
@@ -435,12 +443,14 @@ sudo unattended-upgrade --dry-run --debug
 6. Merge creates audit trail in git history
 
 **Base Configuration**:
+
 - **Extends**: `github>diggsweden/.github//renovate-base.json`
 - **Schedule**: Defined in base config (typically weekly)
 - **Stability days**: 7 days (prevents adopting brand-new releases)
 - **Grouping**: Related updates batched together
 
 **Custom Managers**:
+
 ```json
 {
   "customManagers": [
@@ -457,6 +467,7 @@ sudo unattended-upgrade --dry-run --debug
 ```
 
 **Security Benefits**:
+
 - **No stale dependencies**: Regular updates prevent accumulation of vulnerabilities
 - **Human approval**: Prevents automatic malicious updates
 - **Audit trail**: Every update tracked in git with PR discussion
@@ -607,7 +618,7 @@ DevBase configures system resource limits optimized for development workloads.
 - **Soft/Hard limit**: Unlimited locked memory
 - **Purpose**: Required for containers, virtual machines, and performance-critical applications
 
-### Configuration Files
+### Resource Limit Configuration
 
 DevBase creates system-wide limit configurations:
 
@@ -616,7 +627,7 @@ DevBase creates system-wide limit configurations:
 /etc/security/limits.d/99-devbase.conf
 ```
 
-```
+```text
 # DevBase development limits
 * soft nofile 65536
 * hard nofile 65536
@@ -631,13 +642,13 @@ DevBase creates system-wide limit configurations:
 /etc/sysctl.d/99-devbase.conf
 ```
 
-```
+```text
 fs.file-max = 90000
 ```
 
 **Location**: `libs/configure-services.sh:79` (`set_system_limits()` function)
 
-### Verification
+### Verifying Resource Limits
 
 ```bash
 # Check current limits for your session
@@ -705,7 +716,7 @@ trap cleanup_temp EXIT INT TERM
 - Vendors don't provide
 - HTTPS + dpkg signatures
 
-## Verification
+## Security Verification Commands
 
 ```bash
 # 1. No secrets

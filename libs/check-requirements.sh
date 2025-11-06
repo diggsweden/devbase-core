@@ -3,6 +3,7 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
@@ -15,6 +16,7 @@ get_os_info() {
   declare -gA _DEVBASE_OS_INFO
 
   if [[ -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091 # System file, always exists on Linux
     source /etc/os-release
     _DEVBASE_OS_INFO[id]="${ID:-unknown}"
     _DEVBASE_OS_INFO[name]="${NAME:-Unknown}"
@@ -109,7 +111,7 @@ get_wsl_version() {
 
   local wsl_version_output
   wsl_version_output=$(/mnt/c/Windows/System32/wsl.exe --version 2>/dev/null | grep "WSL version:" | head -1 | awk '{print $3}' | tr -d '\r')
-  
+
   if [[ -z "$wsl_version_output" ]]; then
     echo ""
     return 1
@@ -359,6 +361,47 @@ check_path_writable() {
   return 0
 }
 
+# Brief: Check if MISE_GITHUB_TOKEN is set to avoid GitHub API rate limiting
+# Params: None
+# Uses: MISE_GITHUB_TOKEN, NON_INTERACTIVE, show_progress (globals)
+# Returns: 0 if token set or user continues, 1 if user declines to continue
+# Side-effects: Prompts user if token not set (unless NON_INTERACTIVE), reads stdin
+check_mise_github_token() {
+  if [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
+    show_progress "done" "GitHub token (MISE_GITHUB_TOKEN) configured ✓"
+    return 0
+  fi
+
+  show_progress warning "MISE_GITHUB_TOKEN not set"
+  show_progress info "Without this token, mise downloads may be rate limited or stalled"
+  show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
+
+  # In non-interactive mode, just warn and continue
+  if [[ "${NON_INTERACTIVE:-false}" == "true" ]]; then
+    show_progress info "Continuing in non-interactive mode (token recommended but not required)"
+    return 0
+  fi
+
+  printf "\n"
+  printf "To set the token, you can:\n"
+  printf "  1. Create a GitHub personal access token at:\n"
+  printf "     https://github.com/settings/tokens/new?scopes=public_repo\n"
+  printf "  2. Export it before running setup:\n"
+  printf "     export MISE_GITHUB_TOKEN=ghp_your_token_here\n"
+  printf "  3. Or add it to your shell config permanently\n"
+  printf "\n"
+  printf "Continue without GitHub token? (y/N): "
+  read -r response
+
+  if [[ "$response" =~ ^[Yy]$ ]]; then
+    show_progress info "Continuing without GitHub token (may experience rate limiting)"
+    return 0
+  else
+    show_progress info "Installation cancelled - please set MISE_GITHUB_TOKEN and try again"
+    exit 1
+  fi
+}
+
 # PRE-FLIGHT CHECK
 run_preflight_checks() {
   show_progress info "Running pre-flight checks..."
@@ -368,6 +411,8 @@ run_preflight_checks() {
   check_disk_space 5 || return 1
 
   check_path_writable || return 1
+
+  check_mise_github_token || return 1
 
   printf "%b Please enter your password when prompted\n" "${DEVBASE_COLORS[DIM]}ℹ"
   if ! sudo -v; then
@@ -415,4 +460,5 @@ export -f check_critical_tools
 export -f detect_environment
 export -f check_ubuntu_version
 export -f validate_required_vars
+export -f check_mise_github_token
 export -f run_preflight_checks

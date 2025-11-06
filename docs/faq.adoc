@@ -129,3 +129,25 @@ mise is a Rust rewrite of asdf with better performance, additional backends (aqu
 === Why Podman instead of Docker?
 
 Rootless by default, no daemon, Docker-compatible.
+
+=== Why am I being asked about MISE_GITHUB_TOKEN during installation?
+
+Without a GitHub token, mise downloads may be rate limited by GitHub's API (60 requests/hour for unauthenticated requests). This can cause installation failures or stalls.
+
+To avoid this issue:
+
+[source,bash]
+----
+# Create a token at: https://github.com/settings/tokens/new?scopes=public_repo
+export MISE_GITHUB_TOKEN=ghp_your_token_here
+./setup.sh
+----
+
+You can also add it to your shell profile permanently:
+
+[source,bash]
+----
+echo 'export MISE_GITHUB_TOKEN=ghp_your_token_here' >> ~/.bashrc
+----
+
+The installation will continue without a token if you choose, but may experience issues.

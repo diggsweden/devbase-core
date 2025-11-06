@@ -3,6 +3,7 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
@@ -56,7 +57,7 @@ validate_critical_versions() {
     show_progress warning "mise version not found in custom-tools.yaml"
     return 0
   fi
-  
+
   # All other critical tools (node, python, java) are in mise/config.toml
   return 0
 }
@@ -67,6 +68,7 @@ validate_critical_versions() {
 # Returns: 0 always
 # Side-effects: Modifies mise config.toml in dotfiles
 sync_mise_config_versions() {
+  # shellcheck disable=SC2153 # DEVBASE_DOT is set in setup.sh and exported
   local mise_config_src="${DEVBASE_DOT}/.config/mise/config.toml"
   [[ ! -f "$mise_config_src" ]] && return 0
 
@@ -209,17 +211,17 @@ install_mise() {
         mise_version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
       fi
     fi
-    
+
     # Set mise version and let it install to default location (~/.local/bin/mise)
     if [[ -n "$mise_version" ]]; then
       export MISE_VERSION="$mise_version"
     fi
-    
+
     bash "$mise_installer" || die "Failed to run Mise installer script"
 
     # Add default mise install location to PATH so we can find it
     export PATH="${HOME}/.local/bin:${PATH}"
-    
+
     # Find where mise was actually installed
     if ! mise_path=$(command -v mise 2>/dev/null); then
       die "Mise installation failed - binary not found in PATH after installation (MISE_VERSION=${MISE_VERSION:-not set})"

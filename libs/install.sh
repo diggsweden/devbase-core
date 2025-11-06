@@ -48,13 +48,17 @@ handle_interrupt() {
 trap cleanup_temp_directory EXIT
 trap handle_interrupt INT TERM
 
+# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/process-templates.sh"
+# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-apt.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-snap.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-mise.sh"
+# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-custom.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/configure-completions.sh"
@@ -62,6 +66,7 @@ source "${DEVBASE_ROOT}/libs/configure-completions.sh"
 source "${DEVBASE_ROOT}/libs/configure-shell.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/configure-services.sh"
+# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
 
 _VERSIONS_FILE=""
@@ -163,6 +168,7 @@ setup_installation_paths() {
   validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "_DEVBASE_TEMP" || return 1
 
+  # shellcheck disable=SC2153 # DEVBASE_DOT is validated above and set in setup.sh
   _VERSIONS_FILE="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
 
   return 0
@@ -613,62 +619,17 @@ display_configuration_summary() {
   fi
 }
 
-# Brief: Prepare system by obtaining sudo access and ensuring user directories
+# Brief: Prepare system by ensuring user directories and system configuration
 # Params: None
-# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system (globals/functions)
+# Uses: show_progress, die, ensure_user_dirs, setup_sudo_and_system (globals/functions)
 # Returns: 0 always (dies on failure)
-# Side-effects: Prompts for sudo password (3 attempts), creates user directories
+# Side-effects: Creates user directories, configures sudo for proxy (if needed)
+# Note: Sudo access already validated by run_preflight_checks()
 prepare_system() {
   # PHASE 1: System Preparation (first actual changes)
-  if ! sudo -n true 2>/dev/null; then
-    show_progress info "Sudo access required for system package installation"
-
-    # Give user 3 attempts to enter correct sudo password
-    local sudo_attempts=0
-    local max_attempts=3
-
-    # Temporarily disable exit on error for sudo handling
-    set +e
-
-    while [[ $sudo_attempts -lt $max_attempts ]]; do
-      sudo_attempts=$((sudo_attempts + 1))
-
-      if [[ $sudo_attempts -gt 1 ]]; then
-        show_progress warning "Incorrect password. Attempt $sudo_attempts of $max_attempts"
-        sudo -k 2>/dev/null
-      fi
-
-      local sudo_success=false
-
-      # First try sudo normally to see if it can access a terminal
-      if sudo -v 2>/dev/null; then
-        sudo_success=true
-      else
-        # If sudo can't find a terminal, read password manually
-        printf "  [sudo] password for %s: " "$USER"
-        IFS= read -r -s sudo_password
-        printf "\n"
-        if [[ -n "$sudo_password" ]]; then
-          if echo "$sudo_password" | sudo -S -v 2>/dev/null; then
-            sudo_success=true
-          fi
-          unset sudo_password
-        fi
-      fi
-
-      if [[ "$sudo_success" == "true" ]]; then
-        show_progress success "Sudo access granted"
-        break
-      fi
-
-      if [[ $sudo_attempts -eq $max_attempts ]]; then
-        printf "\n"
-        die "Failed to obtain sudo privileges after $max_attempts attempts"
-      fi
-    done
-  else
-    show_progress success "Sudo access already available"
-  fi
+  # Sudo access already validated and cached by run_preflight_checks()
+  # Just refresh the sudo timestamp to ensure it's still valid
+  sudo -v 2>/dev/null || die "Sudo access lost - please re-run installation"
 
   ensure_user_dirs
 
@@ -704,13 +665,17 @@ perform_installation() {
 
 # Brief: Main installation orchestration function
 # Params: None
-# Uses: DEVBASE_COLORS, validate_environment, validate_source_repository, setup_installation_paths, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
+# Uses: DEVBASE_COLORS, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
 # Returns: 0 always
 # Side-effects: Orchestrates entire DevBase installation process
 main() {
   validate_environment
   validate_source_repository
   setup_installation_paths
+
+  # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token, sudo)
+  printf "\n"
+  run_preflight_checks || return 1
 
   collect_user_configuration
   display_configuration_summary
