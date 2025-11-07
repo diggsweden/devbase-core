@@ -7,6 +7,12 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
+if [[ -z "${DEVBASE_DOT:-}" ]]; then
+  echo "ERROR: DEVBASE_DOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
+  return 1 2>/dev/null || exit 1
+fi
+
 # Brief: Read APT package list from configuration file
 # Params: None
 # Uses: DEVBASE_DOT (global)
@@ -135,6 +141,27 @@ install_ms_core_fonts() {
   return 1
 }
 
+# Brief: Add Fish shell PPA for version 4.x
+# Params: None
+# Returns: 0 on success, 1 on failure
+# Side-effects: Adds fish-shell/release-4 PPA for Fish 4.x with GPG key, skips apt update
+add_fish_ppa() {
+  show_progress info "Adding Fish shell 4.x PPA..."
+  
+  # Use -n flag to skip automatic apt update (we'll do it later in pkg_update)
+  # add-apt-repository with -n flag:
+  # 1. Downloads and verifies GPG signing key via HTTPS
+  # 2. Adds repository to /etc/apt/sources.list.d/
+  # 3. Does NOT run apt update (we handle that separately)
+  if ! sudo add-apt-repository -y -n ppa:fish-shell/release-4 &>/dev/null; then
+    show_progress warning "Failed to add Fish 4.x PPA (will use default version from Ubuntu repos)"
+    return 1
+  fi
+  
+  show_progress success "Fish 4.x PPA added"
+  return 0
+}
+
 # Brief: Install all APT packages, configure locale, and install fonts
 # Params: None
 # Uses: load_apt_packages, APT_PACKAGES_ALL (functions/global array)
@@ -142,6 +169,9 @@ install_ms_core_fonts() {
 # Side-effects: Loads package list, installs packages, configures locale, cleans up
 install_apt_packages() {
   show_progress info "Installing system packages..."
+
+  # Add Fish PPA before updating package cache
+  add_fish_ppa
 
   # Load package list from file
   if ! load_apt_packages; then
