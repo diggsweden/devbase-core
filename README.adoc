@@ -23,6 +23,7 @@ Built on principles from https://web.archive.org/web/20250411215614/https://gabe
 * Ubuntu 24.04 LTS or newer (WSL2 or native)
 * 6GB free disk space
 * Installation time: ~10-15 minutes
+* (A simple GitHub-token to avoid RateLimiting - might be provided automatically by custom config)
 
 == Installation
 
@@ -67,7 +68,7 @@ Your terminal will open in Zellij (terminal multiplexer) after installation.
 DevBase works in two modes:
 
 1. **Standalone** - Just clone and run. Perfect for personal use.
-2. **Custom mode** - Add a `devbase-custom-config` repo with your company's proxy, certificates, and registry settings. See link:docs/customization.adoc[Customization Guide].
+2. **Custom mode** - Add a `devbase-custom-config` repo with your organizational proxy, certificates, and registry settings. See link:docs/customization.adoc[Customization Guide].
 
 == Contributing
 
