@@ -430,6 +430,84 @@ install_fisher() {
   return 0
 }
 
+# Brief: Install Monaspace Nerd Font for terminal use (native Ubuntu only, skips WSL)
+# Params: None
+# Uses: _DEVBASE_TEMP, HOME, validate_var_set, is_wsl, show_progress, retry_command, download_file (globals/functions)
+# Returns: 0 on success/skip, 1 on failure
+# Side-effects: Downloads and installs Monaspace Nerd Font to ~/.local/share/fonts, updates font cache, configures terminal defaults
+install_nerd_fonts() {
+  validate_var_set "_DEVBASE_TEMP" || return 1
+  validate_var_set "HOME" || return 1
+
+  # Skip on WSL - users manage fonts on Windows side
+  if is_wsl; then
+    show_progress info "Skipping Nerd Font installation on WSL (manage fonts on Windows)"
+    return 0
+  fi
+
+  show_progress info "Installing Monaspace Nerd Font..."
+
+  local fonts_dir="${HOME}/.local/share/fonts"
+  local monaspace_dir="${fonts_dir}/MonaspaceNerdFont"
+
+  # Check if already installed
+  if [[ -d "$monaspace_dir" ]] && [[ $(find "$monaspace_dir" -name "*.ttf" | wc -l) -gt 0 ]]; then
+    show_progress success "Monaspace Nerd Font already installed"
+    return 0
+  fi
+
+  # Use latest release from ryanoasis/nerd-fonts
+  local nf_version="v3.4.0"
+  local font_url="https://github.com/ryanoasis/nerd-fonts/releases/download/${nf_version}/Monaspace.zip"
+  local font_zip="${_DEVBASE_TEMP}/Monaspace.zip"
+
+  # Download font (no checksum provided by Nerd Fonts project)
+  if retry_command download_file "$font_url" "$font_zip"; then
+    mkdir -p "$monaspace_dir"
+    
+    # Extract only TTF files
+    if unzip -q -o "$font_zip" "*.ttf" -d "$monaspace_dir" 2>/dev/null; then
+      # Update font cache
+      if command -v fc-cache &>/dev/null; then
+        fc-cache -f "$fonts_dir"
+      fi
+      
+      show_progress success "Monaspace Nerd Font installed ($nf_version)"
+      
+      # Configure GNOME Terminal to use Monaspace (if installed)
+      if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+        local profile_id
+        profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
+        if [[ -n "$profile_id" ]]; then
+          gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font 'MonaspiceNe Nerd Font Mono 11' 2>/dev/null || true
+          gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" use-system-font false 2>/dev/null || true
+          show_progress success "GNOME Terminal configured to use Monaspace Nerd Font"
+        fi
+      fi
+      
+      # Configure Ghostty (if config exists)
+      local ghostty_config="${HOME}/.config/ghostty/config"
+      if [[ -f "$ghostty_config" ]]; then
+        # Check if font-family is already set
+        if ! grep -q "^font-family" "$ghostty_config"; then
+          echo "" >> "$ghostty_config"
+          echo "# Nerd Font for icons and symbols" >> "$ghostty_config"
+          echo 'font-family = "MonaspiceNe Nerd Font Mono"' >> "$ghostty_config"
+          show_progress success "Ghostty configured to use Monaspace Nerd Font"
+        fi
+      fi
+      
+      return 0
+    else
+      show_progress warning "Failed to extract Monaspace fonts"
+      return 1
+    fi
+  else
+    show_progress warning "Failed to download Monaspace Nerd Font - skipping"
+    return 1
+  fi
+}
+
 # Brief: Install Visual Studio Code (native Linux only, skips WSL)
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, is_wsl, command_exists, show_progress, get_vscode_checksum, retry_command, download_file (globals/functions)

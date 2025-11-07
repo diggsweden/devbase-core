@@ -17,6 +17,7 @@ curl
 git
 locales
 software-properties-common
+unzip
 wget
 
 # Build tools and compilers

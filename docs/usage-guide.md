@@ -9,6 +9,7 @@ This guide documents all tools in the devbase environment, including devbase-spe
 - [Terminal & Shell Tools](#terminal--shell-tools)
   - [Fish Shell](#fish-shell)
   - [Ghostty (Terminal Emulator)](#ghostty-terminal-emulator---non-wsl-only)
+  - [Nerd Fonts (Monaspace)](#nerd-fonts-monaspace---native-ubuntu-only)
   - [vifm (Vim File Manager)](#vifm-vim-file-manager)
   - [lf (List Files)](#lf-list-files)
   - [Starship (Cross-Shell Prompt)](#starship-cross-shell-prompt)
@@ -228,6 +229,66 @@ DevBase installs via snap and configures with system theme integration.
 
 - Documentation: [Ghostty Documentation](https://ghostty.org/docs/)
 - Man page: `man ghostty`
+
+### Nerd Fonts (Monaspace) - Native Ubuntu Only
+
+DevBase automatically installs and configures **Monaspace Nerd Font** on native Ubuntu (not WSL). This provides proper rendering of icons, glyphs, and symbols in terminal applications.
+
+**What is a Nerd Font?**
+
+Nerd Fonts are patched fonts that include 3,600+ glyphs from popular icon sets:
+- Font Awesome
+- Devicons  
+- Octicons (GitHub icons)
+- Material Design Icons
+- Powerline symbols
+- Weather icons
+- And many more...
+
+**Installed Variant:**
+
+- **Font**: Monaspace Nerd Font (MonaspiceNe Nerd Font Mono)
+- **Style**: Neon variant (most popular, modern coding font)
+- **Type**: Mono variant (icons fit within character cells, required for terminals)
+- **Location**: `~/.local/share/fonts/MonaspaceNerdFont/`
+- **Version**: Latest from [ryanoasis/nerd-fonts](https://github.com/ryanoasis/nerd-fonts)
+
+**Auto-Configuration:**
+
+DevBase automatically configures the Nerd Font for:
+
+1. **GNOME Terminal**: Sets default profile to use `MonaspiceNe Nerd Font Mono 11`
+2. **Ghostty**: Adds `font-family = "MonaspiceNe Nerd Font Mono"` to config (if not already set)
+
+**WSL Note:**
+
+On WSL, fonts must be installed on the Windows side (not in WSL). Install Nerd Fonts on Windows and configure your terminal emulator (Windows Terminal, ConEmu, etc.) to use them.
+
+**Manual Font Configuration:**
+
+If you want to use a different Nerd Font or configure additional terminals:
+
+```bash
+# List installed Nerd Fonts
+fc-list | grep -i "nerd"
+
+# GNOME Terminal (GUI)
+# Preferences → Profile → Text → Custom font → Select "MonaspiceNe Nerd Font Mono"
+
+# Ghostty config (~/.config/ghostty/config)
+font-family = "MonaspiceNe Nerd Font Mono"
+
+# Check font is working (should show icons)
+echo "        "  # Various nerd font icons
+```
+
+**Why This Matters:**
+
+Modern CLI tools like `starship`, `eza`, `lf`, and `lazygit` use icons extensively. Without a Nerd Font, you'll see missing character boxes (□) instead of proper icons.
+
+**Learn more**:
+- [Nerd Fonts Homepage](https://www.nerdfonts.com/)
+- [Monaspace by GitHub Next](https://github.com/githubnext/monaspace)
 
 ### vifm (Vim File Manager)
 

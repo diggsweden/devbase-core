@@ -303,6 +303,16 @@ toc::[]
 |✓
 |✓
 |7.3
+
+|link:https://github.com/ryanoasis/nerd-fonts[Monaspace Nerd Font]
+|Nerd Font patched Monaspace with 3,600+ glyphs (icons, powerline, devicons). Native Ubuntu only (WSL users manage fonts on Windows).
+|binary/zip
+|SIL OFL 1.1
+|✓
+|
+|
+|✓
+|7.3
 |===
 
 == Modern CLI Tools
