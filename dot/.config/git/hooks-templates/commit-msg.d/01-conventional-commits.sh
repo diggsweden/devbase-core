@@ -31,11 +31,18 @@ if [[ ! -f ".conform.yaml" ]]; then
   exit 0
 fi
 
-if conform enforce --commit-msg-file="$commit_msg_file"; then
+# Capture conform output
+output=$(conform enforce --commit-msg-file="$commit_msg_file" 2>&1)
+status=$?
+
+if [[ $status -eq 0 ]]; then
+  # Success - only show simple message
   echo -e "  ${GREEN}✓${NC} Commit message valid"
   exit 0
 else
+  # Failure - show detailed output
   echo -e "  ${RED}✗${NC} Commit message validation failed" >&2
+  echo "$output" >&2
   echo "     Check .conform.yaml for requirements" >&2
   exit 1
 fi
