@@ -15,7 +15,7 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "  → Verifying GPG signatures (git verify-commit)..."
+echo "  → Verifying commit signatures (GPG/SSH)..."
 
 # Read stdin to get the list of commits being pushed
 while read -r local_ref local_sha remote_ref remote_sha; do
@@ -25,8 +25,17 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 
   if [[ "$remote_sha" == "0000000000000000000000000000000000000000" ]]; then
-    # New branch, check all commits
-    range="$local_sha"
+    # New branch - find merge base with default branch to avoid checking all history
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+    merge_base=$(git merge-base "origin/$default_branch" "$local_sha" 2>/dev/null || echo "")
+    
+    if [[ -n "$merge_base" ]]; then
+      # Check only commits since divergence from default branch
+      range="$merge_base..$local_sha"
+    else
+      # Fallback: check all commits in the branch
+      range="$local_sha"
+    fi
   else
     # Existing branch, check commits between remote and local
     range="$remote_sha..$local_sha"
@@ -39,22 +48,28 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     continue
   fi
 
-  # Verify each commit has a valid GPG signature
+  # Verify each commit has a valid signature (GPG or SSH)
+  # %G? returns: G (good), B (bad), U (untrusted), X (expired), Y (good + expired), R (revoked), E (no key), N (no signature)
   failed=0
   while IFS= read -r commit; do
-    if ! git verify-commit "$commit" >/dev/null 2>&1; then
-      echo -e "  ${RED}✗${NC} Commit $commit is not signed or has invalid signature" >&2
+    sig_status=$(git log -1 --format="%G?" "$commit" 2>/dev/null)
+    
+    # Accept only "G" (good signature - works for both GPG and SSH)
+    if [[ "$sig_status" != "G" ]]; then
+      echo -e "  ${RED}✗${NC} Commit $commit is not signed or has invalid signature (status: $sig_status)" >&2
       failed=1
     fi
   done <<< "$commits"
 
   if [[ $failed -eq 1 ]]; then
-    echo -e "  ${RED}✗${NC} Some commits lack valid GPG signatures" >&2
-    echo "     Ensure commits are signed: git commit -S" >&2
+    echo -e "  ${RED}✗${NC} Some commits lack valid signatures" >&2
+    echo "     Ensure commits are signed:" >&2
+    echo "       GPG: git commit -S" >&2
+    echo "       SSH: git config gpg.format ssh && git commit -S" >&2
     echo "     Or configure automatic signing: git config commit.gpgsign true" >&2
     exit 1
   fi
 done
 
-echo -e "  ${GREEN}✓${NC} All commits have valid GPG signatures"
+echo -e "  ${GREEN}✓${NC} All commits have valid signatures"
 exit 0
