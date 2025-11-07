@@ -24,8 +24,6 @@ if [[ "$branch_name" =~ ([A-Z]{2,10})-([0-9]+) ]]; then
 
   # Otherwise append footer
   printf "\n%s\n" "$footer" >>"$commit_msg_file"
-else
-  CYAN='\033[0;36m'
-  NC='\033[0m'
-  echo -e "  ${CYAN}ⓘ${NC} No issue number detected in branch name, skipping" >&2
 fi
+
+# No message needed when issue number is not found - silent success
