@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+# Colors
+CYAN='\033[0;36m'
+NC='\033[0m'
+
 commit_msg_file="$1"
 
 branch_name="$(git rev-parse --abbrev-ref HEAD)"
@@ -19,11 +23,13 @@ if [[ "$branch_name" =~ ([A-Z]{2,10})-([0-9]+) ]]; then
   # Insert before first 'Signed-off-by:' or other trailers if present
   if grep -q "^Signed-off-by:" "$commit_msg_file"; then
     sed -i "0,/^Signed-off-by:/s/^Signed-off-by:/${footer}\nSigned-off-by:/" "$commit_msg_file"
-    exit 0
+  else
+    # Otherwise append footer
+    printf "\n%s\n" "$footer" >>"$commit_msg_file"
   fi
-
-  # Otherwise append footer
-  printf "\n%s\n" "$footer" >>"$commit_msg_file"
+  
+  # Show notification that issue reference was added
+  echo -e "  ${CYAN}ⓘ${NC} Added issue reference from branch name: Refs: ${issue}" >&2
 fi
 
-# No message needed when issue number is not found - silent success
+# Silent when no issue number is found
