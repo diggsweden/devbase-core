@@ -402,6 +402,35 @@ check_mise_github_token() {
   fi
 }
 
+# Brief: Check if Secure Boot is enabled on native Linux
+# Params: None
+# Uses: is_wsl, show_progress (globals)
+# Returns: 0 if enabled or not applicable, 1 if disabled on native Linux
+# Side-effects: Prints warning if Secure Boot is disabled
+check_secure_boot() {
+  # Skip check on WSL - not applicable
+  if is_wsl; then
+    return 0
+  fi
+
+  # Check if mokutil is available
+  if ! command -v mokutil &>/dev/null; then
+    # mokutil not available - can't check, assume OK
+    return 0
+  fi
+
+  # Check Secure Boot status
+  local sb_state
+  sb_state=$(mokutil --sb-state 2>/dev/null || echo "unknown")
+
+  if echo "$sb_state" | grep -qi "SecureBoot enabled"; then
+    return 0
+  else
+    # Secure Boot is disabled or unknown
+    return 1
+  fi
+}
+
 # PRE-FLIGHT CHECK
 run_preflight_checks() {
   show_progress step "Running pre-flight checks"
@@ -455,4 +484,5 @@ export -f detect_environment
 export -f check_ubuntu_version
 export -f validate_required_vars
 export -f check_mise_github_token
+export -f check_secure_boot
 export -f run_preflight_checks

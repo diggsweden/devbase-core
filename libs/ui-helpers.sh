@@ -5,9 +5,9 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   # Handle both sourced and executed contexts
   if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-    return 1  # Script is being sourced
+    return 1 # Script is being sourced
   else
-    exit 1    # Script is being executed directly
+    exit 1 # Script is being executed directly
   fi
 fi
 

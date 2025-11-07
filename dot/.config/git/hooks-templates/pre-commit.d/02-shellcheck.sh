@@ -14,9 +14,11 @@ files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(sh|bash)$'
 
 [[ -z "$files" ]] && { echo -e "${CYAN}ⓘ${NC} No shell scripts staged"; exit 0; }
 
-# SC2034: unused variables, SC2155: declare and assign separately
+# SC1091: Not following sourced files (expected when sourcing external libs)
+# SC2034: Unused variables (intentional for constants/config)
+# SC2155: Declare and assign separately (common pattern, low risk)
 # Capture shellcheck output
-output=$(echo "$files" | xargs -r shellcheck --severity=info --exclude=SC2034,SC2155 2>&1)
+output=$(echo "$files" | xargs -r shellcheck --severity=info --exclude=SC1091,SC2034,SC2155 2>&1)
 status=$?
 
 if [[ $status -eq 0 ]]; then

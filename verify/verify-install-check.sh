@@ -82,17 +82,7 @@ readonly MSG_CONFIG_EXISTS="%s exists"
 
 # Counters initialized in verify-base-lib.sh
 
-# Extract version string from command output (last field of first line)
-# Example: "node v20.0.0" -> "v20.0.0"
-extract_version() {
-  awk '{print $NF}' <<<"$1" | head -1
-}
-
-# Format mise tool output as "tool@version"
-# Example: "node    20.0.0" -> "node@20.0.0"
-parse_mise_tool() {
-  awk '{print $1 "@" $2}' <<<"$1"
-}
+# Note: extract_version() and parse_mise_tool() functions removed - dead code (not used anywhere)
 
 get_permissions() {
   stat -c %a "$1" 2>/dev/null || echo "missing"
@@ -101,60 +91,10 @@ get_permissions() {
 count_files() {
   local dir="$1"
   local pattern="${2:-*}"
-  ls -1 "$dir"/$pattern 2>/dev/null | wc -l
-}
-
-parse_config_line() {
-  local line="$1"
-  local part="${2:-both}" # key, value, or both
-  local key="${line%%=*}"
-  local value="${line#*=}"
-
-  case "$part" in
-  key) echo "$key" ;;
-  value) echo "$value" ;;
-  both) echo "$key|$value" ;;
-  esac
+  find "$dir" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | wc -l
 }
 
 # check_file_content now in verify-base-lib.sh
-
-# Data-Driven Path Checking
-
-check_paths() {
-  local path_type="$1" # "file" or "directory"
-  local -n paths=$2    # Reference to associative array
-  local section_name="${3:-Items}"
-  local found=0
-  local total=0
-
-  for path in "${!paths[@]}"; do
-    total=$((total + 1))
-    local description="${paths[$path]}"
-    local display_path=$(home_to_tilde "$path")
-
-    if [[ "$path_type" == "file" ]]; then
-      if file_exists "$path"; then
-        print_check "pass" "$display_path"
-        found=$((found + 1))
-      else
-        print_check "fail" "$display_path"
-      fi
-    elif [[ "$path_type" == "directory" ]]; then
-      if dir_exists "$path"; then
-        print_check "pass" "$display_path"
-        found=$((found + 1))
-      else
-        print_check "fail" "$display_path"
-      fi
-    fi
-  done
-
-  # Summary if needed
-  if [[ $total -gt 10 ]]; then
-    printf "  %b→ %s: %d/%d exist%b\n" "${CYAN}" "$section_name" "$found" "$total" "${NC}"
-  fi
-}
 
 # Configuration - Expected Tools and Packages
 
@@ -206,40 +146,8 @@ declare -A APT_PACKAGES=(
 
 # Common Utility Functions now in verify-base-lib.sh
 
-# Safe check wrapper with error handling
-safe_check() {
-  local check_function="$1"
-  shift
-  local result
-
-  if result=$($check_function "$@" 2>/dev/null); then
-    echo "$result"
-    return 0
-  else
-    return 1
-  fi
-}
-
-check_file_exists() {
-  file_exists "$1"
-}
-
-check_dir_exists() {
-  dir_exists "$1"
-}
-
-check_file_permissions() {
-  local file="$1"
-  local expected_perms="$2"
-  local actual_perms
-
-  if [[ -e "$file" ]]; then
-    actual_perms=$(get_permissions "$file")
-    [[ "$actual_perms" == "$expected_perms" ]]
-  else
-    return 1
-  fi
-}
+# Note: check_file_exists() and check_dir_exists() removed - dead code
+# Code now uses file_exists() and dir_exists() directly
 
 get_file_permissions() {
   local file="$1"
@@ -329,561 +237,17 @@ declare -A FILE_PERMISSIONS=(
 
 # Enhanced Utility Functions
 
-check_command() {
-  local cmd="$1"
-  command -v "$cmd" &>/dev/null
-}
-
-check_command_status() {
-  local cmd="$1"
-  local package="${2:-$cmd}" # Package name if different from command
-
-  if check_command "$cmd"; then
-    print_check "pass" "$cmd installed"
-    return 0
-  else
-    print_check "fail" "$(printf "$MSG_NOT_FOUND" "$cmd") (install: $package)"
-    return 1
-  fi
-}
-
 # check_env_var now in verify-base-lib.sh
 
-check_systemd_service() {
-  local service="$1"
-  local scope="${2:-user}"    # 'user' or 'system'
-  local special_type="${3:-}" # 'oneshot' or empty
-
-  if [[ "$scope" == "user" ]]; then
-    if ! systemctl --user list-unit-files "$service" &>/dev/null 2>&1; then
-      return 1
-    fi
-
-    local enabled_state=$(systemctl --user is-enabled "$service" 2>&1)
-    local active_state=$(systemctl --user is-active "$service" 2>&1)
-  else
-    if ! systemctl list-unit-files "$service" &>/dev/null 2>&1; then
-      return 1
-    fi
-
-    local enabled_state=$(systemctl is-enabled "$service" 2>&1)
-    local active_state=$(systemctl is-active "$service" 2>&1)
-  fi
-
-  if [[ "$special_type" == "oneshot" ]]; then
-    if [[ "$enabled_state" == "enabled" ]]; then
-      printf "  %b%s%b %s: enabled (oneshot)\n" "${GREEN}" "$CHECK" "${NC}" "$service"
-    else
-      printf "  %b%s%b %s: disabled\n" "${YELLOW}" "$WARN" "${NC}" "$service"
-    fi
-  elif [[ "$enabled_state" == "enabled" ]]; then
-    if [[ "$active_state" == "active" ]] || [[ "$active_state" == "running" ]]; then
-      printf "  %b%s%b %s: enabled and running\n" "${GREEN}" "$CHECK" "${NC}" "$service"
-    else
-      printf "  %b%s%b %s: enabled but %s\n" "${YELLOW}" "$WARN" "${NC}" "$service" "$active_state"
-    fi
-  else
-    printf "  %b%s%b %s: disabled\n" "${YELLOW}" "$WARN" "${NC}" "$service"
-  fi
-
-  return 0
-}
-
-print_item_list() {
-  local -n items=$1 # nameref to array
-  local type="${2:-file}"
-
-  for item in "${items[@]}"; do
-    print_item_status "$item" "$type"
-  done
-}
-
-check_items_exist() {
-  local -n items=$1 # nameref to array
-  local type="${2:-file}"
-  local found=0
-  local total=${#items[@]}
-
-  for item in "${items[@]}"; do
-    if [[ "$type" == "dir" ]]; then
-      [[ -d "$item" ]] && found=$((found + 1))
-    else
-      [[ -e "$item" ]] && found=$((found + 1))
-    fi
-  done
-
-  echo "$found/$total"
-}
-
-# display_file_box now in verify-base-lib.sh
-
-# Generic Tool Checking
-
-# Generic tool checker that handles different tool types
-check_tool() {
-  local tool="$1"
-  local check_type="$2" # apt, mise, command
-  local expected="${3:-}"
-
-  case "$check_type" in
-  apt)
-    if dpkg -l "$tool" 2>/dev/null | grep -q "^ii"; then
-      print_check "pass" "$tool"
-      return 0
-    else
-      print_check "fail" "$tool"
-      return 1
-    fi
-    ;;
-  mise)
-    # Get installed version for this tool from mise
-    local installed_version=$(mise list 2>/dev/null |
-      grep "^$tool" |
-      awk '{print $2}')
-    if [[ -n "$installed_version" ]]; then
-      if [[ -n "$expected" ]]; then
-        printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$tool" "${DIM}" "$expected" "${NC}"
-      else
-        print_check "pass" "$tool installed"
-      fi
-      return 0
-    else
-      printf "  %b%s%b %s %b(%s)%b\n" "${RED}" "$CROSS" "${NC}" "$tool" "${DIM}" "$expected" "${NC}"
-      return 1
-    fi
-    ;;
-  command)
-    if has_command "$tool"; then
-      local version=$(safe_check "$tool" --version 2>/dev/null | head -1)
-      print_check "pass" "$tool${version:+ (${version:0:40})}"
-      return 0
-    else
-      print_check "fail" "$(printf "$MSG_NOT_FOUND" "$tool")"
-      return 1
-    fi
-    ;;
-  *)
-    print_check "warn" "$tool (unknown check type: $check_type)"
-    return 1
-    ;;
-  esac
-}
-
-check_tools_batch() {
-  local tool_type="$1" # apt, mise, command
-  local -n tools=$2    # Reference to associative array
-  local found=0
-  local total=0
-
-  for tool in "${!tools[@]}"; do
-    total=$((total + 1))
-    if check_tool "$tool" "$tool_type" "${tools[$tool]}"; then
-      found=$((found + 1))
-    fi
-  done
-
-  printf "  %b%s: %d/%d installed%b\n" "${CYAN}" "${tool_type^}" "$found" "$total" "${NC}"
-}
-
-# Tool Checking Patterns
-
-# Generic tool checking function
-check_tools_batch() {
-  local -n tools=$1
-  local check_type="$2" # 'command', 'dpkg', 'mise'
-  local found=0
-  local total=0
-
-  for tool in "${!tools[@]}"; do
-    total=$((total + 1))
-    case "$check_type" in
-    command)
-      has_command "$tool" && found=$((found + 1))
-      ;;
-    dpkg)
-      dpkg -l "$tool" 2>/dev/null | grep -q "^ii" && found=$((found + 1))
-      ;;
-    mise)
-      mise list 2>/dev/null | grep -q "^$tool" && found=$((found + 1))
-      ;;
-    esac
-  done
-
-  echo "$found/$total"
-}
-
-check_tool_status() {
-  local tool="$1"
-  local check_type="$2"
-  local expected="${3:-}"
-
-  case "$check_type" in
-  command)
-    if has_command "$tool"; then
-      local version=$(safe_check "$tool" --version 2>/dev/null | head -1)
-      print_check "pass" "$tool installed${version:+ ($version)}"
-      return 0
-    fi
-    ;;
-  dpkg)
-    if dpkg -l "$tool" 2>/dev/null | grep -q "^ii"; then
-      print_check "pass" "$tool installed (apt)"
-      return 0
-    fi
-    ;;
-  mise)
-    # Get installed version for this tool from mise
-    local installed_version=$(mise list 2>/dev/null |
-      grep "^$tool" |
-      awk '{print $2}')
-    if [[ -n "$installed_version" ]]; then
-      if [[ -n "$expected" ]] && [[ "$installed_version" != "$expected" ]]; then
-        print_check "warn" "$tool $installed_version (expected: $expected)"
-      else
-        print_check "pass" "$tool $installed_version"
-      fi
-      return 0
-    fi
-    ;;
-  esac
-
-  print_check "fail" "$(printf "$MSG_NOT_FOUND" "$tool")"
-  return 1
-}
-
-# Display Functions now in verify-base-lib.sh
-
-print_item_status() {
-  local item="$1"
-  local type="${2:-file}" # 'file' or 'dir'
-  local display_path=$(normalize_path "$item")
-
-  if [[ "$type" == "dir" ]]; then
-    if check_dir_exists "$item"; then
-      printf "  %b%s%b %s\n" "${GREEN}" "$CHECK" "${NC}" "$display_path"
-    else
-      printf "  %b%s%b %s\n" "${RED}" "$CROSS" "${NC}" "$display_path"
-    fi
-  else
-    if check_file_exists "$item"; then
-      if [[ -L "$item" ]]; then
-        printf "  %b↗%b %s (symlink)\n" "${CYAN}" "${NC}" "$display_path"
-      else
-        printf "  %b%s%b %s\n" "${GREEN}" "$CHECK" "${NC}" "$display_path"
-      fi
-    else
-      printf "  %b%s%b %s\n" "${RED}" "$CROSS" "${NC}" "$display_path"
-    fi
-  fi
-}
-
-check_mise_activation() {
-  print_header "1. Mise Activation Status"
-
-  local mise_ok=true
-
-  if ! has_command mise; then
-    print_check "fail" "Mise is not installed or not in PATH"
-    print_check "info" "Install mise first: curl https://mise.run | sh"
-    mise_ok=false
-    return 1
-  fi
-
-  local mise_version
-  mise_version=$(mise --version 2>/dev/null | cut -d' ' -f2)
-  print_check "pass" "Mise installed (version: ${mise_version:-unknown})"
-
-  if file_exists "$HOME/.config/fish/config.fish" && grep -q "mise activate fish" "$HOME/.config/fish/config.fish" 2>/dev/null; then
-    print_check "pass" "Mise activation configured in Fish"
-  fi
-
-  # Note: Tools are lazy-installed on first use, so we don't check if they're accessible here
-  # They will be installed when the user runs them after restarting the shell
-
-  if file_exists "$MISE_CONFIG"; then
-    print_check "pass" "Mise configuration file exists"
-    local has_tools
-    has_tools=$(grep -q '^\[tools\]' "$MISE_CONFIG" 2>/dev/null && echo "yes" || echo "no")
-    if [[ "$has_tools" == "yes" ]]; then
-      print_check "info" "Mise is configured with tools"
-    fi
-  else
-    print_check "fail" "Mise configuration missing"
-    mise_ok=false
-  fi
-
-  return 0
-}
-
-check_user_directories() {
-  print_header "2. User Directories"
-
-  # Check core directories
-  print_subheader "Core Directories"
-  for dir in "${DEVBASE_CORE_DIRS[@]}"; do
-    print_item_status "$dir" "dir"
-  done
-
-  # Check DevBase-specific directories
-  print_subheader "DevBase Directories"
-  for dir in "${DEVBASE_SPECIFIC_DIRS[@]}"; do
-    print_item_status "$dir" "dir"
-  done
-
-  # Check tool configuration directories
-  print_subheader "Shell & Tools"
-  for dir in "${TOOL_CONFIG_DIRS[@]}"; do
-    print_item_status "$dir" "dir"
-  done
-
-  # Check development directories
-  print_subheader "Development"
-  local dev_dirs=(
-    "$DEV_HOME"
-    "$DEV_HOME/gitlab.com"
-    "$DEV_HOME/github.com"
-    "$DEV_HOME/bitbucket.org"
-    "$DEV_HOME/codeberg.org"
-    "$DEV_HOME/code.europa.eu"
-    "$DEV_HOME/devcerts"
-    "$NOTES_HOME"
-    "$MAVEN_HOME"
-    "$GRADLE_HOME"
-  )
-
-  print_item_list dev_dirs "dir"
-
-  # Note: Directory permissions are checked in the Security section (14)
-}
-
-# Check configuration files
-check_config_files() {
-  print_header "3. Configuration Files"
-
-  # Shell configurations - Only check files DevBase actually manages
-  print_subheader "Shell Configs"
-
-  # Fish configuration files that DevBase creates
-  local shell_files=(
-    "$HOME/.config/fish/config.fish"
-    "$HOME/.config/fish/functions/devbase-theme.fish"
-    "$HOME/.config/fish/functions/devbase-update-nag.fish"
-    "$HOME/.config/fish/functions/install-windows-terminal-themes.fish"
-    "$HOME/.config/fish/functions/setup-java.fish"
-    "$HOME/.config/fish/functions/smart-copy.fish"
-    "$HOME/.config/fish/functions/ssh-agent-init.fish"
-    "$HOME/.config/fish/functions/terminal-title.fish"
-    "$HOME/.config/fish/functions/ulimits.fish"
-    "$HOME/.config/fish/functions/update-ghostty-theme.fish"
-    "$HOME/.config/fish/functions/update-windows-terminal-theme.fish"
-    "$HOME/.config/fish/functions/update-zellij-clipboard.fish"
-    "$HOME/.config/fish/conf.d/00-aliases.fish"
-    "$HOME/.config/fish/conf.d/00-environment.fish"
-    "$HOME/.config/fish/conf.d/01-keybindings.fish"
-    "$HOME/.config/fish/conf.d/01-npm-registry.fish"
-    "$HOME/.config/fish/conf.d/02-aliases.fish"
-    "$HOME/.config/fish/conf.d/02-testcontainers-registry.fish"
-    "$HOME/.config/fish/conf.d/03-pip-registry.fish"
-    "$HOME/.config/fish/conf.d/04-ls-colors.fish"
-    "$HOME/.config/fish/conf.d/05-java-cacerts-check.fish"
-    "$HOME/.config/fish/conf.d/06-go-config.fish"
-    "$HOME/.config/fish/conf.d/07-cypress-registry.fish"
-  )
-
-  print_item_list shell_files "file"
-
-  # Conditionally check proxy.fish if proxy is configured
-  if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then
-    if [[ -f "$HOME/.config/fish/functions/proxy.fish" ]]; then
-      printf "  %b✓%b %s
-" "${GREEN}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
-    else
-      printf "  %b✗%b %s (expected with DEVBASE_PROXY_URL)
-" "${RED}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
-    fi
-  fi
-
-  # Development tools configs
-  printf "\n  %bDevelopment Tools:%b\n" "${BOLD}" "${NC}"
-  local dev_files=(
-    "$GIT_CONFIG"
-    "$CONFIG_HOME/git/.gitignore"
-    "$MISE_CONFIG"
-    "$CONFIG_HOME/nvim/lua/plugins/colorscheme.lua"
-    "$CONFIG_HOME/lazygit/config.yml"
-    "$CONFIG_HOME/delta/themes.config"
-    "$CONFIG_HOME/starship/starship.toml"
-    "$CONFIG_HOME/btop/btop.conf"
-  )
-
-  # Only check registries.conf if a registry is configured
-  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
-    dev_files+=("$CONFIG_HOME/containers/registries.conf")
-  fi
-
-  print_item_list dev_files "file"
-
-  # SSH configuration
-  print_subheader "SSH Configuration"
-  local ssh_files=(
-    "$SSH_CONFIG"
-    "$HOME/.ssh/known_hosts"
-    "$HOME/.ssh/allowed_signers"
-    "$CONFIG_HOME/ssh/user.config"
-    "$CONFIG_HOME/ssh/allowed_signers"
-  )
-  print_item_list ssh_files "file"
-
-  # Terminal multiplexers
-  print_subheader "Terminal Tools"
-  local term_files=(
-    "$CONFIG_HOME/zellij/config.kdl"
-    "$CONFIG_HOME/eza/default.yml"
-    "$SYSTEMD_USER_DIR/ssh-agent.service"
-  )
-  print_item_list term_files "file"
-
-  # DevBase Tool Configs (processed from templates)
-  print_subheader "Tool Configs"
-  local tool_configs=(
-    "$HOME/.config/git/config"
-    "$HOME/.config/starship/starship.toml"
-    "$HOME/.config/btop/btop.conf"
-    "$HOME/.config/lazygit/config.yml"
-    "$HOME/.config/delta/themes.config"
-    "$HOME/.config/k9s/config.yaml"
-    "$HOME/.config/lf/lfrc"
-    "$HOME/.config/vifm/vifmrc"
-  )
-
-  # Only check registries.conf if a registry is configured
-  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
-    tool_configs+=("$HOME/.config/containers/registries.conf")
-  fi
-
-  print_item_list tool_configs "file"
-
-  # DevBase metadata
-  printf "\n  %bDevBase Metadata:%b\n" "${BOLD}" "${NC}"
-  local devbase_files=(
-    "$DEVBASE_CONFIG/version"
-    "$DEVBASE_CONFIG/custom-tools.yaml"
-    "$DEVBASE_CONFIG/install-summary.txt"
-  )
-
-  print_item_list devbase_files "file"
-}
-
-# Check systemd services
-check_systemd_services() {
-  print_header "4. Systemd Services"
-
-  # Check if systemd is available
-  if ! command -v systemctl &>/dev/null; then
-    print_check "info" "systemd not available (container/minimal environment?)"
-    return
-  fi
-
-  # User services
-  print_subheader "User Services"
-
-  check_systemd_service "ssh-agent.service" "user"
-  check_systemd_service "podman.socket" "user"
-
-  # WSL-specific service
-  if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
-    check_systemd_service "wayland-socket-symlink.service" "user" "oneshot"
-  fi
-
-  # System services
-  print_subheader "System Services"
-
-  check_systemd_service "unattended-upgrades.service" "system"
-
-  if systemctl list-unit-files "clamav-daemon.service" &>/dev/null 2>&1; then
-    local clam_daemon_state=$(systemctl is-active "clamav-daemon.service" 2>&1)
-    if [[ "$clam_daemon_state" == "inactive" ]]; then
-      printf "  %b%s%b clamav-daemon.service: inactive (expected for dev machines)\n" "${GRAY}" "${INFO}" "${NC}"
-    else
-      printf "  %b%s%b clamav-daemon.service: %s\n" "${GREEN}" "$CHECK" "${NC}" "$clam_daemon_state"
-    fi
-  fi
-
-  if systemctl list-timers "clamav-daily-scan.timer" &>/dev/null 2>&1; then
-    local timer_enabled=$(systemctl is-enabled "clamav-daily-scan.timer" 2>&1)
-    local timer_active=$(systemctl is-active "clamav-daily-scan.timer" 2>&1)
-    if [[ "$timer_enabled" == "enabled" ]] && [[ "$timer_active" == "active" ]]; then
-      printf "  %b%s%b clamav-daily-scan.timer: enabled and active\n" "${GREEN}" "$CHECK" "${NC}"
-    else
-      printf "  %b%s%b clamav-daily-scan.timer: %s/%s\n" "${YELLOW}" "$WARN" "${NC}" "$timer_enabled" "$timer_active"
-    fi
-  else
-    printf "  %b%s%b clamav-daily-scan.timer: not installed\n" "${YELLOW}" "$WARN" "${NC}"
-  fi
-
-  if systemctl list-unit-files "clamav-freshclam.service" &>/dev/null 2>&1; then
-    local freshclam_enabled=$(systemctl is-enabled "clamav-freshclam.service" 2>&1)
-    local freshclam_state=$(systemctl is-active "clamav-freshclam.service" 2>&1)
-    if [[ "$freshclam_enabled" == "enabled" ]] && [[ "$freshclam_state" == "active" ]]; then
-      printf "  %b%s%b clamav-freshclam.service: enabled and active\n" "${GREEN}" "$CHECK" "${NC}"
-    elif [[ "$freshclam_enabled" == "enabled" ]]; then
-      printf "  %b%s%b clamav-freshclam.service: enabled but %s\n" "${YELLOW}" "$WARN" "${NC}" "$freshclam_state"
-    else
-      printf "  %b%s%b clamav-freshclam.service: %s (%s)\n" "${YELLOW}" "$WARN" "${NC}" "$freshclam_enabled" "$freshclam_state"
-    fi
-  fi
-
-  if command -v ufw &>/dev/null; then
-    if grep -qi microsoft /proc/version 2>/dev/null; then
-      print_check "info" "UFW not used on WSL (Windows Firewall applies)"
-    else
-      local ufw_status=$(sudo ufw status 2>&1 | head -1)
-      if [[ "$ufw_status" == *"active"* ]]; then
-        print_check "pass" "UFW firewall: active"
-      else
-        print_check "warn" "UFW firewall: inactive"
-      fi
-    fi
-  fi
-
-}
-
-# Check Git configuration
-# Helper to display git config entries
-display_git_config() {
-  local config_file="$1"
-  local config_output="$2"
-
-  [[ -z "$config_output" ]] && {
-    printf "  %b%s%b (empty)\n" "${GRAY}" "$INFO" "${NC}"
-    return
-  }
-
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-
-    local key=$(echo "$line" | cut -d'=' -f1)
-    local value=$(echo "$line" | cut -d'=' -f2-)
-
-    # Handle special value types
-    [[ "$value" =~ ^/ ]] && value=$(normalize_path "$value")
-
-    # Truncate very long values
-    if [[ ${#value} -gt $MAX_VALUE_LENGTH ]]; then
-      if [[ "$value" =~ ^ssh- ]]; then
-        # SSH keys are long - show only key type (first field) and email (last field)
-        # Example: "ssh-ed25519 AAAA...long_key user@host" -> "ssh-ed25519 ...user@host"
-        local key_type=$(awk '{print $1}' <<<"$value")
-        local key_email=$(awk '{print $NF}' <<<"$value")
-        value="$key_type ...$key_email"
-      else
-        value=$(truncate_string "$value")
-      fi
-    fi
-
-    print_check "pass" "$key = $value"
-  done <<<"$config_output"
-}
+# Note: The following functions have been removed as dead code (not used anywhere):
+# - check_systemd_service() - Systemd services are checked directly in check_systemd_services()
+# - display_git_config() - Git config display logic is now inlined in check_git_config()
+# - check_file_exists() and check_dir_exists() - Code now uses file_exists() and dir_exists() directly
+# - parse_config_line() - Not used anywhere
+# - check_paths() - Not used anywhere
+# - safe_check() - Not used anywhere
+# - check_file_permissions() - Not used anywhere
+# - check_command() and check_command_status() - Not used anywhere
 
 check_git_config() {
   print_header "5. Git Configuration"
@@ -925,7 +289,7 @@ check_git_config() {
     fi
   else
     printf "\n  %b~/.gitconfig:%b\n" "${BOLD}" "${NC}"
-    print_check "fail" "$(printf "$MSG_NOT_FOUND" "$HOME/.gitconfig")"
+    print_check "fail" "$(printf '%s not found or empty' "$HOME/.gitconfig")"
   fi
 
   # Check ~/.config/git/config
@@ -1566,11 +930,11 @@ check_vscode_extensions() {
         remote_flag="--remote wsl+${wsl_distro}"
       else
         # Fallback to vscode-server CLI
-        code_cmd=$(ls -t "$HOME/.vscode-server/bin/"/*/bin/remote-cli/code 2>/dev/null | head -1)
+        code_cmd=$(find "$HOME/.vscode-server/bin/" -path "*/bin/remote-cli/code" 2>/dev/null | head -1)
       fi
     else
       # Not WSL, just use vscode-server CLI
-      code_cmd=$(ls -t "$HOME/.vscode-server/bin/"/*/bin/remote-cli/code 2>/dev/null | head -1)
+      code_cmd=$(find "$HOME/.vscode-server/bin/" -path "*/bin/remote-cli/code" 2>/dev/null | head -1)
     fi
   elif [[ -f "/mnt/c/Program Files/Microsoft VS Code/bin/code" ]]; then
     # Windows VSCode (for WSL without vscode-server yet)
@@ -1819,7 +1183,11 @@ check_common_issues() {
     return 0
   }
 
-  echo "$current_locale" | grep -q "UTF-8" && print_check "pass" "Locale: $current_locale" || print_check "warn" "Non-UTF-8 locale: $current_locale"
+  if echo "$current_locale" | grep -q "UTF-8"; then
+    print_check "pass" "Locale: $current_locale"
+  else
+    print_check "warn" "Non-UTF-8 locale: $current_locale"
+  fi
 }
 
 # Check for WSL-specific DevBase configuration
@@ -1917,6 +1285,33 @@ check_security() {
 # Organization-specific verification (sections 13-14) moved to custom verification
 # Custom verification script location: devbase-custom-config/verification/verify-custom.sh
 
+# Check Secure Boot status (extra security check, not counted in statistics)
+check_secure_boot_status() {
+  # Skip on WSL
+  if [[ -f /proc/sys/kernel/osrelease ]] && grep -qi "microsoft\|wsl" /proc/sys/kernel/osrelease 2>/dev/null; then
+    return 0
+  fi
+
+  # Skip if mokutil not available
+  if ! command -v mokutil &>/dev/null; then
+    return 0
+  fi
+
+  printf "\n"
+  print_header "Extra Security Check: Secure Boot"
+
+  local sb_state
+  sb_state=$(mokutil --sb-state 2>/dev/null || echo "unknown")
+
+  if echo "$sb_state" | grep -qi "SecureBoot enabled"; then
+    printf "  %b%s%b Secure Boot is enabled\n" "${GREEN}" "$CHECK" "${NC}"
+  else
+    printf "  %b%s%b WARNING: Secure Boot is DISABLED\n" "${YELLOW}" "$WARN" "${NC}"
+    printf "  %b   Action required: Enable Secure Boot in UEFI/BIOS settings%b\n" "${YELLOW}" "${NC}"
+    printf "  %b   This is a security best practice for production systems%b\n" "${DIM}" "${NC}"
+  fi
+}
+
 find_custom_verification() {
   local candidates=(
     "../devbase-custom-config/verification/verify-custom.sh"
@@ -1981,6 +1376,9 @@ main() {
 
   # Run organization-specific verification if available
   run_custom_verification
+
+  # Extra security checks (not counted in pass/fail percentage)
+  check_secure_boot_status
 
   print_summary
 

@@ -253,7 +253,10 @@ SHELL & TERMINAL
   • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
   • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "not found")
   • Zellij Autostart: ${DEVBASE_ZELLIJ_AUTOSTART:-not set}
-  • Monaspace Nerd Font: $(if is_wsl; then echo "not applicable (WSL)"; elif [[ -d ~/.local/share/fonts/MonaspaceNerdFont ]]; then font_count=$(find ~/.local/share/fonts/MonaspaceNerdFont -name "*.ttf" -o -name "*.otf" 2>/dev/null | wc -l); if [[ $font_count -gt 0 ]]; then echo "installed ($font_count fonts)"; else echo "not installed"; fi; else echo "not installed"; fi)
+  • Monaspace Nerd Font: $(if is_wsl; then echo "not applicable (WSL)"; elif [[ -d ~/.local/share/fonts/MonaspaceNerdFont ]]; then
+    font_count=$(find ~/.local/share/fonts/MonaspaceNerdFont -name "*.ttf" -o -name "*.otf" 2>/dev/null | wc -l)
+    if [[ $font_count -gt 0 ]]; then echo "installed ($font_count fonts)"; else echo "not installed"; fi
+  else echo "not installed"; fi)
 
 DEVELOPMENT TOOLS
 =================
@@ -364,6 +367,14 @@ show_completion_message() {
     print_box_line "  2. Re-run setup.sh to apply custom settings" "$box_width"
   fi
 
+  # Check Secure Boot status (native Linux only)
+  if ! check_secure_boot 2>/dev/null; then
+    print_box_line "" "$box_width"
+    print_box_line "!!! SECURITY WARNING !!!" "$box_width"
+    print_box_line "Secure Boot is DISABLED on this machine" "$box_width"
+    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width"
+  fi
+
   print_box_bottom "$box_width"
   return 0
 }
@@ -410,7 +421,7 @@ configure_fonts_post_install() {
   fi
 
   printf "\n"
-  
+
   if [[ "$already_configured" == "true" ]]; then
     printf "  %b✓%b GNOME Terminal is already configured to use Monaspace Nerd Font\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     return 0
@@ -427,7 +438,7 @@ configure_fonts_post_install() {
     printf "\n"
     # configure_terminal_fonts now only sets the font (theme already applied above)
     configure_terminal_fonts
-    
+
     printf "\n"
     printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
       "${DEVBASE_COLORS[YELLOW]}" \
