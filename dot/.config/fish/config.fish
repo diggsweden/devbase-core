@@ -10,8 +10,8 @@ else if test -x $HOME/.local/bin/mise
     $HOME/.local/bin/mise activate fish --shims | source
 end
 
-# Auto-add SSH key to agent
-if functions -q ssh-agent-init
+# Auto-add SSH key to agent (only in interactive shells)
+if status is-interactive; and functions -q ssh-agent-init
     ssh-agent-init
 end
 

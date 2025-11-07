@@ -256,7 +256,7 @@ check_ubuntu_version() {
     if dpkg --compare-versions "$current_version" "lt" "$min_version" 2>/dev/null; then
       show_progress warning "Ubuntu $min_version or later recommended (found: $current_version)"
     else
-      show_progress "done" "Ubuntu version $current_version ✓"
+      show_progress success "Ubuntu version $current_version"
     fi
   else
     show_progress warning "Cannot determine Ubuntu version"
@@ -278,11 +278,11 @@ check_disk_space() {
 
   if [[ "$available_gb" -lt "$required_gb" ]]; then
     show_progress warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
-    printf "Disk space may be insufficient, continue anyway? (y/N): "
+    printf "  %bDisk space may be insufficient, continue anyway? (y/N): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
     read -r response
     [[ "$response" =~ ^[Yy]$ ]] || exit 1
   else
-    show_progress "done" "Disk space: ${available_gb}GB available ✓"
+    show_progress success "Disk space: ${available_gb}GB available"
   fi
   return 0
 }
@@ -357,7 +357,7 @@ check_path_writable() {
     fi
   done
 
-  show_progress "done" "Home directory paths ✓"
+  show_progress success "Home directory paths"
   return 0
 }
 
@@ -368,7 +368,7 @@ check_path_writable() {
 # Side-effects: Prompts user if token not set (unless NON_INTERACTIVE), reads stdin
 check_mise_github_token() {
   if [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
-    show_progress "done" "GitHub token (MISE_GITHUB_TOKEN) configured ✓"
+    show_progress success "GitHub token (MISE_GITHUB_TOKEN) configured"
     return 0
   fi
 
@@ -390,7 +390,7 @@ check_mise_github_token() {
   printf "     export MISE_GITHUB_TOKEN=ghp_your_token_here\n"
   printf "  3. Or add it to your shell config permanently\n"
   printf "\n"
-  printf "Continue without GitHub token? (y/N): "
+  printf "  %bContinue without GitHub token? (y/N): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
   read -r response
 
   if [[ "$response" =~ ^[Yy]$ ]]; then

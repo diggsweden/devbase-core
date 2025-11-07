@@ -129,7 +129,7 @@ download_file() {
     else
       # Try curl first (better error handling and progress display)
       if command_exists curl; then
-        if curl -#fL --connect-timeout "$timeout" "$url" -o "$target" 2>&1; then
+        if curl -#fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1; then
           download_success=true
         else
           curl_exit=$?

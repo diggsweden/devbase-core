@@ -253,6 +253,7 @@ SHELL & TERMINAL
   • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
   • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "not found")
   • Zellij Autostart: ${DEVBASE_ZELLIJ_AUTOSTART:-not set}
+  • Monaspace Nerd Font: $(if is_wsl; then echo "not applicable (WSL)"; elif [[ -d ~/.local/share/fonts/MonaspaceNerdFont ]]; then font_count=$(find ~/.local/share/fonts/MonaspaceNerdFont -name "*.ttf" -o -name "*.otf" 2>/dev/null | wc -l); if [[ $font_count -gt 0 ]]; then echo "installed ($font_count fonts)"; else echo "not installed"; fi; else echo "not installed"; fi)
 
 DEVELOPMENT TOOLS
 =================
@@ -365,6 +366,68 @@ show_completion_message() {
 
   print_box_bottom "$box_width"
   return 0
+}
+
+configure_fonts_post_install() {
+  # Only prompt on native Ubuntu when fonts were installed
+  if [[ "${DEVBASE_FONTS_INSTALLED:-false}" != "true" ]] || [[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]]; then
+    return 0
+  fi
+
+  # Check if terminal is already configured
+  local already_configured=false
+  if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    local profile_id
+    profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
+    if [[ -n "$profile_id" ]]; then
+      local current_font
+      current_font=$(gsettings get "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font 2>/dev/null || echo "")
+      if [[ "$current_font" =~ MonaspiceNe.*Nerd.*Font ]]; then
+        already_configured=true
+      fi
+    fi
+  fi
+
+  printf "\n"
+  print_section "Terminal Font Configuration" "${DEVBASE_COLORS[BOLD_CYAN]}"
+  printf "\n"
+  
+  if [[ "$already_configured" == "true" ]]; then
+    printf "  %b✓%b GNOME Terminal is already configured to use Monaspace Nerd Font\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    return 0
+  fi
+
+  printf "  %bMonaspace Nerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "  %bWould you like to configure your terminal to use it now?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "\n"
+  printf "  %bNote: Configuring now may affect this terminal session.%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
+  printf "  %bYou can also configure it manually later.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "\n"
+
+  if ask_yes_no "Configure terminal fonts now? (y/N)" "N"; then
+    printf "\n"
+    # Source the install-custom.sh to get access to configure_terminal_fonts function
+    if [[ -f "${DEVBASE_LIBS}/install-custom.sh" ]]; then
+      # shellcheck disable=SC1091
+      source "${DEVBASE_LIBS}/install-custom.sh"
+      configure_terminal_fonts
+      
+      printf "\n"
+      printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
+        "${DEVBASE_COLORS[YELLOW]}" \
+        "${DEVBASE_COLORS[NC]}" \
+        "${DEVBASE_COLORS[BOLD_YELLOW]}" \
+        "${DEVBASE_COLORS[NC]}"
+      printf "  %bClose and reopen your terminal application.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    else
+      show_progress error "Could not find install-custom.sh"
+    fi
+  else
+    printf "\n"
+    printf "  %b✓%b Font configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    printf "  %bTo configure later, set the font in your terminal settings to:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    printf "    MonaspiceNe Nerd Font Mono\n"
+  fi
 }
 
 handle_wsl_restart() {
@@ -696,6 +759,7 @@ main() {
   write_installation_summary
   printf "\n"
   show_completion_message
+  configure_fonts_post_install
   handle_wsl_restart
   return 0
 }

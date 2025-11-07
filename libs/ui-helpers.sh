@@ -3,7 +3,12 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-  return 1 2>/dev/null || exit 1
+  # Handle both sourced and executed contexts
+  if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 1  # Script is being sourced
+  else
+    exit 1    # Script is being executed directly
+  fi
 fi
 
 # UI Layout Constants
@@ -40,7 +45,7 @@ show_progress() {
 
   # Warning
   warning)
-    printf "  %b%s%b %b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_SYMBOLS[WARN]}" "${DEVBASE_COLORS[NC]}" "$message"
+    printf "  %b%s %s%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_SYMBOLS[WARN]}" "$message" "${DEVBASE_COLORS[NC]}"
     ;;
 
   # Error (non-fatal by default - caller decides if fatal)
