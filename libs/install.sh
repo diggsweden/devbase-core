@@ -374,7 +374,28 @@ configure_fonts_post_install() {
     return 0
   fi
 
-  # Check if terminal is already configured
+  # Source install-custom.sh early to get access to theme function
+  if [[ -f "${DEVBASE_LIBS}/install-custom.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${DEVBASE_LIBS}/install-custom.sh"
+  fi
+
+  printf "\n"
+  print_section "Terminal Configuration" "${DEVBASE_COLORS[BOLD_CYAN]}"
+  printf "\n"
+
+  # Apply theme FIRST (before showing font configuration section)
+  if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    local profile_id
+    profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
+    if [[ -n "$profile_id" ]] && [[ -n "${DEVBASE_THEME:-}" ]]; then
+      if apply_gnome_terminal_theme "${DEVBASE_THEME}" "$profile_id" 2>/dev/null; then
+        show_progress success "GNOME Terminal: Theme applied (${DEVBASE_THEME})"
+      fi
+    fi
+  fi
+
+  # Check if terminal font is already configured
   local already_configured=false
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     local profile_id
@@ -388,8 +409,6 @@ configure_fonts_post_install() {
     fi
   fi
 
-  printf "\n"
-  print_section "Terminal Font Configuration" "${DEVBASE_COLORS[BOLD_CYAN]}"
   printf "\n"
   
   if [[ "$already_configured" == "true" ]]; then
@@ -406,22 +425,16 @@ configure_fonts_post_install() {
 
   if ask_yes_no "Configure terminal fonts now? (y/N)" "N"; then
     printf "\n"
-    # Source the install-custom.sh to get access to configure_terminal_fonts function
-    if [[ -f "${DEVBASE_LIBS}/install-custom.sh" ]]; then
-      # shellcheck disable=SC1091
-      source "${DEVBASE_LIBS}/install-custom.sh"
-      configure_terminal_fonts
-      
-      printf "\n"
-      printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
-        "${DEVBASE_COLORS[YELLOW]}" \
-        "${DEVBASE_COLORS[NC]}" \
-        "${DEVBASE_COLORS[BOLD_YELLOW]}" \
-        "${DEVBASE_COLORS[NC]}"
-      printf "  %bClose and reopen your terminal application.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-    else
-      show_progress error "Could not find install-custom.sh"
-    fi
+    # configure_terminal_fonts now only sets the font (theme already applied above)
+    configure_terminal_fonts
+    
+    printf "\n"
+    printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
+      "${DEVBASE_COLORS[YELLOW]}" \
+      "${DEVBASE_COLORS[NC]}" \
+      "${DEVBASE_COLORS[BOLD_YELLOW]}" \
+      "${DEVBASE_COLORS[NC]}"
+    printf "  %bClose and reopen your terminal application.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   else
     printf "\n"
     printf "  %b✓%b Font configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"

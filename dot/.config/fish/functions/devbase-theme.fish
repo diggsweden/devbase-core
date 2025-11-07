@@ -254,6 +254,14 @@ function devbase-theme --description "Set theme for multiple CLI tools"
         end
     end
     
+    # Update GNOME Terminal theme if on native Linux
+    set -l gnome_terminal_updated false
+    if functions -q update-gnome-terminal-theme
+        if update-gnome-terminal-theme
+            set gnome_terminal_updated true
+        end
+    end
+    
     # Update VSCode theme if VS Code is installed
     set -l vscode_updated false
     set -l settings_file ""
@@ -313,6 +321,9 @@ function devbase-theme --description "Set theme for multiple CLI tools"
     end
     if test $ghostty_updated = true
         printf "  Ghostty: Config updated (reload with Ctrl+Shift+Comma or restart)\n"
+    end
+    if test $gnome_terminal_updated = true
+        printf "  GNOME Terminal: Theme updated (applies immediately)\n"
     end
     if test $vscode_updated = true
         printf "  VSCode: Theme updated (reload window to apply)\n"

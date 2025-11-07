@@ -493,6 +493,84 @@ install_nerd_fonts() {
   fi
 }
 
+# Brief: Apply GNOME Terminal theme colors
+# Params: $1 - theme name, $2 - profile ID
+# Returns: 0 on success, 1 on failure
+# Side-effects: Updates GNOME Terminal color scheme via gsettings
+apply_gnome_terminal_theme() {
+  local theme_name="$1"
+  local profile_id="$2"
+  
+  if [[ -z "$profile_id" ]]; then
+    return 1
+  fi
+  
+  local profile_path="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/"
+  
+  # Color variables
+  local bg fg cursor
+  local -a palette
+  
+  case "$theme_name" in
+    everforest-dark)
+      bg='#272E33'; fg='#D3C6AA'; cursor='#D3C6AA'
+      palette=('#2E383C' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA' '#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8')
+      ;;
+    everforest-light)
+      bg='#FDF6E3'; fg='#5C6A72'; cursor='#5C6A72'
+      palette=('#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8' '#343F44' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA')
+      ;;
+    catppuccin-mocha)
+      bg='#1E1E2E'; fg='#CDD6F4'; cursor='#CDD6F4'
+      palette=('#45475A' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#BAC2DE' '#585B70' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#A6ADC8')
+      ;;
+    catppuccin-latte)
+      bg='#EFF1F5'; fg='#4C4F69'; cursor='#4C4F69'
+      palette=('#5C5F77' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#ACB0BE' '#6C6F85' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#BCC0CC')
+      ;;
+    tokyonight-night)
+      bg='#1A1B26'; fg='#C0CAF5'; cursor='#C0CAF5'
+      palette=('#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#A9B1D6' '#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#C0CAF5')
+      ;;
+    tokyonight-day)
+      bg='#D5D6DB'; fg='#565A6E'; cursor='#565A6E'
+      palette=('#0F0F14' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58' '#9699A3' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58')
+      ;;
+    gruvbox-dark)
+      bg='#282828'; fg='#EBDBB2'; cursor='#EBDBB2'
+      palette=('#282828' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#A89984' '#928374' '#FB4934' '#B8BB26' '#FABD2F' '#83A598' '#D3869B' '#8EC07C' '#EBDBB2')
+      ;;
+    gruvbox-light)
+      bg='#FBF1C7'; fg='#654735'; cursor='#654735'
+      palette=('#F2E5BC' '#C14A4A' '#6C782E' '#B47109' '#45707A' '#945E80' '#4C7A5D' '#654735' '#F2E5BC' '#C14A4A' '#6C782E' '#B47109' '#45707A' '#945E80' '#4C7A5D' '#654735')
+      ;;
+    *)
+      return 0  # Unknown theme, skip
+      ;;
+  esac
+  
+  # Build palette string
+  local palette_str="["
+  for i in "${!palette[@]}"; do
+    palette_str+="'${palette[$i]}'"
+    if [[ $i -lt $((${#palette[@]} - 1)) ]]; then
+      palette_str+=", "
+    fi
+  done
+  palette_str+="]"
+  
+  # Apply settings
+  gsettings set "$profile_path" use-theme-colors false 2>/dev/null || true
+  gsettings set "$profile_path" background-color "$bg" 2>/dev/null || true
+  gsettings set "$profile_path" foreground-color "$fg" 2>/dev/null || true
+  gsettings set "$profile_path" cursor-background-color "$cursor" 2>/dev/null || true
+  gsettings set "$profile_path" cursor-foreground-color "$bg" 2>/dev/null || true
+  gsettings set "$profile_path" palette "$palette_str" 2>/dev/null || true
+  gsettings set "$profile_path" bold-color-same-as-fg true 2>/dev/null || true
+  
+  return 0
+}
+
 # Brief: Configure terminal fonts to use Monaspace Nerd Font (GNOME Terminal and Ghostty)
 # Params: None
 # Uses: HOME, command_exists, show_progress (globals/functions)
@@ -519,8 +597,11 @@ configure_terminal_fonts() {
     if [[ -n "$profile_id" ]]; then
       gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font 'MonaspiceNe Nerd Font Mono 11' 2>/dev/null || true
       gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" use-system-font false 2>/dev/null || true
-      show_progress success "GNOME Terminal configured to use Monaspace Nerd Font"
+      show_progress success "GNOME Terminal: Font configured (Monaspace Nerd Font)"
       configured=true
+      
+      # Note: Theme colors are applied separately in configure_fonts_post_install()
+      # before this function is called, so we don't apply them here
     fi
   fi
 
@@ -532,7 +613,7 @@ configure_terminal_fonts() {
       echo "" >>"$ghostty_config"
       echo "# Nerd Font for icons and symbols" >>"$ghostty_config"
       echo 'font-family = "MonaspiceNe Nerd Font Mono"' >>"$ghostty_config"
-      show_progress success "Ghostty configured to use Monaspace Nerd Font"
+      show_progress success "Ghostty: Font configured (Monaspace Nerd Font)"
       configured=true
     else
       show_progress info "Ghostty font already configured - skipping"
