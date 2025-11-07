@@ -29,7 +29,7 @@ if [[ "$branch_name" =~ ([A-Z]{2,10})-([0-9]+) ]]; then
   fi
   
   # Show notification that issue reference was added
-  echo -e "  ${CYAN}ⓘ${NC} Added issue reference from branch name: Refs: ${issue}" >&2
+  echo -e "${CYAN}ⓘ${NC} Added issue reference from branch name: Refs: ${issue}" >&2
 fi
 
 # Silent when no issue number is found

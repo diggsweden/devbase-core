@@ -24,17 +24,22 @@ fi
 IFS=$'\n' scripts=($(sort <<<"${scripts[*]}"))
 unset IFS
 
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
 echo "Running pre-push checks..."
 
 # Run all executable scripts in pre-push.d/ (in sorted order)
 for script in "${scripts[@]}"; do
   if [[ -x "$script" ]]; then
     "$script" "$@" || {
-      echo "✗ Hook failed: $(basename "$script")" >&2
+      echo -e "${RED}✗${NC} Hook failed: $(basename "$script")" >&2
       exit 1
     }
   fi
 done
 
-echo "✓ All pre-push checks passed"
+echo -e "${GREEN}✓${NC} All pre-push checks passed"
 exit 0
