@@ -30,7 +30,7 @@ show_progress() {
   case "$level" in
   # Main actions/phases
   step)
-    printf "%b%s %b%b\n" "${DEVBASE_COLORS[BOLD]}" "${DEVBASE_SYMBOLS[ARROW]}" "$message" "${DEVBASE_COLORS[NC]}"
+    printf "%b%s %b%b\n" "${DEVBASE_COLORS[WHITE]}" "${DEVBASE_SYMBOLS[ARROW]}" "$message" "${DEVBASE_COLORS[NC]}"
     ;;
 
   # Information/details
