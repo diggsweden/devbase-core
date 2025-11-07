@@ -3,6 +3,7 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
@@ -12,7 +13,7 @@ fi
 # Returns: 0 always
 # Side-effects: Sets snap system proxy configuration
 configure_snap_proxy() {
-  [[ -z "${DEVBASE_PROXY_URL:-}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 0
   command -v snap &>/dev/null || return 0
 
   sudo snap unset system proxy.http 2>/dev/null || true

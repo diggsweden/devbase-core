@@ -20,25 +20,25 @@ export ARROW='→'
 
 # Helper functions for colored output
 print_header() {
-  printf "\n${YELLOW}************ $1 ***********${NC}\n\n"
+  printf "\n%b************ %s ***********%b\n\n" "${YELLOW}" "$1" "${NC}"
 }
 
 print_success() {
-  printf "${GREEN}${CHECK} $1${NC}\n"
+  printf "%b%b %s%b\n" "${GREEN}" "${CHECK}" "$1" "${NC}"
 }
 
 print_error() {
-  printf "${RED}${CROSS} $1${NC}\n" >&2
+  printf "%b%b %s%b\n" "${RED}" "${CROSS}" "$1" "${NC}" >&2
 }
 
 print_warning() {
-  printf "${YELLOW}${WARN} $1${NC}\n" >&2
+  printf "%b%b %s%b\n" "${YELLOW}" "${WARN}" "$1" "${NC}" >&2
 }
 
 print_info() {
-  printf "${CYAN}${INFO} $1${NC}\n"
+  printf "%b%b %s%b\n" "${CYAN}" "${INFO}" "$1" "${NC}"
 }
 
 print_arrow() {
-  printf "${BLUE}${ARROW} $1${NC}\n"
+  printf "%b%b %s%b\n" "${BLUE}" "${ARROW}" "$1" "${NC}"
 }

@@ -16,6 +16,7 @@ generate_ssh_passphrase() {
 # Verify devbase environment is set
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
@@ -92,23 +93,23 @@ validate_path() {
 
   validate_not_empty "$path" "path" || die "Path required"
 
+  # Determine user home directory
   local original_user="${SUDO_USER:-$USER}"
   local user_home
   user_home=$(getent passwd "$original_user" | cut -d: -f6)
-
   [[ -n "$user_home" ]] || die "Cannot determine user home directory"
 
   # Resolve real path (handles symlinks)
   local real_path
   real_path=$(realpath -m "$path" 2>/dev/null) || die "Cannot resolve path: $path"
 
-  # SECURITY CHECKS (always applied)
+  # ===== SECURITY CHECKS (always applied) =====
   [[ "$real_path" = /* ]] || die "Path must be absolute: $real_path"
-
   [[ "$real_path" != *".."* ]] || die "Path traversal detected: $real_path"
 
-  # STRICT MODE WHITELIST
+  # ===== STRICT MODE WHITELIST =====
   if [[ "$strict_mode" == "true" ]]; then
+    # Block system directories
     case "$real_path" in
     / | /bin | /boot | /dev | /etc | /lib | /lib64 | /proc | /root | /sbin | /sys | /usr | /var)
       die "Cannot operate on system directory: $real_path"
@@ -121,6 +122,7 @@ validate_path() {
       ;;
     esac
 
+    # Allow only user-writable locations
     case "$real_path" in
     /tmp/* | /var/tmp/*)
       [[ "$real_path" != "/tmp" ]] && [[ "$real_path" != "/var/tmp" ]] || die "Cannot operate on temp directory root"
@@ -146,8 +148,13 @@ validate_path() {
 # Side-effects: None (pure function)
 _extract_uppercase_vars() {
   local content="$1"
-  echo "$content" | grep -o '\${\?[A-Z_][A-Z0-9_]*}\?' |
-    sed 's/[{}$]//g' | sort -u | sed 's/^/$/g' | tr '\n' ' '
+  # shellcheck disable=SC2016 # Single quotes intentional - we're searching for literal $ patterns
+  echo "$content" |
+    grep -o '\${\?[A-Z_][A-Z0-9_]*}\?' |  # Extract ${VAR} or $VAR patterns
+    sed 's/[{}$]//g' |                     # Remove $ { } characters
+    sort -u |                              # Get unique variable names only
+    sed 's/^/$/g' |                        # Add $ prefix back for envsubst
+    tr '\n' ' '                            # Convert to space-separated list
 }
 
 # Brief: Process template with envsubst, only substituting UPPERCASE variables
@@ -187,6 +194,7 @@ retry_command() {
   local max_attempts="${_RETRY_ATTEMPTS}"
   local base_delay="${_RETRY_DELAY}"
 
+  # ===== Parse optional arguments =====
   while [[ $# -gt 0 ]] && [[ "$1" != "--" ]]; do
     case "$1" in
     --attempts)
@@ -210,6 +218,7 @@ retry_command() {
   local current_delay="$base_delay"
   local command=("$@")
 
+  # ===== Retry loop with exponential backoff =====
   while [[ $attempt -le $max_attempts ]]; do
     if "${command[@]}"; then
       return 0
@@ -308,47 +317,72 @@ merge_dotfiles_with_backup() {
 ensure_user_dirs() {
   show_progress info "Setting up user directories..."
 
-  local dirs=(
-    # XDG base directories
+  # ===== XDG base directories =====
+  local xdg_dirs=(
     "$XDG_CONFIG_HOME"
     "$XDG_CONFIG_HOME/systemd/user"
     "$XDG_BIN_HOME"
     "$XDG_DATA_HOME"
     "$XDG_DATA_HOME/ca-certificates"
     "$XDG_DATA_HOME/devbase/libs"
-    "${DEVBASE_BACKUP_DIR}"
     "$XDG_CACHE_HOME"
+  )
+
+  # ===== DevBase directories =====
+  local devbase_dirs=(
+    "${DEVBASE_BACKUP_DIR}"
+    "${DEVBASE_CONFIG_DIR}"
     "${DEVBASE_CACHE_DIR}"
     "${DEVBASE_CACHE_DIR}/downloads"
     "${DEVBASE_CACHE_DIR}/mise"
     "${DEVBASE_CACHE_DIR}/vscode-extensions"
+  )
 
-    # Shell configurations
+  # ===== Shell and editor configurations =====
+  local config_dirs=(
     "$XDG_CONFIG_HOME/fish"
     "$XDG_CONFIG_HOME/fish/completions"
     "$XDG_CONFIG_HOME/fish/conf.d"
     "$XDG_CONFIG_HOME/mise"
     "$XDG_CONFIG_HOME/git"
     "$XDG_CONFIG_HOME/nvim/lua/plugins"
-    "${DEVBASE_CONFIG_DIR}"
+  )
 
-    # SSH
+  # ===== SSH directories =====
+  local ssh_dirs=(
     "$HOME/.ssh"
-    "$XDG_CONFIG_HOME/ssh" # XDG-compliant SSH config directory
+    "$XDG_CONFIG_HOME/ssh"
+  )
 
-    # Development tools
-    "$HOME/.m2"         # Maven
-    "$HOME/.gradle"     # Gradle
-    "$HOME/development" # Git repos
+  # ===== Development tool caches =====
+  local tool_dirs=(
+    "$HOME/.m2"
+    "$HOME/.gradle"
+  )
+
+  # ===== Development project directories =====
+  local project_dirs=(
+    "$HOME/development"
     "$HOME/development/gitlab.com"
     "$HOME/development/github.com"
     "$HOME/development/bitbucket.org"
     "$HOME/development/codeberg.org"
     "$HOME/development/code.europa.eu"
-    "$HOME/development/devcerts" # Development certificates
-    "$HOME/notes"                # Notes directory
+    "$HOME/development/devcerts"
+    "$HOME/notes"
   )
 
+  # Combine all directories
+  local dirs=(
+    "${xdg_dirs[@]}"
+    "${devbase_dirs[@]}"
+    "${config_dirs[@]}"
+    "${ssh_dirs[@]}"
+    "${tool_dirs[@]}"
+    "${project_dirs[@]}"
+  )
+
+  # ===== Create directories =====
   local created_count=0
   for dir in "${dirs[@]}"; do
     if [[ ! -d "$dir" ]]; then
@@ -357,10 +391,12 @@ ensure_user_dirs() {
     fi
   done
 
+  # ===== Set permissions on security-sensitive directories =====
   [[ -d "$HOME/.ssh" ]] && chmod 700 "$HOME/.ssh"
   [[ -d "$XDG_CONFIG_HOME/ssh" ]] && chmod 755 "$XDG_CONFIG_HOME/ssh"
   [[ -d "${DEVBASE_CACHE_DIR}" ]] && chmod 700 "${DEVBASE_CACHE_DIR}"
 
+  # ===== Report results =====
   local total_dirs=${#dirs[@]}
   local existing=$((total_dirs - created_count))
 

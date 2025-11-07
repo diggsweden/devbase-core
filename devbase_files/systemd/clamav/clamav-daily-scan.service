@@ -5,6 +5,31 @@ After=network.target clamav-freshclam.service
 [Service]
 Type=oneshot
 ExecStartPre=/bin/mkdir -p /var/log/clamav
-ExecStart=/usr/bin/clamscan -r / --exclude-dir="^/sys" --exclude-dir="^/proc" --exclude-dir="^/dev" --log=/var/log/clamav/daily-scan.log --quiet
+# Use clamscan (standalone) to avoid persistent daemon
+# - Runs only during scheduled scans (2-4 AM)
+# - Excludes caches and build artifacts to improve performance
+# - Recursive scan with infection-only reporting
+ExecStart=/usr/bin/clamscan \
+  --recursive \
+  --infected \
+  --exclude-dir=.cache \
+  --exclude-dir=.local/share/Trash \
+  --exclude-dir=.npm \
+  --exclude-dir=.cargo \
+  --exclude-dir=.rustup \
+  --exclude-dir=.gradle \
+  --exclude-dir=.m2 \
+  --exclude-dir=.virtualenvs \
+  --exclude-dir=node_modules \
+  --exclude-dir=.git \
+  --exclude-dir=.vscode-server \
+  --exclude-dir=.conda \
+  --exclude-dir=.pyenv \
+  --exclude-dir=.rbenv \
+  --log=/var/log/clamav/daily-scan.log \
+  /home \
+  /root \
+  /opt
+# Lowest priority to minimize impact on interactive performance
 Nice=19
 IOSchedulingClass=idle

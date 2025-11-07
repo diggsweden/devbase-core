@@ -20,23 +20,26 @@ setup_non_interactive_mode() {
   printf "\n"
   printf "%bRunning in non-interactive mode with defaults...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
 
+  #TODO: DO We really need both of thes vars, why cant we just use DEVBASE_SSH_PASSPHRASE directly
   # Map SSH_KEY_PASSPHRASE (user-facing) to DEVBASE_SSH_PASSPHRASE (internal)
   DEVBASE_SSH_PASSPHRASE="${SSH_KEY_PASSPHRASE:-$(generate_ssh_passphrase)}"
   export DEVBASE_SSH_PASSPHRASE
 
   # If passphrase was auto-generated (user didn't provide SSH_KEY_PASSPHRASE)
-  if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
+  if [[ -z "${SSH_KEY_PASSPHRASE}" ]]; then
     export GENERATED_SSH_PASSPHRASE="true"
     mkdir -p "${DEVBASE_CONFIG_DIR}"
     echo "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
     chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  export DEVBASE_GIT_AUTHOR="${GIT_NAME:-DevBase User}"
-  export DEVBASE_GIT_EMAIL="${GIT_EMAIL:-$USER@$(hostname)}"
+  # shellcheck disable=SC2153 # GIT_NAME and GIT_EMAIL are set in setup.sh
+  export DEVBASE_GIT_AUTHOR="${GIT_NAME}"
+  # shellcheck disable=SC2153
+  export DEVBASE_GIT_EMAIL="${GIT_EMAIL}"
   export DEVBASE_GIT_DEFAULT_BRANCH="${DEVBASE_GIT_DEFAULT_BRANCH:-main}"
-  export EDITOR_CHOICE="${EDITOR_CHOICE:-nvim}"
-  export DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}"
+  export EDITOR_CHOICE="${EDITOR_CHOICE}"
+  export DEVBASE_THEME="${DEVBASE_THEME}"
   export DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"
   export DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"
   export DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"
@@ -44,7 +47,7 @@ setup_non_interactive_mode() {
   # Set VS Code installation based on environment
   # WSL: Skip (should be installed on Windows side)
   # Native Ubuntu: Install by default
-  if [[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]]; then
+  if [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
   else
     export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-true}"
@@ -449,7 +452,7 @@ collect_tool_preferences() {
 }
 
 collect_user_configuration() {
-  if [[ "${NON_INTERACTIVE:-false}" == "true" ]]; then
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
     setup_non_interactive_mode
     return 0
   fi
@@ -483,11 +486,11 @@ write_user_preferences() {
 # Generated during installation: $(date)
 # This file stores your installation choices for reference by scripts and tools
 
-theme: ${DEVBASE_THEME:-everforest-dark}
+theme: ${DEVBASE_THEME}
 
 git:
-  author: ${DEVBASE_GIT_AUTHOR:-}
-  email: ${DEVBASE_GIT_EMAIL:-}
+  author: ${DEVBASE_GIT_AUTHOR}
+  email: ${DEVBASE_GIT_EMAIL}
 
 ssh:
   key_action: ${DEVBASE_SSH_KEY_ACTION:-keep}

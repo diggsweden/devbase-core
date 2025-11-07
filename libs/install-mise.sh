@@ -224,7 +224,7 @@ install_mise() {
 
     # Find where mise was actually installed
     if ! mise_path=$(command -v mise 2>/dev/null); then
-      die "Mise installation failed - binary not found in PATH after installation (MISE_VERSION=${MISE_VERSION:-not set})"
+      die "Mise installation failed - binary not found in PATH after installation (MISE_VERSION=${MISE_VERSION})"
     fi
 
     if ! verify_mise_checksum; then

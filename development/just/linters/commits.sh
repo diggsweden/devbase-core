@@ -16,12 +16,12 @@ check_commits() {
   local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@" || echo "main")
 
   # Check if there are any commits to verify
-  if [ "$(git rev-list --count ${default_branch}.. 2>/dev/null || echo 0)" = "0" ]; then
+  if [ "$(git rev-list --count "${default_branch}".  . 2>/dev/null || echo 0)" = "0" ]; then
     print_info "No commits found in current branch: ${current_branch} (compared to ${default_branch})"
     return 0
   fi
 
-  if conform enforce --base-branch=${default_branch} 2>/dev/null; then
+  if conform enforce --base-branch="${default_branch}" 2>/dev/null; then
     print_success "Commit health check passed"
     return 0
   else

@@ -142,11 +142,19 @@ check_file_content() {
 
   if ! file_exists "$file"; then
     local display_path=$(home_to_tilde "$file")
-    [[ "$check_type" == "pass" ]] && print_check "fail" "$fail_msg (file missing: $display_path)" || print_check "$check_type" "$fail_msg"
+    if [[ "$check_type" == "pass" ]]; then
+      print_check "fail" "$fail_msg (file missing: $display_path)"
+    else
+      print_check "$check_type" "$fail_msg"
+    fi
     return 1
   fi
 
-  grep -q "$pattern" "$file" 2>/dev/null && print_check "pass" "$pass_msg" || print_check "warn" "$fail_msg"
+  if grep -q "$pattern" "$file" 2>/dev/null; then
+    print_check "pass" "$pass_msg"
+  else
+    print_check "warn" "$fail_msg"
+  fi
   return 0
 }
 

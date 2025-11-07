@@ -134,7 +134,7 @@ is_ubuntu() {
 
 # Brief: Display OS and environment information to user
 # Params: None
-# Uses: get_os_info, is_wsl, DEVBASE_FROM_GIT, USER, HOME (globals)
+# Uses: get_os_info, is_wsl, _DEVBASE_FROM_GIT, USER, HOME (globals)
 # Returns: 0 always
 # Side-effects: Prints OS info to stdout
 display_os_info() {
@@ -150,9 +150,9 @@ display_os_info() {
     printf "  • Environment: Native Linux\n"
   fi
 
-  if [[ "${DEVBASE_FROM_GIT:-}" == "true" ]]; then
+  if [[ "${_DEVBASE_FROM_GIT}" == "true" ]]; then
     printf "  • Installation: Git repository\n"
-  elif [[ "${DEVBASE_FROM_GIT:-}" == "false" ]]; then
+  elif [[ "${_DEVBASE_FROM_GIT}" == "false" ]]; then
     printf "  • Installation: Archive/ZIP\n"
   fi
 
@@ -222,7 +222,7 @@ detect_environment() {
     export _DEVBASE_ENV="ubuntu"
   fi
 
-  if [[ -n "${FORCE_DEVBASE_ENV:-}" ]]; then
+  if [[ -n "${FORCE_DEVBASE_ENV}" ]]; then
     export _DEVBASE_ENV="$FORCE_DEVBASE_ENV"
     show_progress info "Environment overridden to: ${_DEVBASE_ENV}"
   fi
@@ -305,7 +305,7 @@ validate_required_vars() {
     fi
   done
 
-  if [[ -n "${_DEVBASE_ENV:-}" ]]; then
+  if [[ -n "${_DEVBASE_ENV}" ]]; then
     case "${_DEVBASE_ENV}" in
     ubuntu | wsl-ubuntu) ;;
     *) invalid_vars+=("_DEVBASE_ENV=${_DEVBASE_ENV} (must be 'ubuntu' or 'wsl-ubuntu')") ;;
@@ -367,7 +367,7 @@ check_path_writable() {
 # Returns: 0 if token set or user continues, 1 if user declines to continue
 # Side-effects: Prompts user if token not set (unless NON_INTERACTIVE), reads stdin
 check_mise_github_token() {
-  if [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
+  if [[ -n "${MISE_GITHUB_TOKEN}" ]]; then
     show_progress success "GitHub token (MISE_GITHUB_TOKEN) configured"
     return 0
   fi
@@ -377,7 +377,7 @@ check_mise_github_token() {
   show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
 
   # In non-interactive mode, just warn and continue
-  if [[ "${NON_INTERACTIVE:-false}" == "true" ]]; then
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
     show_progress info "Continuing in non-interactive mode (token recommended but not required)"
     return 0
   fi

@@ -115,7 +115,7 @@ pkg_cleanup() {
 # Returns: 0 always
 # Side-effects: Generates and sets system locale
 configure_locale() {
-  [[ -z "${DEVBASE_LOCALE:-}" ]] && return 0
+  [[ -z "${DEVBASE_LOCALE}" ]] && return 0
 
   local locale_name="${DEVBASE_LOCALE%.*}"
   if ! locale -a 2>/dev/null | grep -q "^${locale_name}"; then
@@ -195,7 +195,7 @@ install_apt_packages() {
 
   local locale_configured=""
   if configure_locale; then
-    [[ -n "${DEVBASE_LOCALE:-}" ]] && locale_configured="${DEVBASE_LOCALE}"
+    [[ -n "${DEVBASE_LOCALE}" ]] && locale_configured="${DEVBASE_LOCALE}"
   fi
 
   local fonts_installed=false

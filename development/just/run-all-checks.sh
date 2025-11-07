@@ -30,7 +30,7 @@ run_check() {
 }
 
 main() {
-  printf "\n${BLUE}Starting code quality checks...${NC}\n"
+  printf "\n%bStarting code quality checks...%b\n" "${BLUE}" "${NC}"
   printf "=====================================\n\n"
 
   # Run all checks
@@ -58,7 +58,7 @@ main() {
   else
     local current_branch=$(git branch --show-current)
     local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@" || echo "main")
-    if [ "$(git rev-list --count ${default_branch}.. 2>/dev/null || echo 0)" = "0" ]; then
+    if [ "$(git rev-list --count "${default_branch}".  . 2>/dev/null || echo 0)" = "0" ]; then
       status[commit]="SKIP"
     else
       status[commit]="FAIL"
@@ -67,19 +67,19 @@ main() {
   fi
   printf "\n"
 
-  printf "${YELLOW}=====================================\n"
+  printf "%b=====================================\n" "${YELLOW}"
   printf "       CODE QUALITY SUMMARY\n"
-  printf "=====================================${NC}\n\n"
+  printf "=====================================%b\n\n" "${NC}"
 
   # Print status for each check
   for check in markdown yaml actions secrets; do
     local display_name="${check^}"
     if [ "${status[$check]}" = "PASS" ]; then
-      printf "${GREEN}✓ ${display_name}${NC}  "
+      printf "%b✓ %s%b  " "${GREEN}" "${display_name}" "${NC}"
     elif [ "${status[$check]}" = "SKIP" ]; then
-      printf "${YELLOW}○ ${display_name}${NC}  "
+      printf "%b○ %s%b  " "${YELLOW}" "${display_name}" "${NC}"
     else
-      printf "${RED}✗ ${display_name}${NC}  "
+      printf "%b✗ %s%b  " "${RED}" "${display_name}" "${NC}"
     fi
   done
   printf "\n"
@@ -88,25 +88,25 @@ main() {
     local display_name="${check^}"
     display_name="${display_name//-fmt/ Format}" # Replace -fmt with Format
     if [ "${status[$check]}" = "PASS" ]; then
-      printf "${GREEN}✓ ${display_name}${NC}  "
+      printf "%b✓ %s%b  " "${GREEN}" "${display_name}" "${NC}"
     elif [ "${status[$check]}" = "SKIP" ]; then
-      printf "${YELLOW}○ ${display_name} (no new)${NC}  "
+      printf "%b○ %s (no new)%b  " "${YELLOW}" "${display_name}" "${NC}"
     else
-      printf "${RED}✗ ${display_name}${NC}  "
+      printf "%b✗ %s%b  " "${RED}" "${display_name}" "${NC}"
     fi
   done
   printf "\n\n"
 
   if [ "$overall_status" = "PASS" ]; then
-    printf "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    printf "%b━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" "${GREEN}"
     printf "     ✓ ALL CHECKS PASSED!\n"
-    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%b\n" "${NC}"
     exit 0
   else
-    printf "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    printf "%b━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" "${RED}"
     printf "     ✗ SOME CHECKS FAILED\n"
-    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-    printf "\n${YELLOW}Run ${GREEN}just lint-fix${YELLOW} to auto-fix some issues${NC}\n"
+    printf "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%b\n" "${NC}"
+    printf "\n%bRun %bjust lint-fix%b to auto-fix some issues%b\n" "${YELLOW}" "${GREEN}" "${YELLOW}" "${NC}"
     exit 1
   fi
 }

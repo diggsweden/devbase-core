@@ -3,22 +3,23 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
 # Brief: Install custom certificates to system trust store and configure Git
 # Params: None
-# Uses: DEVBASE_CUSTOM_CERTS (global, optional)
+# Uses: _DEVBASE_CUSTOM_CERTS (global, optional)
 # Returns: 0 always
 # Side-effects: Copies certs to system, updates trust store, configures Git
 install_certificates() {
-  [[ -z "${DEVBASE_CUSTOM_CERTS:-}" ]] && return 0
-  [[ ! -d "${DEVBASE_CUSTOM_CERTS:-}" ]] && return 0
+  [[ -z "${_DEVBASE_CUSTOM_CERTS}" ]] && return 0
+  [[ ! -d "${_DEVBASE_CUSTOM_CERTS}" ]] && return 0
 
-  local cert_src="${DEVBASE_CUSTOM_CERTS}"
+  local cert_src="${_DEVBASE_CUSTOM_CERTS}"
 
   local cert_count
-  cert_count=$(ls "${cert_src}"/*.crt 2>/dev/null | wc -l)
+  cert_count=$(find "${cert_src}" -maxdepth 1 -name "*.crt" -type f 2>/dev/null | wc -l)
   [[ $cert_count -eq 0 ]] && return 0
 
   show_progress info "Installing certificates..."

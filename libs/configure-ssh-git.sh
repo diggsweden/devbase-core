@@ -3,12 +3,13 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
 # Brief: Setup SSH config includes (user.config and custom.config)
 # Params: None
-# Uses: DEVBASE_CUSTOM_SSH (global, optional), HOME (global)
+# Uses: _DEVBASE_CUSTOM_SSH (global, optional), HOME (global)
 # Returns: 0 always
 # Side-effects: Creates config files, sets permissions
 setup_ssh_config_includes() {
@@ -17,8 +18,8 @@ setup_ssh_config_includes() {
   chmod 700 ~/.ssh
   chmod 755 ~/.config/ssh
 
-  if [[ -n "${DEVBASE_CUSTOM_SSH:-}" ]] && [[ -f "${DEVBASE_CUSTOM_SSH}/custom.config" ]]; then
-    cp "${DEVBASE_CUSTOM_SSH}/custom.config" ~/.config/ssh/custom.config
+  if [[ -n "${_DEVBASE_CUSTOM_SSH}" ]] && [[ -f "${_DEVBASE_CUSTOM_SSH}/custom.config" ]]; then
+    cp "${_DEVBASE_CUSTOM_SSH}/custom.config" ~/.config/ssh/custom.config
     chmod 600 ~/.config/ssh/custom.config
   fi
 
@@ -117,20 +118,14 @@ configure_git_user() {
   local existing_email
   existing_email=$(git config --global user.email 2>/dev/null)
 
-  if [[ -n "${DEVBASE_GIT_AUTHOR:-}" ]] && [[ -n "${DEVBASE_GIT_EMAIL:-}" ]]; then
-    if [[ "${DEVBASE_GIT_AUTHOR}" != "$existing_name" ]] || [[ "${DEVBASE_GIT_EMAIL}" != "$existing_email" ]]; then
-      git config --global user.name "${DEVBASE_GIT_AUTHOR}"
-      git config --global user.email "${DEVBASE_GIT_EMAIL}"
-      echo "true"
-    else
-      echo "existing"
-    fi
-  else
-    DEVBASE_GIT_AUTHOR="${DEVBASE_GIT_AUTHOR:-${USER}}"
-    DEVBASE_GIT_EMAIL="${DEVBASE_GIT_EMAIL:-${USER}@$(hostname)}"
+  # DEVBASE_GIT_AUTHOR and DEVBASE_GIT_EMAIL are always set from GIT_NAME/GIT_EMAIL
+  # (which have defaults in setup.sh IMPORT section)
+  if [[ "${DEVBASE_GIT_AUTHOR}" != "$existing_name" ]] || [[ "${DEVBASE_GIT_EMAIL}" != "$existing_email" ]]; then
     git config --global user.name "${DEVBASE_GIT_AUTHOR}"
     git config --global user.email "${DEVBASE_GIT_EMAIL}"
     echo "true"
+  else
+    echo "existing"
   fi
 }
 
@@ -140,7 +135,7 @@ configure_git_user() {
 # Returns: 0 if configured, 1 if no proxy set
 # Side-effects: Sets global git config for proxy
 configure_git_proxy() {
-  [[ -z "${DEVBASE_PROXY_URL:-}" ]] && return 1
+  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 1
 
   git config --global --unset-all http.proxy 2>/dev/null || true
   git config --global --unset-all https.proxy 2>/dev/null || true
@@ -148,7 +143,7 @@ configure_git_proxy() {
   git config --global http.proxy "${DEVBASE_PROXY_URL}"
   git config --global https.proxy "${DEVBASE_PROXY_URL}"
 
-  if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
+  if [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]]; then
     IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"
     for domain in "${NO_PROXY_ARRAY[@]}"; do
       if [[ "$domain" == *"*"* ]]; then

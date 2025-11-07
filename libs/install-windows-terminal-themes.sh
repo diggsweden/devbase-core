@@ -80,7 +80,8 @@ install_windows_terminal_themes() {
 
   # Find theme files directory
   local theme_dir=""
-  local xdg_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+  # shellcheck disable=SC2153 # XDG_DATA_HOME is set in environment
+  local xdg_data_home="${XDG_DATA_HOME}"
   local possible_theme_dirs=(
     "$xdg_data_home/devbase/files/windows-terminal"
     "$HOME/.local/share/devbase/files/windows-terminal"

@@ -54,12 +54,12 @@ main() {
     printf "\n"
     print_info "To fix this:"
     printf "1. Activate mise in your shell:\n"
-    printf "   ${GREEN}eval \"\$(mise activate bash)\"${NC}  # For bash\n"
-    printf "   ${GREEN}eval \"\$(mise activate zsh)\"${NC}   # For zsh\n"
-    printf "   ${GREEN}mise activate fish | source${NC}     # For fish\n"
-    printf "2. Install tools: ${GREEN}mise install${NC}\n"
+    printf "   %beval \"\$(mise activate bash)\"%b  # For bash\n" "${GREEN}" "${NC}"
+    printf "   %beval \"\$(mise activate zsh)\"%b   # For zsh\n" "${GREEN}" "${NC}"
+    printf "   %bmise activate fish | source%b     # For fish\n" "${GREEN}" "${NC}"
+    printf "2. Install tools: %bmise install%b\n" "${GREEN}" "${NC}"
     printf "3. Restart your shell or source your rc file\n"
-    printf "\nFor more details, see: ${BLUE}docs/guides/development.adoc${NC}\n"
+    printf "\nFor more details, see: %bdocs/guides/development.adoc%b\n" "${BLUE}" "${NC}"
     return 1
   else
     print_success "All required tools installed!"

@@ -3,6 +3,7 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
   return 1 2>/dev/null || exit 1
 fi
 
@@ -145,7 +146,7 @@ configure_wayland_service() {
 # Params: None
 # Uses: DEVBASE_FILES, show_progress (globals/functions)
 # Returns: 0 on success, 1 if daily scan enable fails
-# Side-effects: Enables clamav-freshclam service, copies timer/service files, enables daily scan timer
+# Side-effects: Enables clamav-freshclam service, copies timer/service files, enables daily scan timer, disables persistent daemon socket
 configure_clamav_service() {
   validate_var_set "DEVBASE_FILES" || return 1
 
@@ -157,6 +158,14 @@ configure_clamav_service() {
 
   local systemd_dir="/etc/systemd/system"
   local source_dir="${DEVBASE_FILES}/systemd/clamav"
+
+  # Disable Ubuntu's default socket-activated daemon to prevent 24/7 resource usage
+  # The daemon will only run during scheduled scans (2-4 AM)
+  if systemctl is-enabled clamav-daemon.socket &>/dev/null; then
+    sudo systemctl disable --now clamav-daemon.socket &>/dev/null || true
+    sudo systemctl disable clamav-daemon.service &>/dev/null || true
+    show_progress success "Disabled ClamAV persistent daemon (will run only during scheduled scans)"
+  fi
 
   if sudo systemctl enable clamav-freshclam.service; then
     sudo systemctl start clamav-freshclam.service || true
@@ -170,7 +179,7 @@ configure_clamav_service() {
       sudo systemctl daemon-reload
       if sudo systemctl enable clamav-daily-scan.timer; then
         if sudo systemctl start clamav-daily-scan.timer; then
-          show_progress success "ClamAV daily scan enabled and started"
+          show_progress success "ClamAV daily scan enabled and started (runs 2-4 AM)"
         else
           show_progress warning "ClamAV daily scan enabled (will start on next boot)"
         fi

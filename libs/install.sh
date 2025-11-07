@@ -77,29 +77,6 @@ _DEVBASE_TEMP=$(mktemp -d /tmp/devbase.XXXXXX) || {
 
 readonly _DEVBASE_TEMP
 
-# Rotate old backup if it exists (keep only one previous backup)
-if [[ -d "${DEVBASE_BACKUP_DIR}" ]]; then
-  if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
-    # Safety check: ensure path is within user home
-    if [[ -n "${DEVBASE_BACKUP_DIR}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
-      rm -rf "${DEVBASE_BACKUP_DIR}.old"
-    else
-      show_progress warning "Refusing to remove unsafe backup path: ${DEVBASE_BACKUP_DIR}.old"
-    fi
-  fi
-  mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
-fi
-
-# Clean up old timestamped backups from previous version
-for old_backup in "${HOME}"/.devbase_backup_*; do
-  if [[ -d "$old_backup" ]]; then
-    if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
-      rm -rf "$old_backup"
-    else
-      show_progress warning "Skipping unexpected backup path: $old_backup"
-    fi
-  fi
-done
 if [[ -z "${DEVBASE_ROOT:-}" ]] || [[ -z "${DEVBASE_LIBS:-}" ]]; then
   echo "ERROR: Devbase environment not properly initialized" >&2
   exit 1
@@ -107,6 +84,39 @@ fi
 
 # All required libraries are now sourced in setup.sh before this script
 # This prevents duplicate sourcing and readonly variable conflicts
+
+# Brief: Rotate backup directories to keep only one previous backup
+# Params: None
+# Uses: DEVBASE_BACKUP_DIR, HOME, show_progress (globals/functions)
+# Returns: 0 always
+# Side-effects: Removes old backups, renames current backup to .old
+rotate_backup_directories() {
+  # Rotate old backup if it exists (keep only one previous backup)
+  if [[ -d "${DEVBASE_BACKUP_DIR}" ]]; then
+    if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
+      # Safety check: ensure path is within user home
+      if [[ -n "${DEVBASE_BACKUP_DIR}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
+        rm -rf "${DEVBASE_BACKUP_DIR}.old"
+      else
+        show_progress warning "Refusing to remove unsafe backup path: ${DEVBASE_BACKUP_DIR}.old"
+      fi
+    fi
+    mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
+  fi
+
+  # Clean up old timestamped backups from previous version
+  for old_backup in "${HOME}"/.devbase_backup_*; do
+    if [[ -d "$old_backup" ]]; then
+      if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
+        rm -rf "$old_backup"
+      else
+        show_progress warning "Skipping unexpected backup path: $old_backup"
+      fi
+    fi
+  done
+
+  return 0
+}
 
 # Brief: Validate installation environment variables and critical tools
 # Params: None
@@ -224,7 +234,7 @@ DEVBASE INSTALLATION SUMMARY
 Installation Date: $(date)
 Environment: ${_DEVBASE_ENV:-unknown}
 OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
-Theme: ${DEVBASE_THEME:-everforest-dark}
+Theme: ${DEVBASE_THEME}
 DevBase Version: $(cat "${DEVBASE_CONFIG_DIR}/version" 2>/dev/null || echo "unknown")
 $(if is_wsl; then echo "WSL Version: $(get_wsl_version 2>/dev/null || echo "unknown")"; fi)
 
@@ -311,9 +321,9 @@ SSH CONFIGURATION
 
 NETWORK CONFIGURATION
 =====================
-  • Proxy: $(if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then echo "${DEVBASE_PROXY_URL}" | sed 's|://[^@]*@|://***:***@|'; else echo "not configured"; fi)
-  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then echo "${DEVBASE_REGISTRY_URL}"; else echo "not configured"; fi)
-  • Container Registry: $(if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]]; then echo "${DEVBASE_CONTAINERS_REGISTRY}"; else echo "not configured"; fi)
+  • Proxy: $(if [[ -n "${DEVBASE_PROXY_URL}" ]]; then echo "${DEVBASE_PROXY_URL}" | sed 's|://[^@]*@|://***:***@|'; else echo "not configured"; fi)
+  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then echo "${DEVBASE_REGISTRY_URL}"; else echo "not configured"; fi)
+  • Container Registry: $(if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then echo "${DEVBASE_CONTAINERS_REGISTRY}"; else echo "not configured"; fi)
 
 MISE ACTIVATION
 ===============
@@ -323,7 +333,7 @@ MISE ACTIVATION
 
 CUSTOM CONFIGURATION
 ====================
-  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
+  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
   • Custom Env: $(if [[ -n "${DEVBASE_CUSTOM_ENV:-}" ]]; then echo "loaded"; else echo "not loaded"; fi)
 
 NEXT STEPS
@@ -359,7 +369,7 @@ show_completion_message() {
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  if [[ -z "${DEVBASE_CUSTOM_DIR:-}" ]]; then
+  if [[ -z "${DEVBASE_CUSTOM_DIR}" ]]; then
     print_box_line "" "$box_width"
     print_box_line "Note: Using default configuration" "$box_width"
     print_box_line "For custom overlay (proxy, certs, hooks):" "$box_width"
@@ -370,9 +380,9 @@ show_completion_message() {
   # Check Secure Boot status (native Linux only)
   if ! check_secure_boot 2>/dev/null; then
     print_box_line "" "$box_width"
-    print_box_line "!!! SECURITY WARNING !!!" "$box_width"
-    print_box_line "Secure Boot is DISABLED on this machine" "$box_width"
-    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width"
+    print_box_line "!!! SECURITY WARNING !!!" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
+    print_box_line "Secure Boot is DISABLED on this machine" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
+    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
   fi
 
   print_box_bottom "$box_width"
@@ -380,8 +390,9 @@ show_completion_message() {
 }
 
 configure_fonts_post_install() {
+  # ===== Skip if not applicable =====
   # Only prompt on native Ubuntu when fonts were installed
-  if [[ "${DEVBASE_FONTS_INSTALLED:-false}" != "true" ]] || [[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]]; then
+  if [[ "${DEVBASE_FONTS_INSTALLED:-false}" != "true" ]] || [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     return 0
   fi
 
@@ -395,18 +406,18 @@ configure_fonts_post_install() {
   print_section "Terminal Configuration" "${DEVBASE_COLORS[BOLD_CYAN]}"
   printf "\n"
 
-  # Apply theme FIRST (before showing font configuration section)
+  # ===== Apply terminal theme =====
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     local profile_id
     profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
-    if [[ -n "$profile_id" ]] && [[ -n "${DEVBASE_THEME:-}" ]]; then
+    if [[ -n "$profile_id" ]] && [[ -n "${DEVBASE_THEME}" ]]; then
       if apply_gnome_terminal_theme "${DEVBASE_THEME}" "$profile_id" 2>/dev/null; then
         show_progress success "GNOME Terminal: Theme applied (${DEVBASE_THEME})"
       fi
     fi
   fi
 
-  # Check if terminal font is already configured
+  # ===== Check if font already configured =====
   local already_configured=false
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     local profile_id
@@ -427,6 +438,7 @@ configure_fonts_post_install() {
     return 0
   fi
 
+  # ===== Prompt user to configure font =====
   printf "  %bMonaspace Nerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "  %bWould you like to configure your terminal to use it now?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "\n"
@@ -455,7 +467,7 @@ configure_fonts_post_install() {
 }
 
 handle_wsl_restart() {
-  if [[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]]; then
+  if [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     show_progress info "[WSL-specific] WSL must restart to apply all changes"
     printf "\n"
     printf "  %b%b%bPress ENTER to shutdown WSL now...%b" \
@@ -628,7 +640,7 @@ display_configuration_summary() {
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 
   print_box_line "Editor & Shell:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  if [[ "${EDITOR:-}" == "nvim" ]]; then
+  if [[ "${EDITOR}" == "nvim" ]]; then
     print_box_line "  • Default editor: Neovim" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     print_box_line "  • Shell bindings: Vim mode" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
@@ -732,7 +744,7 @@ prepare_system() {
 
 # Brief: Perform complete DevBase installation (tools, configs, services, hooks)
 # Params: None
-# Uses: DEVBASE_COLORS, DEVBASE_CUSTOM_HOOKS, download_and_install_tools, apply_configurations, configure_system_and_shell, finalize_installation, run_custom_hook, show_progress (globals/functions)
+# Uses: DEVBASE_COLORS, _DEVBASE_CUSTOM_HOOKS, download_and_install_tools, apply_configurations, configure_system_and_shell, finalize_installation, run_custom_hook, show_progress (globals/functions)
 # Returns: 0 always
 # Side-effects: Installs tools, applies configs, runs custom hooks
 perform_installation() {
@@ -745,24 +757,25 @@ perform_installation() {
   printf "\n%bConfiguring system services...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   configure_system_and_shell
 
-  if [[ -n "${DEVBASE_CUSTOM_HOOKS:-}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
+  if [[ -n "${_DEVBASE_CUSTOM_HOOKS}" ]] && [[ -d "${_DEVBASE_CUSTOM_HOOKS}" ]]; then
     run_custom_hook "post-configuration" || show_progress warning "Post-configuration hook failed"
   fi
 
   printf "\n%bFinalizing installation...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   finalize_installation
 
-  if [[ -n "${DEVBASE_CUSTOM_HOOKS:-}" ]] && [[ -d "${DEVBASE_CUSTOM_HOOKS}" ]]; then
+  if [[ -n "${_DEVBASE_CUSTOM_HOOKS}" ]] && [[ -d "${_DEVBASE_CUSTOM_HOOKS}" ]]; then
     run_custom_hook "post-install" || show_progress warning "Post-install hook failed, continuing..."
   fi
 }
 
 # Brief: Main installation orchestration function
 # Params: None
-# Uses: DEVBASE_COLORS, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
+# Uses: DEVBASE_COLORS, rotate_backup_directories, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
 # Returns: 0 always
 # Side-effects: Orchestrates entire DevBase installation process
 main() {
+  rotate_backup_directories
   validate_environment
   validate_source_repository
   setup_installation_paths
@@ -794,11 +807,11 @@ run_custom_hook() {
 
   validate_not_empty "$hook_name" "Hook name" || return 1
 
-  if [[ -z "${DEVBASE_CUSTOM_HOOKS:-}" ]]; then
+  if [[ -z "${_DEVBASE_CUSTOM_HOOKS}" ]]; then
     return 0 # No custom hooks directory configured
   fi
 
-  local hook_file="${DEVBASE_CUSTOM_HOOKS}/${hook_name}.sh"
+  local hook_file="${_DEVBASE_CUSTOM_HOOKS}/${hook_name}.sh"
 
   if [[ -f "$hook_file" ]] && [[ -x "$hook_file" ]]; then
     show_progress info "Running $hook_name hook"

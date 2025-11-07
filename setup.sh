@@ -5,7 +5,8 @@ set -uo pipefail
 # DevBase Installation Setup Script
 # ============================================================================
 
-# Check if running in bash (not fish, zsh, etc.)
+# Guard: Verify running in bash (must check before any bash-specific code)
+# Note: BASH_VERSION check must use ${:-} since this runs before our imports
 if [ -z "${BASH_VERSION:-}" ]; then
   echo "ERROR: This script must be run with bash, not sourced in another shell."
   echo "Usage: bash setup.sh"
@@ -21,50 +22,81 @@ handle_interrupt() {
 trap handle_interrupt INT TERM
 
 # ============================================================================
-# EXPORTED ENVIRONMENT VARIABLES (for child processes and sourced scripts)
+# IMPORT OPTIONAL ENVIRONMENT VARIABLES (fail-fast initialization)
+# ============================================================================
+# Import environment variables that may be set by user/environment before running setup.sh
+# Importing here with empty defaults enables fail-fast (set -u) for the rest of the script
+# Any typo in variable names will cause immediate crash instead of silent empty string
+#
+# For complete documentation: docs/environment.adoc
+
+# User-provided overrides
+DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}"          # Custom config directory path
+DEBUG="${DEBUG:-}"                                     # Debug mode (set DEBUG=1 for verbose output)
+DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}"     # Theme choice (default: everforest-dark)
+EDITOR="${EDITOR:-}"                                   # Editor preference
+EDITOR_CHOICE="${EDITOR_CHOICE:-nvim}"                # Editor choice for non-interactive mode (default: nvim)
+FORCE_DEVBASE_ENV="${FORCE_DEVBASE_ENV:-}"            # Force specific environment type
+GIT_EMAIL="${GIT_EMAIL:-$USER@$(hostname)}"           # Git email for non-interactive (default: user@hostname)
+GIT_NAME="${GIT_NAME:-DevBase User}"                  # Git name for non-interactive (default: DevBase User)
+MISE_GITHUB_TOKEN="${MISE_GITHUB_TOKEN:-}"            # GitHub token for mise downloads
+MISE_VERSION="${MISE_VERSION:-}"                      # Mise version override
+SSH_KEY_PASSPHRASE="${SSH_KEY_PASSPHRASE:-}"          # SSH key passphrase
+USER_UID="${USER_UID:-$(id -u)}"                      # User ID override (defaults to current user)
+
+# XDG directories (may be pre-set by user, defaults follow XDG Base Directory spec)
+XDG_BIN_HOME="${XDG_BIN_HOME:-${HOME}/.local/bin}"        # Not in spec, but follows pattern
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-${HOME}/.cache}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
+
+# Network configuration (may be set by org.env file when sourced)
+DEVBASE_PROXY_URL="${DEVBASE_PROXY_URL:-}"
+DEVBASE_NO_PROXY_DOMAINS="${DEVBASE_NO_PROXY_DOMAINS:-}"
+DEVBASE_REGISTRY_URL="${DEVBASE_REGISTRY_URL:-}"
+DEVBASE_EMAIL_DOMAIN="${DEVBASE_EMAIL_DOMAIN:-}"
+DEVBASE_LOCALE="${DEVBASE_LOCALE:-}"
+DEVBASE_CONTAINERS_REGISTRY="${DEVBASE_CONTAINERS_REGISTRY:-}"
+DEVBASE_PROXY_HOST="${DEVBASE_PROXY_HOST:-proxy}"
+DEVBASE_PROXY_PORT="${DEVBASE_PROXY_PORT:-8080}"
+
+# Internal state variables (set by functions during execution)
+_DEVBASE_CUSTOM_CERTS="${_DEVBASE_CUSTOM_CERTS:-}"
+_DEVBASE_CUSTOM_HOOKS="${_DEVBASE_CUSTOM_HOOKS:-}"
+_DEVBASE_CUSTOM_SSH="${_DEVBASE_CUSTOM_SSH:-}"
+_DEVBASE_CUSTOM_TEMPLATES="${_DEVBASE_CUSTOM_TEMPLATES:-}"
+_DEVBASE_FROM_GIT="${_DEVBASE_FROM_GIT:-}"
+_DEVBASE_ENV="${_DEVBASE_ENV:-}"
+
+# Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
+NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+
+# ============================================================================
+# EXPORTED ENVIRONMENT VARIABLES (see docs/environment.adoc for details)
 # ============================================================================
 #
-# Core Paths (readonly, set in initialize_devbase_paths):
-#   DEVBASE_ROOT, DEVBASE_LIBS, DEVBASE_DOT, DEVBASE_FILES,
-#   DEVBASE_ENVS, DEVBASE_DOCS
+# Core Paths (readonly):
+#   DEVBASE_ROOT, DEVBASE_LIBS, DEVBASE_DOT, DEVBASE_FILES, DEVBASE_ENVS, DEVBASE_DOCS
 #
-# Custom Configuration (if devbase-custom-config found):
-#   DEVBASE_CUSTOM_DIR, DEVBASE_CUSTOM_ENV, DEVBASE_CUSTOM_CERTS,
-#   DEVBASE_CUSTOM_HOOKS, DEVBASE_CUSTOM_TEMPLATES, DEVBASE_CUSTOM_SSH
+# Custom Configuration (optional):
+#   DEVBASE_CUSTOM_DIR, DEVBASE_CUSTOM_ENV, _DEVBASE_CUSTOM_CERTS, 
+#   _DEVBASE_CUSTOM_HOOKS, _DEVBASE_CUSTOM_TEMPLATES, _DEVBASE_CUSTOM_SSH
 #
-# Environment Detection:
-#   DEVBASE_ENV (ubuntu|wsl-ubuntu)
-#   DEVBASE_ENV_FILE (path to org.env or default.env)
-#
-# Network Configuration (if configured in org.env):
-#   DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS, DEVBASE_REGISTRY_URL
-#   DEVBASE_CONTAINERS_REGISTRY, DEVBASE_EMAIL_DOMAIN
-#   http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
+# Environment & Network:
+#   DEVBASE_ENV, DEVBASE_ENV_FILE, DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS,
+#   DEVBASE_REGISTRY_URL, DEVBASE_CONTAINERS_REGISTRY, DEVBASE_EMAIL_DOMAIN
 #
 # Installation Settings:
-#   DEVBASE_THEME (everforest-dark|everforest-light)
-#   DEVBASE_CACHE_DIR (${XDG_CACHE_HOME}/devbase)
-#   DEVBASE_CONFIG_DIR (${XDG_CONFIG_HOME}/devbase)
-#   DEVBASE_BACKUP_DIR (${XDG_DATA_HOME}/devbase/backup)
-#   DEVBASE_FROM_GIT (true|false)
-#   USER_UID (current user ID)
-#   XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME, XDG_BIN_HOME
+#   DEVBASE_THEME, DEVBASE_CACHE_DIR, DEVBASE_CONFIG_DIR, DEVBASE_BACKUP_DIR,
+#   _DEVBASE_FROM_GIT, USER_UID, XDG_* directories
 #
-# Non-Interactive Mode:
-#   NON_INTERACTIVE (true|false)
-#   DEBIAN_FRONTEND (noninteractive)
+# User Preferences (collected during install):
+#   DEVBASE_GIT_*, DEVBASE_SSH_*, EDITOR, VISUAL, DEVBASE_INSTALL_*, 
+#   DEVBASE_ENABLE_GIT_HOOKS, DEVBASE_ZELLIJ_AUTOSTART
 #
-# User Preferences (collected during install, see collect-user-preferences.sh):
-#   DEVBASE_GIT_AUTHOR, DEVBASE_GIT_EMAIL, DEVBASE_GIT_DEFAULT_BRANCH
-#   DEVBASE_SSH_KEY_PATH, DEVBASE_SSH_KEY_ACTION, DEVBASE_SSH_PASSPHRASE
-#   DEVBASE_SSH_ALLOW_EMPTY_PW
-#   EDITOR, VISUAL, DEVBASE_INSTALL_LAZYVIM, DEVBASE_INSTALL_JMC,
-#   DEVBASE_INSTALL_INTELLIJ, DEVBASE_ENABLE_GIT_HOOKS, DEVBASE_ZELLIJ_AUTOSTART
-#
+# For complete documentation with descriptions and examples:
+# → docs/environment.adoc
 # ============================================================================
-
-# Script behavior flags
-NON_INTERACTIVE=false
 
 # Global variables - set by various functions below
 # DevBase paths - set by initialize_devbase_paths()
@@ -102,6 +134,7 @@ parse_arguments() {
 # Returns: 0 always
 # Side-effects: None
 initialize_devbase_paths() {
+  # Get absolute path to devbase root (canonical bash idiom)
   export DEVBASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
@@ -185,7 +218,7 @@ validate_custom_directory() {
 
 find_custom_directory() {
   local candidates=(
-    "${DEVBASE_CUSTOM_DIR:-}"
+    "${DEVBASE_CUSTOM_DIR}"  # Imported at top - empty if user didn't set it
     "$DEVBASE_ROOT/../devbase-custom-config"
     "$DEVBASE_ROOT/devbase-custom-config"
   )
@@ -204,19 +237,19 @@ find_custom_directory() {
     show_progress step "Using custom configuration: $fullpath"
     export DEVBASE_CUSTOM_DIR="$fullpath"
     export DEVBASE_CUSTOM_ENV="$fullpath/config"
-    export DEVBASE_CUSTOM_CERTS="$fullpath/certificates"
-    export DEVBASE_CUSTOM_HOOKS="$fullpath/hooks"
-    export DEVBASE_CUSTOM_TEMPLATES="$fullpath/templates"
-    export DEVBASE_CUSTOM_SSH="$fullpath/ssh"
+    export _DEVBASE_CUSTOM_CERTS="$fullpath/certificates"
+    export _DEVBASE_CUSTOM_HOOKS="$fullpath/hooks"
+    export _DEVBASE_CUSTOM_TEMPLATES="$fullpath/templates"
+    export _DEVBASE_CUSTOM_SSH="$fullpath/ssh"
 
-    # Debug output if DEBUG is set
-    if [[ "${DEBUG:-}" == "1" ]]; then
+    # Debug output if DEBUG is set (see docs/environment.adoc)
+    if [[ "${DEBUG}" == "1" ]]; then
       show_progress info "DEVBASE_CUSTOM_DIR=${DEVBASE_CUSTOM_DIR}"
       show_progress info "DEVBASE_CUSTOM_ENV=${DEVBASE_CUSTOM_ENV}"
-      show_progress info "DEVBASE_CUSTOM_CERTS=${DEVBASE_CUSTOM_CERTS}"
-      show_progress info "DEVBASE_CUSTOM_HOOKS=${DEVBASE_CUSTOM_HOOKS}"
-      show_progress info "DEVBASE_CUSTOM_TEMPLATES=${DEVBASE_CUSTOM_TEMPLATES}"
-      show_progress info "DEVBASE_CUSTOM_SSH=${DEVBASE_CUSTOM_SSH}"
+      show_progress info "_DEVBASE_CUSTOM_CERTS=${_DEVBASE_CUSTOM_CERTS}"
+      show_progress info "_DEVBASE_CUSTOM_HOOKS=${_DEVBASE_CUSTOM_HOOKS}"
+      show_progress info "_DEVBASE_CUSTOM_TEMPLATES=${_DEVBASE_CUSTOM_TEMPLATES}"
+      show_progress info "_DEVBASE_CUSTOM_SSH=${_DEVBASE_CUSTOM_SSH}"
     fi
 
     return 0
@@ -225,14 +258,14 @@ find_custom_directory() {
   # If we get here, no custom directory was found
   show_progress info "No custom directory found (using default configuration)"
   show_progress info "Searched locations:"
-  [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && show_progress info "  • \$DEVBASE_CUSTOM_DIR: ${DEVBASE_CUSTOM_DIR}"
+  [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && show_progress info "  • \$DEVBASE_CUSTOM_DIR: ${DEVBASE_CUSTOM_DIR}"
   show_progress info "  • $DEVBASE_ROOT/../devbase-custom-config"
   show_progress info "  • $DEVBASE_ROOT/devbase-custom-config"
 }
 
 load_environment_configuration() {
   # Determine environment file to use
-  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
     _DEVBASE_ENV_FILE="${DEVBASE_CUSTOM_DIR}/config/org.env"
     show_progress step "Using custom environment: ${_DEVBASE_ENV_FILE}"
   else
@@ -257,7 +290,7 @@ load_environment_configuration() {
 
   # Export registry URL immediately after loading environment
   # This ensures it's available for connectivity checks
-  if [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
     export DEVBASE_REGISTRY_URL
   fi
 }
@@ -270,7 +303,7 @@ load_environment_configuration() {
 # Returns: 0 always
 # Side-effects: Sets proxy for all subsequent network operations
 configure_proxy_settings() {
-  if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
     local proxy_url="${DEVBASE_PROXY_URL}"
 
     export http_proxy="${proxy_url}"
@@ -278,7 +311,7 @@ configure_proxy_settings() {
     export HTTP_PROXY="${proxy_url}"
     export HTTPS_PROXY="${proxy_url}"
 
-    if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
+    if [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]]; then
       export no_proxy="${DEVBASE_NO_PROXY_DOMAINS}"
       export NO_PROXY="${DEVBASE_NO_PROXY_DOMAINS}"
     else
@@ -302,8 +335,8 @@ check_required_config_variables() {
   local required_vars=()
   local missing_vars=()
 
-  [[ -n "${DEVBASE_PROXY_URL:-}" ]] && required_vars+=("DEVBASE_PROXY_URL")
-  [[ -n "${DEVBASE_REGISTRY_URL:-}" ]] && required_vars+=("DEVBASE_REGISTRY_URL")
+  [[ -n "${DEVBASE_PROXY_URL}" ]] && required_vars+=("DEVBASE_PROXY_URL")
+  [[ -n "${DEVBASE_REGISTRY_URL}" ]] && required_vars+=("DEVBASE_REGISTRY_URL")
 
   for var in "${required_vars[@]}"; do
     [[ -z "${!var:-}" ]] && missing_vars+=("$var")
@@ -321,15 +354,15 @@ check_required_config_variables() {
 # Returns: 0 always
 # Side-effects: Displays info messages
 display_network_configuration() {
-  if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
     local masked_proxy=$(echo "${DEVBASE_PROXY_URL}" | mask_url_credentials)
     show_progress info "Proxy URL: ${masked_proxy}"
   fi
 
-  [[ -n "${DEVBASE_REGISTRY_URL:-}" ]] &&
+  [[ -n "${DEVBASE_REGISTRY_URL}" ]] &&
     show_progress info "Registry URL: ${DEVBASE_REGISTRY_URL}"
 
-  [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]] &&
+  [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]] &&
     show_progress info "No-proxy domains: ${DEVBASE_NO_PROXY_DOMAINS}"
 }
 
@@ -339,26 +372,26 @@ display_network_configuration() {
 # Returns: 0 always
 # Side-effects: Displays info messages
 display_custom_settings() {
-  if [[ -n "${DEVBASE_EMAIL_DOMAIN:-}" ]] && [[ "${DEVBASE_EMAIL_DOMAIN}" != "@" ]]; then
+  if [[ -n "${DEVBASE_EMAIL_DOMAIN}" ]] && [[ "${DEVBASE_EMAIL_DOMAIN}" != "@" ]]; then
     show_progress info "Email domain: ${DEVBASE_EMAIL_DOMAIN} (pre-fills Git config)"
   fi
 
-  if [[ -n "${DEVBASE_LOCALE:-}" ]] && [[ "${DEVBASE_LOCALE}" != "en_US.UTF-8" ]]; then
+  if [[ -n "${DEVBASE_LOCALE}" ]] && [[ "${DEVBASE_LOCALE}" != "en_US.UTF-8" ]]; then
     show_progress info "Locale: ${DEVBASE_LOCALE}"
   fi
 }
 
 # Brief: Display available custom hook scripts
 # Params: None
-# Uses: DEVBASE_CUSTOM_HOOKS (global)
+# Uses: _DEVBASE_CUSTOM_HOOKS (global)
 # Returns: 0 always
 # Side-effects: Displays info message if hooks found
 display_custom_hooks() {
-  [[ ! -d "${DEVBASE_CUSTOM_HOOKS:-}" ]] && return 0
+  [[ ! -d "${_DEVBASE_CUSTOM_HOOKS}" ]] && return 0
 
   local hooks=()
   for hook in pre-install post-configuration post-install; do
-    [[ -f "${DEVBASE_CUSTOM_HOOKS}/${hook}.sh" ]] && hooks+=("${hook}.sh")
+    [[ -f "${_DEVBASE_CUSTOM_HOOKS}/${hook}.sh" ]] && hooks+=("${hook}.sh")
   done
 
   [[ ${#hooks[@]} -gt 0 ]] && show_progress info "Custom hooks: ${hooks[*]}"
@@ -366,19 +399,19 @@ display_custom_hooks() {
 
 # Brief: Display SSH hosts configured with proxy
 # Params: None
-# Uses: DEVBASE_CUSTOM_SSH, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT (globals)
+# Uses: _DEVBASE_CUSTOM_SSH, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT (globals)
 # Returns: 0 always
 # Side-effects: Displays info message if proxied hosts found
 display_ssh_proxy_configuration() {
-  [[ ! -f "${DEVBASE_CUSTOM_SSH:-}/custom.config" ]] && return 0
+  [[ ! -f "${_DEVBASE_CUSTOM_SSH}/custom.config" ]] && return 0
 
   local ssh_proxied_hosts
   ssh_proxied_hosts=$(awk '/^Host / {host=$2} /ProxyCommand/ && host {print host; host=""}' \
-    "${DEVBASE_CUSTOM_SSH}/custom.config" 2>/dev/null |
+    "${_DEVBASE_CUSTOM_SSH}/custom.config" 2>/dev/null |
     paste -sd "," -)
 
   if [[ -n "$ssh_proxied_hosts" ]]; then
-    show_progress info "SSH proxy: ${ssh_proxied_hosts} → ${DEVBASE_PROXY_HOST:-proxy}:${DEVBASE_PROXY_PORT:-8080}"
+    show_progress info "SSH proxy: ${ssh_proxied_hosts} → ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
   fi
 }
 
@@ -388,7 +421,7 @@ display_ssh_proxy_configuration() {
 # Returns: 0 always
 # Side-effects: Displays validation status and configuration info
 validate_custom_config() {
-  [[ -z "${DEVBASE_CUSTOM_DIR:-}" ]] && return 0
+  [[ -z "${DEVBASE_CUSTOM_DIR}" ]] && return 0
 
   show_progress step "Validating custom configuration"
 
@@ -401,10 +434,10 @@ validate_custom_config() {
 
 run_pre_install_hook() {
   # Run pre-install hook if it exists (organization-specific)
-  if [[ -f "${DEVBASE_CUSTOM_HOOKS:-}/pre-install.sh" ]]; then
+  if [[ -f "${_DEVBASE_CUSTOM_HOOKS}/pre-install.sh" ]]; then
     show_progress step "Running pre-install hook"
     # Run in subprocess for isolation (hooks can't pollute main script)
-    bash "${DEVBASE_CUSTOM_HOOKS}/pre-install.sh" || {
+    bash "${_DEVBASE_CUSTOM_HOOKS}/pre-install.sh" || {
       show_progress warning "Pre-install hook failed, continuing anyway"
     }
   fi
@@ -423,42 +456,29 @@ test_generic_network_connectivity() {
 }
 
 set_default_values() {
-  USER_UID="${USER_UID:-$(id -u)}"
+  # Export variables that were initialized in IMPORT section with defaults
   export USER_UID
-
-  # Export proxy and registry related variables
-  DEVBASE_PROXY_URL="${DEVBASE_PROXY_URL:-}"
-  DEVBASE_NO_PROXY_DOMAINS="${DEVBASE_NO_PROXY_DOMAINS:-}"
-  DEVBASE_REGISTRY_URL="${DEVBASE_REGISTRY_URL:-}"
   export DEVBASE_PROXY_URL DEVBASE_NO_PROXY_DOMAINS DEVBASE_REGISTRY_URL
-
-  # Set up XDG Base Directory variables if not already set
-  export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
-  export XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
-  export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${HOME}/.cache}"
-  # XDG_BIN_HOME is not part of the spec, but follows the pattern
-  export XDG_BIN_HOME="${XDG_BIN_HOME:-${HOME}/.local/bin}"
+  export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_BIN_HOME
+  export DEVBASE_THEME
 
   # Define DevBase directories using XDG variables
   export DEVBASE_CACHE_DIR="${XDG_CACHE_HOME}/devbase"
   export DEVBASE_CONFIG_DIR="${XDG_CONFIG_HOME}/devbase"
   export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
 
-  # Export theme preference (will be set during install)
-  DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}"
-  export DEVBASE_THEME
-
+  # Determine if running from git clone or release tarball
   if git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
-    export DEVBASE_FROM_GIT="true"
+    export _DEVBASE_FROM_GIT="true"
   else
-    export DEVBASE_FROM_GIT="false"
+    export _DEVBASE_FROM_GIT="false"
   fi
 
   # Debug output if DEBUG environment variable is set
-  if [[ "${DEBUG:-}" == "1" ]]; then
+  if [[ "${DEBUG}" == "1" ]]; then
     show_progress info "Debug mode enabled"
     show_progress info "DEVBASE_ROOT=${DEVBASE_ROOT}"
-    show_progress info "DEVBASE_FROM_GIT=${DEVBASE_FROM_GIT}"
+    show_progress info "_DEVBASE_FROM_GIT=${_DEVBASE_FROM_GIT}"
     show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
     show_progress info "_DEVBASE_ENV=${_DEVBASE_ENV}"
     [[ -n "${DEVBASE_PROXY_URL}" ]] && show_progress info "Proxy configured: ${DEVBASE_PROXY_URL}"

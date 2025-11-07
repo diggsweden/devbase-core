@@ -21,9 +21,10 @@ check_shell_scripts() {
   fi
 
   # Exclude warnings that don't affect functionality:
+  # SC1091: Not following sourced files (expected when sourcing external libs)
   # SC2034: unused variables (often used in other sourced scripts)
   # SC2155: declare and assign separately (style preference, not a bug)
-  if echo "$scripts" | xargs -r shellcheck --severity=warning --exclude=SC2034,SC2155 2>/dev/null; then
+  if echo "$scripts" | xargs -r shellcheck --severity=info --exclude=SC1091,SC2034,SC2155 2>/dev/null; then
     print_success "Shell script linting passed"
     return 0
   else

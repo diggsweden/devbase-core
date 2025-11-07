@@ -77,7 +77,7 @@ setup_vscode() {
       else
         # Try to find vscode-server CLI directly
         local vscode_server_path
-        vscode_server_path=$(ls -t "$HOME/.vscode-server/bin/"/*/bin/remote-cli/code 2>/dev/null | head -1)
+        vscode_server_path=$(find "$HOME/.vscode-server/bin/" -maxdepth 2 -path "*/bin/remote-cli/code" -type f 2>/dev/null | sort -r | head -1)
 
         if [[ -n "$vscode_server_path" ]] && [[ -f "$vscode_server_path" ]]; then
           # VS Code Server CLI only works inside an active VS Code terminal
@@ -147,6 +147,7 @@ configure_vscode_settings() {
 
   local configure_neovim="${DEVBASE_VSCODE_NEOVIM}"
 
+  # shellcheck disable=SC2153 # DEVBASE_DOT is set in setup.sh
   local settings_template="${DEVBASE_DOT}/.config/vscode/settings.json"
   local vscode_settings_dir=""
   local settings_target=""
@@ -172,7 +173,7 @@ configure_vscode_settings() {
 
   # Map DEVBASE_THEME to VSCode theme name
   local vscode_theme="Everforest Dark" # default
-  if [[ -n "${DEVBASE_THEME:-}" ]]; then
+  if [[ -n "${DEVBASE_THEME}" ]]; then
     case "${DEVBASE_THEME}" in
     everforest-dark)
       vscode_theme="Everforest Dark"

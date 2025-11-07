@@ -221,7 +221,7 @@ check_network_connectivity() {
 # Side-effects: Tests proxy connection
 check_proxy_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_PROXY_URL:-}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 0
 
   # Test with a site that should go through proxy (github.com is not in NO_PROXY)
   if curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) https://github.com &>/dev/null; then
@@ -240,7 +240,7 @@ check_proxy_connectivity() {
 # Side-effects: Tests registry connection
 check_registry_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_REGISTRY_URL:-}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
 
   # Simple connectivity check with --insecure (ignoring cert issues)
   # curl will automatically use http_proxy/https_proxy/no_proxy env vars

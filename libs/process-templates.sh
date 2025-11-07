@@ -48,25 +48,25 @@ count_templates() {
 
 # Brief: Count custom overlay templates
 # Params: None
-# Uses: DEVBASE_CUSTOM_TEMPLATES (global, optional)
+# Uses: _DEVBASE_CUSTOM_TEMPLATES (global, optional)
 # Returns: Custom overlay count to stdout
 # Side-effects: None (read-only)
 count_custom_overlays() {
-  [[ -z "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && {
+  [[ -z "${_DEVBASE_CUSTOM_TEMPLATES}" ]] && {
     echo 0
     return 0
   }
-  [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && {
+  [[ ! -d "${_DEVBASE_CUSTOM_TEMPLATES}" ]] && {
     echo 0
     return 0
   }
 
-  find "${DEVBASE_CUSTOM_TEMPLATES}" -name "*.template" -type f | wc -l
+  find "${_DEVBASE_CUSTOM_TEMPLATES}" -name "*.template" -type f | wc -l
 }
 
 # Brief: Apply theme and custom template overlays to dotfiles
 # Params: $1 - temp_dotfiles directory path
-# Uses: DEVBASE_CUSTOM_TEMPLATES, DEVBASE_THEME (globals)
+# Uses: _DEVBASE_CUSTOM_TEMPLATES, DEVBASE_THEME (globals)
 # Returns: 0 on success, 1 on error
 # Side-effects: Modifies files in temp_dotfiles directory
 apply_customizations() {
@@ -74,7 +74,7 @@ apply_customizations() {
   validate_not_empty "$temp_dotfiles" "temp_dotfiles parameter" || return 1
   validate_dir_exists "$temp_dotfiles" "Temp dotfiles directory" || return 1
 
-  if [[ -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]]; then
+  if [[ -n "${_DEVBASE_CUSTOM_TEMPLATES}" ]] && [[ -d "${_DEVBASE_CUSTOM_TEMPLATES}" ]]; then
     copy_custom_templates_to_temp "${temp_dotfiles}"
   fi
 
@@ -99,15 +99,15 @@ process_templates_and_tools() {
 
 # Brief: Apply custom non-template configuration files
 # Params: None
-# Uses: DEVBASE_CUSTOM_TEMPLATES, process_custom_templates, show_progress (globals/functions)
+# Uses: _DEVBASE_CUSTOM_TEMPLATES, process_custom_templates, show_progress (globals/functions)
 # Returns: 0 always
 # Side-effects: Processes custom config files, prints count
 apply_custom_configs() {
-  [[ ! -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] || [[ ! -d "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && return 0
+  [[ ! -n "${_DEVBASE_CUSTOM_TEMPLATES}" ]] || [[ ! -d "${_DEVBASE_CUSTOM_TEMPLATES}" ]] && return 0
 
   show_progress info "Applying custom organization configs..."
   local custom_configs
-  custom_configs=$(find "${DEVBASE_CUSTOM_TEMPLATES}" -type f ! -name "*.template" ! -name "README*" | wc -l)
+  custom_configs=$(find "${_DEVBASE_CUSTOM_TEMPLATES}" -type f ! -name "*.template" ! -name "README*" | wc -l)
   process_custom_templates
   show_progress success "Custom configs applied ($custom_configs files)"
 }
@@ -219,13 +219,13 @@ validate_custom_template() {
 
 # Brief: Copy validated custom templates to temp dotfiles directory
 # Params: $1 - temp_dir path
-# Uses: DEVBASE_CUSTOM_TEMPLATES, validate_custom_template (globals/functions)
+# Uses: _DEVBASE_CUSTOM_TEMPLATES, validate_custom_template (globals/functions)
 # Returns: 0 always
 # Side-effects: Overwrites vanilla templates with custom versions
 copy_custom_templates_to_temp() {
   local temp_dir="$1"
 
-  for template in "${DEVBASE_CUSTOM_TEMPLATES}"/*.template; do
+  for template in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.template; do
     [[ -f "$template" ]] || continue
 
     local template_name
@@ -484,7 +484,7 @@ process_template_file() {
     ;;
   .testcontainers.properties)
     # Skip if no container registry configured
-    if [[ -z "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] && [[ -z "${DEVBASE_REGISTRY_URL:-}" ]]; then
+    if [[ -z "${DEVBASE_CONTAINERS_REGISTRY}" ]] && [[ -z "${DEVBASE_REGISTRY_URL}" ]]; then
       rm "$file" 2>/dev/null || true
       return 0
     fi
@@ -631,7 +631,7 @@ process_maven_templates_yaml() {
   fi
 
   # Add proxy config if needed
-  if [[ -n "${DEVBASE_PROXY_URL:-}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
+  if [[ -n "${DEVBASE_PROXY_URL}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
     local proxy_processed="${temp_dir}/proxy.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed"
     yaml_fragments+=("$proxy_processed")
@@ -639,7 +639,7 @@ process_maven_templates_yaml() {
   fi
 
   # Add registry/mirror if configured
-  if [[ -n "${DEVBASE_REGISTRY_URL:-}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
     local registry_processed="${temp_dir}/registry.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
     yaml_fragments+=("$registry_processed")
@@ -647,9 +647,9 @@ process_maven_templates_yaml() {
   fi
 
   # Add custom repos if available
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/maven-repos.yaml" ]]; then
+  if [[ -f "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" ]]; then
     local custom_processed="${temp_dir}/maven-repos.yaml"
-    envsubst_preserve_undefined "${DEVBASE_CUSTOM_TEMPLATES:-}/maven-repos.yaml" "$custom_processed"
+    envsubst_preserve_undefined "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
     yaml_fragments+=("$custom_processed")
     config_desc="${config_desc:+$config_desc + }custom repos"
   fi
@@ -695,7 +695,7 @@ process_maven_templates_yaml() {
 
 process_gradle_templates() {
   # Skip if no registry configured
-  [[ -z "${DEVBASE_REGISTRY_URL:-}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
 
   local gradle_templates_dir="${DEVBASE_FILES}/gradle-templates"
   local target_file="${HOME}/.gradle/init.gradle"
@@ -704,8 +704,8 @@ process_gradle_templates() {
   mkdir -p "${HOME}/.gradle"
 
   # Check custom first, then core
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/init.gradle.template" ]]; then
-    template_to_use="${DEVBASE_CUSTOM_TEMPLATES:-}/init.gradle.template"
+  if [[ -f "${_DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template" ]]; then
+    template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template"
     show_progress info "Configuring Gradle with custom repository settings"
   elif [[ -f "${gradle_templates_dir}/init.gradle.template" ]]; then
     template_to_use="${gradle_templates_dir}/init.gradle.template"
@@ -727,7 +727,7 @@ process_container_templates() {
   mkdir -p "$(dirname "$target_file")"
 
   # Skip registries.conf generation if no registry configured
-  if [[ -z "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] && [[ -z "${DEVBASE_REGISTRY_URL:-}" ]]; then
+  if [[ -z "${DEVBASE_CONTAINERS_REGISTRY}" ]] && [[ -z "${DEVBASE_REGISTRY_URL}" ]]; then
     return 0
   fi
 
@@ -735,12 +735,12 @@ process_container_templates() {
   # Extract host:port from registry URL (without protocol and path)
   if [[ -z "${DEVBASE_REGISTRY_CONTAINER:-}" ]]; then
     export DEVBASE_REGISTRY_CONTAINER
-    if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]]; then
+    if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then
       # Remove protocol and path: "https://host:port/path" -> "host:port"
       DEVBASE_REGISTRY_CONTAINER=$(echo "${DEVBASE_CONTAINERS_REGISTRY}" |
         sed -E 's|^[^:]+://||' | # Remove protocol
         sed -E 's|/.*$||')       # Remove path
-    elif [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+    elif [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
       # Remove protocol and path: "https://host:port/path" -> "host:port"
       DEVBASE_REGISTRY_CONTAINER=$(echo "${DEVBASE_REGISTRY_URL}" |
         sed -E 's|^[^:]+://||' | # Remove protocol
@@ -749,8 +749,8 @@ process_container_templates() {
   fi
 
   # Check custom first, then core
-  if [[ -f "${DEVBASE_CUSTOM_TEMPLATES:-}/registries.conf.template" ]]; then
-    template_to_use="${DEVBASE_CUSTOM_TEMPLATES:-}/registries.conf.template"
+  if [[ -f "${_DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template" ]]; then
+    template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template"
     show_progress info "Configuring container registry with custom settings"
   elif [[ -f "${container_templates_dir}/registries.conf.template" ]]; then
     template_to_use="${container_templates_dir}/registries.conf.template"
@@ -764,14 +764,14 @@ process_container_templates() {
 }
 
 process_custom_templates() {
-  [[ -n "${DEVBASE_CUSTOM_TEMPLATES:-}" ]] && [[ -d "${DEVBASE_CUSTOM_TEMPLATES}" ]] || return 0
+  [[ -n "${_DEVBASE_CUSTOM_TEMPLATES}" ]] && [[ -d "${_DEVBASE_CUSTOM_TEMPLATES}" ]] || return 0
 
   local file_count
-  file_count=$(find "${DEVBASE_CUSTOM_TEMPLATES}" -type f -name "*" ! -name "README*" 2>/dev/null | wc -l)
+  file_count=$(find "${_DEVBASE_CUSTOM_TEMPLATES}" -type f -name "*" ! -name "README*" 2>/dev/null | wc -l)
 
   [[ $file_count -eq 0 ]] && return 0
 
-  for file in "${DEVBASE_CUSTOM_TEMPLATES}"/*; do
+  for file in "${_DEVBASE_CUSTOM_TEMPLATES}"/*; do
     [[ -f "$file" ]] || continue
     [[ "$(basename "$file")" == README* ]] && continue
 
