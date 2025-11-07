@@ -237,6 +237,7 @@ DevBase automatically installs and configures **Monaspace Nerd Font** on native 
 **What is a Nerd Font?**
 
 Nerd Fonts are patched fonts that include 3,600+ glyphs from popular icon sets:
+
 - Font Awesome
 - Devicons  
 - Octicons (GitHub icons)
@@ -287,6 +288,7 @@ echo "        "  # Various nerd font icons
 Modern CLI tools like `starship`, `eza`, `lf`, and `lazygit` use icons extensively. Without a Nerd Font, you'll see missing character boxes (□) instead of proper icons.
 
 **Learn more**:
+
 - [Nerd Fonts Homepage](https://www.nerdfonts.com/)
 - [Monaspace by GitHub Next](https://github.com/githubnext/monaspace)
 

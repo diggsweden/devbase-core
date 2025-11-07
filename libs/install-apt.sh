@@ -147,7 +147,7 @@ install_ms_core_fonts() {
 # Side-effects: Adds fish-shell/release-4 PPA for Fish 4.x with GPG key, skips apt update
 add_fish_ppa() {
   show_progress info "Adding Fish shell 4.x PPA..."
-  
+
   # Use -n flag to skip automatic apt update (we'll do it later in pkg_update)
   # add-apt-repository with -n flag:
   # 1. Downloads and verifies GPG signing key via HTTPS
@@ -157,7 +157,7 @@ add_fish_ppa() {
     show_progress warning "Failed to add Fish 4.x PPA (will use default version from Ubuntu repos)"
     return 1
   fi
-  
+
   show_progress success "Fish 4.x PPA added"
   return 0
 }

@@ -464,16 +464,16 @@ install_nerd_fonts() {
   # Download font (no checksum provided by Nerd Fonts project)
   if retry_command download_file "$font_url" "$font_zip"; then
     mkdir -p "$monaspace_dir"
-    
+
     # Extract only TTF files
     if unzip -q -o "$font_zip" "*.ttf" -d "$monaspace_dir" 2>/dev/null; then
       # Update font cache
       if command -v fc-cache &>/dev/null; then
         fc-cache -f "$fonts_dir"
       fi
-      
+
       show_progress success "Monaspace Nerd Font installed ($nf_version)"
-      
+
       # Configure GNOME Terminal to use Monaspace (if installed)
       if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
         local profile_id
@@ -484,19 +484,19 @@ install_nerd_fonts() {
           show_progress success "GNOME Terminal configured to use Monaspace Nerd Font"
         fi
       fi
-      
+
       # Configure Ghostty (if config exists)
       local ghostty_config="${HOME}/.config/ghostty/config"
       if [[ -f "$ghostty_config" ]]; then
         # Check if font-family is already set
         if ! grep -q "^font-family" "$ghostty_config"; then
-          echo "" >> "$ghostty_config"
-          echo "# Nerd Font for icons and symbols" >> "$ghostty_config"
-          echo 'font-family = "MonaspiceNe Nerd Font Mono"' >> "$ghostty_config"
+          echo "" >>"$ghostty_config"
+          echo "# Nerd Font for icons and symbols" >>"$ghostty_config"
+          echo 'font-family = "MonaspiceNe Nerd Font Mono"' >>"$ghostty_config"
           show_progress success "Ghostty configured to use Monaspace Nerd Font"
         fi
       fi
-      
+
       return 0
     else
       show_progress warning "Failed to extract Monaspace fonts"
