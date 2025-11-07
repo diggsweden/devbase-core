@@ -15,7 +15,7 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "  → Verifying GPG signatures on commits being pushed..."
+echo "  → Verifying GPG signatures (git verify-commit)..."
 
 # Read stdin to get the list of commits being pushed
 while read -r local_ref local_sha remote_ref remote_sha; do
