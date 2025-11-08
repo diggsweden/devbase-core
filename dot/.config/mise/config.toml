@@ -32,7 +32,7 @@ RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
 [tools]
 # Core Languages & Runtimes (managed by mise, auto-updated by Renovate)
 node = "20.18.1"
-go = "1.25.1"
+go = "1.25.3"
 python = "3.12"
 ruby = "3.3.6"
 rust = "1.91.0"
