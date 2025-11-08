@@ -24,6 +24,9 @@ sainnhe.everforest: 0.3.0 # renovate: datasource=npm
 catppuccin.catppuccin-vsc: 3.20.0 # renovate: datasource=npm
 enkia.tokyo-night: 1.0.6 # renovate: datasource=npm
 jdinhlife.gruvbox: 1.18.0 # renovate: datasource=npm
+arcticicestudio.nord-visual-studio-code: 0.19.0 # renovate: datasource=npm
+dracula-theme.theme-dracula: 2.26.5 # renovate: datasource=npm
+ryanolsonx.solarized: 2.1.0 # renovate: datasource=npm
 # Java Development
 redhat.java: 1.40.0 # renovate: datasource=npm
 shengchen.vscode-checkstyle: 1.4.2 # renovate: datasource=npm

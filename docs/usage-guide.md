@@ -9,7 +9,7 @@ This guide documents all tools in the devbase environment, including devbase-spe
 - [Terminal & Shell Tools](#terminal--shell-tools)
   - [Fish Shell](#fish-shell)
   - [Ghostty (Terminal Emulator)](#ghostty-terminal-emulator---non-wsl-only)
-  - [Nerd Fonts (Monaspace)](#nerd-fonts-monaspace---native-ubuntu-only)
+  - [Nerd Fonts](#nerd-fonts---native-ubuntu-only)
   - [vifm (Vim File Manager)](#vifm-vim-file-manager)
   - [lf (List Files)](#lf-list-files)
   - [Starship (Cross-Shell Prompt)](#starship-cross-shell-prompt)
@@ -81,8 +81,6 @@ This guide documents all tools in the devbase environment, including devbase-spe
 - [Build & Version Management](#build--version-management)
   - [Just](#just)
   - [Mise (Version Manager)](#mise-version-manager)
-  - Just
-  - Mise (Version Manager)
 - [Programming Languages & Runtimes](#programming-languages--runtimes)
   - [Go](#go)
   - [Java (OpenJDK/Temurin)](#java-openjdktemurin)
@@ -195,6 +193,19 @@ devbase-theme gruvbox-light
 
 Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows Terminal (WSL), Ghostty (Linux), VSCode
 
+**devbase-font** - Set fonts for terminals and editors:
+
+```bash
+# Available fonts
+devbase-font jetbrains-mono  # JetBrains Mono - Excellent readability
+devbase-font firacode        # Fira Code - Extensive ligatures
+devbase-font cascadia-code   # Cascadia Code - Microsoft font
+devbase-font monaspace       # Monaspace - Superfamily (default)
+```
+
+Affects: GNOME Terminal, Ghostty, VSCode  
+⚠️ Requires restart: Close and reopen terminals/editors for changes to take effect
+
 **Automatic Environment Setup:**
 
 - Starship prompt with Git integration
@@ -208,6 +219,8 @@ Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows
 - Tutorial: [Fish for Bash Users](https://fishshell.com/docs/current/fish_for_bash_users.html)
 - Man page: `man fish`
 - Examples: `tldr fish`
+
+---
 
 ### Ghostty (Terminal Emulator) - Non-WSL Only
 
@@ -230,36 +243,63 @@ DevBase installs via snap and configures with system theme integration.
 - Documentation: [Ghostty Documentation](https://ghostty.org/docs/)
 - Man page: `man ghostty`
 
-### Nerd Fonts (Monaspace) - Native Ubuntu Only
+---
 
-DevBase automatically installs and configures **Monaspace Nerd Font** on native Ubuntu (not WSL). This provides proper rendering of icons, glyphs, and symbols in terminal applications.
+### Nerd Fonts - Native Ubuntu Only
+
+DevBase downloads **all 4 supported Nerd Fonts** to cache and installs your chosen font on native Ubuntu (not WSL). This provides proper rendering of icons, glyphs, and symbols in terminal applications.
+
+**Available Fonts:**
+
+- **JetBrains Mono** - Excellent readability for coding (default)
+- **Fira Code** - Popular with extensive ligatures  
+- **Cascadia Code** - Microsoft's font with Powerline support
+- **Monaspace** - Superfamily with multiple styles
 
 **What is a Nerd Font?**
 
 Nerd Fonts are patched fonts that include 3,600+ glyphs from popular icon sets:
 
-- Font Awesome
-- Devicons  
-- Octicons (GitHub icons)
-- Material Design Icons
-- Powerline symbols
-- Weather icons
-- And many more...
+- Font Awesome, Devicons, Octicons (GitHub icons)
+- Material Design Icons, Powerline symbols
+- Weather icons, and many more...
 
-**Installed Variant:**
+**How Font Installation Works:**
 
-- **Font**: Monaspace Nerd Font (MonaspiceNe Nerd Font Mono)
-- **Style**: Neon variant (most popular, modern coding font)
-- **Type**: Mono variant (icons fit within character cells, required for terminals)
-- **Location**: `~/.local/share/fonts/MonaspaceNerdFont/`
-- **Version**: Latest from [ryanoasis/nerd-fonts](https://github.com/ryanoasis/nerd-fonts)
+1. **During Setup**: All 4 fonts downloaded to `~/.cache/devbase/fonts/v3.4.0/`
+2. **Installation**: Your chosen font (set via `DEVBASE_FONT` variable) is installed to `~/.local/share/fonts/`
+3. **Switching**: Use `devbase-font` command to switch fonts without re-downloading
+
+**Switching Fonts:**
+
+```fish
+# Switch to a different font (auto-installs from cache)
+devbase-font jetbrains-mono  # JetBrains Mono
+devbase-font firacode        # Fira Code  
+devbase-font cascadia-code   # Cascadia Code
+devbase-font monaspace       # Monaspace
+```
 
 **Auto-Configuration:**
 
-DevBase automatically configures the Nerd Font for:
+DevBase automatically configures the selected Nerd Font for:
 
-1. **GNOME Terminal**: Sets default profile to use `MonaspiceNe Nerd Font Mono 11`
-2. **Ghostty**: Adds `font-family = "MonaspiceNe Nerd Font Mono"` to config (if not already set)
+1. **GNOME Terminal**: Sets default profile font
+2. **Ghostty**: Updates `font-family` in config
+3. **VS Code**: Updates `editor.fontFamily` setting
+
+**Cache Location:**
+
+Fonts are cached with version numbers for easy updates:
+
+```text
+~/.cache/devbase/fonts/
+  └── v3.4.0/              # Nerd Fonts version
+      ├── JetBrainsMono.zip
+      ├── FiraCode.zip
+      ├── CascadiaCode.zip
+      └── Monaspace.zip
+```
 
 **WSL Note:**
 
@@ -267,17 +307,9 @@ On WSL, fonts must be installed on the Windows side (not in WSL). Install Nerd F
 
 **Manual Font Configuration:**
 
-If you want to use a different Nerd Font or configure additional terminals:
-
 ```bash
 # List installed Nerd Fonts
 fc-list | grep -i "nerd"
-
-# GNOME Terminal (GUI)
-# Preferences → Profile → Text → Custom font → Select "MonaspiceNe Nerd Font Mono"
-
-# Ghostty config (~/.config/ghostty/config)
-font-family = "MonaspiceNe Nerd Font Mono"
 
 # Check font is working (should show icons)
 echo "        "  # Various nerd font icons
@@ -291,6 +323,8 @@ Modern CLI tools like `starship`, `eza`, `lf`, and `lazygit` use icons extensive
 
 - [Nerd Fonts Homepage](https://www.nerdfonts.com/)
 - [Monaspace by GitHub Next](https://github.com/githubnext/monaspace)
+
+---
 
 ### vifm (Vim File Manager)
 
@@ -324,6 +358,8 @@ Efficient for managing files when you're already working in the terminal or pref
 - Man page: `man vifm`
 - Examples: `tldr vifm`
 
+---
+
 ### lf (List Files)
 
 Minimalist terminal file manager similar to vifm but lighter and faster.
@@ -355,6 +391,8 @@ Good alternative when you need quick file navigation without the overhead of a f
 - Man page: `man lf`
 - Examples: `tldr lf`
 
+---
+
 ### Starship (Cross-Shell Prompt)
 
 Customizable shell prompt that displays relevant context like git branch, language versions, and command duration.
@@ -383,6 +421,8 @@ Replaces the default prompt with more useful information while remaining fast an
 - Documentation: [Starship Documentation](https://starship.rs/)
 - Examples: `tldr starship`
 
+---
+
 ### Tree
 
 Lists directory contents recursively in a tree structure showing the hierarchy of files and folders.
@@ -403,6 +443,8 @@ Shows at a glance what files exist and how they're nested without manually navig
 
 - Man page: `man tree`
 - Examples: `tldr tree`
+
+---
 
 ### Zellij (Terminal Multiplexer)
 
@@ -505,6 +547,8 @@ DevBase aliases `bat` to handle Ubuntu/Debian's `batcat` naming.
 - Man page: `man bat`
 - Examples: `tldr bat`
 
+---
+
 ### btop
 
 System monitor showing CPU, memory, disk, and network usage with graphs and process details.
@@ -533,6 +577,8 @@ DevBase aliases `top` to `btop` for muscle memory compatibility.
 - Documentation: [btop Documentation](https://github.com/aristocratos/btop)
 - Man page: `man btop`
 
+---
+
 ### Delta (Git Diff Tool)
 
 Renders git diffs with syntax highlighting and improved readability compared to default git output.
@@ -553,6 +599,8 @@ DevBase pre-configures git to use delta automatically for all diff and log comma
 - Documentation: [Delta Documentation](https://dandavison.github.io/delta/)
 - Man page: `man delta`
 - Examples: `tldr delta`
+
+---
 
 ### Eza (Modern ls)
 
@@ -584,6 +632,8 @@ DevBase aliases `ls` to `eza --icons` for enhanced default listings.
 - Documentation: [Eza Documentation](https://eza.rocks/)
 - Man page: `man eza`
 - Examples: `tldr eza`
+
+---
 
 ### FZF (Fuzzy Finder)
 
@@ -625,6 +675,8 @@ The [fzf.fish plugin](https://github.com/PatrickF1/fzf.fish) provides powerful f
 - Man page: `man fzf`
 - Examples: `tldr fzf`
 
+---
+
 ### TLDR (Command Help)
 
 Shows practical examples of how to use command-line tools instead of full manual pages.
@@ -654,6 +706,8 @@ tldr find       # Find command examples
 
 - Documentation: [TLDR Pages](https://tldr.sh/)
 - Man page: `man tldr`
+
+---
 
 ### Git
 
@@ -729,6 +783,8 @@ DevBase provides pre-configured git hooks for code quality and security.
 - Man page: `man git`
 - Examples: `tldr git`
 
+---
+
 ### Git Cliff
 
 Parses git commit messages to automatically generate a changelog file.
@@ -748,6 +804,8 @@ Eliminates manual changelog maintenance by extracting release notes from commit 
 - Documentation: [Git Cliff Documentation](https://git-cliff.org/)
 - Man page: `man git-cliff`
 - Examples: `tldr git-cliff`
+
+---
 
 ### GitHub CLI (gh)
 
@@ -775,6 +833,8 @@ Integrates GitHub operations into your terminal workflow instead of switching to
 - Man page: `man gh`
 - Examples: `tldr gh`
 
+---
+
 ### GitLab CLI (glab)
 
 Manages GitLab merge requests, issues, and CI/CD pipelines from the command line.
@@ -799,6 +859,8 @@ Keeps you in the terminal for GitLab operations instead of switching to the web 
 - Man page: `man glab`
 - Examples: `tldr glab`
 
+---
+
 ### jq (JSON Processor)
 
 Parses and manipulates JSON from the command line using a query language.
@@ -820,6 +882,8 @@ Essential for working with API responses, configuration files, or any JSON data 
 - Man page: `man jq`
 - Examples: `tldr jq`
 
+---
+
 ### JWT CLI
 
 Decodes JWT tokens to inspect their payload and verify signatures from the command line.
@@ -836,6 +900,8 @@ Eliminates the need for online JWT decoders when working with token-based authen
 
 - Documentation: [JWT CLI Documentation](https://github.com/mike-engel/jwt-cli)
 - Examples: `tldr jwt`
+
+---
 
 ### Lazygit
 
@@ -865,6 +931,8 @@ DevBase configures automatic theme switching to match system preferences.
 - Documentation: [Lazygit Documentation](https://github.com/jesseduffield/lazygit)
 - In-app help: Press `?` for keybindings
 - Examples: `tldr lazygit`
+
+---
 
 ### LazyVim
 
@@ -917,6 +985,8 @@ DevBase includes LazyVim as the default Neovim configuration.
 
 - Documentation: [LazyVim Documentation](https://www.lazyvim.org/)
 - In-app help: Press `<leader>?` for keybindings
+
+---
 
 ### Neovim
 
@@ -986,6 +1056,8 @@ DevBase configures Neovim with LazyVim distribution for immediate productivity.
 - Man page: `man nvim`
 - Examples: `tldr nvim`
 
+---
+
 ### Pandoc
 
 Universal document converter that translates between markup formats like Markdown, HTML, LaTeX, DOCX, and PDF.
@@ -1004,6 +1076,8 @@ Useful for generating multiple output types from a single source file or convert
 - Documentation: [Pandoc Documentation](https://pandoc.org/MANUAL.html)
 - Man page: `man pandoc`
 - Examples: `tldr pandoc`
+
+---
 
 ### Parallel
 
@@ -1025,6 +1099,8 @@ Useful for tasks like converting files, processing data, or running tests on mul
 - Man page: `man parallel`
 - Examples: `tldr parallel`
 
+---
+
 ### PWGen
 
 Creates random passwords with specified length and complexity requirements.
@@ -1045,6 +1121,8 @@ Quick way to create secure passwords from the command line without using a passw
 - Documentation: [PWGen Documentation](https://sourceforge.net/projects/pwgen/)
 - Man page: `man pwgen`
 - Examples: `tldr pwgen`
+
+---
 
 ### Ripgrep (rg)
 
@@ -1090,6 +1168,8 @@ DevBase uses ripgrep as the primary search tool across all configurations.
 - Documentation: [Ripgrep User Guide](https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md)
 - Man page: `man rg`
 - Examples: `tldr rg`
+
+---
 
 ### fd (Find Alternative)
 
@@ -1158,6 +1238,8 @@ fd -t f | fzf
 - Man page: `man fd`
 - Examples: `tldr fd`
 
+---
+
 ### w3m
 
 Text-based web browser for viewing websites and HTML files directly in the terminal.
@@ -1202,6 +1284,8 @@ w3m -dump_head https://example.com
 - Man page: `man w3m`
 - Examples: `tldr w3m`
 
+---
+
 ### yadm
 
 Tracks dotfiles (configuration files like .bashrc, .gitconfig) in a git repository for synchronization across machines.
@@ -1223,6 +1307,8 @@ Keeps your personal settings consistent across multiple computers and lets you v
 - Documentation: [yadm Documentation](https://yadm.io/)
 - Man page: `man yadm`
 - Examples: `tldr yadm`
+
+---
 
 ### yq (YAML Processor)
 
@@ -1268,6 +1354,8 @@ Integrates continuous deployment operations into terminal workflows instead of u
 - Documentation: [Argo CD Documentation](https://argo-cd.readthedocs.io/)
 - Examples: `tldr argocd`
 
+---
+
 ### Buildah
 
 Builds container images from Dockerfiles or from scratch without needing a running daemon.
@@ -1290,6 +1378,8 @@ Alternative to Docker build that works in environments where running a daemon is
 - Man page: `man buildah`
 - Examples: `tldr buildah`
 
+---
+
 ### Docker Compose
 
 Defines multi-container applications in a YAML file and manages them as a single unit.
@@ -1310,6 +1400,8 @@ Simplifies running complex applications that need databases, caches, and other s
 
 - Documentation: [Docker Compose Documentation](https://docs.docker.com/compose/)
 - Examples: `tldr docker-compose`
+
+---
 
 ### K3s
 
@@ -1340,6 +1432,8 @@ K3s is **disabled by default** to avoid consuming system resources. Enable it wh
 
 - Documentation: [K3s Documentation](https://docs.k3s.io/)
 - Examples: `tldr k3s`
+
+---
 
 ### MicroK8s
 
@@ -1382,6 +1476,8 @@ MicroK8s is **disabled by default** to avoid consuming system resources. Enable 
 - Documentation: [MicroK8s Documentation](https://microk8s.io/docs)
 - Addons: [MicroK8s Addons](https://microk8s.io/docs/addons)
 
+---
+
 ### K6
 
 Load testing tool that runs performance tests written in JavaScript.
@@ -1399,6 +1495,8 @@ Helps identify performance bottlenecks and verify that systems meet performance 
 
 - Documentation: [K6 Documentation](https://k6.io/docs/)
 - Examples: `tldr k6`
+
+---
 
 ### K9s
 
@@ -1426,6 +1524,8 @@ Makes Kubernetes operations faster and more visual than typing kubectl commands 
 - Documentation: [K9s Documentation](https://k9scli.io/)
 - Examples: `tldr k9s`
 
+---
+
 ### Kubeseal
 
 Encrypts Kubernetes Secret resources so they can be safely stored in version control.
@@ -1443,6 +1543,8 @@ Enables storing sensitive configuration in Git repositories without exposing cre
 
 - Documentation: [Sealed Secrets Documentation](https://sealed-secrets.netlify.app/)
 - Examples: `tldr kubeseal`
+
+---
 
 ### OpenShift CLI (oc)
 
@@ -1468,6 +1570,8 @@ Works like kubectl but includes additional commands for OpenShift's enterprise f
 - Documentation: [OpenShift CLI Documentation](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html)
 - Man page: `man oc`
 - Examples: `tldr oc`
+
+---
 
 ### Podman
 
@@ -1500,6 +1604,8 @@ DevBase aliases `docker` to `podman` for seamless transition.
 - Documentation: [Podman Documentation](https://docs.podman.io/)
 - Man page: `man podman`
 - Examples: `tldr podman`
+
+---
 
 ### Skopeo
 
@@ -1544,6 +1650,8 @@ Universal database client that works with multiple database types from one appli
 
 - Documentation: [DBeaver Documentation](https://dbeaver.io/docs/)
 
+---
+
 ### JDK Mission Control
 
 Analyzes Java application performance through low-overhead flight recordings from the JVM.
@@ -1561,6 +1669,8 @@ Diagnoses production performance issues that can't be reproduced in development 
 
 - Documentation: [JMC Documentation](https://docs.oracle.com/en/java/java-components/jdk-mission-control/)
 
+---
+
 ### KeyStore Explorer
 
 GUI for managing Java keystores, certificates, and cryptographic keys.
@@ -1577,6 +1687,8 @@ Makes certificate management easier when working with Java applications requirin
 **Learn more**:
 
 - Documentation: [KeyStore Explorer Documentation](https://keystore-explorer.org/docs/)
+
+---
 
 ### Maven
 
@@ -1603,6 +1715,8 @@ Provides consistent project structure and build lifecycle across Java projects.
 - Documentation: [Maven Documentation](https://maven.apache.org/guides/)
 - Man page: `man mvn`
 - Examples: `tldr mvn`
+
+---
 
 ### VisualVM
 
@@ -1643,6 +1757,8 @@ Catches common mistakes locally instead of discovering them after triggering CI/
 - Documentation: [Actionlint Documentation](https://github.com/rhysd/actionlint)
 - Examples: `tldr actionlint`
 
+---
+
 ### Checkstyle
 
 Checks Java code against a set of coding standards and style rules.
@@ -1657,6 +1773,8 @@ Helps maintain code quality by catching style violations before code review.
 **Learn more**:
 
 - Documentation: [Checkstyle Documentation](https://checkstyle.org/)
+
+---
 
 ### ClamAV
 
@@ -1679,6 +1797,8 @@ Provides virus scanning on Linux systems for files, email attachments, and downl
 - Man page: `man clamscan`
 - Examples: `tldr clamscan`
 
+---
+
 ### Conform
 
 Validates git commits against conventional commit format and other repository policies.
@@ -1695,6 +1815,8 @@ Enforces repository standards like required sign-offs or commit message length l
 **Learn more**:
 
 - Documentation: [Conform Documentation](https://github.com/siderolabs/conform)
+
+---
 
 ### DNSUtils
 
@@ -1716,6 +1838,8 @@ Essential for diagnosing connectivity issues related to DNS configuration or pro
 - Man page: `man dig`, `man nslookup`, `man host`
 - Examples: `tldr dig`
 
+---
+
 ### Gitleaks
 
 Scans git repositories for accidentally committed secrets like API keys, passwords, and tokens.
@@ -1736,6 +1860,8 @@ DevBase includes gitleaks in pre-commit hooks for automatic secret scanning.
 - Documentation: [Gitleaks Documentation](https://github.com/gitleaks/gitleaks)
 - Examples: `tldr gitleaks`
 
+---
+
 ### Hadolint
 
 Analyzes Dockerfiles for best practices, security issues, and common mistakes.
@@ -1754,6 +1880,8 @@ DevBase includes hadolint in git hooks for automatic Dockerfile validation.
 
 - Documentation: [Hadolint Documentation](https://github.com/hadolint/hadolint)
 - Examples: `tldr hadolint`
+
+---
 
 ### Lynis
 
@@ -1775,6 +1903,8 @@ Provides hardening recommendations to improve system security posture.
 - Man page: `man lynis`
 - Examples: `tldr lynis`
 
+---
+
 ### Mkcert
 
 Generates locally-trusted SSL/TLS certificates for development without browser warnings.
@@ -1793,6 +1923,8 @@ Enables testing HTTPS locally without self-signed certificate errors or security
 - Man page: `man mkcert`
 - Examples: `tldr mkcert`
 
+---
+
 ### PMD
 
 Static analysis tool that finds potential bugs, dead code, and inefficient patterns in source code.
@@ -1808,6 +1940,8 @@ Catches code quality issues before they make it into production.
 **Learn more**:
 
 - Documentation: [PMD Documentation](https://docs.pmd-code.org/)
+
+---
 
 ### Publiccode Parser
 
@@ -1825,6 +1959,8 @@ Ensures metadata about public software projects is structured correctly for disc
 
 - Documentation: [Publiccode Parser Documentation](https://github.com/italia/publiccode-parser-go)
 
+---
+
 ### RumDL
 
 Downloads content from Riksutställningar (Swedish Travelling Exhibitions) museum databases.
@@ -1840,6 +1976,8 @@ Specialized tool for accessing Swedish museum digital collections.
 **Learn more**:
 
 - Documentation: [RumDL Documentation](https://github.com/rvben/rumdl)
+
+---
 
 ### Scorecard
 
@@ -1857,6 +1995,8 @@ Helps assess the security risk of using a particular open source dependency.
 **Learn more**:
 
 - Documentation: [Scorecard Documentation](https://github.com/ossf/scorecard)
+
+---
 
 ### ShellCheck
 
@@ -1878,6 +2018,8 @@ DevBase includes ShellCheck in git hooks for automatic script validation.
 - Man page: `man shellcheck`
 - Examples: `tldr shellcheck`
 
+---
+
 ### Shfmt
 
 Automatically formats shell scripts with consistent indentation and style.
@@ -1896,6 +2038,8 @@ Ensures readable, consistently formatted shell code without manual formatting ef
 - Documentation: [Shfmt Documentation](https://github.com/mvdan/sh)
 - Examples: `tldr shfmt`
 
+---
+
 ### SLSA Verifier
 
 Verifies that software artifacts were built from expected source code without tampering.
@@ -1911,6 +2055,8 @@ Validates supply chain security by ensuring artifacts match their claimed proven
 **Learn more**:
 
 - Documentation: [SLSA Verifier Documentation](https://github.com/slsa-framework/slsa-verifier)
+
+---
 
 ### Syft
 
@@ -1929,6 +2075,8 @@ Essential for security audits, vulnerability scanning, and license compliance tr
 
 - Documentation: [Syft Documentation](https://github.com/anchore/syft)
 - Examples: `tldr syft`
+
+---
 
 ### UFW (Uncomplicated Firewall)
 
@@ -1951,6 +2099,8 @@ Makes basic firewall configuration accessible without learning iptables internal
 - Documentation: [UFW Documentation](https://help.ubuntu.com/community/UFW)
 - Man page: `man ufw`
 - Examples: `tldr ufw`
+
+---
 
 ### GUFW (Graphical UFW)
 
@@ -1979,6 +2129,8 @@ Easier for users who prefer GUI over command-line for configuring firewall setti
 
 - Documentation: [GUFW Documentation](https://help.ubuntu.com/community/Gufw)
 - Homepage: [GUFW Homepage](http://gufw.org/)
+
+---
 
 ### YamlFmt
 
@@ -2021,6 +2173,8 @@ Eliminates the need to remember complex command sequences by giving them simple 
 - Documentation: [Just Documentation](https://just.systems/)
 - Man page: `man just`
 - Examples: `tldr just`
+
+---
 
 ### Mise (Version Manager)
 
@@ -2090,6 +2244,8 @@ Designed for building network services, CLI tools, and concurrent applications.
 - Documentation: [Go Documentation](https://go.dev/doc/)
 - Examples: `tldr go`
 
+---
+
 ### Java (OpenJDK/Temurin)
 
 Object-oriented programming language that runs on the Java Virtual Machine (JVM).
@@ -2112,6 +2268,8 @@ DevBase includes Temurin OpenJDK builds for optimal performance.
 - Man page: `man java`
 - Examples: `tldr java`
 
+---
+
 ### Node.js
 
 JavaScript runtime built on Chrome's V8 engine that executes JavaScript outside the browser.
@@ -2132,6 +2290,8 @@ Powers web servers, build tools, and CLI applications using JavaScript and the n
 - Documentation: [Node.js Documentation](https://nodejs.org/docs/)
 - Man page: `man node`
 - Examples: `tldr node`
+
+---
 
 ### Python
 
@@ -2155,6 +2315,8 @@ Features extensive standard library and third-party packages for virtually any d
 - Documentation: [Python Documentation](https://docs.python.org/)
 - Man page: `man python3`
 - Examples: `tldr python`
+
+---
 
 ### Ruby
 
@@ -2186,6 +2348,8 @@ Features powerful metaprogramming capabilities and a rich ecosystem of gems (lib
 - Documentation: [Ruby Documentation](https://www.ruby-lang.org/en/documentation/)
 - Man page: `man ruby`
 - Examples: `tldr ruby`
+
+---
 
 ### Rust
 
@@ -2254,6 +2418,8 @@ Provides intelligent code completion, navigation, and debugging for Java project
 **Learn more**:
 
 - Documentation: [IntelliJ IDEA Documentation](https://www.jetbrains.com/idea/documentation/)
+
+---
 
 ### VS Code Extensions
 
@@ -2362,6 +2528,8 @@ Useful for web development testing or as a privacy-focused alternative to Chrome
 - Man page: `man chromium`
 - Examples: `tldr chromium`
 
+---
+
 ### Firefox
 
 Open-source web browser with strong privacy protections and comprehensive developer tools.
@@ -2411,6 +2579,8 @@ Automatically installed on native Ubuntu only (WSL accesses Windows drives direc
 - Documentation: [Dislocker Documentation](https://github.com/Aorimn/dislocker)
 - Man page: `man dislocker`
 
+---
+
 ### TLP (Power Management - Non-WSL Only)
 
 Manages laptop power settings to extend battery life on Linux.
@@ -2437,6 +2607,8 @@ Automatically installed on native Ubuntu laptops only (not needed in WSL).
 - Documentation: [TLP Documentation](https://linrunner.de/tlp/)
 - Man page: `man tlp`
 - Examples: `tldr tlp`
+
+---
 
 ### BleachBit
 
@@ -2527,6 +2699,8 @@ ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 ssh-keygen -t ecdsa -b 521 -f ~/.ssh/mykey_ecdsa
 ```
 
+---
+
 ### Key Management
 
 ```bash
@@ -2546,6 +2720,8 @@ ssh-add -D
 cat ~/.ssh/id_ecdsa_nistp521_devbase.pub | xclip -selection clipboard
 ```
 
+---
+
 ### Copy Key to Server
 
 ```bash
@@ -2558,6 +2734,8 @@ cat ~/.ssh/id_ecdsa_nistp521_devbase.pub | ssh user@hostname 'cat >> ~/.ssh/auth
 # Specific port
 ssh-copy-id -p 2222 user@hostname
 ```
+
+---
 
 ### SSH Config
 
@@ -2579,6 +2757,8 @@ Host *
     AddKeysToAgent yes
 ```
 
+---
+
 ### Permissions (Important!)
 
 ```bash
@@ -2589,6 +2769,8 @@ chmod 644 ~/.ssh/id_ecdsa_nistp521_devbase.pub
 chmod 600 ~/.ssh/config
 chmod 600 ~/.ssh/authorized_keys
 ```
+
+---
 
 ### Test Connection
 
@@ -2622,6 +2804,8 @@ Different tools use different formats for proxy bypass lists. This reference hel
 
 **Always use lowercase `http_proxy` and `https_proxy`** - they are universally supported. Uppercase forms have inconsistent support and can cause issues.
 
+---
+
 ### NO_PROXY / no_proxy Format
 
 | Tool/Language | `no_proxy` | `NO_PROXY` | Suffix Match? | Leading `.` Stripped? | `*` = All? | CIDR? | Case Precedence |
@@ -2639,6 +2823,8 @@ Different tools use different formats for proxy bypass lists. This reference hel
 - Wildcard: `*.example.com` matches subdomains, NOT bare domain
 - **Does NOT** match suffixes automatically (unlike curl/wget/Ruby/Python/Go)
 
+---
+
 ### Domain Pattern Behavior
 
 Different tools interpret domain patterns differently:
@@ -2649,12 +2835,16 @@ Different tools interpret domain patterns differently:
 | `.example.com` | Strips `.`, matches `example.com` and `*.example.com` | **Literal** match (`.example.com` only) | Strips `.`, matches `example.com` and `*.example.com` | Strips `.`, matches `example.com` and `*.example.com` | **Literal** match (`.example.com` only) | Not supported |
 | `*.example.com` | Matches `sub.example.com` but NOT `example.com` | Matches `sub.example.com` but NOT `example.com` | Matches `sub.example.com` but NOT `example.com` | Matches `sub.example.com` but NOT `example.com` | Matches `sub.example.com` but NOT `example.com` | Matches `sub.example.com` but NOT `example.com` |
 
+---
+
 ### Key Findings
 
 - **Suffix matching works in all implementations EXCEPT Java/Maven** - most tools automatically match subdomains
 - **Leading dot (`.`) behavior varies** - curl/Ruby/Python strip it, wget/Go treat it literally
 - **wget is the most restrictive** - doesn't strip leading dots, doesn't support `NO_PROXY` (uppercase), doesn't support `*` to match all
 - **Go prefers UPPERCASE** - this can cause issues in multi-language applications (see GitLab article below)
+
+---
 
 ### Best Practices (Lowest Common Denominator)
 
@@ -2673,6 +2863,8 @@ Different tools interpret domain patterns differently:
    - IP addresses unless explicitly used by clients
    - Uppercase forms unless absolutely necessary (and make them identical to lowercase)
 
+---
+
 ### Example Configuration
 
 For shell tools (curl, wget, etc):
@@ -2688,6 +2880,8 @@ For Java/Maven tools:
 ```bash
 export JAVA_TOOL_OPTIONS="-Dhttp.proxyHost=proxy.example.com -Dhttp.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.0.0.1|*.example.com|example.com|*.internal.net|internal.net"
 ```
+
+---
 
 ### Learn More
 

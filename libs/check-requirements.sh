@@ -435,9 +435,6 @@ run_preflight_checks() {
   check_path_writable || return 1
   check_mise_github_token || return 1
 
-  # Note: Sudo access check moved to prepare_system() - no need to ask for password
-  # before user configuration questions (better UX, avoids timeout issues)
-
   show_progress success "Pre-flight checks complete"
   return 0
 }

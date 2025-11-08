@@ -19,4 +19,6 @@ paranoid = true      # Enable strict security checks and verification
 "aqua:sharkdp/fd" = "v10.2.0"
 "aqua:BurntSushi/ripgrep" = "15.1.0"
 "aqua:tldr-pages/tlrc" = "v1.12.0"
-yq = "latest"  # YAML/XML processor for Maven settings generation
+yq = "4.48.1"  # YAML/XML processor for Maven settings generation
+"aqua:astral-sh/uv" = "0.9.8"
+"pipx:reuse" = "6.2.0"  # License compliance tool (uses uvx for fast installation)

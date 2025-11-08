@@ -22,7 +22,11 @@ setup_non_interactive_mode() {
 
   #TODO: DO We really need both of thes vars, why cant we just use DEVBASE_SSH_PASSPHRASE directly
   # Map SSH_KEY_PASSPHRASE (user-facing) to DEVBASE_SSH_PASSPHRASE (internal)
-  DEVBASE_SSH_PASSPHRASE="${SSH_KEY_PASSPHRASE:-$(generate_ssh_passphrase)}"
+  if [[ -z "$SSH_KEY_PASSPHRASE" ]]; then
+    DEVBASE_SSH_PASSPHRASE="$(generate_ssh_passphrase)"
+  else
+    DEVBASE_SSH_PASSPHRASE="$SSH_KEY_PASSPHRASE"
+  fi
   export DEVBASE_SSH_PASSPHRASE
 
   # If passphrase was auto-generated (user didn't provide SSH_KEY_PASSPHRASE)
@@ -37,41 +41,45 @@ setup_non_interactive_mode() {
   export DEVBASE_GIT_AUTHOR="${GIT_NAME}"
   # shellcheck disable=SC2153
   export DEVBASE_GIT_EMAIL="${GIT_EMAIL}"
-  export DEVBASE_GIT_DEFAULT_BRANCH="${DEVBASE_GIT_DEFAULT_BRANCH:-main}"
+  export DEVBASE_GIT_DEFAULT_BRANCH="$DEVBASE_GIT_DEFAULT_BRANCH"
   export DEVBASE_THEME="${DEVBASE_THEME}"
-  export DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"
-  export DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"
-  export DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"
+  export DEVBASE_ENV_NAME="$DEVBASE_ENV_NAME"
+  export DEVBASE_INSTALL_DEVTOOLS="$DEVBASE_INSTALL_DEVTOOLS"
+  export DEVBASE_INSTALL_LAZYVIM="$DEVBASE_INSTALL_LAZYVIM"
 
   # Set VS Code installation based on environment
   # WSL: Skip (should be installed on Windows side)
   # Native Ubuntu: Install by default
   if [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
-    export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-false}"
+    [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="false"
   else
-    export DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-true}"
+    [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="true"
   fi
+  export DEVBASE_VSCODE_INSTALL
 
   # Set VS Code extensions defaults based on whether VS Code is being installed
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
-    export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-true}"
-    export DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-true}"
+    [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="true"
+    [[ -z "$DEVBASE_VSCODE_NEOVIM" ]] && DEVBASE_VSCODE_NEOVIM="true"
   else
-    export DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-false}"
-    export DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-false}"
+    [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="false"
+    [[ -z "$DEVBASE_VSCODE_NEOVIM" ]] && DEVBASE_VSCODE_NEOVIM="false"
   fi
+  export DEVBASE_VSCODE_EXTENSIONS
+  export DEVBASE_VSCODE_NEOVIM
 
-  export DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-new}"
-  export DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"
-  export DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-yes}"
-  export DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-no}"
-  export DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-no}"
+  [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
+  export DEVBASE_SSH_KEY_ACTION
+  export DEVBASE_ZELLIJ_AUTOSTART
+  export DEVBASE_ENABLE_GIT_HOOKS
+  export DEVBASE_INSTALL_INTELLIJ
+  export DEVBASE_INSTALL_JMC
 
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
   printf "  Git Email: %s\n" "$DEVBASE_GIT_EMAIL"
   printf "  Theme: %s\n" "$DEVBASE_THEME"
   printf "  Environment: %s\n" "$DEVBASE_ENV_NAME"
-  if [[ "${GENERATED_SSH_PASSPHRASE:-false}" == "true" ]]; then
+  if [[ "$GENERATED_SSH_PASSPHRASE" == "true" ]]; then
     printf "  SSH Key: Generated with secure passphrase\n"
   fi
 }
@@ -114,6 +122,68 @@ get_git_author_name() {
   done
 }
 
+# Brief: Generate default email from author name
+# Params: $1 - author name, $2 - email domain
+# Returns: Echoes generated email to stdout
+_generate_default_email_from_name() {
+  local author_name="$1"
+  local email_domain="$2"
+
+  if [[ -n "$email_domain" ]] && [[ "$email_domain" != "@" ]]; then
+    local email_prefix
+    email_prefix=$(echo "$author_name" |
+      iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null |
+      sed 's/ /./' |
+      tr '[:upper:]' '[:lower:]' |
+      tr -cd 'a-z.')
+    echo "${email_prefix}${email_domain}"
+  fi
+}
+
+# Brief: Prompt user for git email and read into variable
+# Params: $1 - variable name to set, $2 - default email, $3 - email domain
+# Returns: 0 always
+# Side-effects: Sets the named variable to the email entered
+_prompt_for_git_email() {
+  local -n result_var=$1
+  local default_email="$2"
+  local email_domain="$3"
+  local email_input=""
+
+  if [[ -n "$default_email" ]]; then
+    print_prompt "Git email" "$default_email"
+  else
+    if [[ -n "$email_domain" ]] && [[ "$email_domain" != "@" ]]; then
+      printf "  %bGit email (e.g., firstname.lastname%s): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "$email_domain" "${DEVBASE_COLORS[NC]}"
+    else
+      printf "  %bGit email: %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
+    fi
+  fi
+
+  read -r email_input
+
+  if [[ -z "$email_input" ]] && [[ -n "$default_email" ]]; then
+    result_var="$default_email"
+  else
+    result_var="$email_input"
+  fi
+}
+
+# Brief: Append domain to email if missing (modifies variable in place)
+# Params: $1 - variable name containing email, $2 - email domain
+# Returns: 0 always
+# Side-effects: Modifies the named variable to append domain if needed
+_append_domain_if_needed() {
+  local -n email_var=$1
+  local email_domain="$2"
+
+  if [[ -n "$email_domain" ]] && [[ "$email_domain" != "@" ]]; then
+    if [[ ! "$email_var" =~ @ ]]; then
+      email_var="${email_var}${email_domain}"
+    fi
+  fi
+}
+
 # Brief: Prompt user for git email with validation and domain handling
 # Params: None
 # Uses: print_prompt, show_progress, DEVBASE_GIT_AUTHOR, DEVBASE_EMAIL_DOMAIN, DEVBASE_COLORS, USER, hostname (globals)
@@ -126,44 +196,13 @@ get_git_email() {
   default_email=$(git config --global user.email 2>/dev/null || echo "$USER@$(hostname)")
 
   if [[ ! "$default_email" =~ $email_pattern ]]; then
-    if [[ -n "${DEVBASE_EMAIL_DOMAIN}" ]] && [[ "${DEVBASE_EMAIL_DOMAIN}" != "@" ]]; then
-      # Convert name to email prefix: "John Doe" -> "john.doe"
-      # Remove accents/diacritics using iconv (part of glibc, always available on Linux)
-      local email_prefix
-      email_prefix=$(echo "${DEVBASE_GIT_AUTHOR}" |
-        iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null |
-        sed 's/ /./' |
-        tr '[:upper:]' '[:lower:]' |
-        tr -cd 'a-z.')
-      default_email="${email_prefix}${DEVBASE_EMAIL_DOMAIN}"
-    else
-      default_email=""
-    fi
+    default_email=$(_generate_default_email_from_name "${DEVBASE_GIT_AUTHOR}" "${DEVBASE_EMAIL_DOMAIN}")
   fi
 
   local git_email=""
   while true; do
-    if [[ -n "$default_email" ]]; then
-      print_prompt "Git email" "$default_email"
-    else
-      if [[ -n "${DEVBASE_EMAIL_DOMAIN}" ]] && [[ "${DEVBASE_EMAIL_DOMAIN}" != "@" ]]; then
-        printf "  %bGit email (e.g., firstname.lastname%s): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_EMAIL_DOMAIN}" "${DEVBASE_COLORS[NC]}"
-      else
-        printf "  %bGit email: %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
-      fi
-    fi
-
-    read -r git_email
-
-    if [[ -z "$git_email" ]] && [[ -n "$default_email" ]]; then
-      git_email="$default_email"
-    fi
-
-    if [[ -n "${DEVBASE_EMAIL_DOMAIN}" ]] && [[ "${DEVBASE_EMAIL_DOMAIN}" != "@" ]]; then
-      if [[ ! "$git_email" =~ @ ]]; then
-        git_email="${git_email}${DEVBASE_EMAIL_DOMAIN}"
-      fi
-    fi
+    _prompt_for_git_email git_email "$default_email" "${DEVBASE_EMAIL_DOMAIN}"
+    _append_domain_if_needed git_email "${DEVBASE_EMAIL_DOMAIN}"
 
     if [[ "$git_email" =~ $email_pattern ]]; then
       export DEVBASE_GIT_EMAIL="$git_email"
@@ -202,31 +241,70 @@ collect_theme_preference() {
   print_section "Theme Selection" "${DEVBASE_COLORS[BOLD_CYAN]}"
   printf "\n"
   printf "  %bDark themes:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "    1) everforest-dark   (default)\n"
-  printf "    2) catppuccin-mocha\n"
-  printf "    3) tokyonight-night\n"
-  printf "    4) gruvbox-dark\n"
+  printf "    1) everforest-dark   (default)  - Soft, warm, easy on eyes\n"
+  printf "    2) catppuccin-mocha              - Pastel, cozy, modern\n"
+  printf "    3) tokyonight-night              - Vibrant, neon-inspired\n"
+  printf "    4) gruvbox-dark                  - Retro, warm, high contrast\n"
+  printf "    5) nord                          - Arctic, cool, elegant\n"
+  printf "    6) dracula                       - Purple, popular, vivid\n"
+  printf "    7) solarized-dark                - Classic, precision colors\n"
   printf "\n"
   printf "  %bLight themes:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "    5) everforest-light\n"
-  printf "    6) catppuccin-latte\n"
-  printf "    7) tokyonight-day\n"
-  printf "    8) gruvbox-light\n"
+  printf "    8) everforest-light              - Soft, warm, comfortable\n"
+  printf "    9) catppuccin-latte              - Pastel, cozy, gentle\n"
+  printf "   10) tokyonight-day                - Clean, bright, modern\n"
+  printf "   11) gruvbox-light                 - Retro, warm, readable\n"
+  printf "   12) solarized-light               - Classic, precision colors\n"
   printf "\n"
-  print_prompt "Choose theme [1-8 or name]" "1"
+  print_prompt "Choose theme [1-12 or name]" "1"
   read -r theme_choice
   case "${theme_choice,,}" in
   1 | everforest-dark | dark) export DEVBASE_THEME="everforest-dark" ;;
   2 | catppuccin-mocha | mocha) export DEVBASE_THEME="catppuccin-mocha" ;;
   3 | tokyonight-night | tokyonight) export DEVBASE_THEME="tokyonight-night" ;;
   4 | gruvbox-dark | gruvbox) export DEVBASE_THEME="gruvbox-dark" ;;
-  5 | everforest-light | light) export DEVBASE_THEME="everforest-light" ;;
-  6 | catppuccin-latte | latte) export DEVBASE_THEME="catppuccin-latte" ;;
-  7 | tokyonight-day | day) export DEVBASE_THEME="tokyonight-day" ;;
-  8 | gruvbox-light) export DEVBASE_THEME="gruvbox-light" ;;
+  5 | nord) export DEVBASE_THEME="nord" ;;
+  6 | dracula) export DEVBASE_THEME="dracula" ;;
+  7 | solarized-dark) export DEVBASE_THEME="solarized-dark" ;;
+  8 | everforest-light | light) export DEVBASE_THEME="everforest-light" ;;
+  9 | catppuccin-latte | latte) export DEVBASE_THEME="catppuccin-latte" ;;
+  10 | tokyonight-day | day) export DEVBASE_THEME="tokyonight-day" ;;
+  11 | gruvbox-light) export DEVBASE_THEME="gruvbox-light" ;;
+  12 | solarized-light) export DEVBASE_THEME="solarized-light" ;;
   *) export DEVBASE_THEME="everforest-dark" ;;
   esac
   printf "  %b✓%b Selected: %b%s%b\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "${DEVBASE_COLORS[BOLD_GREEN]}" "${DEVBASE_THEME}" "${DEVBASE_COLORS[NC]}"
+}
+
+# Brief: Prompt user to select terminal font
+# Params: None
+# Uses: print_section, print_prompt, DEVBASE_COLORS (globals)
+# Modifies: DEVBASE_FONT (exported)
+# Returns: 0 always (implicit)
+# Side-effects: Reads from stdin, prints font menu, prints selected font
+collect_font_preference() {
+  printf "\n"
+  print_section "Font Selection" "${DEVBASE_COLORS[BOLD_CYAN]}"
+  printf "\n"
+  printf "  Choose a Nerd Font for your terminal and editors:\n"
+  printf "\n"
+  printf "    1) jetbrains-mono             - Clear, excellent readability\n"
+  printf "    2) firacode                   - Popular, extensive ligatures\n"
+  printf "    3) cascadia-code              - Microsoft, Powerline glyphs\n"
+  printf "    4) monaspace       (default)  - Superfamily, multiple styles\n"
+  printf "\n"
+  printf "  %bAll fonts work in terminals, VSCode, and IntelliJ%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "\n"
+  print_prompt "Choose font [1-4 or name]" "4"
+  read -r font_choice
+  case "${font_choice,,}" in
+  1 | jetbrains-mono | jetbrains) export DEVBASE_FONT="jetbrains-mono" ;;
+  2 | firacode | fira) export DEVBASE_FONT="firacode" ;;
+  3 | cascadia-code | cascadia) export DEVBASE_FONT="cascadia-code" ;;
+  4 | monaspace) export DEVBASE_FONT="monaspace" ;;
+  *) export DEVBASE_FONT="monaspace" ;;
+  esac
+  printf "  %b✓%b Selected: %b%s%b\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "${DEVBASE_COLORS[BOLD_GREEN]}" "${DEVBASE_FONT}" "${DEVBASE_COLORS[NC]}"
 }
 
 # Brief: Prompt for SSH key passphrase with confirmation
@@ -243,7 +321,7 @@ prompt_for_ssh_passphrase() {
     printf "\n"
 
     if [[ -z "$ssh_pass" ]]; then
-      if [[ "${DEVBASE_SSH_ALLOW_EMPTY_PW:-false}" == "true" ]]; then
+      if [[ "$DEVBASE_SSH_ALLOW_EMPTY_PW" == "true" ]]; then
         show_progress info "No passphrase set (allowed by config)"
         break
       else
@@ -338,10 +416,9 @@ collect_ssh_configuration() {
 # Modifies: DEVBASE_VSCODE_INSTALL, DEVBASE_VSCODE_EXTENSIONS, DEVBASE_VSCODE_NEOVIM, DEVBASE_INSTALL_LAZYVIM, DEVBASE_INSTALL_INTELLIJ (exported)
 # Returns: 0 always (implicit)
 # Side-effects: Prints section, prompts user multiple times, prints decisions
-collect_editor_preferences() {
-  printf "\n"
-  print_section "Editor & IDE Preferences" "${DEVBASE_COLORS[BOLD_CYAN]}"
-
+# Brief: Prompt for VS Code installation and extensions
+# Returns: 0 always
+_prompt_vscode_preferences() {
   printf "\n"
   printf "  %bVS Code: Popular extensible code editor with rich ecosystem.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Install VS Code? (Y/n)" "Y"; then
@@ -372,7 +449,11 @@ collect_editor_preferences() {
     export DEVBASE_VSCODE_NEOVIM="false"
     printf "  %b✓%b VS Code installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
 
+# Brief: Prompt for LazyVim installation
+# Returns: 0 always
+_prompt_lazyvim_preferences() {
   printf "\n"
   printf "  %bLazyVim is a Neovim IDE configuration with LSP, treesitter, and modern plugins.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Install LazyVim for NeoVim? (Y/n)" "Y"; then
@@ -382,28 +463,34 @@ collect_editor_preferences() {
     export DEVBASE_INSTALL_LAZYVIM="false"
     printf "  %b✓%b LazyVim installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
 
+# Brief: Prompt for IntelliJ IDEA installation
+# Returns: 0 always
+_prompt_intellij_preferences() {
   printf "\n"
   printf "  %bIntelliJ IDEA Ultimate: Full-featured Java/Kotlin IDE with advanced tools (~1GB).%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Install IntelliJ IDEA? (y/N)" "N"; then
-    export DEVBASE_INSTALL_INTELLIJ="yes"
+    export DEVBASE_INSTALL_INTELLIJ="true"
     printf "  %b✓%b IntelliJ IDEA will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   else
-    export DEVBASE_INSTALL_INTELLIJ="no"
+    export DEVBASE_INSTALL_INTELLIJ="false"
     printf "  %b✓%b IntelliJ IDEA installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
 }
 
-# Brief: Collect tool and shell preference settings
-# Params: None
-# Uses: print_section, ask_yes_no, DEVBASE_COLORS (functions/globals)
-# Modifies: EDITOR, VISUAL, DEVBASE_INSTALL_JMC, DEVBASE_ZELLIJ_AUTOSTART, DEVBASE_ENABLE_GIT_HOOKS (exported)
-# Returns: 0 always (implicit)
-# Side-effects: Prints section, prompts user multiple times, prints decisions
-collect_tool_preferences() {
+collect_editor_preferences() {
   printf "\n"
-  print_section "Tool Preferences" "${DEVBASE_COLORS[BOLD_CYAN]}"
+  print_section "Editor & IDE Preferences" "${DEVBASE_COLORS[BOLD_CYAN]}"
 
+  _prompt_vscode_preferences
+  _prompt_lazyvim_preferences
+  _prompt_intellij_preferences
+}
+
+# Brief: Prompt for shell key bindings (Vim vs Emacs)
+# Returns: 0 always
+_prompt_editor_bindings() {
   printf "\n"
   printf "  %bVim bindings: hjkl navigation, modes (normal/insert). Emacs: arrow keys, Ctrl shortcuts.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Use Vim key bindings in shell? (Y/n)" "Y"; then
@@ -417,17 +504,25 @@ collect_tool_preferences() {
     printf "  %b✓%b Emacs key bindings for shell\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     printf "  %b✓%b Default editor: nano\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
 
+# Brief: Prompt for JMC installation
+# Returns: 0 always
+_prompt_jmc_installation() {
   printf "\n"
   printf "  %bJDK Mission Control (JMC) is Oracle's profiling/diagnostics tool for Java (~1GB).%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Install JMC? (y/N)" "N"; then
-    export DEVBASE_INSTALL_JMC="yes"
+    export DEVBASE_INSTALL_JMC="true"
     printf "  %b✓%b JMC will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   else
-    export DEVBASE_INSTALL_JMC="no"
+    export DEVBASE_INSTALL_JMC="false"
     printf "  %b✓%b JMC installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
 
+# Brief: Prompt for Zellij auto-start preference
+# Returns: 0 always
+_prompt_zellij_autostart() {
   printf "\n"
   printf "  %bZellij: Modern terminal workspace with tabs, panes, and session management.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Enable Zellij auto-start when opening terminal? (Y/n)" "Y"; then
@@ -437,17 +532,37 @@ collect_tool_preferences() {
     export DEVBASE_ZELLIJ_AUTOSTART="false"
     printf "  %b✓%b Zellij auto-start disabled\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
 
+# Brief: Prompt for global git hooks enablement
+# Returns: 0 always
+_prompt_git_hooks() {
   printf "\n"
   printf "  %bGlobal git hooks: Automatic pre-commit checks (linting, formatting, secret detection).%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "  %bWARNING: Existing hooks in ~/.config/git/git-hooks/ will be backed up.%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
   if ask_yes_no "Enable global git hooks? (Y/n)" "Y"; then
-    export DEVBASE_ENABLE_GIT_HOOKS="yes"
+    export DEVBASE_ENABLE_GIT_HOOKS="true"
     printf "  %b✓%b Git hooks will be enabled globally for all repos\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   else
-    export DEVBASE_ENABLE_GIT_HOOKS="no"
+    export DEVBASE_ENABLE_GIT_HOOKS="false"
     printf "  %b✓%b Git hooks disabled\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
+}
+
+# Brief: Collect tool and shell preference settings
+# Params: None
+# Uses: print_section, ask_yes_no, DEVBASE_COLORS (functions/globals)
+# Modifies: EDITOR, VISUAL, DEVBASE_INSTALL_JMC, DEVBASE_ZELLIJ_AUTOSTART, DEVBASE_ENABLE_GIT_HOOKS (exported)
+# Returns: 0 always (implicit)
+# Side-effects: Prints section, prompts user multiple times, prints decisions
+collect_tool_preferences() {
+  printf "\n"
+  print_section "Tool Preferences" "${DEVBASE_COLORS[BOLD_CYAN]}"
+
+  _prompt_editor_bindings
+  _prompt_jmc_installation
+  _prompt_zellij_autostart
+  _prompt_git_hooks
 }
 
 collect_user_configuration() {
@@ -461,6 +576,7 @@ collect_user_configuration() {
 
   collect_git_configuration
   collect_theme_preference
+  collect_font_preference
   collect_ssh_configuration
   collect_editor_preferences
   collect_tool_preferences
@@ -486,18 +602,19 @@ write_user_preferences() {
 # This file stores your installation choices for reference by scripts and tools
 
 theme: ${DEVBASE_THEME}
+font: ${DEVBASE_FONT}
 
 git:
   author: ${DEVBASE_GIT_AUTHOR}
   email: ${DEVBASE_GIT_EMAIL}
 
 ssh:
-  key_action: ${DEVBASE_SSH_KEY_ACTION:-keep}
-  key_path: ${DEVBASE_SSH_KEY_PATH:-~/.ssh/id_ecdsa_nistp521_devbase}
+  key_action: ${DEVBASE_SSH_KEY_ACTION}
+  key_path: ${DEVBASE_SSH_KEY_PATH}
 
 editor:
-  default: ${EDITOR:-nvim}
-  shell_bindings: $([ "${EDITOR:-nvim}" == "nvim" ] && echo "vim" || echo "emacs")
+  default: ${EDITOR}
+  shell_bindings: $([ "${EDITOR}" == "nvim" ] && echo "vim" || echo "emacs")
 
 vscode:
   install: ${DEVBASE_VSCODE_INSTALL}
@@ -505,13 +622,13 @@ vscode:
   neovim_extension: ${DEVBASE_VSCODE_NEOVIM}
 
 ide:
-  lazyvim: ${DEVBASE_INSTALL_LAZYVIM:-true}
-  intellij: $([ "${DEVBASE_INSTALL_INTELLIJ:-no}" == "yes" ] && echo "true" || echo "false")
-  jmc: $([ "${DEVBASE_INSTALL_JMC:-no}" == "yes" ] && echo "true" || echo "false")
+  lazyvim: ${DEVBASE_INSTALL_LAZYVIM}
+  intellij: ${DEVBASE_INSTALL_INTELLIJ}
+  jmc: ${DEVBASE_INSTALL_JMC}
 
 tools:
-  zellij_autostart: ${DEVBASE_ZELLIJ_AUTOSTART:-true}
-  git_hooks: $([ "${DEVBASE_ENABLE_GIT_HOOKS:-yes}" == "yes" ] && echo "true" || echo "false")
+  zellij_autostart: ${DEVBASE_ZELLIJ_AUTOSTART}
+  git_hooks: ${DEVBASE_ENABLE_GIT_HOOKS}
 EOF
 
   show_progress success "User preferences saved to ${prefs_file/#$HOME/~}"

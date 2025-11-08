@@ -395,7 +395,7 @@ set -l no_proxy_hosts "${no_proxy_hosts}"
 # Note: Java doesn't support authenticated proxies via system properties.
 # Applications must handle authentication programmatically or use tools like CNTLM
 # Use DEVBASE_NO_PROXY_JAVA if provided (should be in pipe-separated format)
-set -l no_proxy_java "${DEVBASE_NO_PROXY_JAVA:-}"
+set -l no_proxy_java "$DEVBASE_NO_PROXY_JAVA"
 
 # Preserve existing JAVA_TOOL_OPTIONS (like trustStore settings) and append proxy settings
 if test -n "\$JAVA_TOOL_OPTIONS"
@@ -597,6 +597,141 @@ process_maven_templates() {
   process_maven_templates_yaml
 }
 
+# Brief: Validate yq tool availability and XML support
+# Params: None
+# Returns: 0 if yq available with XML support, 1 otherwise
+_process_maven_yaml_check_yq() {
+  if ! command -v yq &>/dev/null; then
+    show_progress warning "yq not found, skipping Maven configuration"
+    show_progress info "Install with: mise install yq"
+    return 1
+  fi
+
+  if ! yq --help 2>&1 | grep -q "output.*xml"; then
+    show_progress warning "yq does not support XML output, skipping Maven configuration"
+    return 1
+  fi
+
+  return 0
+}
+
+# Brief: Collect base YAML fragment if exists
+# Params: $1-maven_yaml_dir $2-fragments_array_name
+# Returns: always 0
+_process_maven_yaml_add_base() {
+  local maven_yaml_dir="$1"
+  local -n fragments=$2
+
+  [[ -f "${maven_yaml_dir}/base.yaml" ]] && fragments+=("${maven_yaml_dir}/base.yaml")
+  return 0
+}
+
+# Brief: Add proxy YAML fragment if configured
+# Params: $1-maven_yaml_dir $2-temp_dir $3-fragments_array_name $4-desc_var_name
+# Returns: always 0
+_process_maven_yaml_add_proxy() {
+  local maven_yaml_dir="$1"
+  local temp_dir="$2"
+  # shellcheck disable=SC2178  # Nameref to array defined in caller scope
+  local -n fragments=$3
+  local -n desc=$4
+
+  if [[ -n "${DEVBASE_PROXY_URL}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
+    local proxy_processed="${temp_dir}/proxy.yaml"
+    envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed"
+    fragments+=("$proxy_processed")
+    desc="proxy"
+  fi
+  return 0
+}
+
+# Brief: Add registry YAML fragment if configured
+# Params: $1-maven_yaml_dir $2-temp_dir $3-fragments_array_name $4-desc_var_name
+# Returns: always 0
+_process_maven_yaml_add_registry() {
+  local maven_yaml_dir="$1"
+  local temp_dir="$2"
+  # shellcheck disable=SC2178  # Nameref to array defined in caller scope
+  local -n fragments=$3
+  local -n desc=$4
+
+  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
+    local registry_processed="${temp_dir}/registry.yaml"
+    envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
+    fragments+=("$registry_processed")
+    desc="${desc:+$desc + }registry"
+  fi
+  return 0
+}
+
+# Brief: Add custom repos YAML fragment if available
+# Params: $1-temp_dir $2-fragments_array_name $3-desc_var_name
+# Returns: always 0
+_process_maven_yaml_add_custom() {
+  local temp_dir="$1"
+  # shellcheck disable=SC2178  # Nameref to array defined in caller scope
+  local -n fragments=$2
+  local -n desc=$3
+
+  if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "maven-repos.yaml" "Custom Maven repos"; then
+    local custom_processed="${temp_dir}/maven-repos.yaml"
+    envsubst_preserve_undefined "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
+    fragments+=("$custom_processed")
+    desc="${desc:+$desc + }custom repos"
+  fi
+  return 0
+}
+
+# Brief: Merge multiple YAML fragments into one
+# Params: $1-fragments_array_name $2-output_file
+# Returns: 0 on success, 1 on error
+_process_maven_yaml_merge() {
+  # shellcheck disable=SC2178  # Nameref to array defined in caller scope
+  local -n fragments=$1
+  local output="$2"
+
+  if [[ ${#fragments[@]} -eq 1 ]]; then
+    cp "${fragments[0]}" "$output"
+    return 0
+  fi
+
+  # shellcheck disable=SC2016 # Single quotes intentional - yq expression, not shell expansion
+  yq eval-all '
+    . as $item ireduce ({}; 
+      .settings = (.settings // {}) * ($item.settings // {}) |
+      .settings.proxies.proxy = ((.settings.proxies.proxy // []) + ($item.proxies.proxy // [])) |
+      .settings.mirrors.mirror = ((.settings.mirrors.mirror // {}) * ($item.mirrors.mirror // {})) |
+      .settings.profiles.profile = ((.settings.profiles.profile // []) + ($item.profiles.profile // [])) |
+      .settings.activeProfiles.activeProfile = ((.settings.activeProfiles.activeProfile // []) + ($item.activeProfiles.activeProfile // []))
+    )
+  ' "${fragments[@]}" >"$output" || {
+    show_progress error "Failed to merge YAML fragments"
+    return 1
+  }
+  return 0
+}
+
+# Brief: Convert YAML to XML using yq
+# Params: $1-yaml_file $2-xml_target
+# Returns: 0 on success, 1 on error
+_process_maven_yaml_to_xml() {
+  local yaml_file="$1"
+  local xml_target="$2"
+
+  if yq -o=xml "$yaml_file" >"$xml_target"; then
+    show_progress success "Maven settings generated from YAML"
+    return 0
+  else
+    show_progress error "Failed to generate Maven settings.xml"
+    return 1
+  fi
+}
+
+# Brief: Process Maven YAML templates into settings.xml
+# Params: None
+# Uses: DEVBASE_FILES, _DEVBASE_TEMP (globals)
+# Returns: 0 on success, 1 on error
+# Side-effects: Creates Maven settings.xml from YAML fragments
 process_maven_templates_yaml() {
   local maven_yaml_dir="${DEVBASE_FILES}/maven-templates/yaml"
   local target_file="${HOME}/.m2/settings.xml"
@@ -604,89 +739,26 @@ process_maven_templates_yaml() {
 
   mkdir -p "$temp_dir"
 
-  # Check for yq
-  if ! command -v yq &>/dev/null; then
-    show_progress warning "yq not found, skipping Maven configuration"
-    show_progress info "Install with: mise install yq"
-    return 1
-  fi
+  _process_maven_yaml_check_yq || return 1
 
-  # Verify yq supports XML output
-  if ! yq --help 2>&1 | grep -q "output.*xml"; then
-    show_progress warning "yq does not support XML output, skipping Maven configuration"
-    return 1
-  fi
-
-  # Collect YAML fragments to merge
+  # Collect YAML fragments
   local yaml_fragments=()
   local config_desc=""
 
-  # Start with base (XML namespaces)
-  if [[ -f "${maven_yaml_dir}/base.yaml" ]]; then
-    yaml_fragments+=("${maven_yaml_dir}/base.yaml")
-  fi
+  _process_maven_yaml_add_base "$maven_yaml_dir" yaml_fragments
+  _process_maven_yaml_add_proxy "$maven_yaml_dir" "$temp_dir" yaml_fragments config_desc
+  _process_maven_yaml_add_registry "$maven_yaml_dir" "$temp_dir" yaml_fragments config_desc
+  _process_maven_yaml_add_custom "$temp_dir" yaml_fragments config_desc
 
-  # Add proxy config if needed
-  if [[ -n "${DEVBASE_PROXY_URL}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
-    local proxy_processed="${temp_dir}/proxy.yaml"
-    envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed"
-    yaml_fragments+=("$proxy_processed")
-    config_desc="proxy"
-  fi
-
-  # Add registry/mirror if configured
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
-    local registry_processed="${temp_dir}/registry.yaml"
-    envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
-    yaml_fragments+=("$registry_processed")
-    config_desc="${config_desc:+$config_desc + }registry"
-  fi
-
-  # Add custom repos if available
-  if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "maven-repos.yaml" "Custom Maven repos"; then
-    local custom_processed="${temp_dir}/maven-repos.yaml"
-    envsubst_preserve_undefined "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
-    yaml_fragments+=("$custom_processed")
-    config_desc="${config_desc:+$config_desc + }custom repos"
-  fi
-
-  # Skip if no fragments
-  if [[ ${#yaml_fragments[@]} -eq 0 ]]; then
-    return 0
-  fi
+  # Skip if no fragments collected
+  [[ ${#yaml_fragments[@]} -eq 0 ]] && return 0
 
   show_progress info "Configuring Maven with ${config_desc}"
 
-  # Merge YAML fragments
+  # Merge and convert
   local merged_yaml="${temp_dir}/merged.yaml"
-
-  if [[ ${#yaml_fragments[@]} -eq 1 ]]; then
-    cp "${yaml_fragments[0]}" "$merged_yaml"
-  else
-    # shellcheck disable=SC2016 # Single quotes intentional - yq expression, not shell expansion
-    yq eval-all '
-      . as $item ireduce ({}; 
-        .settings = (.settings // {}) * ($item.settings // {}) |
-        .settings.proxies.proxy = ((.settings.proxies.proxy // []) + ($item.proxies.proxy // [])) |
-        .settings.mirrors.mirror = ((.settings.mirrors.mirror // {}) * ($item.mirrors.mirror // {})) |
-        .settings.profiles.profile = ((.settings.profiles.profile // []) + ($item.profiles.profile // [])) |
-        .settings.activeProfiles.activeProfile = ((.settings.activeProfiles.activeProfile // []) + ($item.activeProfiles.activeProfile // []))
-      )
-    ' "${yaml_fragments[@]}" >"$merged_yaml"
-
-    if [[ $? -ne 0 ]]; then
-      show_progress error "Failed to merge YAML fragments"
-      return 1
-    fi
-  fi
-
-  # Convert YAML to XML
-  if yq -o=xml "$merged_yaml" >"$target_file"; then
-    show_progress success "Maven settings generated from YAML"
-  else
-    show_progress error "Failed to generate Maven settings.xml"
-    return 1
-  fi
+  _process_maven_yaml_merge yaml_fragments "$merged_yaml" || return 1
+  _process_maven_yaml_to_xml "$merged_yaml" "$target_file"
 }
 
 process_gradle_templates() {
@@ -729,7 +801,7 @@ process_container_templates() {
 
   # Derive DEVBASE_REGISTRY_CONTAINER if not set
   # Extract host:port from registry URL (without protocol and path)
-  if [[ -z "${DEVBASE_REGISTRY_CONTAINER:-}" ]]; then
+  if [[ -z "$DEVBASE_REGISTRY_CONTAINER" ]]; then
     export DEVBASE_REGISTRY_CONTAINER
     if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then
       # Remove protocol and path: "https://host:port/path" -> "host:port"

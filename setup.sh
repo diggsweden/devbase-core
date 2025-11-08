@@ -34,6 +34,7 @@ trap handle_interrupt INT TERM
 DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}"      # Custom config directory path
 DEBUG="${DEBUG:-}"                                # Debug mode (set DEBUG=1 for verbose output)
 DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}" # Theme choice (default: everforest-dark)
+DEVBASE_FONT="${DEVBASE_FONT:-monaspace}"         # Font choice (default: monaspace)
 EDITOR="${EDITOR:-nvim}"                          # Default editor: nvim or nano
 GIT_EMAIL="${GIT_EMAIL:-$USER@$(hostname)}"       # Git email for non-interactive (default: user@hostname)
 GIT_NAME="${GIT_NAME:-DevBase User}"              # Git name for non-interactive (default: DevBase User)
@@ -62,6 +63,36 @@ _DEVBASE_CUSTOM_CERTS=""
 _DEVBASE_CUSTOM_HOOKS=""
 _DEVBASE_CUSTOM_TEMPLATES=""
 _DEVBASE_CUSTOM_SSH=""
+_DEVBASE_CUSTOM_PACKAGES=""
+
+# Installation feature flags (user can override via environment)
+DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"  # Install development tools
+DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"    # Install LazyVim configuration
+DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-false}"           # Install Java Mission Control
+DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-false}" # Install IntelliJ IDEA
+DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-true}"  # Enable Git hooks
+DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"  # Auto-start Zellij terminal multiplexer
+
+# VSCode configuration flags (defaults set during user preferences collection)
+DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-}"       # Install VSCode (set based on WSL detection)
+DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-}" # Install VSCode extensions
+DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-}"         # Install VSCode Neovim extension
+
+# SSH key management configuration
+DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}"                             # SSH key action: new, keep, or import
+DEVBASE_SSH_KEY_PATH="${DEVBASE_SSH_KEY_PATH:-~/.ssh/id_ecdsa_nistp521_devbase}" # SSH key path
+DEVBASE_SSH_ALLOW_EMPTY_PW="${DEVBASE_SSH_ALLOW_EMPTY_PW:-false}"                # Allow empty SSH key passphrase
+GENERATED_SSH_PASSPHRASE="${GENERATED_SSH_PASSPHRASE:-false}"                    # Flag: passphrase was auto-generated
+
+# Environment and Git configuration
+DEVBASE_GIT_DEFAULT_BRANCH="${DEVBASE_GIT_DEFAULT_BRANCH:-main}" # Default Git branch name
+DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"                  # Environment name
+
+# Advanced configuration (offline installs, registry overrides)
+DEVBASE_DEB_CACHE="${DEVBASE_DEB_CACHE:-}"                   # Path to offline .deb package cache
+JMC_DOWNLOAD="${JMC_DOWNLOAD:-}"                             # JMC download URL override
+DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}"           # Java-specific no-proxy domains
+DEVBASE_REGISTRY_CONTAINER="${DEVBASE_REGISTRY_CONTAINER:-}" # Container registry override
 
 # Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
@@ -243,6 +274,7 @@ find_custom_directory() {
     export _DEVBASE_CUSTOM_HOOKS="$fullpath/hooks"
     export _DEVBASE_CUSTOM_TEMPLATES="$fullpath/templates"
     export _DEVBASE_CUSTOM_SSH="$fullpath/ssh"
+    export _DEVBASE_CUSTOM_PACKAGES="$fullpath/packages"
 
     # Debug output if DEBUG is set (see docs/environment.adoc)
     if [[ "${DEBUG}" == "1" ]]; then
@@ -252,6 +284,7 @@ find_custom_directory() {
       show_progress info "_DEVBASE_CUSTOM_HOOKS=${_DEVBASE_CUSTOM_HOOKS}"
       show_progress info "_DEVBASE_CUSTOM_TEMPLATES=${_DEVBASE_CUSTOM_TEMPLATES}"
       show_progress info "_DEVBASE_CUSTOM_SSH=${_DEVBASE_CUSTOM_SSH}"
+      show_progress info "_DEVBASE_CUSTOM_PACKAGES=${_DEVBASE_CUSTOM_PACKAGES}"
     fi
 
     return 0
@@ -463,7 +496,7 @@ set_default_values() {
   # Export variables that were initialized in IMPORT section with defaults
   export DEVBASE_PROXY_URL DEVBASE_NO_PROXY_DOMAINS DEVBASE_REGISTRY_URL
   export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_BIN_HOME
-  export DEVBASE_THEME
+  export DEVBASE_THEME DEVBASE_FONT
 
   # Define DevBase directories using XDG variables
   export DEVBASE_CACHE_DIR="${XDG_CACHE_HOME}/devbase"

@@ -234,8 +234,8 @@ retry_command() {
     # Calculate exponential backoff with jitter (2, 4, 8 seconds + random 0-2)
     current_delay=$((base_delay * (2 ** (attempt - 1)) + RANDOM % 3))
 
-    printf "    %s Attempt %d/%d failed, retrying in %ds...\n" \
-      "${DEVBASE_COLORS[YELLOW]}⚠${DEVBASE_COLORS[NC]}" "$attempt" "$max_attempts" "$current_delay"
+    printf "    %b⚠%b Attempt %d/%d failed, retrying in %ds...\n" \
+      "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}" "$attempt" "$max_attempts" "$current_delay"
 
     sleep "$current_delay"
     attempt=$((attempt + 1))

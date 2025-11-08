@@ -217,6 +217,16 @@ toc::[]
 |✓
 |
 
+|link:https://github.com/astral-sh/uv[uv]
+|Fast Python package installer and resolver (10-100x faster than pip/pipx)
+|mise/aqua
+|MIT/Apache-2.0
+|✓
+|✓
+|
+|✓
+|
+
 |link:https://www.rust-lang.org/[rust]
 |Rust programming language
 |mise/native
@@ -793,6 +803,16 @@ toc::[]
 |✓
 |
 |
+|
+
+|link:https://github.com/fsfe/reuse-tool[reuse]
+|License compliance tool implementing REUSE specification (SPDX headers, DEP5)
+|mise/pipx
+|GPL-3.0+
+|✓
+|✓
+|
+|✓
 |
 
 |link:https://github.com/ossf/scorecard[scorecard]

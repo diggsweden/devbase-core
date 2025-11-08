@@ -259,10 +259,18 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   echo
 
-  if [[ -f "${DEVBASE_DOT}/.config/mise/config.toml" ]]; then
-    cp "${DEVBASE_DOT}/.config/mise/config.toml" "${XDG_CONFIG_HOME}/mise/config.toml"
+  local mise_config="${DEVBASE_DOT}/.config/mise/config.toml"
+
+  # Check for custom mise config override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/mise-config.toml" ]]; then
+    mise_config="${_DEVBASE_CUSTOM_PACKAGES}/mise-config.toml"
+    show_progress info "Using custom mise config: $mise_config"
+  fi
+
+  if [[ -f "$mise_config" ]]; then
+    cp "$mise_config" "${XDG_CONFIG_HOME}/mise/config.toml"
   else
-    die "Mise config not found in ${DEVBASE_DOT}/.config/mise/config.toml"
+    die "Mise config not found at $mise_config"
   fi
 
   # Trust the config file we just copied

@@ -1,0 +1,14 @@
+# DevBase Snap Packages
+# Format: package_name [options]
+# Options: --classic, --edge, --beta, --channel=<channel>
+# Comments start with #
+
+# Terminal emulator with GPU acceleration
+ghostty --classic
+
+# Web browsers
+firefox
+chromium
+
+# Kubernetes (local development)
+microk8s --classic

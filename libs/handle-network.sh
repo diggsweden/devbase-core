@@ -66,6 +66,109 @@ verify_checksum_value() {
   fi
 }
 
+# Brief: Check if file exists for checksum-only verification
+# Params: $1-target $2-has_checksum (0=yes, 1=no)
+# Returns: 0 if should skip download, 1 if should download
+_download_file_should_skip() {
+  local target="$1"
+  local has_checksum="$2"
+
+  if [[ -f "$target" ]] && [[ "$has_checksum" -eq 0 ]]; then
+    show_progress info "File exists, will verify checksum only (use rm to force re-download)"
+    return 0
+  fi
+  return 1
+}
+
+# Brief: Build cache filename from target and version
+# Params: $1-target $2-version
+# Returns: prints cache filename
+_download_file_get_cache_name() {
+  local target="$1"
+  local version="$2"
+
+  if [[ -n "$version" ]]; then
+    local base_name
+    base_name=$(basename "$target")
+    local extension="${base_name##*.}"
+    local name_without_ext="${base_name%.*}"
+    echo "${name_without_ext}-v${version}.${extension}"
+  else
+    basename "$target"
+  fi
+}
+
+# Brief: Try to use cached file
+# Params: $1-cached_file $2-target $3-has_checksum
+# Returns: 0 if cache used, 1 if should proceed with download
+_download_file_try_cache() {
+  local cached_file="$1"
+  local target="$2"
+  local has_checksum="$3"
+
+  if [[ -f "$cached_file" ]] && [[ "$has_checksum" -eq 1 ]]; then
+    show_progress info "Using cached: $(basename "$cached_file")"
+    cp "$cached_file" "$target"
+    return 0
+  fi
+  return 1
+}
+
+# Brief: Perform single download attempt with curl or wget
+# Params: $1-url $2-target $3-timeout $4-skip_download
+# Returns: 0 on success, 1 on failure
+_download_file_attempt() {
+  local url="$1"
+  local target="$2"
+  local timeout="$3"
+  local skip_download="$4"
+
+  [[ "$skip_download" == "true" ]] && return 0
+
+  # Try curl first
+  if command_exists curl; then
+    curl -#fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
+  fi
+
+  # Fallback to wget
+  if command_exists wget; then
+    wget --timeout="$timeout" --tries=1 --show-progress -O "$target" "$url" 2>&1 && return 0
+  fi
+
+  return 1
+}
+
+# Brief: Verify downloaded file checksum
+# Params: $1-target $2-checksum_url $3-expected_checksum $4-timeout
+# Returns: 0 if verified or no checksum, 1 if verification failed
+_download_file_verify() {
+  local target="$1"
+  local checksum_url="$2"
+  local expected_checksum="$3"
+  local timeout="$4"
+
+  if [[ -n "$expected_checksum" ]]; then
+    verify_checksum_value "$target" "$expected_checksum"
+  elif [[ -n "$checksum_url" ]]; then
+    verify_checksum_from_url "$target" "$checksum_url" "$timeout"
+  else
+    show_progress success "$(basename "$target")"
+    return 0
+  fi
+}
+
+# Brief: Cache successfully downloaded file
+# Params: $1-target $2-cached_file $3-version
+# Returns: always 0
+_download_file_cache() {
+  local target="$1"
+  local cached_file="$2"
+  local version="$3"
+
+  [[ -n "$version" ]] && cp "$target" "$cached_file" 2>/dev/null || true
+  return 0
+}
+
 # Brief: Download file with caching, retry logic, and optional checksum verification
 # Params: $1-url $2-target $3-checksum_url(opt) $4-expected_checksum(opt) $5-version(opt) $6-timeout(opt) $7-max_retries(opt) $8-retry_delay(opt)
 # Uses: XDG_CACHE_HOME (global)
@@ -85,105 +188,41 @@ download_file() {
   validate_not_empty "$url" "URL" || return 1
   validate_not_empty "$target" "target file" || return 1
 
-  # Check if file already exists (e.g., from previous failed checksum)
-  local skip_download=false
-  if [[ -f "$target" ]] && [[ -n "$checksum_url" || -n "$expected_checksum" ]]; then
-    show_progress info "File exists, will verify checksum only (use rm to force re-download)"
-    skip_download=true
-  fi
+  # Check if we can skip download and just verify checksum
+  local has_checksum=1
+  [[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
-  # Setup cache directory and naming
+  local skip_download=false
+  _download_file_should_skip "$target" "$has_checksum" && skip_download=true
+
+  # Setup cache
   local cache_dir="${XDG_CACHE_HOME}/devbase/downloads"
   mkdir -p "$cache_dir"
-
   local cache_name
-  if [[ -n "$version" ]]; then
-    local base_name
-    base_name=$(basename "$target")
-    local extension="${base_name##*.}"
-    local name_without_ext="${base_name%.*}"
-    cache_name="${name_without_ext}-v${version}.${extension}"
-  else
-    cache_name="$(basename "$target")"
-  fi
-
+  cache_name=$(_download_file_get_cache_name "$target" "$version")
   local cached_file="${cache_dir}/${cache_name}"
 
-  # Use cache if available and no checksum verification needed
-  if [[ -f "$cached_file" ]] && [[ -z "$checksum_url" ]] && [[ -z "$expected_checksum" ]]; then
-    show_progress info "Using cached: ${cache_name}"
-    cp "$cached_file" "$target"
-    return 0
-  fi
+  # Try to use cached file
+  _download_file_try_cache "$cached_file" "$target" "$has_checksum" && return 0
 
-  # Retry loop for download
+  # Retry loop
   local attempt=1
   while [[ "$attempt" -le "$max_retries" ]]; do
-    local download_success=false
-    local curl_exit=0
-    local wget_exit=0
-
-    # Skip download if file exists and we're just verifying checksum
-    if [[ "$skip_download" == "true" ]]; then
-      download_success=true
-    else
-      # Try curl first (better error handling and progress display)
-      if command_exists curl; then
-        if curl -#fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1; then
-          download_success=true
-        else
-          curl_exit=$?
-        fi
-      fi
-
-      # Fallback to wget if curl failed or not available
-      if [[ "$download_success" == "false" ]] && command_exists wget; then
-        if wget --timeout="$timeout" --tries=1 --show-progress -O "$target" "$url" 2>&1; then
-          download_success=true
-        else
-          wget_exit=$?
-        fi
-      fi
-    fi
-
-    # Download failed - retry
-    if [[ "$download_success" == "false" ]]; then
-      show_progress warning "Attempt ${attempt}/${max_retries} failed (curl=$curl_exit, wget=$wget_exit)"
+    if ! _download_file_attempt "$url" "$target" "$timeout" "$skip_download"; then
+      show_progress warning "Attempt ${attempt}/${max_retries} failed"
       ((attempt++))
       [[ "$attempt" -le "$max_retries" ]] && sleep "$retry_delay"
       continue
     fi
 
-    # Download succeeded - verify checksum if requested
-    local verification_passed=true
+    # Verify checksum
+    _download_file_verify "$target" "$checksum_url" "$expected_checksum" "$timeout" || return 1
 
-    if [[ -n "$expected_checksum" ]]; then
-      # Verify with provided checksum value
-      verify_checksum_value "$target" "$expected_checksum" || verification_passed=false
-
-    elif [[ -n "$checksum_url" ]]; then
-      # Verify with checksum from URL
-      verify_checksum_from_url "$target" "$checksum_url" "$timeout" || verification_passed=false
-
-    else
-      # No checksum verification
-      show_progress success "$(basename "$target")"
-    fi
-
-    # Verification failed - return error
-    if [[ "$verification_passed" == "false" ]]; then
-      return 1
-    fi
-
-    # Success! Cache the file if versioned
-    if [[ -n "$version" ]]; then
-      cp "$target" "$cached_file" 2>/dev/null || true
-    fi
-
+    # Cache and return success
+    _download_file_cache "$target" "$cached_file" "$version"
     return 0
   done
 
-  # All retries exhausted
   show_progress error "Failed to download $(basename "$target") after $max_retries attempts"
   return 1
 }

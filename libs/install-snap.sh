@@ -7,6 +7,74 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
+if [[ -z "${DEVBASE_DOT:-}" ]]; then
+  echo "ERROR: DEVBASE_DOT not set. This script must be sourced from setup.sh" >&2
+  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
+  return 1 2>/dev/null || exit 1
+fi
+
+# Brief: Read snap package list from configuration file
+# Params: None
+# Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES (globals)
+# Returns: 0 on success, 1 if file not found or unreadable
+# Outputs: Arrays of package names and options to global SNAP_PACKAGES and SNAP_OPTIONS
+# Side-effects: Populates SNAP_PACKAGES and SNAP_OPTIONS arrays
+load_snap_packages() {
+  local pkg_file="${DEVBASE_DOT}/.config/devbase/snap-packages.txt"
+
+  # Check for custom package list override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt" ]]; then
+    pkg_file="${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt"
+    show_progress info "Using custom snap package list: $pkg_file"
+  fi
+
+  if [[ ! -f "$pkg_file" ]]; then
+    show_progress error "Snap package list not found: $pkg_file"
+    return 1
+  fi
+
+  if [[ ! -r "$pkg_file" ]]; then
+    show_progress error "Snap package list not readable: $pkg_file"
+    return 1
+  fi
+
+  # Read packages from file
+  local packages=()
+  local options=()
+
+  while IFS= read -r line; do
+    # Skip pure comment lines (starting with #)
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+    # Skip empty lines
+    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+
+    # Extract package name and options
+    # Format: package_name [options]
+    local pkg_name
+    local pkg_options=""
+
+    # Read first word as package name, rest as options
+    read -r pkg_name pkg_options <<<"$line"
+
+    [[ -z "$pkg_name" ]] && continue
+
+    packages+=("$pkg_name")
+    options+=("$pkg_options")
+  done <"$pkg_file"
+
+  if [[ ${#packages[@]} -eq 0 ]]; then
+    show_progress error "No valid snap packages found in $pkg_file"
+    return 1
+  fi
+
+  # Export as readonly arrays
+  readonly SNAP_PACKAGES=("${packages[@]}")
+  readonly SNAP_OPTIONS=("${options[@]}")
+
+  return 0
+}
+
 # Brief: Configure snap package manager proxy settings
 # Params: None
 # Uses: DEVBASE_PROXY_URL (global, optional)
@@ -91,15 +159,33 @@ configure_snap_certificates() {
 
 # Brief: Install all snap packages (main entry point)
 # Params: None
-# Returns: 0 always
-# Side-effects: Configures proxy, installs multiple snaps
+# Uses: load_snap_packages, SNAP_PACKAGES, SNAP_OPTIONS (functions/global arrays)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Configures proxy, loads package list, installs snaps
 install_snap_packages() {
+  show_progress info "Installing snap packages..."
+
   configure_snap_proxy
 
-  snap_install "ghostty" "--classic"
-  snap_install "firefox"
-  snap_install "chromium"
-  snap_install "microk8s" "--classic"
+  # Load package list from file
+  if ! load_snap_packages; then
+    show_progress error "Failed to load snap package list"
+    return 1
+  fi
+
+  local total_packages=${#SNAP_PACKAGES[@]}
+  show_progress info "Found $total_packages snap packages to install"
+  echo
+
+  # Install each package with its options
+  for i in "${!SNAP_PACKAGES[@]}"; do
+    local pkg="${SNAP_PACKAGES[$i]}"
+    local opts="${SNAP_OPTIONS[$i]}"
+    snap_install "$pkg" "$opts"
+  done
+
+  echo
+  show_progress success "Snap packages installation completed ($total_packages packages)"
 
   return 0
 }

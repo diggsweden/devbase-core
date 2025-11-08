@@ -52,14 +52,16 @@ configure_ufw() {
 
   # Allow k3s traffic if k3s is installed
   # k3s requires these ports to function properly:
-  # - 6443/tcp: Kubernetes API server
+  # - 6443/tcp: Kubernetes API server (localhost only for security)
   # - 10.42.0.0/16: Pod network (default flannel CIDR)
   # - 10.43.0.0/16: Service network (default ClusterIP CIDR)
   if command -v k3s &>/dev/null; then
-    sudo ufw allow 6443/tcp comment 'k3s apiserver' &>/dev/null
+    # Only allow K3s API from localhost (secure for dev machines)
+    sudo ufw allow from 127.0.0.1 to any port 6443 proto tcp comment 'k3s apiserver (localhost)' &>/dev/null
+    # Allow pod and service networks (internal K3s networking)
     sudo ufw allow from 10.42.0.0/16 to any comment 'k3s pods' &>/dev/null
     sudo ufw allow from 10.43.0.0/16 to any comment 'k3s services' &>/dev/null
-    show_progress info "Added k3s firewall rules"
+    show_progress info "Added k3s firewall rules (API restricted to localhost)"
   fi
 
   if sudo ufw --force enable &>/dev/null; then
@@ -93,11 +95,15 @@ set_system_limits() {
 * hard memlock unlimited
 EOF
 
-  if [[ ! -f "$sysctl_file" ]] || ! grep -q "fs.file-max" "$sysctl_file" 2>/dev/null; then
-    echo "fs.file-max = 90000" | sudo tee "$sysctl_file" >/dev/null
-  fi
+  sudo bash -c "cat > '$sysctl_file'" <<'EOF'
+# DevBase kernel parameters
+fs.file-max = 90000
+vm.swappiness = 5
+EOF
 
-  show_progress success "System limits configured (nofile: 65536, nproc: 32768, fs.file-max: 90000)"
+  sudo sysctl -p "$sysctl_file" &>/dev/null || true
+
+  show_progress success "System limits configured (nofile: 65536, nproc: 32768, fs.file-max: 90000, swappiness: 5)"
   return 0
 }
 

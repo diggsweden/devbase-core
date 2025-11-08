@@ -20,23 +20,31 @@ function update-ghostty-theme --description "Update Ghostty theme on native Ubun
     set -l ghostty_theme
     switch $devbase_theme
         case everforest-dark
-            set ghostty_theme "Everforest Dark Hard"
+            set ghostty_theme "Everforest Dark Hard (resources)"
         case everforest-light
-            set ghostty_theme "Everforest Light Med"
+            set ghostty_theme "Everforest Light Med (resources)"
         case catppuccin-mocha
-            set ghostty_theme "Catppuccin Mocha"
+            set ghostty_theme "Catppuccin Mocha (resources)"
         case catppuccin-latte
-            set ghostty_theme "Catppuccin Latte"
+            set ghostty_theme "Catppuccin Latte (resources)"
         case tokyonight-night
-            set ghostty_theme "TokyoNight Night"
+            set ghostty_theme "TokyoNight Night (resources)"
         case tokyonight-day
-            set ghostty_theme "TokyoNight Day"
+            set ghostty_theme "TokyoNight Day (resources)"
         case gruvbox-dark
-            set ghostty_theme "Gruvbox Dark"
+            set ghostty_theme "Gruvbox Dark (resources)"
         case gruvbox-light
-            set ghostty_theme "Gruvbox Light"
+            set ghostty_theme "Gruvbox Light (resources)"
+        case nord
+            set ghostty_theme "Nord (resources)"
+        case dracula
+            set ghostty_theme "Dracula (resources)"
+        case solarized-dark
+            set ghostty_theme "Solarized Dark Higher Contrast (resources)"
+        case solarized-light
+            set ghostty_theme "Builtin Solarized Light (resources)"
         case '*'
-            set ghostty_theme "Everforest Dark Hard"
+            set ghostty_theme "Everforest Dark Hard (resources)"
     end
 
     # Update Ghostty config file

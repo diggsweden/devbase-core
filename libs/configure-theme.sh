@@ -9,31 +9,64 @@ fi
 
 source "${DEVBASE_LIBS}/utils.sh"
 
-# Theme presets: is_light|bat|btop|delta|zellij|nvim|vifm
+# Theme presets: is_light|bat|btop|delta|zellij|nvim|vifm|k9s
 declare -gA THEME_CONFIGS
 # WARNING: shfmt incorrectly adds spaces in associative array keys below
 # Keep these compact: [everforest-dark] NOT [everforest - dark]
 # Manual fix required after running shfmt
 
 # Everforest themes
-THEME_CONFIGS[everforest-dark]="dark|Monokai Extended|everforest-dark-hard|Monokai Extended|everforest-dark|everforest|gruvbox"
-THEME_CONFIGS[everforest-light]="light|GitHub|everforest-light-medium|GitHub|everforest-light|everforest|solarized-light"
+THEME_CONFIGS[everforest-dark]="dark|Monokai Extended|everforest-dark-hard|Monokai Extended|everforest-dark|everforest|gruvbox|everforest-dark"
+THEME_CONFIGS[everforest-light]="light|GitHub|everforest-light-medium|GitHub|everforest-light|everforest|solarized-light|everforest-light"
 
 # Catppuccin themes
-THEME_CONFIGS[catppuccin-mocha]="dark|Dracula|catppuccin_mocha|Dracula|catppuccin-mocha|catppuccin-mocha|solarized-dark"
-THEME_CONFIGS[catppuccin-latte]="light|OneHalfLight|catppuccin_latte|OneHalfLight|catppuccin-latte|catppuccin-latte|solarized-light"
+THEME_CONFIGS[catppuccin-mocha]="dark|Dracula|catppuccin_mocha|Dracula|catppuccin-mocha|catppuccin-mocha|solarized-dark|catppuccin-mocha"
+THEME_CONFIGS[catppuccin-latte]="light|OneHalfLight|catppuccin_latte|OneHalfLight|catppuccin-latte|catppuccin-latte|solarized-light|catppuccin-latte"
 
 # Tokyo Night themes
-THEME_CONFIGS[tokyonight-night]="dark|Visual Studio Dark+|tokyo-night|Visual Studio Dark+|tokyo-night|tokyonight-night|solarized-dark"
-THEME_CONFIGS[tokyonight-day]="light|GitHub|tokyo-storm|GitHub|tokyo-day|tokyonight-day|solarized-light"
+THEME_CONFIGS[tokyonight-night]="dark|Visual Studio Dark+|tokyo-night|Visual Studio Dark+|tokyo-night|tokyonight-night|solarized-dark|gruvbox-dark"
+THEME_CONFIGS[tokyonight-day]="light|GitHub|tokyo-storm|GitHub|tokyo-day|tokyonight-day|solarized-light|everforest-light"
 
 # Gruvbox themes
-THEME_CONFIGS[gruvbox-dark]="dark|gruvbox-dark|gruvbox_dark|gruvbox-dark|gruvbox-dark|gruvbox|gruvbox"
-THEME_CONFIGS[gruvbox-light]="light|gruvbox-light|gruvbox_light|gruvbox-light|gruvbox-light|gruvbox|solarized-light"
+THEME_CONFIGS[gruvbox-dark]="dark|gruvbox-dark|gruvbox_dark|gruvbox-dark|gruvbox-dark|gruvbox|gruvbox|gruvbox-dark"
+THEME_CONFIGS[gruvbox-light]="light|gruvbox-light|gruvbox_light|gruvbox-light|gruvbox-light|gruvbox|solarized-light|gruvbox-light"
+
+# Nord theme
+THEME_CONFIGS[nord]="dark|Nord|nord|Nord|nord|nord|solarized-dark|nord"
+
+# Dracula theme
+THEME_CONFIGS[dracula]="dark|Dracula|dracula|Dracula|dracula|dracula|solarized-dark|dracula"
+
+# Solarized themes
+THEME_CONFIGS[solarized-dark]="dark|Solarized (dark)|solarized_dark|Solarized (dark)|solarized-dark|solarized|solarized-dark|solarized-dark"
+THEME_CONFIGS[solarized-light]="light|Solarized (light)|solarized_light|Solarized (light)|solarized-light|solarized|solarized-light|solarized-light"
+
+# FZF color schemes by theme
+declare -gA FZF_COLORS
+FZF_COLORS[catppuccin-mocha]="--color=dark --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
+FZF_COLORS[catppuccin-latte]="--color=light --color=bg+:#ccd0da,bg:#eff1f5,spinner:#dc8a78,hl:#d20f39 --color=fg:#4c4f69,header:#d20f39,info:#8839ef,pointer:#dc8a78 --color=marker:#dc8a78,fg+:#4c4f69,prompt:#8839ef,hl+:#d20f39"
+FZF_COLORS[tokyonight-night]="--color=dark --color=fg:#c0caf5,bg:#1a1b26,hl:#bb9af7 --color=fg+:#c0caf5,bg+:#292e42,hl+:#7dcfff --color=info:#7aa2f7,prompt:#7dcfff,pointer:#7dcfff --color=marker:#7dcfff,spinner:#7dcfff,header:#7dcfff"
+FZF_COLORS[tokyonight-day]="--color=light --color=fg:#3760bf,bg:#e1e2e7,hl:#2e7de9 --color=fg+:#3760bf,bg+:#c4c8da,hl+:#2e7de9 --color=info:#188092,prompt:#188092,pointer:#188092 --color=marker:#188092,spinner:#188092,header:#188092"
+FZF_COLORS[gruvbox-dark]="--color=dark --color=fg:#ebdbb2,bg:#282828,hl:#fabd2f --color=fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f --color=info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54"
+FZF_COLORS[gruvbox-light]="--color=light --color=fg:#3c3836,bg:#fbf1c7,hl:#af3a03 --color=fg+:#3c3836,bg+:#ebdbb2,hl+:#af3a03 --color=info:#076678,prompt:#79740e,spinner:#8f3f71,pointer:#076678,marker:#8f5902,header:#9d0006"
+FZF_COLORS[nord]="--color=dark --color=fg:#d8dee9,bg:#2e3440,hl:#88c0d0 --color=fg+:#eceff4,bg+:#3b4252,hl+:#8fbcbb --color=info:#81a1c1,prompt:#88c0d0,pointer:#88c0d0 --color=marker:#a3be8c,spinner:#ebcb8b,header:#5e81ac"
+FZF_COLORS[dracula]="--color=dark --color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#ff79c6 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4"
+FZF_COLORS[solarized-dark]="--color=dark --color=fg:#839496,bg:#002b36,hl:#b58900 --color=fg+:#839496,bg+:#073642,hl+:#859900 --color=info:#268bd2,prompt:#859900,pointer:#dc322f --color=marker:#dc322f,spinner:#b58900,header:#586e75"
+FZF_COLORS[solarized-light]="--color=light --color=fg:#657b83,bg:#fdf6e3,hl:#b58900 --color=fg+:#657b83,bg+:#eee8d5,hl+:#859900 --color=info:#268bd2,prompt:#859900,pointer:#dc322f --color=marker:#dc322f,spinner:#b58900,header:#93a1a1"
+FZF_COLORS[everforest-dark]="--color=dark --color=fg:#d3c6aa,bg:#2d353b,hl:#a7c080 --color=fg+:#d3c6aa,bg+:#3d484d,hl+:#a7c080 --color=info:#e67e80,prompt:#a7c080,pointer:#e67e80 --color=marker:#a7c080,spinner:#e67e80,header:#a7c080"
+FZF_COLORS[everforest-light]="--color=light --color=fg:#5c6a72,bg:#fdf6e3,hl:#35a77c --color=fg+:#5c6a72,bg+:#f4f0d0,hl+:#35a77c --color=info:#5c6a72,prompt:#5c6a72,pointer:#d73a49 --color=marker:#5c6a72,spinner:#5c6a72,header:#5c6a72"
+
+# Brief: Get FZF color scheme for theme
+# Params: $1 - theme name
+# Returns: FZF color string
+_apply_theme_get_fzf_colors() {
+  local theme="$1"
+  echo "${FZF_COLORS[$theme]:-${FZF_COLORS[everforest-dark]}}"
+}
 
 # Brief: Apply color theme to all tools (bat, btop, delta, fzf, etc.)
 # Params: $1 - theme name (default: everforest-dark)
-# Uses: THEME_CONFIGS (global)
+# Uses: THEME_CONFIGS, FZF_COLORS (globals)
 # Modifies: DEVBASE_THEME, BAT_THEME, BTOP_THEME, DELTA_SYNTAX_THEME, ZELLIJ_THEME,
 #           VIFM_COLORSCHEME, K9S_SKIN, DELTA_DARK, LAZYGIT_LIGHT_THEME,
 #           DELTA_FEATURES, FZF_DEFAULT_OPTS (all exported)
@@ -52,10 +85,13 @@ apply_theme() {
     printf "    Catppuccin: catppuccin-mocha, catppuccin-latte\n"
     printf "    Tokyo Night: tokyonight-night, tokyonight-day\n"
     printf "    Gruvbox: gruvbox-dark, gruvbox-light\n"
+    printf "    Nord: nord\n"
+    printf "    Dracula: dracula\n"
+    printf "    Solarized: solarized-dark, solarized-light\n"
     theme="everforest-dark"
   fi
 
-  IFS='|' read -r is_light bat btop delta _zellij _nvim vifm <<<"${THEME_CONFIGS[$theme]}"
+  IFS='|' read -r is_light bat btop delta _zellij _nvim vifm k9s <<<"${THEME_CONFIGS[$theme]}"
 
   export DEVBASE_THEME="$theme"
   export BAT_THEME="$bat"
@@ -63,37 +99,7 @@ apply_theme() {
   export DELTA_SYNTAX_THEME="$delta"
   export ZELLIJ_THEME="$_zellij"
   export VIFM_COLORSCHEME="$vifm"
-  
-  # K9s skin mapping
-  case "$theme" in
-    everforest-dark)
-      export K9S_SKIN="everforest-dark"
-      ;;
-    everforest-light)
-      export K9S_SKIN="everforest-light"
-      ;;
-    catppuccin-mocha)
-      export K9S_SKIN="catppuccin-mocha"
-      ;;
-    catppuccin-latte)
-      export K9S_SKIN="catppuccin-latte"
-      ;;
-    tokyonight-night)
-      export K9S_SKIN="gruvbox-dark"  # fallback (no official tokyonight skin)
-      ;;
-    tokyonight-day)
-      export K9S_SKIN="everforest-light"  # fallback (no official tokyonight skin)
-      ;;
-    gruvbox-dark)
-      export K9S_SKIN="gruvbox-dark"
-      ;;
-    gruvbox-light)
-      export K9S_SKIN="gruvbox-light"
-      ;;
-    *)
-      export K9S_SKIN="everforest-dark"
-      ;;
-  esac
+  export K9S_SKIN="$k9s"
 
   if [[ "$is_light" == "light" ]]; then
     export DELTA_DARK="false"
@@ -104,33 +110,5 @@ apply_theme() {
   fi
 
   export DELTA_FEATURES="decorations line-numbers"
-
-  # FZF colors by theme family
-  case "$theme" in
-    catppuccin-mocha)
-      export FZF_DEFAULT_OPTS="--color=dark --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
-      ;;
-    catppuccin-latte)
-      export FZF_DEFAULT_OPTS="--color=light --color=bg+:#ccd0da,bg:#eff1f5,spinner:#dc8a78,hl:#d20f39 --color=fg:#4c4f69,header:#d20f39,info:#8839ef,pointer:#dc8a78 --color=marker:#dc8a78,fg+:#4c4f69,prompt:#8839ef,hl+:#d20f39"
-      ;;
-    tokyonight-night)
-      export FZF_DEFAULT_OPTS="--color=dark --color=fg:#c0caf5,bg:#1a1b26,hl:#bb9af7 --color=fg+:#c0caf5,bg+:#292e42,hl+:#7dcfff --color=info:#7aa2f7,prompt:#7dcfff,pointer:#7dcfff --color=marker:#7dcfff,spinner:#7dcfff,header:#7dcfff"
-      ;;
-    tokyonight-day)
-      export FZF_DEFAULT_OPTS="--color=light --color=fg:#3760bf,bg:#e1e2e7,hl:#2e7de9 --color=fg+:#3760bf,bg+:#c4c8da,hl+:#2e7de9 --color=info:#188092,prompt:#188092,pointer:#188092 --color=marker:#188092,spinner:#188092,header:#188092"
-      ;;
-    gruvbox-dark)
-      export FZF_DEFAULT_OPTS="--color=dark --color=fg:#ebdbb2,bg:#282828,hl:#fe8019 --color=fg+:#ebdbb2,bg+:#3c3836,hl+:#fe8019 --color=info:#83a598,prompt:#b8bb26,pointer:#fb4934 --color=marker:#fb4934,spinner:#fb4934,header:#fb4934"
-      ;;
-    gruvbox-light)
-      export FZF_DEFAULT_OPTS="--color=light --color=fg:#3c3836,bg:#fbf1c7,hl:#af3a03 --color=fg+:#3c3836,bg+:#ebdbb2,hl+:#af3a03 --color=info:#076678,prompt:#79740e,pointer:#9d0006 --color=marker:#9d0006,spinner:#9d0006,header:#9d0006"
-      ;;
-    everforest-light)
-      export FZF_DEFAULT_OPTS="--color=light --color=fg:#5c6a72,bg:#fdf6e3,hl:#35a77c --color=fg+:#5c6a72,bg+:#f4f0d0,hl+:#35a77c --color=info:#5c6a72,prompt:#5c6a72,pointer:#d73a49 --color=marker:#5c6a72,spinner:#5c6a72,header:#5c6a72"
-      ;;
-    *)
-      # Default everforest-dark
-      export FZF_DEFAULT_OPTS="--color=dark --color=fg:#d3c6aa,bg:#2d353b,hl:#a7c080 --color=fg+:#d3c6aa,bg+:#3d484d,hl+:#a7c080 --color=info:#e67e80,prompt:#a7c080,pointer:#e67e80 --color=marker:#a7c080,spinner:#e67e80,header:#a7c080"
-      ;;
-  esac
+  export FZF_DEFAULT_OPTS="$(_apply_theme_get_fzf_colors "$theme")"
 }

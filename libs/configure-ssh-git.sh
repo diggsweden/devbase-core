@@ -56,7 +56,7 @@ configure_ssh() {
   local agent_enabled=false
   local passphrase_protected=false
 
-  if [[ "${DEVBASE_SSH_KEY_ACTION:-}" == "new" ]]; then
+  if [[ "$DEVBASE_SSH_KEY_ACTION" == "new" ]]; then
     validate_var_set "DEVBASE_GIT_EMAIL" || return 1
     show_progress info "Configuring SSH..."
 

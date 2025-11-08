@@ -82,8 +82,6 @@ readonly MSG_CONFIG_EXISTS="%s exists"
 
 # Counters initialized in verify-base-lib.sh
 
-# Note: extract_version() and parse_mise_tool() functions removed - dead code (not used anywhere)
-
 get_permissions() {
   stat -c %a "$1" 2>/dev/null || echo "missing"
 }
@@ -93,8 +91,6 @@ count_files() {
   local pattern="${2:-*}"
   find "$dir" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | wc -l
 }
-
-# check_file_content now in verify-base-lib.sh
 
 # Configuration - Expected Tools and Packages
 
@@ -140,14 +136,6 @@ declare -A APT_PACKAGES=(
 )
 
 # Mise-managed tools
-# CLI tools that should be available
-# CLI_TOOLS removed - these are already checked as APT packages
-# No need to check them twice
-
-# Common Utility Functions now in verify-base-lib.sh
-
-# Note: check_file_exists() and check_dir_exists() removed - dead code
-# Code now uses file_exists() and dir_exists() directly
 
 get_file_permissions() {
   local file="$1"
@@ -236,18 +224,6 @@ declare -A FILE_PERMISSIONS=(
 )
 
 # Enhanced Utility Functions
-
-# check_env_var now in verify-base-lib.sh
-
-# Note: The following functions have been removed as dead code (not used anywhere):
-# - check_systemd_service() - Systemd services are checked directly in check_systemd_services()
-# - display_git_config() - Git config display logic is now inlined in check_git_config()
-# - check_file_exists() and check_dir_exists() - Code now uses file_exists() and dir_exists() directly
-# - parse_config_line() - Not used anywhere
-# - check_paths() - Not used anywhere
-# - safe_check() - Not used anywhere
-# - check_file_permissions() - Not used anywhere
-# - check_command() and check_command_status() - Not used anywhere
 
 check_git_config() {
   print_header "5. Git Configuration"
@@ -595,46 +571,270 @@ check_shell_integrations() {
   fi
 }
 
-# Check network and proxy settings
-# REMOVED: This is now shown in Environment Variables section
-# check_network_settings() {
-#     print_header "8. Network & Proxy Settings"
-#
-#     # Check if proxy variables are set
-#     local proxy_vars=(
-#         "HTTP_PROXY"
-#         "HTTPS_PROXY"
-#         "NO_PROXY"
-#     )
-#
-#     local has_proxy=false
-#     for var in "${proxy_vars[@]}"; do
-#         if [[ -n "${!var:-}" ]]; then
-#             local value="${!var}"
-#             # Truncate long values for display
-#             if [[ ${#value} -gt 50 ]]; then
-#                 value="${value:0:47}..."
-#             fi
-#             print_check "info" "$var: $value"
-#             has_proxy=true
-#         fi
-#     done
-#
-#     if [[ "$has_proxy" == "false" ]]; then
-#         print_check "info" "No proxy configured"
-#     fi
-#
-#     # Check Docker proxy settings if Docker is installed
-#     if command -v docker &>/dev/null; then
-#         if [[ -f "$HOME/.docker/config.json" ]]; then
-#             if grep -q "proxies" "$HOME/.docker/config.json" 2>/dev/null; then
-#                 print_check "pass" "Docker proxy configured"
-#             else
-#                 print_check "info" "Docker proxy not configured"
-#             fi
-#         fi
-#     fi
-# }
+check_file_exists() {
+  file_exists "$1"
+}
+
+check_dir_exists() {
+  dir_exists "$1"
+}
+
+print_item_status() {
+  local item="$1"
+  local type="${2:-file}" # 'file' or 'dir'
+  local display_path=$(normalize_path "$item")
+
+  if [[ "$type" == "dir" ]]; then
+    if check_dir_exists "$item"; then
+      printf "  %b%s%b %s\n" "${GREEN}" "$CHECK" "${NC}" "$display_path"
+    else
+      printf "  %b%s%b %s\n" "${RED}" "$CROSS" "${NC}" "$display_path"
+    fi
+  else
+    if check_file_exists "$item"; then
+      if [[ -L "$item" ]]; then
+        printf "  %b↗%b %s (symlink)\n" "${CYAN}" "${NC}" "$display_path"
+      else
+        printf "  %b%s%b %s\n" "${GREEN}" "$CHECK" "${NC}" "$display_path"
+      fi
+    else
+      printf "  %b%s%b %s\n" "${RED}" "$CROSS" "${NC}" "$display_path"
+    fi
+  fi
+}
+
+print_item_list() {
+  local -n items=$1 # nameref to array
+  local type="${2:-file}"
+
+  for item in "${items[@]}"; do
+    print_item_status "$item" "$type"
+  done
+}
+
+check_mise_activation() {
+  print_header "1. Mise Activation Status"
+
+  local mise_ok=true
+
+  if ! has_command mise; then
+    print_check "fail" "Mise is not installed or not in PATH"
+    print_check "info" "Install mise first: curl https://mise.run | sh"
+    mise_ok=false
+    return 1
+  fi
+
+  local mise_version
+  mise_version=$(mise --version 2>/dev/null | cut -d' ' -f2)
+  print_check "pass" "Mise installed (version: ${mise_version:-unknown})"
+
+  if file_exists "$HOME/.config/fish/config.fish" && grep -q "mise activate fish" "$HOME/.config/fish/config.fish" 2>/dev/null; then
+    print_check "pass" "Mise activation configured in Fish"
+  fi
+
+  # Note: Tools are lazy-installed on first use, so we don't check if they're accessible here
+  # They will be installed when the user runs them after restarting the shell
+
+  if file_exists "$MISE_CONFIG"; then
+    print_check "pass" "Mise configuration file exists"
+    local has_tools
+    has_tools=$(grep -q '^\[tools\]' "$MISE_CONFIG" 2>/dev/null && echo "yes" || echo "no")
+    if [[ "$has_tools" == "yes" ]]; then
+      print_check "info" "Mise is configured with tools"
+    fi
+  else
+    print_check "fail" "Mise configuration missing"
+    mise_ok=false
+  fi
+
+  return 0
+}
+
+check_user_directories() {
+  print_header "2. User Directories"
+
+  # Check core directories
+  print_subheader "Core Directories"
+  for dir in "${DEVBASE_CORE_DIRS[@]}"; do
+    print_item_status "$dir" "dir"
+  done
+
+  # Check DevBase-specific directories
+  print_subheader "DevBase Directories"
+  for dir in "${DEVBASE_SPECIFIC_DIRS[@]}"; do
+    print_item_status "$dir" "dir"
+  done
+
+  # Check tool configuration directories
+  print_subheader "Shell & Tools"
+  for dir in "${TOOL_CONFIG_DIRS[@]}"; do
+    print_item_status "$dir" "dir"
+  done
+
+  # Check development directories
+  print_subheader "Development"
+  local dev_dirs=(
+    "$DEV_HOME"
+    "$DEV_HOME/gitlab.com"
+    "$DEV_HOME/github.com"
+    "$DEV_HOME/bitbucket.org"
+    "$DEV_HOME/codeberg.org"
+    "$DEV_HOME/code.europa.eu"
+    "$DEV_HOME/devcerts"
+    "$NOTES_HOME"
+    "$MAVEN_HOME"
+    "$GRADLE_HOME"
+  )
+
+  print_item_list dev_dirs "dir"
+
+  # Note: Directory permissions are checked in the Security section (14)
+}
+
+check_config_files() {
+  print_header "3. Configuration Files"
+
+  # Shell configurations - Only check files DevBase actually manages
+  print_subheader "Shell Configs"
+
+  # Fish configuration files that DevBase creates
+  local shell_files=(
+    "$HOME/.config/fish/config.fish"
+    "$HOME/.config/fish/functions/devbase-theme.fish"
+    "$HOME/.config/fish/functions/devbase-update-nag.fish"
+    "$HOME/.config/fish/functions/install-windows-terminal-themes.fish"
+    "$HOME/.config/fish/functions/setup-java.fish"
+    "$HOME/.config/fish/functions/smart-copy.fish"
+    "$HOME/.config/fish/functions/ssh-agent-init.fish"
+    "$HOME/.config/fish/functions/terminal-title.fish"
+    "$HOME/.config/fish/functions/ulimits.fish"
+    "$HOME/.config/fish/functions/update-ghostty-theme.fish"
+    "$HOME/.config/fish/functions/update-windows-terminal-theme.fish"
+    "$HOME/.config/fish/functions/update-zellij-clipboard.fish"
+    "$HOME/.config/fish/conf.d/00-aliases.fish"
+    "$HOME/.config/fish/conf.d/00-environment.fish"
+    "$HOME/.config/fish/conf.d/01-keybindings.fish"
+    "$HOME/.config/fish/conf.d/01-npm-registry.fish"
+    "$HOME/.config/fish/conf.d/02-aliases.fish"
+    "$HOME/.config/fish/conf.d/02-testcontainers-registry.fish"
+    "$HOME/.config/fish/conf.d/03-pip-registry.fish"
+    "$HOME/.config/fish/conf.d/04-ls-colors.fish"
+    "$HOME/.config/fish/conf.d/05-java-cacerts-check.fish"
+    "$HOME/.config/fish/conf.d/06-go-config.fish"
+    "$HOME/.config/fish/conf.d/07-cypress-registry.fish"
+  )
+
+  print_item_list shell_files "file"
+
+  # Conditionally check proxy.fish if proxy is configured
+  if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then
+    if [[ -f "$HOME/.config/fish/functions/proxy.fish" ]]; then
+      printf "  %b✓%b %s
+" "${GREEN}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
+    else
+      printf "  %b✗%b %s (expected with DEVBASE_PROXY_URL)
+" "${RED}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
+    fi
+  fi
+
+  # Development tools configs
+  printf "\n  %bDevelopment Tools:%b\n" "${BOLD}" "${NC}"
+  local dev_files=(
+    "$GIT_CONFIG"
+    "$CONFIG_HOME/git/.gitignore"
+    "$MISE_CONFIG"
+    "$CONFIG_HOME/nvim/lua/plugins/colorscheme.lua"
+    "$CONFIG_HOME/lazygit/config.yml"
+    "$CONFIG_HOME/delta/themes.config"
+    "$CONFIG_HOME/starship/starship.toml"
+    "$CONFIG_HOME/btop/btop.conf"
+  )
+
+  # Only check registries.conf if a registry is configured
+  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+    dev_files+=("$CONFIG_HOME/containers/registries.conf")
+  fi
+
+  print_item_list dev_files "file"
+
+  # SSH configuration
+  print_subheader "SSH Configuration"
+  local ssh_files=(
+    "$SSH_CONFIG"
+    "$HOME/.ssh/known_hosts"
+    "$HOME/.ssh/allowed_signers"
+    "$CONFIG_HOME/ssh/user.config"
+    "$CONFIG_HOME/ssh/allowed_signers"
+  )
+  print_item_list ssh_files "file"
+
+  # Terminal multiplexers
+  print_subheader "Terminal Tools"
+  local term_files=(
+    "$CONFIG_HOME/zellij/config.kdl"
+    "$CONFIG_HOME/eza/default.yml"
+    "$SYSTEMD_USER_DIR/ssh-agent.service"
+  )
+  print_item_list term_files "file"
+
+  # DevBase Tool Configs (processed from templates)
+  print_subheader "Tool Configs"
+  local tool_configs=(
+    "$HOME/.config/git/config"
+    "$HOME/.config/starship/starship.toml"
+    "$HOME/.config/btop/btop.conf"
+    "$HOME/.config/lazygit/config.yml"
+    "$HOME/.config/delta/themes.config"
+    "$HOME/.config/k9s/config.yaml"
+    "$HOME/.config/lf/lfrc"
+    "$HOME/.config/vifm/vifmrc"
+  )
+
+  # Only check registries.conf if a registry is configured
+  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+    tool_configs+=("$HOME/.config/containers/registries.conf")
+  fi
+
+  print_item_list tool_configs "file"
+
+  # DevBase metadata
+  printf "\n  %bDevBase Metadata:%b\n" "${BOLD}" "${NC}"
+  local devbase_files=(
+    "$DEVBASE_CONFIG/version"
+    "$DEVBASE_CONFIG/custom-tools.yaml"
+    "$DEVBASE_CONFIG/install-summary.txt"
+  )
+
+  print_item_list devbase_files "file"
+}
+
+check_systemd_services() {
+  print_header "4. Systemd Services"
+
+  # Check if systemd is available
+  if ! command -v systemctl &>/dev/null; then
+    print_check "info" "systemd not available (container/minimal environment?)"
+    return
+  fi
+
+  # User services
+  print_subheader "User Services"
+
+  check_systemd_service "ssh-agent.service" "user"
+  check_systemd_service "podman.socket" "user"
+
+  # WSL-specific service
+  if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
+    check_systemd_service "wayland-socket-symlink.service" "user" "oneshot"
+  fi
+
+  # System services
+  print_subheader "System Services"
+
+  check_systemd_service "unattended-upgrades.service" "system"
+
+}
+
 
 # Check installed certificates
 
@@ -663,9 +863,6 @@ check_apt_packages() {
   APT_INSTALLED_COUNT=$apt_installed
   APT_TOTAL_COUNT=$apt_total
 }
-
-# Check CLI tools
-# Removed check_cli_tools - these tools are already checked as APT packages
 
 # Check mise managed tools
 check_mise_tools() {
@@ -697,9 +894,16 @@ check_mise_tools() {
       [[ -z "$line" ]] && continue
       [[ "$line" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
 
-      # Split on first = only (avoid splitting on = inside brackets like [provider=gitlab,exe=glab])
-      local tool_spec="${line%%=*}"
-      local version_spec="${line#*=}"
+      # Split on " = " (the assignment operator, not = inside brackets)
+      # This handles cases like: "ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"
+      if [[ "$line" =~ ^([^=]+)\"][[:space:]]*=[[:space:]]*\"(.+)$ ]]; then
+        local tool_spec="${BASH_REMATCH[1]}\""
+        local version_spec="\"${BASH_REMATCH[2]}"
+      else
+        # Fallback for simpler format: tool = "version"
+        local tool_spec="${line%% = *}"
+        local version_spec="${line#* = }"
+      fi
 
       # Clean up tool_spec (handle quotes and brackets)
       local tool=$(echo "$tool_spec" | tr -d '"' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
@@ -718,8 +922,11 @@ check_mise_tools() {
       [[ -z "$tool" ]] && continue
       [[ -z "$expected_version" ]] && continue
 
-      tool_info["$tool"]="$expected_version"
-      tool_names+=("$tool")
+      # Only add if not already in the associative array (avoid duplicates)
+      if [[ -z "${tool_info[$tool]:-}" ]]; then
+        tool_info["$tool"]="$expected_version"
+        tool_names+=("$tool")
+      fi
     done < <(grep -E "^[a-z\"]+.*=" "$mise_config" | grep -v "^#")
 
     # Sort tool names
@@ -901,7 +1108,6 @@ check_installed_tools() {
   printf "  %bCustom: %d/%d installed%b\n" "${CYAN}" "${CUSTOM_INSTALLED_COUNT:-0}" "${CUSTOM_TOTAL_COUNT:-0}" "${NC}"
 }
 
-# Simplified - functionality moved to check_installed_tools
 # Check VS Code extensions
 check_vscode_extensions() {
   print_header "9. VS Code Extensions"
@@ -1192,10 +1398,6 @@ check_common_issues() {
 
 # Check for WSL-specific DevBase configuration
 check_wsl_config() {
-  # WSL-specific section removed - all checks are covered in other sections:
-  # - Wayland socket service: checked in section 4 (Systemd Services)
-  # - VS Code extensions: checked in section 10 (VS Code Extensions)
-  # DevBase doesn't configure other WSL internals - those are managed by WSL itself
   return 0
 }
 
@@ -1280,10 +1482,95 @@ check_security() {
   # Service file permissions are checked in systemd section, not here
 }
 
-# Proxy check functions now in verify-base-lib.sh
+# Check ClamAV antivirus status (extra security check, not counted in statistics)
+check_clamav_antivirus_status() {
+  # Skip on WSL
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    return 0
+  fi
 
-# Organization-specific verification (sections 13-14) moved to custom verification
-# Custom verification script location: devbase-custom-config/verification/verify-custom.sh
+  # Skip if ClamAV not installed
+  if ! command -v clamav &>/dev/null && ! systemctl list-unit-files "clamav-freshclam.service" &>/dev/null 2>&1; then
+    return 0
+  fi
+
+  printf "\n"
+  print_header "Extra Security Check: ClamAV Antivirus"
+
+  # Check clamav-freshclam.service (virus definition updates)
+  if systemctl list-unit-files "clamav-freshclam.service" &>/dev/null 2>&1; then
+    local freshclam_enabled=$(systemctl is-enabled "clamav-freshclam.service" 2>&1)
+    local freshclam_state=$(systemctl is-active "clamav-freshclam.service" 2>&1)
+    
+    if [[ "$freshclam_enabled" == "enabled" ]] && [[ "$freshclam_state" == "active" ]]; then
+      printf "  %b%s%b ClamAV virus definitions update: enabled and active\n" "${GREEN}" "$CHECK" "${NC}"
+    else
+      printf "  %b%s%b WARNING: ClamAV virus definitions update: %s/%s\n" "${YELLOW}" "$WARN" "${NC}" "$freshclam_enabled" "$freshclam_state"
+      printf "  %b   Action required: Enable ClamAV automatic updates%b\n" "${YELLOW}" "${NC}"
+      printf "  %b   Run: sudo systemctl enable --now clamav-freshclam.service%b\n" "${DIM}" "${NC}"
+    fi
+  fi
+
+  # Check clamav-daily-scan.timer (daily scans)
+  if systemctl list-unit-files "clamav-daily-scan.timer" &>/dev/null 2>&1; then
+    local timer_enabled=$(systemctl is-enabled "clamav-daily-scan.timer" 2>&1)
+    local timer_active=$(systemctl is-active "clamav-daily-scan.timer" 2>&1)
+    
+    if [[ "$timer_enabled" == "enabled" ]] && [[ "$timer_active" == "active" ]]; then
+      printf "  %b%s%b ClamAV daily scan: enabled and active\n" "${GREEN}" "$CHECK" "${NC}"
+    else
+      printf "  %b%s%b WARNING: ClamAV daily scan: %s/%s\n" "${YELLOW}" "$WARN" "${NC}" "$timer_enabled" "$timer_active"
+      printf "  %b   Action required: Enable ClamAV daily scans%b\n" "${YELLOW}" "${NC}"
+      printf "  %b   Run: sudo systemctl enable --now clamav-daily-scan.timer%b\n" "${DIM}" "${NC}"
+    fi
+  fi
+
+  # Check clamav-daemon.service (on-access scanning)
+  if systemctl list-unit-files "clamav-daemon.service" &>/dev/null 2>&1; then
+    local daemon_enabled=$(systemctl is-enabled "clamav-daemon.service" 2>&1)
+    local daemon_state=$(systemctl is-active "clamav-daemon.service" 2>&1)
+    
+    if [[ "$daemon_enabled" == "enabled" ]] && [[ "$daemon_state" == "active" ]]; then
+      printf "  %b%s%b ClamAV daemon (on-access): enabled and active\n" "${GREEN}" "$CHECK" "${NC}"
+    else
+      printf "  %b%s%b ClamAV daemon (on-access): %s/%s (optional)\n" "${CYAN}" "$INFO" "${NC}" "$daemon_enabled" "$daemon_state"
+      printf "  %b   Note: On-access scanning is optional for performance reasons%b\n" "${DIM}" "${NC}"
+    fi
+  fi
+
+  printf "  %b   ClamAV protects against malware and viruses%b\n" "${DIM}" "${NC}"
+}
+
+# Check UFW firewall status (extra security check, not counted in statistics)
+check_ufw_firewall_status() {
+  # Skip on WSL
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    return 0
+  fi
+
+  # Skip if UFW not installed
+  if ! command -v ufw &>/dev/null; then
+    return 0
+  fi
+
+  printf "\n"
+  print_header "Extra Security Check: UFW Firewall"
+
+  # Try non-interactive sudo first
+  local ufw_status=$(sudo -n ufw status 2>&1 | head -1)
+  if [[ "$ufw_status" == *"sudo"* ]] || [[ "$ufw_status" == *"lösenord"* ]] || [[ "$ufw_status" == *"password"* ]]; then
+    # Sudo requires password - can't check without interaction
+    printf "  %b%s%b UFW status check requires sudo credentials\n" "${CYAN}" "$INFO" "${NC}"
+    printf "  %b   To check manually: sudo ufw status%b\n" "${DIM}" "${NC}"
+  elif [[ "$ufw_status" == *"active"* ]]; then
+    printf "  %b%s%b UFW firewall is active\n" "${GREEN}" "$CHECK" "${NC}"
+  else
+    printf "  %b%s%b WARNING: UFW firewall is INACTIVE\n" "${YELLOW}" "$WARN" "${NC}"
+    printf "  %b   Action required: Enable UFW firewall%b\n" "${YELLOW}" "${NC}"
+    printf "  %b   Run: sudo ufw enable%b\n" "${DIM}" "${NC}"
+    printf "  %b   This protects your system from unauthorized network access%b\n" "${DIM}" "${NC}"
+  fi
+}
 
 # Check Secure Boot status (extra security check, not counted in statistics)
 check_secure_boot_status() {
@@ -1378,6 +1665,8 @@ main() {
   run_custom_verification
 
   # Extra security checks (not counted in pass/fail percentage)
+  check_clamav_antivirus_status
+  check_ufw_firewall_status
   check_secure_boot_status
 
   print_summary

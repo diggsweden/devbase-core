@@ -193,6 +193,16 @@ devbase-theme tokyonight-day     # Light
 devbase-theme gruvbox-dark
 devbase-theme gruvbox-light
 
+# Nord
+devbase-theme nord
+
+# Dracula
+devbase-theme dracula
+
+# Solarized
+devbase-theme solarized-dark
+devbase-theme solarized-light
+
 # Restart terminal for all changes to take effect
 ----
 

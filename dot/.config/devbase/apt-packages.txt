@@ -61,6 +61,7 @@ xdg-desktop-portal-gtk
 dnsutils
 e2fsprogs
 jq
+meld
 pandoc
 parallel
 pwgen

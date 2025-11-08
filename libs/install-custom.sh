@@ -8,7 +8,7 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
 fi
 
 # Verify JMC_DOWNLOAD is set (should be set earlier in the process)
-if [[ -z "${JMC_DOWNLOAD:-}" ]]; then
+if [[ -z "$JMC_DOWNLOAD" ]]; then
   JMC_DOWNLOAD="https://download.oracle.com/java/GA"
 fi
 
@@ -75,7 +75,7 @@ install_lazyvim() {
   validate_var_set "DEVBASE_THEME" || return 1
   validate_var_set "DEVBASE_DOT" || return 1
 
-  if [[ "${DEVBASE_INSTALL_LAZYVIM:-true}" != "true" ]]; then
+  if [[ "$DEVBASE_INSTALL_LAZYVIM" != "true" ]]; then
     show_progress info "LazyVim installation skipped by user preference"
     return 0
   fi
@@ -145,18 +145,19 @@ install_jmc() {
   validate_var_set "XDG_DATA_HOME" || return 1
   validate_var_set "XDG_BIN_HOME" || return 1
 
-  if [[ -n "${TOOL_VERSIONS[jdk_mission_control]:-}" ]] && [[ "${DEVBASE_INSTALL_JMC:-no}" == "yes" ]]; then
+  if [[ -n "${TOOL_VERSIONS[jdk_mission_control]:-}" ]] && [[ "$DEVBASE_INSTALL_JMC" == "true" ]]; then
     if command_exists jmc; then
       show_progress success "JMC already installed"
       return 0
     else
       show_progress info "Installing JDK Mission Control..."
       local jmc_version="${TOOL_VERSIONS[jdk_mission_control]}"
-      local jmc_url="${JMC_DOWNLOAD:-https://download.oracle.com/java/GA}/jmc/${jmc_version}/jmc-${jmc_version}_linux-x64.tar.gz"
+      # JMC is available from Adoptium (Eclipse Temurin project)
+      local jmc_url="https://github.com/adoptium/jmc-build/releases/download/${jmc_version}/org.openjdk.jmc-${jmc_version}-linux.gtk.x86_64.tar.gz"
       local jmc_tar="${_DEVBASE_TEMP}/jmc.tar.gz"
 
       # Check cache first if DEVBASE_DEB_CACHE is set (reusing same cache dir for all binaries)
-      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+      if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
         local cached_tar="${DEVBASE_DEB_CACHE}/jmc-${jmc_version}.tar.gz"
         if [[ -f "$cached_tar" ]]; then
           show_progress info "Using cached JMC package"
@@ -174,11 +175,44 @@ install_jmc() {
       fi
 
       if [[ -f "$jmc_tar" ]]; then
-        tar -C "${_DEVBASE_TEMP}" -xzf "$jmc_tar"
+        tar -C "${_DEVBASE_TEMP}" -xzf "$jmc_tar" 2>&1 | grep -v "Ignoring unknown extended header keyword" || true
         backup_if_exists "${XDG_DATA_HOME}/JDK Mission Control" "jmc-old"
 
-        mv -f "${_DEVBASE_TEMP}/jmc-${jmc_version}_linux-x64/JDK Mission Control/" "${XDG_DATA_HOME}/"
+        # Adoptium archive extracts directly to "JDK Mission Control" directory
+        local extracted_dir="${_DEVBASE_TEMP}/JDK Mission Control"
+        if [[ -d "$extracted_dir" ]]; then
+          mv -f "$extracted_dir" "${XDG_DATA_HOME}/"
+        else
+          show_progress warning "Unexpected JMC archive structure - skipping"
+          return 0
+        fi
         ln -sf "${XDG_DATA_HOME}/JDK Mission Control/jmc" "${XDG_BIN_HOME}/jmc"
+
+        # Create desktop file for application menu
+        local jmc_install_dir="${XDG_DATA_HOME}/JDK Mission Control"
+        local jmc_icon="${jmc_install_dir}/icon.xpm"
+
+        # Fallback to generic Java icon if JMC icon not found
+        if [[ ! -f "$jmc_icon" ]]; then
+          jmc_icon="java"
+        fi
+
+        mkdir -p "$HOME/.local/share/applications"
+        cat >"$HOME/.local/share/applications/jmc.desktop" <<DESKTOP_EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=JDK Mission Control
+GenericName=Java Profiler
+Comment=Advanced Java profiling and diagnostics tool
+Exec="${jmc_install_dir}/jmc"
+Icon=${jmc_icon}
+Categories=Development;Java;Profiler;Debugger;
+Terminal=false
+StartupNotify=true
+StartupWMClass=jmc
+DESKTOP_EOF
+
         show_progress success "JDK Mission Control installed"
       else
         show_progress warning "JMC download failed - skipping"
@@ -266,7 +300,7 @@ install_dbeaver() {
   local dbeaver_deb="${_DEVBASE_TEMP}/dbeaver.deb"
 
   # Check cache first if DEVBASE_DEB_CACHE is set
-  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
     local cached_deb="${DEVBASE_DEB_CACHE}/dbeaver-${dbeaver_version}.deb"
     if [[ -f "$cached_deb" ]]; then
       show_progress info "Using cached DBeaver package"
@@ -319,7 +353,7 @@ install_keystore_explorer() {
   local kse_deb="${_DEVBASE_TEMP}/keystore-explorer.deb"
 
   # Check cache first if DEVBASE_DEB_CACHE is set
-  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
     local cached_deb="${DEVBASE_DEB_CACHE}/kse-${kse_version}.deb"
     if [[ -f "$cached_deb" ]]; then
       show_progress info "Using cached KeyStore Explorer package"
@@ -430,65 +464,215 @@ install_fisher() {
   return 0
 }
 
-# Brief: Install Monaspace Nerd Font for terminal use (native Ubuntu only, skips WSL)
+# Brief: Determine font details (name, zip, directory, display name, timeout) from font choice
+# Params: $1 - font choice name
+# Returns: Echoes "font_name font_zip_name font_dir_name font_display_name timeout" to stdout
+_determine_font_details() {
+  local font_choice="$1"
+  local font_name=""
+  local font_zip_name=""
+  local font_dir_name=""
+  local font_display_name=""
+  local timeout="300"
+
+  case "$font_choice" in
+  jetbrains-mono)
+    font_name="JetBrainsMono"
+    font_zip_name="JetBrainsMono.zip"
+    font_dir_name="JetBrainsMonoNerdFont"
+    font_display_name="JetBrains Mono Nerd Font"
+    ;;
+  firacode)
+    font_name="FiraCode"
+    font_zip_name="FiraCode.zip"
+    font_dir_name="FiraCodeNerdFont"
+    font_display_name="Fira Code Nerd Font"
+    timeout="180"
+    ;;
+  cascadia-code)
+    font_name="CascadiaCode"
+    font_zip_name="CascadiaCode.zip"
+    font_dir_name="CascadiaCodeNerdFont"
+    font_display_name="Cascadia Code Nerd Font"
+    ;;
+  monaspace)
+    font_name="Monaspace"
+    font_zip_name="Monaspace.zip"
+    font_dir_name="MonaspaceNerdFont"
+    font_display_name="Monaspace Nerd Font"
+    ;;
+  *)
+    show_progress warning "Unknown font choice: $font_choice, defaulting to JetBrains Mono"
+    font_name="JetBrainsMono"
+    font_zip_name="JetBrainsMono.zip"
+    font_dir_name="JetBrainsMonoNerdFont"
+    font_display_name="JetBrains Mono Nerd Font"
+    ;;
+  esac
+
+  echo "$font_name|$font_zip_name|$font_dir_name|$font_display_name|$timeout"
+}
+
+# Brief: Check if font is already installed
+# Params: $1 - font directory path
+# Returns: 0 if installed, 1 otherwise
+_check_font_installed() {
+  local font_dir="$1"
+
+  if [[ -d "$font_dir" ]] && [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) | wc -l) -gt 0 ]]; then
+    return 0
+  fi
+  return 1
+}
+
+# Brief: Download Nerd Font to cache with version tracking
+# Params: $1 - font_zip_name, $2 - cache_dir, $3 - nf_version, $4 - timeout
+# Returns: 0 on success (downloaded or cached), 1 on failure
+_download_font_to_cache() {
+  local font_zip_name="$1"
+  local cache_dir="$2"
+  local nf_version="$3"
+  local timeout="$4"
+
+  local font_url="https://github.com/ryanoasis/nerd-fonts/releases/download/${nf_version}/${font_zip_name}"
+  local versioned_cache_dir="${cache_dir}/${nf_version}"
+  local font_zip="${versioned_cache_dir}/${font_zip_name}"
+  local version_file="${versioned_cache_dir}/.version"
+
+  # Check if already cached with correct version
+  if [[ -f "$font_zip" ]] && [[ -f "$version_file" ]]; then
+    local cached_version
+    cached_version=$(cat "$version_file" 2>/dev/null || echo "")
+    if [[ "$cached_version" == "$nf_version" ]]; then
+      return 0
+    fi
+  fi
+
+  # Download new version
+  mkdir -p "$versioned_cache_dir"
+  if download_file "$font_url" "$font_zip" "" "" "" "$timeout"; then
+    echo "$nf_version" >"$version_file"
+    return 0
+  fi
+
+  return 1
+}
+
+# Brief: Extract font from cache to installation directory
+# Params: $1 - font_zip_path, $2 - font_dir
+# Returns: 0 on success, 1 on failure
+_extract_font_from_cache() {
+  local font_zip="$1"
+  local font_dir="$2"
+
+  if [[ ! -f "$font_zip" ]]; then
+    return 1
+  fi
+
+  mkdir -p "$font_dir"
+  unzip -q -o "$font_zip" "*.ttf" "*.otf" -d "$font_dir" 2>/dev/null || true
+
+  if [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -gt 0 ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Brief: Download all Nerd Fonts to cache for offline use
+# Params: $1 - cache_dir, $2 - nf_version
+# Returns: 0 on success, 1 on failure
+# Side-effects: Downloads all 4 supported Nerd Fonts to versioned cache directory
+_download_all_fonts_to_cache() {
+  local cache_dir="$1"
+  local nf_version="$2"
+  local all_fonts="jetbrains-mono firacode cascadia-code monaspace"
+  local failed_count=0
+
+  show_progress info "Downloading all Nerd Fonts ($nf_version) to cache..."
+
+  for font in $all_fonts; do
+    local font_details
+    font_details=$(_determine_font_details "$font")
+    local font_name font_zip_name font_dir_name font_display_name timeout
+    IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout <<<"$font_details"
+
+    if _download_font_to_cache "$font_zip_name" "$cache_dir" "$nf_version" "$timeout"; then
+      show_progress success "$font_display_name cached"
+    else
+      show_progress warning "Failed to cache $font_display_name"
+      ((failed_count++))
+    fi
+  done
+
+  if [[ $failed_count -gt 0 ]]; then
+    show_progress warning "$failed_count font(s) failed to download"
+  fi
+
+  return 0
+}
+
+# Brief: Install selected Nerd Font for terminal use (native Ubuntu only, skips WSL)
 # Params: None
-# Uses: _DEVBASE_TEMP, HOME, validate_var_set, is_wsl, show_progress, retry_command, download_file (globals/functions)
+# Uses: _DEVBASE_TEMP, HOME, DEVBASE_FONT, DEVBASE_CACHE_DIR, TOOL_VERSIONS, validate_var_set, is_wsl, show_progress (globals/functions)
 # Returns: 0 on success/skip, 1 on failure
-# Side-effects: Downloads and installs Monaspace Nerd Font to ~/.local/share/fonts, updates font cache, configures terminal defaults
+# Side-effects: Downloads all fonts to versioned cache, installs selected font to ~/.local/share/fonts, updates font cache
 install_nerd_fonts() {
   validate_var_set "_DEVBASE_TEMP" || return 1
   validate_var_set "HOME" || return 1
+  validate_var_set "DEVBASE_CACHE_DIR" || return 1
 
-  # Skip on WSL - users manage fonts on Windows side
   if is_wsl; then
     show_progress info "Skipping Nerd Font installation on WSL (manage fonts on Windows)"
     return 0
   fi
 
-  show_progress info "Installing Monaspace Nerd Font..."
+  # Get version from config
+  local nf_version="${TOOL_VERSIONS[nerd_fonts]:-v3.4.0}"
+  local font_cache_dir="${DEVBASE_CACHE_DIR}/fonts"
+
+  # Try to download all fonts to cache (best effort)
+  _download_all_fonts_to_cache "$font_cache_dir" "$nf_version"
+
+  # Install selected font
+  local font_choice="${DEVBASE_FONT:-jetbrains-mono}"
+  local font_details
+  font_details=$(_determine_font_details "$font_choice")
+
+  local font_name font_zip_name font_dir_name font_display_name timeout
+  IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout <<<"$font_details"
+
+  show_progress info "Installing $font_display_name..."
 
   local fonts_dir="${HOME}/.local/share/fonts"
-  local monaspace_dir="${fonts_dir}/MonaspaceNerdFont"
+  local font_dir="${fonts_dir}/${font_dir_name}"
 
-  # Check if already installed (check for both TTF and OTF files)
-  if [[ -d "$monaspace_dir" ]] && [[ $(find "$monaspace_dir" \( -name "*.ttf" -o -name "*.otf" \) | wc -l) -gt 0 ]]; then
-    show_progress success "Monaspace Nerd Font already installed"
-    # Set flag to indicate fonts are available (for post-install configuration prompt)
+  # Check if already installed
+  if _check_font_installed "$font_dir"; then
+    show_progress success "$font_display_name already installed"
     export DEVBASE_FONTS_INSTALLED="true"
     return 0
   fi
 
-  # Use latest release from ryanoasis/nerd-fonts
-  local nf_version="v3.4.0"
-  local font_url="https://github.com/ryanoasis/nerd-fonts/releases/download/${nf_version}/Monaspace.zip"
-  local font_zip="${_DEVBASE_TEMP}/Monaspace.zip"
+  # Check if font is in cache
+  local font_zip="${font_cache_dir}/${nf_version}/${font_zip_name}"
+  if [[ ! -f "$font_zip" ]]; then
+    show_progress error "Font not in cache: $font_zip"
+    show_progress error "Failed to download $font_display_name"
+    return 1
+  fi
 
-  # Download font (no checksum provided by Nerd Fonts project)
-  # Note: 184MB file, needs longer timeout (300s = 5 minutes)
-  if download_file "$font_url" "$font_zip" "" "" "" "300"; then
-    mkdir -p "$monaspace_dir"
-
-    # Extract TTF and OTF files (Monaspace v3.4.0+ uses OTF format)
-    # Note: unzip may return 11 if one pattern doesn't match, so we check for actual files instead
-    unzip -q -o "$font_zip" "*.ttf" "*.otf" -d "$monaspace_dir" 2>/dev/null || true
-    if [[ $(find "$monaspace_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -gt 0 ]]; then
-      # Update font cache
-      if command -v fc-cache &>/dev/null; then
-        fc-cache -f "$fonts_dir"
-      fi
-
-      show_progress success "Monaspace Nerd Font installed ($nf_version)"
-
-      # Set flag to indicate fonts were installed (for post-install configuration prompt)
-      export DEVBASE_FONTS_INSTALLED="true"
-
-      return 0
-    else
-      show_progress warning "Failed to extract Monaspace fonts"
-      return 1
+  # Extract and install from cache
+  if _extract_font_from_cache "$font_zip" "$font_dir"; then
+    if command -v fc-cache &>/dev/null; then
+      fc-cache -f "$fonts_dir"
     fi
+
+    show_progress success "$font_display_name installed ($nf_version)"
+    export DEVBASE_FONTS_INSTALLED="true"
+    return 0
   else
-    show_progress warning "Failed to download Monaspace Nerd Font - skipping"
+    show_progress error "Failed to extract $font_display_name from cache"
     return 1
   fi
 }
@@ -558,7 +742,31 @@ apply_gnome_terminal_theme() {
     bg='#FBF1C7'
     fg='#654735'
     cursor='#654735'
-    palette=('#F2E5BC' '#C14A4A' '#6C782E' '#B47109' '#45707A' '#945E80' '#4C7A5D' '#654735' '#F2E5BC' '#C14A4A' '#6C782E' '#B47109' '#45707A' '#945E80' '#4C7A5D' '#654735')
+    palette=('#FBF1C7' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#7C6F64' '#928374' '#9D0006' '#79740E' '#B57614' '#076678' '#8F3F71' '#427B58' '#3C3836')
+    ;;
+  nord)
+    bg='#2E3440'
+    fg='#D8DEE9'
+    cursor='#D8DEE9'
+    palette=('#3B4252' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#88C0D0' '#E5E9F0' '#4C566A' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#8FBCBB' '#ECEFF4')
+    ;;
+  dracula)
+    bg='#282A36'
+    fg='#F8F8F2'
+    cursor='#F8F8F2'
+    palette=('#21222C' '#FF5555' '#50FA7B' '#F1FA8C' '#BD93F9' '#FF79C6' '#8BE9FD' '#F8F8F2' '#6272A4' '#FF6E6E' '#69FF94' '#FFFFA5' '#D6ACFF' '#FF92DF' '#A4FFFF' '#FFFFFF')
+    ;;
+  solarized-dark)
+    bg='#002B36'
+    fg='#839496'
+    cursor='#839496'
+    palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
+    ;;
+  solarized-light)
+    bg='#FDF6E3'
+    fg='#657B83'
+    cursor='#657B83'
+    palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
     ;;
   *)
     return 0 # Unknown theme, skip
@@ -587,33 +795,67 @@ apply_gnome_terminal_theme() {
   return 0
 }
 
-# Brief: Configure terminal fonts to use Monaspace Nerd Font (GNOME Terminal and Ghostty)
+# Brief: Configure terminal fonts to use selected Nerd Font (GNOME Terminal and Ghostty)
 # Params: None
-# Uses: HOME, command_exists, show_progress (globals/functions)
+# Uses: HOME, DEVBASE_FONT, command_exists, show_progress (globals/functions)
 # Returns: 0 on success, 1 if fonts not installed
-# Side-effects: Updates GNOME Terminal gsettings and Ghostty config file to use Monaspace
+# Side-effects: Updates GNOME Terminal gsettings and Ghostty config file to use selected font
 configure_terminal_fonts() {
   validate_var_set "HOME" || return 1
 
+  # Determine font details based on selection
+  local font_choice="${DEVBASE_FONT:-jetbrains-mono}"
+  local font_dir_name=""
+  local font_family_name=""
+  local font_display_name=""
+
+  case "$font_choice" in
+  jetbrains-mono)
+    font_dir_name="JetBrainsMonoNerdFont"
+    font_family_name="JetBrainsMono Nerd Font Mono"
+    font_display_name="JetBrains Mono Nerd Font"
+    ;;
+  firacode)
+    font_dir_name="FiraCodeNerdFont"
+    font_family_name="FiraCode Nerd Font Mono"
+    font_display_name="Fira Code Nerd Font"
+    ;;
+  cascadia-code)
+    font_dir_name="CascadiaCodeNerdFont"
+    font_family_name="CaskaydiaCove Nerd Font Mono"
+    font_display_name="Cascadia Code Nerd Font"
+    ;;
+  monaspace)
+    font_dir_name="MonaspaceNerdFont"
+    font_family_name="MonaspiceNe Nerd Font Mono"
+    font_display_name="Monaspace Nerd Font"
+    ;;
+  *)
+    font_dir_name="JetBrainsMonoNerdFont"
+    font_family_name="JetBrainsMono Nerd Font Mono"
+    font_display_name="JetBrains Mono Nerd Font"
+    ;;
+  esac
+
   # Check if fonts are installed
   local fonts_dir="${HOME}/.local/share/fonts"
-  local monaspace_dir="${fonts_dir}/MonaspaceNerdFont"
+  local font_dir="${fonts_dir}/${font_dir_name}"
 
-  if [[ ! -d "$monaspace_dir" ]] || [[ $(find "$monaspace_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -eq 0 ]]; then
-    show_progress warning "Monaspace Nerd Font not installed - skipping terminal configuration"
+  if [[ ! -d "$font_dir" ]] || [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -eq 0 ]]; then
+    show_progress warning "$font_display_name not installed - skipping terminal configuration"
     return 1
   fi
 
   local configured=false
 
-  # Configure GNOME Terminal to use Monaspace (if installed)
+  # Configure GNOME Terminal to use selected font (if installed)
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     local profile_id
     profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
     if [[ -n "$profile_id" ]]; then
-      gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font 'MonaspiceNe Nerd Font Mono 11' 2>/dev/null || true
+      gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font "${font_family_name} 11" 2>/dev/null || true
       gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" use-system-font false 2>/dev/null || true
-      show_progress success "GNOME Terminal: Font configured (Monaspace Nerd Font)"
+      show_progress success "GNOME Terminal: Font configured ($font_display_name)"
       configured=true
 
       # Note: Theme colors are applied separately in configure_fonts_post_install()
@@ -628,8 +870,8 @@ configure_terminal_fonts() {
     if ! grep -q "^font-family" "$ghostty_config"; then
       echo "" >>"$ghostty_config"
       echo "# Nerd Font for icons and symbols" >>"$ghostty_config"
-      echo 'font-family = "MonaspiceNe Nerd Font Mono"' >>"$ghostty_config"
-      show_progress success "Ghostty: Font configured (Monaspace Nerd Font)"
+      echo "font-family = \"${font_family_name}\"" >>"$ghostty_config"
+      show_progress success "Ghostty: Font configured ($font_display_name)"
       configured=true
     else
       show_progress info "Ghostty font already configured - skipping"
@@ -680,7 +922,7 @@ install_vscode() {
 
   # Check cache first if DEVBASE_DEB_CACHE is set
   local download_needed=true
-  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
     local cached_deb="${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
     if [[ -f "$cached_deb" ]]; then
       show_progress info "Using cached VS Code package"
@@ -692,7 +934,7 @@ install_vscode() {
   if [[ "$download_needed" == "true" ]]; then
     if retry_command download_file "$vscode_url" "$vscode_deb" "" "$vscode_checksum"; then
       # Save to cache if DEVBASE_DEB_CACHE is set
-      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+      if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
         mkdir -p "${DEVBASE_DEB_CACHE}"
         cp "$vscode_deb" "${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
       fi
@@ -723,6 +965,134 @@ install_vscode() {
   fi
 }
 
+# Brief: Download IntelliJ IDEA archive with cache support
+# Params: $1 - version, $2 - temp dir
+# Returns: 0 on success, 1 on failure; echoes tar path to stdout
+_download_intellij_archive() {
+  local version="$1"
+  local temp_dir="$2"
+  local idea_url="https://download.jetbrains.com/idea/ideaIU-${version}.tar.gz"
+  local idea_checksum_url="${idea_url}.sha256"
+  local idea_tar="${temp_dir}/intellij-idea.tar.gz"
+
+  local download_needed=true
+  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
+    local cached_tar="${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
+    if [[ -f "$cached_tar" ]]; then
+      show_progress info "Using cached IntelliJ IDEA package"
+      cp "$cached_tar" "$idea_tar"
+      download_needed=false
+    fi
+  fi
+
+  if [[ "$download_needed" == "true" ]]; then
+    if retry_command download_file "$idea_url" "$idea_tar" "$idea_checksum_url"; then
+      if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
+        mkdir -p "${DEVBASE_DEB_CACHE}"
+        cp "$idea_tar" "${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
+      fi
+    else
+      show_progress warning "IntelliJ IDEA download failed - skipping"
+      return 1
+    fi
+  fi
+
+  echo "$idea_tar"
+  return 0
+}
+
+# Brief: Extract and move IntelliJ IDEA to installation directory
+# Params: $1 - tar file path, $2 - extract directory
+# Returns: 0 on success and echoes install path, 1 on failure
+_extract_and_install_intellij() {
+  local idea_tar="$1"
+  local extract_dir="$2"
+
+  mkdir -p "$extract_dir"
+  show_progress info "Extracting IntelliJ IDEA (this may take a few minutes)..."
+
+  if ! tar -xzf "$idea_tar" -C "$extract_dir"; then
+    show_progress warning "Failed to extract IntelliJ IDEA"
+    return 1
+  fi
+
+  local idea_dir
+  idea_dir=$(find "$extract_dir" -maxdepth 1 -type d -name "idea-IU-*" -o -name "ideaIU-*" | head -1)
+
+  if [[ -z "$idea_dir" ]]; then
+    show_progress warning "IntelliJ IDEA directory not found in archive"
+    return 1
+  fi
+
+  mv "$idea_dir" "$extract_dir/IntelliJIdea"
+  echo "$extract_dir/IntelliJIdea"
+  return 0
+}
+
+# Brief: Check if running on Wayland session
+# Returns: 0 if Wayland, 1 otherwise
+_is_wayland_session() {
+  [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]] || [[ -n "${WAYLAND_DISPLAY:-}" ]]
+}
+
+# Brief: Configure IntelliJ VM options from template
+# Params: $1 - version, $2 - vmoptions template path
+# Returns: 0 always
+_configure_intellij_vmoptions() {
+  local version="$1"
+  local vmoptions_template="$2"
+
+  local idea_version_short
+  idea_version_short=$(echo "$version" | grep -oP '^\d+\.\d+')
+  local idea_config_dir="$HOME/.config/JetBrains/IntelliJIdea${idea_version_short}"
+  local vmoptions_file="${idea_config_dir}/idea64.vmoptions"
+
+  mkdir -p "$idea_config_dir"
+
+  if [[ -f "$vmoptions_template" ]]; then
+    show_progress info "Configuring IntelliJ VM options for optimal performance..."
+
+    if _is_wayland_session; then
+      sed 's|# WAYLAND_PLACEHOLDER|-Dawt.toolkit.name=WLToolkit|' "$vmoptions_template" >"$vmoptions_file"
+      show_progress info "Wayland support enabled"
+    else
+      sed '/# WAYLAND_PLACEHOLDER/d' "$vmoptions_template" >"$vmoptions_file"
+    fi
+
+    show_progress success "IntelliJ VM options configured (Xmx=4GB, optimized for medium projects)"
+  else
+    if _is_wayland_session; then
+      show_progress info "Detected Wayland session - enabling Wayland support for IntelliJ"
+      echo "-Dawt.toolkit.name=WLToolkit" >"$vmoptions_file"
+    fi
+  fi
+
+  return 0
+}
+
+# Brief: Create IntelliJ IDEA desktop file
+# Params: $1 - install directory path
+# Returns: 0 always
+_create_intellij_desktop_file() {
+  local install_dir="$1"
+
+  mkdir -p "$HOME/.local/share/applications"
+  cat >"$HOME/.local/share/applications/jetbrains-idea.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=IntelliJ IDEA Ultimate
+Icon=$install_dir/bin/idea.svg
+Exec="$install_dir/bin/idea" %f
+Comment=Capable and Ergonomic IDE for JVM
+Categories=Development;IDE;
+Terminal=false
+StartupWMClass=jetbrains-idea
+StartupNotify=true
+EOF
+  return 0
+}
+
 # Brief: Install IntelliJ IDEA Ultimate with Wayland support
 # Params: None
 # Uses: _DEVBASE_TEMP, HOME, TOOL_VERSIONS, XDG_SESSION_TYPE, WAYLAND_DISPLAY, validate_var_set, show_progress, retry_command, download_file (globals/functions)
@@ -732,7 +1102,7 @@ install_intellij_idea() {
   validate_var_set "_DEVBASE_TEMP" || return 1
   validate_var_set "HOME" || return 1
 
-  if [[ "${DEVBASE_INSTALL_INTELLIJ:-no}" != "yes" ]]; then
+  if [[ "$DEVBASE_INSTALL_INTELLIJ" != "true" ]]; then
     show_progress info "IntelliJ IDEA installation skipped by user preference"
     return 0
   fi
@@ -744,76 +1114,23 @@ install_intellij_idea() {
 
   show_progress info "Installing IntelliJ IDEA..."
   local version="${TOOL_VERSIONS[intellij_idea]}"
-  local idea_url="https://download.jetbrains.com/idea/ideaIU-${version}.tar.gz"
-  local idea_checksum_url="${idea_url}.sha256"
-  local idea_tar="${_DEVBASE_TEMP}/intellij-idea.tar.gz"
   local extract_dir="$HOME/.local/share/JetBrains"
 
-  # Check cache first if DEVBASE_DEB_CACHE is set (reusing same cache dir for all binaries)
-  local download_needed=true
-  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
-    local cached_tar="${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
-    if [[ -f "$cached_tar" ]]; then
-      show_progress info "Using cached IntelliJ IDEA package"
-      cp "$cached_tar" "$idea_tar"
-      download_needed=false
-    fi
-  fi
-
-  if [[ "$download_needed" == "true" ]]; then
-    if retry_command download_file "$idea_url" "$idea_tar" "$idea_checksum_url"; then
-      # Save to cache if DEVBASE_DEB_CACHE is set
-      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
-        mkdir -p "${DEVBASE_DEB_CACHE}"
-        cp "$idea_tar" "${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
-      fi
-    else
-      show_progress warning "IntelliJ IDEA download failed - skipping"
-      return 1
-    fi
-  fi
-
-  if [[ -f "$idea_tar" ]]; then
-    mkdir -p "$extract_dir"
-    show_progress info "Extracting IntelliJ IDEA (this may take a few minutes)..."
-    if tar -xzf "$idea_tar" -C "$extract_dir"; then
-      local idea_dir
-      idea_dir=$(find "$extract_dir" -maxdepth 1 -type d -name "idea-IU-*" -o -name "ideaIU-*" | head -1)
-      if [[ -n "$idea_dir" ]]; then
-        mv "$idea_dir" "$extract_dir/IntelliJIdea"
-
-        # Enable Wayland support if running on Wayland (JetBrains 2024.2+)
-        if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]] || [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
-          show_progress info "Detected Wayland session - enabling Wayland support for IntelliJ"
-          mkdir -p "$HOME/.config/JetBrains/IntelliJIdea2025.2"
-          echo "-Dawt.toolkit.name=WLToolkit" >"$HOME/.config/JetBrains/IntelliJIdea2025.2/idea64.vmoptions"
-        fi
-
-        mkdir -p "$HOME/.local/share/applications"
-        cat >"$HOME/.local/share/applications/jetbrains-idea.desktop" <<EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=IntelliJ IDEA Ultimate
-Icon=$extract_dir/IntelliJIdea/bin/idea.svg
-Exec="$extract_dir/IntelliJIdea/bin/idea" %f
-Comment=Capable and Ergonomic IDE for JVM
-Categories=Development;IDE;
-Terminal=false
-StartupWMClass=jetbrains-idea
-StartupNotify=true
-EOF
-        show_progress success "IntelliJ IDEA installed ($version)"
-      else
-        show_progress warning "IntelliJ IDEA directory not found in archive"
-        return 1
-      fi
-    else
-      show_progress warning "Failed to extract IntelliJ IDEA"
-      return 1
-    fi
-  else
-    show_progress warning "IntelliJ IDEA download failed - skipping"
+  local idea_tar
+  if ! idea_tar=$(_download_intellij_archive "$version" "$_DEVBASE_TEMP"); then
     return 1
   fi
+
+  local install_dir
+  if ! install_dir=$(_extract_and_install_intellij "$idea_tar" "$extract_dir"); then
+    return 1
+  fi
+
+  local vmoptions_template="${DEVBASE_ROOT}/dot/.config/devbase/intellij-vmoptions.template"
+  _configure_intellij_vmoptions "$version" "$vmoptions_template"
+
+  _create_intellij_desktop_file "$install_dir"
+
+  show_progress success "IntelliJ IDEA installed ($version)"
+  return 0
 }

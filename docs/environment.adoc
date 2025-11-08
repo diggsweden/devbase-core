@@ -69,7 +69,7 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 
 | `DEVBASE_THEME`
 | `everforest-dark`
-| Theme: `everforest-dark` or `everforest-light`
+| Theme: `everforest-dark`, `everforest-light`, `catppuccin-mocha`, `catppuccin-latte`, `tokyonight-night`, `tokyonight-day`, `gruvbox-dark`, `gruvbox-light`, `nord`, `dracula`, `solarized-dark`, or `solarized-light`
 
 | `EDITOR`
 | `nvim`

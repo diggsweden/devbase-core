@@ -18,7 +18,7 @@ configure_git_hooks() {
   validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "DEVBASE_BACKUP_DIR" || return 1
 
-  [[ "${DEVBASE_ENABLE_GIT_HOOKS:-no}" != "yes" ]] && {
+  [[ "$DEVBASE_ENABLE_GIT_HOOKS" != "true" ]] && {
     show_progress info "Git hooks disabled (skipping)"
     return 0
   }

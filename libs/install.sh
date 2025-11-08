@@ -104,7 +104,7 @@ rotate_backup_directories() {
     mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
   fi
 
-  # Clean up old timestamped backups from previous version
+  # Clean up old timestamped backups
   for old_backup in "${HOME}"/.devbase_backup_*; do
     if [[ -d "$old_backup" ]]; then
       if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
@@ -225,10 +225,8 @@ cleanup() {
   return 0
 }
 
-write_installation_summary() {
-  validate_var_set "DEVBASE_CONFIG_DIR" || return 1
-
-  cat >"${DEVBASE_CONFIG_DIR}/install-summary.txt" <<EOF
+_summary_header() {
+  cat <<EOF
 DEVBASE INSTALLATION SUMMARY
 ============================
 Installation Date: $(date)
@@ -237,6 +235,11 @@ OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unkn
 Theme: ${DEVBASE_THEME}
 DevBase Version: $(cat "${DEVBASE_CONFIG_DIR}/version" 2>/dev/null || echo "unknown")
 $(if is_wsl; then echo "WSL Version: $(get_wsl_version 2>/dev/null || echo "unknown")"; fi)
+EOF
+}
+
+_summary_system_config() {
+  cat <<EOF
 
 SYSTEM CONFIGURATION
 ====================
@@ -245,6 +248,11 @@ Home: ${HOME}
 Shell: ${SHELL}
 XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}
 XDG_DATA_HOME: ${XDG_DATA_HOME}
+EOF
+}
+
+_summary_development_languages() {
+  cat <<EOF
 
 DEVELOPMENT LANGUAGES (mise-managed)
 ====================================
@@ -256,17 +264,27 @@ DEVELOPMENT LANGUAGES (mise-managed)
   • Java: $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo "not found")
   • Maven: $(command -v mvn >/dev/null && mvn --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not found")
   • Gradle: $(command -v gradle >/dev/null && gradle --version 2>&1 | grep Gradle | cut -d' ' -f2 || echo "not found")
+EOF
+}
+
+_summary_shell_terminal() {
+  cat <<EOF
 
 SHELL & TERMINAL
 ================
   • Fish: $(fish --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
   • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
   • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "not found")
-  • Zellij Autostart: ${DEVBASE_ZELLIJ_AUTOSTART:-not set}
+  • Zellij Autostart: $DEVBASE_ZELLIJ_AUTOSTART
   • Monaspace Nerd Font: $(if is_wsl; then echo "not applicable (WSL)"; elif [[ -d ~/.local/share/fonts/MonaspaceNerdFont ]]; then
     font_count=$(find ~/.local/share/fonts/MonaspaceNerdFont -name "*.ttf" -o -name "*.otf" 2>/dev/null | wc -l)
     if [[ $font_count -gt 0 ]]; then echo "installed ($font_count fonts)"; else echo "not installed"; fi
   else echo "not installed"; fi)
+EOF
+}
+
+_summary_development_tools() {
+  cat <<EOF
 
 DEVELOPMENT TOOLS
 =================
@@ -283,18 +301,33 @@ DEVELOPMENT TOOLS
   • Delta: $(delta --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
   • Jq: $(jq --version 2>/dev/null | sed 's/jq-//' || echo "not found")
   • Yq: $(yq --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
+EOF
+}
+
+_summary_container_tools() {
+  cat <<EOF
 
 CONTAINER TOOLS
 ===============
   • Podman: $(podman --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
   • Buildah: $(buildah --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
   • Skopeo: $(skopeo --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
+EOF
+}
+
+_summary_cloud_kubernetes() {
+  cat <<EOF
 
 CLOUD & KUBERNETES
 ==================
   • kubectl: $(kubectl version --client 2>/dev/null | grep -o 'v[0-9.]*' | head -1 || echo "not found")
   • oc: $(oc version --client 2>/dev/null | grep -o '[0-9.]*' | head -1 || echo "not found")
   • k9s: $(k9s version 2>/dev/null | grep Version | cut -d' ' -f2 || echo "not found")
+EOF
+}
+
+_summary_optional_tools() {
+  cat <<EOF
 
 OPTIONAL TOOLS
 ==============
@@ -302,6 +335,11 @@ OPTIONAL TOOLS
   • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
   • IntelliJ IDEA: $(compgen -G ~/.local/share/JetBrains/IntelliJIdea* >/dev/null && echo "installed" || echo "not installed")
   • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
+EOF
+}
+
+_summary_git_config() {
+  cat <<EOF
 
 GIT CONFIGURATION
 =================
@@ -310,6 +348,11 @@ GIT CONFIGURATION
   • Default Branch: $(git config --global init.defaultBranch 2>/dev/null || echo "not configured")
   • GPG Sign: $(git config --global commit.gpgsign 2>/dev/null || echo "not configured")
   • SSH Sign: $(git config --global gpg.format 2>/dev/null || echo "not configured")
+EOF
+}
+
+_summary_ssh_config() {
+  cat <<EOF
 
 SSH CONFIGURATION
 =================
@@ -318,23 +361,43 @@ SSH CONFIGURATION
   • Key Exists: $([ -f ~/.ssh/id_ecdsa_nistp521_devbase ] && echo "yes" || echo "no")
   • Public Key Exists: $([ -f ~/.ssh/id_ecdsa_nistp521_devbase.pub ] && echo "yes" || echo "no")
   • SSH Agent: $([ -n "${SSH_AUTH_SOCK:-}" ] && echo "configured" || echo "not configured")
+EOF
+}
+
+_summary_network_config() {
+  cat <<EOF
 
 NETWORK CONFIGURATION
 =====================
   • Proxy: $(if [[ -n "${DEVBASE_PROXY_URL}" ]]; then echo "${DEVBASE_PROXY_URL}" | sed 's|://[^@]*@|://***:***@|'; else echo "not configured"; fi)
   • Registry: $(if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then echo "${DEVBASE_REGISTRY_URL}"; else echo "not configured"; fi)
   • Container Registry: $(if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then echo "${DEVBASE_CONTAINERS_REGISTRY}"; else echo "not configured"; fi)
+EOF
+}
+
+_summary_mise_activation() {
+  cat <<EOF
 
 MISE ACTIVATION
 ===============
   • Mise Version: $(mise --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
   • Config File: $([ -f ~/.config/mise/config.toml ] && echo "exists" || echo "missing")
   • Activation: Run 'eval "\$(mise activate bash)"' or restart shell
+EOF
+}
+
+_summary_custom_config() {
+  cat <<EOF
 
 CUSTOM CONFIGURATION
 ====================
   • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
   • Custom Env: $(if [[ -n "${DEVBASE_CUSTOM_ENV:-}" ]]; then echo "loaded"; else echo "not loaded"; fi)
+EOF
+}
+
+_summary_next_steps() {
+  cat <<EOF
 
 NEXT STEPS
 ==========
@@ -343,6 +406,27 @@ NEXT STEPS
 
 For help and documentation: https://github.com/diggsweden/devbase-core
 EOF
+}
+
+write_installation_summary() {
+  validate_var_set "DEVBASE_CONFIG_DIR" || return 1
+
+  {
+    _summary_header
+    _summary_system_config
+    _summary_development_languages
+    _summary_shell_terminal
+    _summary_development_tools
+    _summary_container_tools
+    _summary_cloud_kubernetes
+    _summary_optional_tools
+    _summary_git_config
+    _summary_ssh_config
+    _summary_network_config
+    _summary_mise_activation
+    _summary_custom_config
+    _summary_next_steps
+  } >"${DEVBASE_CONFIG_DIR}/install-summary.txt"
 
   return 0
 }
@@ -356,7 +440,7 @@ show_completion_message() {
   print_box_line "Summary: ${DEVBASE_CONFIG_DIR}/install-summary.txt" "$box_width"
   print_box_line "Verify: ./verify/verify-install-check.sh (after new login)" "$box_width"
 
-  if [[ "${GENERATED_SSH_PASSPHRASE:-false}" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
+  if [[ "$GENERATED_SSH_PASSPHRASE" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
     local passphrase
     passphrase=$(cat "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" 2>/dev/null)
     if [[ -n "$passphrase" ]]; then
@@ -382,7 +466,7 @@ show_completion_message() {
     print_box_line "" "$box_width"
     print_box_line "!!! SECURITY WARNING !!!" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
     print_box_line "Secure Boot is DISABLED on this machine" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
-    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
+    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width" "${DEVBASE_COLORS[BLINK_SLOW]}${DEVBASE_COLORS[BOLD_YELLOW]}"
   fi
 
   print_box_bottom "$box_width"
@@ -392,7 +476,7 @@ show_completion_message() {
 configure_fonts_post_install() {
   # ===== Skip if not applicable =====
   # Only prompt on native Ubuntu when fonts were installed
-  if [[ "${DEVBASE_FONTS_INSTALLED:-false}" != "true" ]] || [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
+  if [[ "$DEVBASE_FONTS_INSTALLED" != "true" ]] || [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     return 0
   fi
 
@@ -425,7 +509,7 @@ configure_fonts_post_install() {
     if [[ -n "$profile_id" ]]; then
       local current_font
       current_font=$(gsettings get "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/" font 2>/dev/null || echo "")
-      if [[ "$current_font" =~ MonaspiceNe.*Nerd.*Font ]]; then
+      if [[ "$current_font" =~ Nerd.*Font ]]; then
         already_configured=true
       fi
     fi
@@ -434,12 +518,12 @@ configure_fonts_post_install() {
   printf "\n"
 
   if [[ "$already_configured" == "true" ]]; then
-    printf "  %b✓%b GNOME Terminal is already configured to use Monaspace Nerd Font\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    printf "  %b✓%b GNOME Terminal is already configured to use Nerd Font\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     return 0
   fi
 
   # ===== Prompt user to configure font =====
-  printf "  %bMonaspace Nerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "  %bNerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "  %bWould you like to configure your terminal to use it now?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "\n"
   printf "  %bNote: Configuring now may affect this terminal session.%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
@@ -461,8 +545,7 @@ configure_fonts_post_install() {
   else
     printf "\n"
     printf "  %b✓%b Font configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-    printf "  %bTo configure later, set the font in your terminal settings to:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-    printf "    MonaspiceNe Nerd Font Mono\n"
+    printf "  %bTo configure later, set the font in your terminal settings to a Nerd Font%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   fi
 }
 
@@ -574,54 +657,58 @@ finalize_installation() {
   return 0
 }
 
-display_configuration_summary() {
-  validate_var_set "DEVBASE_GIT_AUTHOR" || return 1
-  validate_var_set "DEVBASE_GIT_EMAIL" || return 1
-  validate_var_set "DEVBASE_THEME" || return 1
-  validate_var_set "DEVBASE_SSH_KEY_ACTION" || return 1
-  validate_var_set "DEVBASE_SSH_KEY_PATH" || return 1
+_get_theme_display_name() {
+  local theme="$1"
+  case "$theme" in
+  everforest-dark) echo "Everforest Dark" ;;
+  everforest-light) echo "Everforest Light" ;;
+  catppuccin-mocha) echo "Catppuccin Mocha" ;;
+  catppuccin-latte) echo "Catppuccin Latte" ;;
+  tokyonight-night) echo "Tokyo Night" ;;
+  tokyonight-day) echo "Tokyo Night Day" ;;
+  gruvbox-dark) echo "Gruvbox Dark" ;;
+  gruvbox-light) echo "Gruvbox Light" ;;
+  nord) echo "Nord" ;;
+  dracula) echo "Dracula" ;;
+  solarized-dark) echo "Solarized Dark" ;;
+  solarized-light) echo "Solarized Light" ;;
+  *) echo "$theme" ;;
+  esac
+}
 
-  printf "\n"
-  print_box_top "Configuration Summary" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+_get_font_display_name() {
+  local font="$1"
+  case "$font" in
+  jetbrains-mono) echo "JetBrains Mono Nerd Font" ;;
+  firacode) echo "Fira Code Nerd Font" ;;
+  cascadia-code) echo "Cascadia Code Nerd Font" ;;
+  monaspace) echo "Monaspace Nerd Font" ;;
+  *) echo "$font" ;;
+  esac
+}
 
+_display_git_config() {
   print_box_line "Git Configuration:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "  • Author: ${DEVBASE_GIT_AUTHOR}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "  • Email: ${DEVBASE_GIT_EMAIL}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
+_display_theme_config() {
+  local theme_display
+  local font_display
+  theme_display=$(_get_theme_display_name "${DEVBASE_THEME}")
+  # shellcheck disable=SC2153 # DEVBASE_FONT is set in setup.sh
+  font_display=$(_get_font_display_name "${DEVBASE_FONT}")
   print_box_line "Theme:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  case "${DEVBASE_THEME}" in
-  everforest-dark)
-    print_box_line "  • Everforest Dark" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  everforest-light)
-    print_box_line "  • Everforest Light" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  catppuccin-mocha)
-    print_box_line "  • Catppuccin Mocha" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  catppuccin-latte)
-    print_box_line "  • Catppuccin Latte" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  tokyonight-night)
-    print_box_line "  • Tokyo Night" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  tokyonight-day)
-    print_box_line "  • Tokyo Night Day" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  gruvbox-dark)
-    print_box_line "  • Gruvbox Dark" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  gruvbox-light)
-    print_box_line "  • Gruvbox Light" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  *)
-    print_box_line "  • ${DEVBASE_THEME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    ;;
-  esac
+  print_box_line "  • ${theme_display}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+  print_box_line "Font:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+  print_box_line "  • ${font_display}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
+_display_ssh_config() {
   print_box_line "SSH Key:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
     print_box_line "  • Action: Generate new key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
@@ -638,7 +725,9 @@ display_configuration_summary() {
     print_box_line "  • Location: ${DEVBASE_SSH_KEY_PATH}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
+_display_editor_config() {
   print_box_line "Editor & Shell:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   if [[ "${EDITOR}" == "nvim" ]]; then
     print_box_line "  • Default editor: Neovim" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
@@ -648,15 +737,19 @@ display_configuration_summary() {
     print_box_line "  • Shell bindings: Emacs mode" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
-  # Detect and show clipboard utility
+_display_clipboard_config() {
   local clipboard_util
   clipboard_util=$(detect_clipboard_utility 2>/dev/null || echo "not detected")
   print_box_line "Clipboard:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "  • ${clipboard_util}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
+_display_ide_config() {
   print_box_line "IDE & Editor Extensions:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
     print_box_line "  • VS Code: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
@@ -672,38 +765,47 @@ display_configuration_summary() {
   else
     print_box_line "  • VS Code: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
-  if [[ "${DEVBASE_INSTALL_LAZYVIM:-true}" == "true" ]]; then
+
+  if [[ "$DEVBASE_INSTALL_LAZYVIM" == "true" ]]; then
     print_box_line "  • LazyVim: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • LazyVim: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
-  if [[ "${DEVBASE_INSTALL_INTELLIJ:-no}" == "yes" ]]; then
+
+  if [[ "$DEVBASE_INSTALL_INTELLIJ" == "true" ]]; then
     print_box_line "  • IntelliJ IDEA: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • IntelliJ IDEA: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
-  if [[ "${DEVBASE_INSTALL_JMC:-no}" == "yes" ]]; then
+
+  if [[ "$DEVBASE_INSTALL_JMC" == "true" ]]; then
     print_box_line "  • JDK Mission Control: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • JDK Mission Control: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 
+  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
+
+_display_tools_config() {
   print_box_line "Tools & Integrations:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  if [[ "${DEVBASE_ZELLIJ_AUTOSTART:-true}" == "true" ]]; then
+
+  if [[ "$DEVBASE_ZELLIJ_AUTOSTART" == "true" ]]; then
     print_box_line "  • Zellij auto-start: Enabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • Zellij auto-start: Disabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
-  if [[ "${DEVBASE_ENABLE_GIT_HOOKS:-yes}" == "yes" ]]; then
+
+  if [[ "$DEVBASE_ENABLE_GIT_HOOKS" == "true" ]]; then
     print_box_line "  • Global git hooks: Enabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • Global git hooks: Disabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
+
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
 
-  print_box_bottom 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
+_display_installation_overview() {
   printf "\n"
   print_box_top "Installation Overview" 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
   print_box_line "• Estimated time: 10-15 minutes" 60
@@ -711,6 +813,30 @@ display_configuration_summary() {
   print_box_line "• Internet connection required" 60
   print_box_line "• Sudo password will be requested before install" 60
   print_box_bottom 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
+}
+
+display_configuration_summary() {
+  validate_var_set "DEVBASE_GIT_AUTHOR" || return 1
+  validate_var_set "DEVBASE_GIT_EMAIL" || return 1
+  validate_var_set "DEVBASE_THEME" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_ACTION" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_PATH" || return 1
+
+  printf "\n"
+  print_box_top "Configuration Summary" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+
+  _display_git_config
+  _display_theme_config
+  _display_ssh_config
+  _display_editor_config
+  _display_clipboard_config
+  _display_ide_config
+  _display_tools_config
+
+  print_box_bottom 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+
+  _display_installation_overview
 
   printf "\n"
   if ! ask_yes_no "Ready to install with these settings? (Y/n)" "Y"; then

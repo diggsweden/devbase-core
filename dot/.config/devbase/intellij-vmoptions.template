@@ -1,0 +1,46 @@
+# IntelliJ IDEA VM Options
+# Optimized for medium-sized projects (16GB+ RAM systems)
+# For more information: https://www.jetbrains.com/help/idea/tuning-the-ide.html
+
+# Memory Settings
+-Xms2048m
+-Xmx4096m
+
+# Garbage Collection
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+
+# Code Cache
+-XX:ReservedCodeCacheSize=1024m
+
+# Compiler threads
+-XX:CICompilerCount=2
+
+# String deduplication (reduces memory for duplicate strings)
+-XX:+UseStringDeduplication
+
+# Enable newer JVM features
+-XX:+UnlockDiagnosticVMOptions
+
+# Wayland support (Linux with Wayland)
+# WAYLAND_PLACEHOLDER
+
+# Improved rendering (uncomment if you experience UI issues)
+# -Dsun.java2d.uiScale=1.0
+
+# Disable specific JVM optimizations that can cause issues
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
+
+# Prevent IDE from stealing focus
+-Djdk.attach.allowAttachSelf=true
+
+# Better font rendering on Linux
+-Dawt.useSystemAAFontSettings=lcd
+-Dswing.aatext=true
+
+# Increase maximum file size that IDE can open (in KB)
+-Didea.max.intellisense.filesize=2500
+
+# Performance optimizations
+-Djava.net.preferIPv4Stack=true

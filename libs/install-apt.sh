@@ -15,12 +15,18 @@ fi
 
 # Brief: Read APT package list from configuration file
 # Params: None
-# Uses: DEVBASE_DOT (global)
+# Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES (globals)
 # Returns: 0 on success, 1 if file not found or unreadable
 # Outputs: Array of package names to global APT_PACKAGES_ALL
 # Side-effects: Populates APT_PACKAGES_ALL array, filters WSL-specific packages
 load_apt_packages() {
   local pkg_file="${DEVBASE_DOT}/.config/devbase/apt-packages.txt"
+
+  # Check for custom package list override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/apt-packages.txt" ]]; then
+    pkg_file="${_DEVBASE_CUSTOM_PACKAGES}/apt-packages.txt"
+    show_progress info "Using custom APT package list: $pkg_file"
+  fi
 
   if [[ ! -f "$pkg_file" ]]; then
     show_progress error "APT package list not found: $pkg_file"

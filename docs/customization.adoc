@@ -19,6 +19,11 @@ devbase-custom-config/
 ├── config/
 │   └── org.env                # Organization variables
 ├── certificates/              # CA certificates (*.crt)
+├── packages/                  # Package overrides (optional)
+│   ├── apt-packages.txt       # Override default APT packages
+│   ├── snap-packages.txt      # Override default snap packages
+│   ├── vscode-extensions.yaml # Override default VS Code extensions
+│   └── mise-config.toml       # Override default mise tools
 ├── templates/                 # Config templates
 ├── ssh/                       # SSH configuration
 │   └── custom.config          # Organization SSH hosts
@@ -314,6 +319,207 @@ ${VARIABLE_NAME:-default}     # Use default if not set
 ----
 
 Variables from `org.env` are automatically available.
+
+== Package Overrides
+
+Organizations can override the default package lists and VS Code extensions by providing custom lists in their custom configuration directory.
+
+=== Directory Structure
+
+[source]
+----
+devbase-custom-config/
+└── packages/
+    ├── apt-packages.txt        # Override default APT packages
+    ├── snap-packages.txt       # Override default snap packages
+    ├── vscode-extensions.yaml  # Override default VS Code extensions
+    └── mise-config.toml        # Override default mise tools
+----
+
+=== How Overrides Work
+
+When custom package lists are present, DevBase uses **full override mode** (not merge):
+
+1. **If custom file exists** → Use custom list exclusively
+2. **If custom file missing** → Use DevBase default list
+
+This matches the behavior of other custom configurations (templates, SSH) and gives organizations complete control over installed packages.
+
+=== APT Packages Override
+
+Create `devbase-custom-config/packages/apt-packages.txt`:
+
+[source,text]
+----
+# Organization Package List
+# One package per line, comments allowed
+
+# Core system tools
+build-essential
+git
+curl
+wget
+
+# Development tools
+fish                    # Fish shell 4.x
+neovim
+tmux
+
+# WSL-specific packages
+wslu                    # @skip-wsl
+
+# Organization-specific tools
+your-company-tool
+----
+
+**Tags:**
+
+- `@skip-wsl` - Skip package installation on WSL
+
+**Best practices:**
+
+- Start with DevBase defaults (`dot/.config/devbase/apt-packages.txt`) and customize
+- Document why packages are included/excluded
+- Keep organization-specific packages minimal
+- Test on clean system before deploying
+
+=== Snap Packages Override
+
+Create `devbase-custom-config/packages/snap-packages.txt`:
+
+[source,text]
+----
+# Organization Snap Packages
+# Format: package_name [options]
+# Options: --classic, --edge, --beta, --channel=<channel>
+
+# Terminal emulator with GPU acceleration
+ghostty --classic
+
+# Web browsers
+firefox
+chromium
+
+# Kubernetes (local development)
+microk8s --classic
+
+# Organization-specific snaps
+# your-company-tool --classic
+----
+
+**Options:**
+
+- `--classic` - Classic confinement (full system access)
+- `--edge` - Edge channel (latest development)
+- `--beta` - Beta channel
+- `--channel=<name>` - Specific channel
+
+**Best practices:**
+
+- Start with DevBase defaults (`dot/.config/devbase/snap-packages.txt`) and customize
+- Remove browsers if organization provides them differently
+- Skip microk8s if using k3s or other Kubernetes
+- Test snap installations on clean system
+- Document why specific channels/options are used
+
+=== VS Code Extensions Override
+
+Create `devbase-custom-config/packages/vscode-extensions.yaml`:
+
+[source,yaml]
+----
+# Organization VS Code Extensions
+# Format: extension-id:version (version optional)
+
+# Themes (match DEVBASE_THEME support)
+sainnhe.everforest:
+catppuccin.catppuccin-vsc:
+enkia.tokyo-night:
+jdinhlife.gruvbox:
+arcticicestudio.nord-visual-studio-code:
+dracula-theme.theme-dracula:
+
+# Java development
+redhat.java:
+vscjava.vscode-java-debug:
+vscjava.vscode-java-test:
+vscjava.vscode-maven:
+
+# Code quality
+sonarsource.sonarlint-vscode:
+shengchen.vscode-checkstyle:
+
+# Organization-specific
+your-company.internal-extension:
+----
+
+**Best practices:**
+
+- Start with DevBase defaults (`dot/.config/devbase/vscode-extensions.yaml`) and customize
+- Pin versions for critical extensions if needed
+- Test extension compatibility before deployment
+- Consider WSL Remote extension (auto-installed by DevBase)
+
+=== Mise Tools Override
+
+Create `devbase-custom-config/packages/mise-config.toml`:
+
+[source,toml]
+----
+[settings]
+experimental = true
+legacy_version_file = false
+asdf_compat = false
+jobs = 6
+yes = true
+http_timeout = "90s"
+
+[tools]
+# Core Languages & Runtimes
+node = "20.18.1"
+go = "1.25.1"
+python = "3.12"
+java = "temurin-21"
+
+# Development tools
+"aqua:junegunn/fzf" = "v0.65.2"
+"aqua:eza-community/eza" = "v0.23.4"
+"aqua:starship/starship" = "v1.24.0"
+
+# Organization-specific tools
+"aqua:your-org/internal-cli" = "v1.0.0"
+----
+
+**Best practices:**
+
+- Start with DevBase defaults (`dot/.config/mise/config.toml`) and customize
+- Keep essential development tools (node, python, java, go)
+- Use version pinning for reproducibility across organization
+- Test tool installations before deployment
+- Document organization-specific tools
+
+=== Validation During Installation
+
+During installation:
+
+[source,bash]
+----
+# If custom packages exist
+Using custom APT package list: /path/to/custom/packages/apt-packages.txt
+Found 42 packages to install
+
+# If custom snap packages exist
+Using custom snap package list: /path/to/custom/packages/snap-packages.txt
+Found 4 snap packages to install
+
+# If custom extensions exist
+Using custom VSCode extensions list: /path/to/custom/packages/vscode-extensions.yaml
+
+# If custom mise config exists
+Using custom mise config: /path/to/custom/packages/mise-config.toml
+----
+
+If custom files don't exist, DevBase silently uses defaults (no message shown).
 
 == Git Hooks
 
