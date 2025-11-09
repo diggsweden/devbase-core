@@ -58,7 +58,7 @@ jq = "jq-1.8.1"
 # Git and development tools
 "aqua:dandavison/delta" = "0.18.2"
 "aqua:orhun/git-cliff" = "v2.10.1"
-"aqua:neovim/neovim" = "v0.11.4"
+"aqua:neovim/neovim" = "v0.11.5"
 
 # Container and Kubernetes tools
 "aqua:docker/compose" = "v2.39.4"
