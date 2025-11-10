@@ -66,7 +66,7 @@ jq = "jq-1.8.1"
 "aqua:grafana/k6" = "v1.3.0"
 "aqua:argoproj/argo-cd" = "v3.1.9"
 "aqua:bitnami-labs/sealed-secrets" = "v0.32.2"
-"aqua:tektoncd/cli" = "v0.38.0"  # Tekton CLI (tkn)
+"aqua:tektoncd/cli" = "v0.42.0"  # Tekton CLI (tkn)
 
 # Code quality and formatting
 "aqua:google/yamlfmt" = "v0.20.0"
