@@ -81,7 +81,7 @@ jq = "jq-1.8.1"
 "aqua:zricethezav/gitleaks" = "v8.18.1"
 "aqua:anchore/syft" = "v1.36.0"
 # Lynis is installed via APT (see libs/install-apt.sh)
-"aqua:ossf/scorecard" = "v5.2.1"
+"aqua:ossf/scorecard" = "v5.3.0"
 
 # Verification tools (for verifying other tools)
 "aqua:sigstore/cosign" = "2.6.1"
