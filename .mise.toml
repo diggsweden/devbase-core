@@ -18,5 +18,5 @@ paranoid = true      # Enable strict security checks and verification
 "aqua:hadolint/hadolint" = "v2.14.0"
 "aqua:sharkdp/fd" = "v10.2.0"
 "aqua:BurntSushi/ripgrep" = "14.1.1"
-"aqua:tldr-pages/tlrc" = "v1.9.3"
+"aqua:tldr-pages/tlrc" = "v1.12.0"
 yq = "latest"  # YAML/XML processor for Maven settings generation
