@@ -94,7 +94,7 @@ jq = "jq-1.8.1"
 "github:italia/publiccode-parser-go" = "v4.3.7"
 
 # Additional development tools
-"aqua:BurntSushi/ripgrep" = "14.1.1"
+"aqua:BurntSushi/ripgrep" = "15.1.0"
 "aqua:sharkdp/fd" = "v10.2.0"
 "aqua:tldr-pages/tlrc" = "v1.12.0"
 "aqua:jesseduffield/lazygit" = "v0.56.0"
