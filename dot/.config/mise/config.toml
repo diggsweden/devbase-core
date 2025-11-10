@@ -84,7 +84,7 @@ jq = "jq-1.8.1"
 "aqua:ossf/scorecard" = "v5.3.0"
 
 # Verification tools (for verifying other tools)
-"aqua:sigstore/cosign" = "2.6.1"
+"aqua:sigstore/cosign" = "3.0.2"
 "github:slsa-framework/slsa-verifier" = "v2.7.1"
 
 # Git commit standards
