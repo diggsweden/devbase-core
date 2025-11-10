@@ -61,7 +61,7 @@ jq = "jq-1.8.1"
 "aqua:neovim/neovim" = "v0.11.5"
 
 # Container and Kubernetes tools
-"aqua:docker/compose" = "v2.39.4"
+"aqua:docker/compose" = "v2.40.3"
 "aqua:derailed/k9s" = "v0.50.16"
 "aqua:grafana/k6" = "v1.3.0"
 "aqua:argoproj/argo-cd" = "v3.1.9"
