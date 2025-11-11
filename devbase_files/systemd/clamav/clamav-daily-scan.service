@@ -1,0 +1,26 @@
+[Unit]
+Description=ClamAV Daily Scan
+After=network.target clamav-freshclam.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/mkdir -p /var/log/clamav
+# Use clamscan (standalone) to avoid persistent daemon
+# - Runs only during scheduled scans (2-4 AM)
+# - Excludes only caches and non-executable content
+# - Scans dependency directories for supply chain security
+# - Recursive scan with infection-only reporting
+ExecStart=/usr/bin/clamscan \
+  --recursive \
+  --infected \
+  --exclude-dir=.cache \
+  --exclude-dir=.local/share/Trash \
+  --exclude-dir=.git \
+  --exclude-dir=.vscode-server \
+  --log=/var/log/clamav/daily-scan.log \
+  /home \
+  /root \
+  /opt
+# Lowest priority to minimize impact on interactive performance
+Nice=19
+IOSchedulingClass=idle

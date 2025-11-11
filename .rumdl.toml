@@ -1,0 +1,23 @@
+# Rumdl configuration for markdown linting
+# https://github.com/rvben/rumdl
+
+[global]
+# Files and directories to ignore
+exclude = [
+    "node_modules/**",
+    ".git/**",
+    "target/**",
+    "dist/**",
+    "build/**",
+    ".mise/**",
+    "dot/.local/bin/empty.txt"
+]
+
+# MD013 - Line length rule (disabled by setting to very high value)
+[MD013]
+line-length = 10000
+
+# MD036 - Emphasis used instead of a heading  
+# (Allow emphasis that looks like headings, common in Swedish text)
+[MD036]
+punctuation = ".,;:!?。，；：！？"

@@ -1,0 +1,72 @@
+# ~/.config/fish/conf.d/00-environment.fish
+# Core environment variables - loads first due to 00- prefix
+
+# Terminal and locale
+set -gx TERM xterm-256color
+# Locale is inherited from system settings (/etc/default/locale)
+# which is configured during devbase installation
+
+# XDG Base Directory specification
+set -gx XDG_CONFIG_HOME $HOME/.config
+set -gx XDG_DATA_HOME $HOME/.local/share
+set -gx XDG_CACHE_HOME $HOME/.cache
+set -gx XDG_RUNTIME_DIR /run/user/(id -u)
+# XDG_BIN_HOME is not part of the spec, but follows the pattern
+set -gx XDG_BIN_HOME $HOME/.local/bin
+
+# PATH additions (Fish handles PATH differently)
+# Add ~/.local/bin to PATH early (for user-installed tools like mise)
+fish_add_path $HOME/.local/bin
+fish_add_path $HOME/snap/bin
+
+# SSH agent socket
+set -gx SSH_AUTH_SOCK "$XDG_RUNTIME_DIR/ssh-agent.socket"
+
+# GPG
+set -gx GPG_TTY (tty)
+
+# Default editor settings
+set -gx EDITOR "${EDITOR}"
+set -gx VISUAL "${VISUAL}"
+
+# User UID for various tools
+set -gx USER_UID (id -u)
+
+# Podman - expose dockerhost for docker-compose compatibility
+set -gx DOCKER_HOST "unix:///run/user/$USER_UID/podman/podman.sock"
+
+# Java certificate configuration
+if test -n "${DEVBASE_CUSTOM_CERTS}"
+    set -gx JAVA_TOOL_OPTIONS "-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+end
+
+
+# Theme configuration - centralized via DEVBASE_THEME
+set -gx DEVBASE_THEME "${DEVBASE_THEME}"
+
+# Tool-specific theme settings are handled by environment variables
+# set above (BAT_THEME, FZF_DEFAULT_OPTS)
+
+# Starship prompt
+set -gx STARSHIP_CONFIG "$XDG_CONFIG_HOME/starship/starship.toml"
+
+# Runtime theme variables (for apps that read from environment)
+set -gx BAT_THEME "${BAT_THEME}"
+
+# FZF theme colors - apply on shell startup based on DEVBASE_THEME
+# Uses __devbase_theme_get_fzf_opts from devbase-theme.fish to get theme-specific color palettes
+if test -n "$DEVBASE_THEME"
+    if functions -q __devbase_theme_get_fzf_opts
+        set -gx FZF_DEFAULT_OPTS (__devbase_theme_get_fzf_opts $DEVBASE_THEME)
+    end
+end
+
+# Zellij auto-start configuration
+set -gx DEVBASE_ZELLIJ_AUTOSTART "${DEVBASE_ZELLIJ_AUTOSTART}"
+
+# Registry configuration from devbase setup
+set -gx DEVBASE_REGISTRY_URL "${DEVBASE_REGISTRY_URL}"
+set -gx DEVBASE_CONTAINERS_REGISTRY "${DEVBASE_CONTAINERS_REGISTRY}"
+
+# Proxy configuration variables are now handled by generate_fish_proxy_config()
+# in libs/config.sh which generates 00-proxy.fish separately

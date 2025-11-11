@@ -1,0 +1,27 @@
+# Custom Tool Versions for Development Environment
+# This file contains ONLY custom tools with specialized installers NOT managed by mise
+# For mise-managed tools (node, python, aqua packages, etc.), see: ~/.config/mise/config.toml
+# For APT packages, see: apt-packages.txt
+# For VSCode extensions, see: vscode-extensions.yaml
+# Automatically updated by Renovate Bot
+# Bootstrap tool (installs itself - must bootstrap before mise can run)
+mise: v2025.9.20 # renovate: datasource=github-releases depName=jdx/mise
+# Fish shell plugins (installed via Fisher, not mise)
+fisher: 4.4.5 # renovate: datasource=github-releases depName=jorgebucaran/fisher
+fzf_fish: v10.3 # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
+# Snap packages (optional GUI tools, not in mise)
+ghostty: 1.2.0 # renovate: datasource=github-releases depName=ghostty-org/ghostty
+# Neovim config (git ref - commit hash)
+lazyvim_starter: 803bc18 # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter lookupName=main
+# Nerd Fonts (patched fonts with icons/glyphs)
+nerd_fonts: v3.4.0 # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
+# Custom datasources (not available in mise/aqua)
+oc: 4.15.33 # renovate: datasource=custom depName=openshift/oc
+k3s: v1.32.4+k3s1 # renovate: datasource=github-releases depName=k3s-io/k3s
+# Java development tools (custom installers with complex logic)
+keystore_explorer: v5.6.0 # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
+jdk_mission_control: 9.1.1 # renovate: datasource=github-releases depName=adoptium/jmc-build
+dbeaver: 25.2.1 # renovate: datasource=github-releases depName=dbeaver/dbeaver extractVersion=^v?(?<version>\d+\.\d+\.\d+)$
+intellij_idea: 2025.2.4 # renovate: datasource=jetbrains-releases depName=idea packageName=IIU
+# VS Code (custom installer with WSL-specific logic)
+vscode: 1.105.1 # renovate: datasource=github-releases depName=microsoft/vscode

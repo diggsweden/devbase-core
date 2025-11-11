@@ -1,0 +1,36 @@
+# Editor aliases based on EDITOR preference
+
+if string match -q "*vim*" "$EDITOR"; or test "$EDITOR" = "vi"
+    # Vim user aliases - point to nvim if available, otherwise vim
+    if command -q nvim
+        alias vi='nvim'
+        alias vim='nvim'
+        alias v='nvim'
+        alias view='nvim -R'
+        alias vimrc='nvim ~/.config/nvim/init.lua'
+    else
+        alias v='vim'
+        alias view='vim -R'
+        alias vimrc='vim ~/.vimrc'
+    end
+    alias fishconfig='$EDITOR ~/.config/fish/config.fish'
+else
+    # Non-vim user aliases
+    alias edit='$EDITOR'
+    alias fishconfig='$EDITOR ~/.config/fish/config.fish'
+    
+    # But still provide vim/nvim if available
+    if command -q nvim
+        alias vi='nvim'
+        alias vim='nvim'
+    else if command -q vim
+        alias vi='vim'
+    end
+end
+
+# Common editor-agnostic aliases
+alias e='$EDITOR'
+alias se='sudo $EDITOR'
+
+# IntelliJ IDEA
+alias idea='$HOME/.local/share/JetBrains/IntelliJIdea/bin/idea'

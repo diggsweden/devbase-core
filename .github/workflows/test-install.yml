@@ -1,0 +1,68 @@
+name: Test Installation
+on:
+  pull_request:
+    paths:
+      - 'setup.sh'
+      - 'libs/**'
+      - 'dot/**'
+      - 'environments/**'
+      - '.github/workflows/test-install.yml'
+  workflow_dispatch:
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-latest
+    name: Test on Ubuntu ${{ matrix.version }}
+    strategy:
+      matrix:
+        version: ['24.04']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Cache Mise tools
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.local/share/mise/installs
+            ~/.local/share/mise/downloads
+          key: mise-${{ runner.os }}-${{ hashFiles('dot/.config/mise/config.toml') }}
+          restore-keys: |
+            mise-${{ runner.os }}-
+      - name: Cache VS Code extensions
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.vscode/extensions
+            ~/.config/Code/User
+          key: vscode-ext-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/vscode-extensions.yaml') }}
+          restore-keys: |
+            vscode-ext-${{ runner.os }}-
+      - name: Cache binary downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/devbase/debs
+          key: binary-downloads-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/custom-tools.yaml') }}
+          restore-keys: |
+            binary-downloads-${{ runner.os }}-
+      - name: Prepare binary cache directory
+        run: mkdir -p ~/.cache/devbase/debs
+      - name: Run installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_NAME: DevBase CI
+          GIT_EMAIL: ci@devbase.test
+          DEVBASE_DEB_CACHE: ~/.cache/devbase/debs
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          export CI=true
+          ./setup.sh --non-interactive
+      - name: Verify installation
+        run: |
+          sudo -v
+          ./verify/verify-install-check.sh
+      - name: Upload installation summary
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: install-summary-${{ matrix.version }}
+          path: ~/.config/devbase/install-summary.txt
+          retention-days: 7

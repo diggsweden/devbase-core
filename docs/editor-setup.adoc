@@ -1,0 +1,88 @@
+= Editor Setup
+
+== VS Code
+
+=== WSL Users - Important
+
+VS Code extensions on WSL are installed in the *VS Code Server* (`~/.vscode-server`), which is created when you first connect from Windows VS Code using the Remote-WSL extension.
+
+DevBase setup handles this automatically:
+
+1. **During setup**: If Remote-WSL extension is installed, setup offers to automatically launch VS Code to create vscode-server
+2. **If you decline or it fails**: Setup provides step-by-step instructions for your specific user
+3. **After vscode-server is created**: Re-run setup to install extensions
+
+==== Per-User Setup
+
+Each WSL user (including when using `su -l username`) needs their own vscode-server:
+
+[source,bash]
+----
+# Connect from WSL as specific user
+wsl -d Ubuntu-24.04 -u username
+/mnt/c/Program\ Files/Microsoft\ VS\ Code/bin/code .
+
+# Or let DevBase setup handle it automatically during installation
+----
+
+The setup script detects your current user and provides tailored instructions.
+
+=== Extensions
+
+Extensions installed automatically if VS Code detected:
+- GitLens
+- EditorConfig
+- Prettier
+- ESLint
+- Shellcheck
+- YAML
+- Docker
+- Remote Development
+
+Settings applied: `.config/Code/User/settings.json`
+
+== Neovim
+
+DevBase installs LazyVim starter configuration with:
+- LSP support
+- Treesitter syntax
+- Everforest theme (matches terminal theme)
+- Leader key: `space`
+
+Config: `~/.config/nvim/`
+
+Add personal configs to:
+- `~/.config/nvim/lua/plugins/` - Custom plugin configurations
+- `~/.config/nvim/after/` - Personal overrides
+
+See link:https://www.lazyvim.org/configuration[LazyVim documentation] for customization options.
+
+== IntelliJ IDEA
+
+Import code styles from devbase-core installation directory:
+- Java: `.config/devtools/formatting/java/eclipse-java-google-style.xml`
+- Checkstyle: `.config/devtools/linting/java/google_checks.xml`
+
+Settings → Editor → Code Style → Import Scheme
+
+These files are copied to `~/.config/devtools/` during installation.
+
+== Common Issues
+
+=== VS Code can't find tools
+Add to settings.json:
+[source,json]
+----
+"terminal.integrated.profiles.linux": {
+  "fish": {
+    "path": "/usr/bin/fish"
+  }
+}
+----
+
+=== Neovim plugins not loading
+[source,bash]
+----
+rm -rf ~/.local/share/nvim
+nvim --headless "+Lazy! sync" +qa
+----
