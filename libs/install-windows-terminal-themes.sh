@@ -239,7 +239,7 @@ install_windows_terminal_themes() {
 
   # Inject themes into settings.json
   if _inject_themes_to_settings "$wt_settings" "$themes_array" "$backup_file"; then
-    printf "  %b✓%b Windows Terminal: All 8 DevBase themes installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" >&2
+    printf "  %b✓%b Windows Terminal: All 12 DevBase themes installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" >&2
     return 0
   else
     printf "  %b✗%b Windows Terminal: Failed to update settings.json\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
