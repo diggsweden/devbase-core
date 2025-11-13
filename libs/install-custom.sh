@@ -493,8 +493,8 @@ install_reuse() {
 
   # Install reuse with pipx (respects HTTP_PROXY/HTTPS_PROXY/PIP_INDEX_URL env vars)
   local output
-  output=$(pipx install reuse 2>&1 | tee /dev/tty)
-
+  output=$(pipx install reuse 2>&1)
+  
   if echo "$output" | grep -qE "(installed package|already seems to be installed)"; then
     if echo "$output" | grep -q "already seems to be installed"; then
       show_progress success "reuse is already installed"
@@ -504,6 +504,9 @@ install_reuse() {
     return 0
   else
     show_progress error "Failed to install reuse via pipx"
+    if [[ -n "$output" ]]; then
+      printf "  Error details: %s\n" "$output" >&2
+    fi
     return 1
   fi
 }

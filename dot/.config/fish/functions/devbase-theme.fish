@@ -528,11 +528,11 @@ function devbase-theme --description "Set theme for multiple CLI tools"
     # Update CLI tools
     __devbase_theme_update_cli_tools $theme_name
     
+    # Save preference (must be done before updating terminals since they read $DEVBASE_THEME)
+    __devbase_theme_save_preference $theme_name
+    
     # Update terminals and collect results
     set -l terminal_results (__devbase_theme_update_terminals $theme_name)
-    
-    # Save preference
-    __devbase_theme_save_preference $theme_name
     
     # Parse results and print
     set -l parsed (string split " " (__devbase_theme_parse_terminal_results $terminal_results))
