@@ -104,13 +104,13 @@ function __update_gnome_apply_colors --description "Apply colors to GNOME Termin
     set -l cursor $argv[4]
     set -l palette_str $argv[5]
     
-    gsettings set $profile_path use-theme-colors false 2>/dev/null
-    gsettings set $profile_path background-color "$bg" 2>/dev/null
-    gsettings set $profile_path foreground-color "$fg" 2>/dev/null
-    gsettings set $profile_path cursor-background-color "$cursor" 2>/dev/null
-    gsettings set $profile_path cursor-foreground-color "$bg" 2>/dev/null
-    gsettings set $profile_path palette "$palette_str" 2>/dev/null
-    gsettings set $profile_path bold-color-same-as-fg true 2>/dev/null
+    gsettings set $profile_path use-theme-colors false
+    and gsettings set $profile_path background-color "$bg"
+    and gsettings set $profile_path foreground-color "$fg"
+    and gsettings set $profile_path cursor-background-color "$cursor"
+    and gsettings set $profile_path cursor-foreground-color "$bg"
+    and gsettings set $profile_path palette "$palette_str"
+    and gsettings set $profile_path bold-color-same-as-fg true
 end
 
 function update-gnome-terminal-theme --description "Update GNOME Terminal theme on native Ubuntu"

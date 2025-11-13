@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Dracula skin
-# Source: https://github.com/derailed/k9s/blob/master/skins/dracula.yaml
 # -----------------------------------------------------------------------------
+
 # Styles...
 foreground: &foreground "#f8f8f2"
 background: &background "#282a36"
@@ -15,6 +15,7 @@ pink: &pink "#ff79c6"
 purple: &purple "#bd93f9"
 red: &red "#ff5555"
 yellow: &yellow "#f1fa8c"
+
 # Skin...
 k9s:
   # General K9s styles

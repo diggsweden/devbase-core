@@ -49,12 +49,13 @@ function update-ghostty-theme --description "Update Ghostty theme on native Ubun
 
     # Update Ghostty config file
     set -l ghostty_config "$XDG_CONFIG_HOME/ghostty/config"
-    if test -f "$ghostty_config"
-        # Update or add theme line
-        if grep -q "^theme = " "$ghostty_config"
-            sed -i "s|^theme = .*|theme = $ghostty_theme|" "$ghostty_config"
-        else
-            echo "theme = $ghostty_theme" >> "$ghostty_config"
-        end
+    if not test -f "$ghostty_config"
+        return 0
+    end
+    
+    if grep -q "^theme = " "$ghostty_config"
+        sed -i "s|^theme = .*|theme = $ghostty_theme|" "$ghostty_config"
+    else
+        echo "theme = $ghostty_theme" >> "$ghostty_config"
     end
 end

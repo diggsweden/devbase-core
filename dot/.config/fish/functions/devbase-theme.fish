@@ -1,5 +1,20 @@
 function __devbase_theme_show_usage --description "Display theme usage information"
     printf "Usage: devbase-theme <name>\n"
+    printf "\n"
+
+    set -l current_theme (set -q DEVBASE_THEME; and echo $DEVBASE_THEME; or echo "everforest-dark")
+    
+    set -l theme_variant "dark"
+    if __devbase_theme_is_light $current_theme
+        set theme_variant "light"
+    end
+    
+    printf "Current theme: "
+    set_color green --bold
+    printf "%s" "$current_theme"
+    set_color normal
+    printf " (%s)\n" "$theme_variant"
+
     printf "\nAvailable themes:\n"
     printf "  Everforest:  everforest-dark (default), everforest-light\n"
     printf "  Catppuccin:  catppuccin-mocha, catppuccin-latte\n"
@@ -80,7 +95,7 @@ function __devbase_theme_get_btop_theme
         case tokyonight-night
             echo "tokyo-night"
         case tokyonight-day
-            echo "tokyo-storm"
+            echo "everforest-light-medium"
         case gruvbox-dark
             echo "gruvbox_dark"
         case gruvbox-light
@@ -164,7 +179,7 @@ function __devbase_theme_get_zellij_theme
         case tokyonight-night
             echo "tokyo-night"
         case tokyonight-day
-            echo "tokyo-night-light"
+            echo "tokyo-day"
         case gruvbox-dark
             echo "gruvbox-dark"
         case gruvbox-light
@@ -253,9 +268,15 @@ function __devbase_theme_update_vifm --description "Update vifm colorscheme"
     end
     
     switch $theme_name
-        case everforest-dark catppuccin-mocha tokyonight-night gruvbox-dark nord dracula solarized-dark
+        case solarized-dark
+            sed -i 's/^colorscheme .*/colorscheme solarized-dark/' ~/.config/vifm/vifmrc
+        case solarized-light
+            sed -i 's/^colorscheme .*/colorscheme solarized-light/' ~/.config/vifm/vifmrc
+        case gruvbox-dark
             sed -i 's/^colorscheme .*/colorscheme gruvbox/' ~/.config/vifm/vifmrc
-        case everforest-light catppuccin-latte tokyonight-day gruvbox-light solarized-light
+        case everforest-dark catppuccin-mocha tokyonight-night nord dracula
+            sed -i 's/^colorscheme .*/colorscheme gruvbox/' ~/.config/vifm/vifmrc
+        case everforest-light catppuccin-latte tokyonight-day gruvbox-light
             sed -i 's/^colorscheme .*/colorscheme solarized-light/' ~/.config/vifm/vifmrc
     end
 end
@@ -283,17 +304,14 @@ function __devbase_theme_update_vscode --description "Update VSCode theme"
     if test -f $settings_file
         if command -v jq &>/dev/null
             jq --arg theme "$vscode_theme" '. + {"workbench.colorTheme": $theme}' $settings_file > $settings_file.tmp
-            mv $settings_file.tmp $settings_file
-            return 0
+            and mv $settings_file.tmp $settings_file
         end
     else
         mkdir -p (dirname $settings_file)
         echo '{
   "workbench.colorTheme": "'$vscode_theme'"
 }' > $settings_file
-        return 0
     end
-    return 1
 end
 
 function __devbase_theme_get_fzf_opts

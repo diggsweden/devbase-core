@@ -2,6 +2,7 @@
 # K9s Gruvbox Dark Skin
 # Author: [@indiebrain](https://github.com/indiebrain)
 # -----------------------------------------------------------------------------
+
 # Styles...
 foreground: &foreground "#ebdbb2"
 background: &background "#272727"
@@ -14,6 +15,7 @@ orange: &orange "#d79920"
 magenta: &magenta "#b16185"
 blue: &blue "#448488"
 red: &red "#cc231c"
+
 k9s:
   body:
     fgColor: *foreground

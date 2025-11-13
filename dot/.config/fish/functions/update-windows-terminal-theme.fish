@@ -145,6 +145,14 @@ function __update_wt_apply_scheme --description "Apply Windows Terminal color sc
         return 1
     end
     
+    # Verify scheme exists in settings
+    if not jq -e --arg scheme "$wt_scheme_name" '.schemes[]? | select(.name == $scheme)' "$wt_settings" >/dev/null 2>&1
+        echo "✗ Windows Terminal: Scheme '$wt_scheme_name' not installed in settings.json" >&2
+        echo "  Run install-windows-terminal-themes to install schemes" >&2
+        rm -f "$temp_file"
+        return 1
+    end
+    
     # Apply the color scheme change
     if not jq --arg scheme_name "$wt_scheme_name" '.profiles.defaults.colorScheme = $scheme_name' "$wt_settings" > "$temp_file" 2>&1
         set -l jq_error (jq --arg scheme_name "$wt_scheme_name" '.profiles.defaults.colorScheme = $scheme_name' "$wt_settings" 2>&1)
@@ -175,7 +183,11 @@ function __update_wt_apply_scheme --description "Apply Windows Terminal color sc
         return 1
     end
     
-    return 0
+    __devbase_verify_with_retry \
+        "jq -r '.profiles.defaults.colorScheme // empty' '$wt_settings'" \
+        "$wt_scheme_name" \
+        "Windows Terminal" \
+        5 100 1000
 end
 
 function __update_wt_validate_environment --description "Validate WSL and prerequisites"
@@ -208,9 +220,9 @@ function __update_wt_get_settings_and_backup --description "Find settings file a
         return 1
     end
     
-    set -l timestamp (date +%S.%H.%M.%y)
+    set -l timestamp (date +%Y%m%d_%H%M%S)
     set -l settings_dir (dirname "$wt_settings")
-    set -l backup_file "$settings_dir/settings.$timestamp.json"
+    set -l backup_file "$settings_dir/settings.backup.$timestamp.json"
     if not cp "$wt_settings" "$backup_file" 2>/dev/null
         echo "✗ Windows Terminal: Failed to create backup" >&2
         return 1

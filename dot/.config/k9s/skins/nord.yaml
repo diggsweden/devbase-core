@@ -1,6 +1,7 @@
 # -----------------------------------------------------------------------------
 # Nord skin
 # -----------------------------------------------------------------------------
+
 # Styles...
 foreground: &foreground "#DADEE8"
 background: &background "#30343F"
@@ -14,6 +15,7 @@ blue: &blue "#81A1C1"
 magenta: &magenta "#B48EAD"
 red: &red "#BF616A"
 yellow: &yellow "#EBCB8B"
+
 # Skin...
 k9s:
   # General K9s styles

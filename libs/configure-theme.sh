@@ -24,8 +24,8 @@ THEME_CONFIGS[catppuccin-mocha]="dark|Dracula|catppuccin_mocha|Dracula|catppucci
 THEME_CONFIGS[catppuccin-latte]="light|OneHalfLight|catppuccin_latte|OneHalfLight|catppuccin-latte|catppuccin-latte|solarized-light|catppuccin-latte"
 
 # Tokyo Night themes
-THEME_CONFIGS[tokyonight-night]="dark|Visual Studio Dark+|tokyo-night|Visual Studio Dark+|tokyo-night|tokyonight-night|solarized-dark|gruvbox-dark"
-THEME_CONFIGS[tokyonight-day]="light|GitHub|tokyo-storm|GitHub|tokyo-day|tokyonight-day|solarized-light|everforest-light"
+THEME_CONFIGS[tokyonight-night]="dark|Visual Studio Dark+|tokyo-night|Visual Studio Dark+|tokyo-night|tokyonight-night|gruvbox|gruvbox-dark"
+THEME_CONFIGS[tokyonight-day]="light|GitHub|everforest-light-medium|GitHub|tokyo-day|tokyonight-day|solarized-light|everforest-light"
 
 # Gruvbox themes
 THEME_CONFIGS[gruvbox-dark]="dark|gruvbox-dark|gruvbox_dark|gruvbox-dark|gruvbox-dark|gruvbox|gruvbox|gruvbox-dark"

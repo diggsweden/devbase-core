@@ -193,6 +193,25 @@ devbase-theme gruvbox-light
 
 Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows Terminal (WSL), Ghostty (Linux), VSCode
 
+**Theme Provenance:**
+
+| Tool | Theme Source | Notes |
+|------|--------------|-------|
+| **btop** | Official | 10 from [btop official repo](https://github.com/aristocratos/btop/tree/main/themes), 2 from [catppuccin/btop](https://github.com/catppuccin/btop) |
+| **k9s** | Official | 8 from [k9s official skins](https://github.com/derailed/k9s/tree/master/skins), 2 from [catppuccin/k9s](https://github.com/catppuccin/k9s) |
+| **eza** | Official + Custom | 14 from [eza-community/eza-themes](https://github.com/eza-community/eza-themes), 2 custom (nord.yml, solarized-light.yml) |
+| **Windows Terminal** | Custom | Custom JSON schemes using [official color palettes](https://windowsterminalthemes.dev/) (Nord, Dracula, Solarized, etc.) |
+| **Ghostty** | Built-in | Uses [Ghostty built-in themes](https://ghostty.org/) via theme names |
+| **bat/delta** | Built-in | Uses bat/delta built-in syntax themes |
+| **FZF** | Custom | Custom color schemes matching theme palettes |
+| **Neovim** | Plugin | Uses official theme plugins (everforest, catppuccin, tokyonight, gruvbox, nord, dracula, solarized) |
+| **vifm** | Community | Uses [vifm community themes](https://github.com/vifm/vifm-colors) |
+| **Lazygit** | Built-in | Uses built-in light/dark mode |
+| **Zellij** | Configuration | Theme colors defined in config (no separate theme files) |
+| **VSCode** | Extensions | Requires corresponding theme extensions to be installed |
+
+**Note:** All custom themes reference official color palettes from their respective projects (Nord, Dracula, Solarized, Everforest, Catppuccin, Tokyo Night, Gruvbox) to ensure visual consistency.
+
 **devbase-font** - Set fonts for terminals and editors:
 
 ```bash
