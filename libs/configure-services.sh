@@ -173,8 +173,8 @@ configure_clamav_service() {
     show_progress success "Disabled ClamAV persistent daemon (will run only during scheduled scans)"
   fi
 
-  if sudo systemctl enable clamav-freshclam.service; then
-    sudo systemctl start clamav-freshclam.service || true
+  if sudo systemctl enable clamav-freshclam.service 2>&1 | sed 's/^/    /'; then
+    sudo systemctl start clamav-freshclam.service >/dev/null 2>&1 || true
     show_progress success "ClamAV freshclam enabled"
   else
     show_progress warning "Failed to enable clamav-freshclam service"
@@ -182,9 +182,9 @@ configure_clamav_service() {
 
   if [[ -d "$source_dir" ]]; then
     if sudo cp "$source_dir"/*.{service,timer} "$systemd_dir"/ 2>/dev/null; then
-      sudo systemctl daemon-reload
-      if sudo systemctl enable clamav-daily-scan.timer; then
-        if sudo systemctl start clamav-daily-scan.timer; then
+      sudo systemctl daemon-reload 2>&1 | sed 's/^/    /'
+      if sudo systemctl enable clamav-daily-scan.timer 2>&1 | sed 's/^/    /'; then
+        if sudo systemctl start clamav-daily-scan.timer >/dev/null 2>&1; then
           show_progress success "ClamAV daily scan enabled and started (runs 2-4 AM)"
         else
           show_progress warning "ClamAV daily scan enabled (will start on next boot)"
@@ -212,16 +212,16 @@ disable_kubernetes_services() {
   show_progress info "Disabling Kubernetes services (enable manually when needed)..."
 
   if command -v k3s &>/dev/null; then
-    if sudo systemctl stop k3s; then
-      sudo systemctl disable k3s || true
+    if sudo systemctl stop k3s >/dev/null 2>&1; then
+      sudo systemctl disable k3s 2>&1 | sed 's/^/    /' || true
       show_progress success "K3s disabled (enable with: sudo systemctl enable --now k3s)"
     fi
   fi
 
   # Disable MicroK8s if installed
   if command -v microk8s &>/dev/null; then
-    if sudo snap stop microk8s; then
-      sudo systemctl disable snap.microk8s.daemon-kubelite || true
+    if sudo snap stop microk8s >/dev/null 2>&1; then
+      sudo systemctl disable snap.microk8s.daemon-kubelite 2>&1 | sed 's/^/    /' || true
       show_progress success "MicroK8s disabled (enable with: sudo systemctl enable --now snap.microk8s.daemon-kubelite)"
     fi
   fi

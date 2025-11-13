@@ -1,5 +1,4 @@
 colourful: true
-
 filekinds:
   normal: {foreground: "#3c3836"}
   directory: {foreground: "#076678"}
@@ -11,7 +10,6 @@ filekinds:
   special: {foreground: "#b16286"}
   executable: {foreground: "#98971a"}
   mount_point: {foreground: "#d65d0e"}
-
 perms:
   user_read: {foreground: "#3c3836"}
   user_write: {foreground: "#d79921"}
@@ -26,7 +24,6 @@ perms:
   special_user_file: {foreground: "#b16286"}
   special_other: {foreground: "#7c6f64"}
   attribute: {foreground: "#7c6f64"}
-
 size:
   major: {foreground: "#7c6f64"}
   minor: {foreground: "#427b58"}
@@ -40,7 +37,6 @@ size:
   unit_mega: {foreground: "#b16286"}
   unit_giga: {foreground: "#b16286"}
   unit_huge: {foreground: "#d65d0e"}
-
 users:
   user_you: {foreground: "#3c3836"}
   user_root: {foreground: "#9d0006"}
@@ -48,11 +44,9 @@ users:
   group_yours: {foreground: "#3c3836"}
   group_other: {foreground: "#7c6f64"}
   group_root: {foreground: "#9d0006"}
-
 links:
   normal: {foreground: "#427b58"}
   multi_link_file: {foreground: "#d65d0e"}
-
 git:
   new: {foreground: "#98971a"}
   modified: {foreground: "#d79921"}
@@ -61,20 +55,17 @@ git:
   typechange: {foreground: "#b16286"}
   ignored: {foreground: "#7c6f64"}
   conflicted: {foreground: "#cc241d"}
-
 git_repo:
   branch_main: {foreground: "#3c3836"}
   branch_other: {foreground: "#b16286"}
   git_clean: {foreground: "#98971a"}
   git_dirty: {foreground: "#9d0006"}
-
 security_context:
   colon: {foreground: "#7c6f64"}
   user: {foreground: "#3c3836"}
   role: {foreground: "#b16286"}
   typ: {foreground: "#a89984"}
   range: {foreground: "#b16286"}
-
 file_type:
   image: {foreground: "#d79921"}
   video: {foreground: "#9d0006"}
@@ -87,7 +78,6 @@ file_type:
   compiled: {foreground: "#076678"}
   build: {foreground: "#7c6f64"}
   source: {foreground: "#076678"}
-
 punctuation: {foreground: "#7c6f64"}
 date: {foreground: "#d79921"}
 inode: {foreground: "#7c6f64"}
@@ -95,7 +85,6 @@ blocks: {foreground: "#928374"}
 header: {foreground: "#3c3836"}
 octal: {foreground: "#427b58"}
 flags: {foreground: "#b16286"}
-
 symlink_path: {foreground: "#427b58"}
 control_char: {foreground: "#076678"}
 broken_symlink: {foreground: "#9d0006"}

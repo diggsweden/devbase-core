@@ -94,7 +94,7 @@ configure_git_certificate() {
 # Returns: 0 always
 # Side-effects: Rebuilds system cert bundle, configures snap certs
 update_system_certificates() {
-  sudo update-ca-certificates
+  sudo update-ca-certificates 2>&1 | sed 's/^/    /'
   configure_snap_certificates
 
   return 0

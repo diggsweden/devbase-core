@@ -35,7 +35,7 @@ show_progress() {
 
   # Information/details
   info)
-    printf "    %b\n" "$message"
+    printf "  %b%s%b %b\n" "${DEVBASE_COLORS[CYAN]}" "${DEVBASE_SYMBOLS[INFO]}" "${DEVBASE_COLORS[NC]}" "$message"
     ;;
 
   # Success/completion

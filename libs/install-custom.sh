@@ -98,11 +98,12 @@ install_lazyvim() {
   fi
 
   show_progress info "Cloning LazyVim starter (version: $lazyvim_version)..."
-  if git clone https://github.com/LazyVim/starter "$nvim_config"; then
+  local git_output
+  if git_output=$(git clone --quiet https://github.com/LazyVim/starter "$nvim_config" 2>&1); then
     cd "$nvim_config" || return 1
 
     if [[ "$lazyvim_version" != "main" ]]; then
-      git checkout "$lazyvim_version" 2>/dev/null || {
+      git checkout --quiet "$lazyvim_version" 2>/dev/null || {
         show_progress warning "Failed to checkout $lazyvim_version, using main"
       }
     fi
@@ -112,6 +113,9 @@ install_lazyvim() {
     show_progress success "LazyVim starter installed ($lazyvim_version)"
   else
     show_progress error "Failed to clone LazyVim starter"
+    if [[ -n "$git_output" ]]; then
+      printf "  Error details: %s\n" "$git_output" >&2
+    fi
     return 1
   fi
 
@@ -440,7 +444,8 @@ install_fisher() {
   local fisher_version="${TOOL_VERSIONS[fisher]}"
   local fisher_dir="${_DEVBASE_TEMP}/fisher"
 
-  if git clone --depth 1 --branch "${fisher_version}" https://github.com/jorgebucaran/fisher.git "$fisher_dir" 2>&1 | grep -v "Cloning into" | grep -v "remote:" || true; then
+  local git_output
+  if git_output=$(git clone --quiet --depth 1 --branch "${fisher_version}" https://github.com/jorgebucaran/fisher.git "$fisher_dir" 2>&1); then
     if fish -c "source $fisher_dir/functions/fisher.fish && fisher install jorgebucaran/fisher" >/dev/null 2>&1; then
       show_progress success "Fisher installed ($fisher_version)"
 
@@ -458,6 +463,9 @@ install_fisher() {
     fi
   else
     show_progress error "Failed to clone Fisher repository"
+    if [[ -n "$git_output" ]]; then
+      printf "  Error details: %s\n" "$git_output" >&2
+    fi
     return 1
   fi
 
@@ -484,8 +492,15 @@ install_reuse() {
   fi
 
   # Install reuse with pipx (respects HTTP_PROXY/HTTPS_PROXY/PIP_INDEX_URL env vars)
-  if pipx install reuse 2>&1 | tee /dev/tty | grep -qE "(installed package|already installed)"; then
-    show_progress success "reuse installed successfully"
+  local output
+  output=$(pipx install reuse 2>&1 | tee /dev/tty)
+
+  if echo "$output" | grep -qE "(installed package|already seems to be installed)"; then
+    if echo "$output" | grep -q "already seems to be installed"; then
+      show_progress success "reuse is already installed"
+    else
+      show_progress success "reuse installed successfully"
+    fi
     return 0
   else
     show_progress error "Failed to install reuse via pipx"

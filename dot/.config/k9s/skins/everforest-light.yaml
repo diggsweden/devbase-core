@@ -13,7 +13,6 @@ yellow: &yellow "#dfa000"
 green: &green "#35a77c"
 pink: &pink "#df69ba"
 orange: &orange "#f57d26"
-
 # Skin...
 k9s:
   # General K9s styles

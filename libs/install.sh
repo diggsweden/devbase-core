@@ -863,7 +863,7 @@ prepare_system() {
   # Check/obtain sudo access right before we need it (after user answers questions)
   if ! sudo -n true 2>/dev/null; then
     show_progress info "Sudo access required for system package installation"
-    printf "%b Please enter your password when prompted\n" "${DEVBASE_COLORS[DIM]}ℹ"
+    show_progress info "Please enter your password when prompted"
 
     if ! sudo -v; then
       die "Sudo access required to install system packages"

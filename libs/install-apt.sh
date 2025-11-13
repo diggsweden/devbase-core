@@ -85,8 +85,8 @@ load_apt_packages() {
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 pkg_update() {
-  retry_command sudo apt-get -q update
-  return 0
+  retry_command sudo apt-get -q update 2>&1 | sed 's/^/    /'
+  return "${PIPESTATUS[0]}"
 }
 
 # Brief: Install APT packages with retry logic
@@ -102,8 +102,8 @@ pkg_install() {
     validate_not_empty "$pkg" "Package name" || return 1
   done
 
-  retry_command sudo apt-get -y -q install "${packages[@]}"
-  return 0
+  retry_command sudo apt-get -y -q install "${packages[@]}" 2>&1 | sed 's/^/    /'
+  return "${PIPESTATUS[0]}"
 }
 
 # Brief: Remove unused APT packages
@@ -139,9 +139,9 @@ configure_locale() {
 install_ms_core_fonts() {
   echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections 2>/dev/null
 
-  if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q ttf-mscorefonts-installer; then
-    command -v fc-cache &>/dev/null && fc-cache -f
-    return 0
+  if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q ttf-mscorefonts-installer 2>&1 | sed 's/^/    /'; then
+    command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
+    return "${PIPESTATUS[0]}"
   fi
 
   return 1

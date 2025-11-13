@@ -2,7 +2,6 @@
 # K9s Gruvbox Light Skin
 # Author: [@indiebrain](https://github.com/indiebrain)
 # -----------------------------------------------------------------------------
-
 # Styles...
 foreground: &foreground "#3c3735"
 background: &background "#fbf1c7"
@@ -15,7 +14,6 @@ orange: &orange "#d79920"
 magenta: &magenta "#b16185"
 blue: &blue "#448488"
 red: &red "#cc231c"
-
 k9s:
   body:
     fgColor: *foreground

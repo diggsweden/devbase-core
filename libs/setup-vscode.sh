@@ -100,10 +100,8 @@ _setup_wsl_code_command() {
       if vscode_server_path=$(_find_vscode_server_cli); then
         code_command="$vscode_server_path"
         show_progress info "[WSL-specific] Using VS Code Server CLI" >&2
-      else
-        show_progress warning "[WSL-specific] VS Code Server CLI requires active VS Code connection" >&2
-        show_progress info "[WSL-specific] Extensions will be installed after connecting VS Code" >&2
       fi
+      # If no code_command available, we'll handle messaging in the main function
     fi
   else
     if [[ -n "$win_code_cmd" ]]; then
@@ -166,13 +164,20 @@ setup_vscode() {
 
   printf "\n"
   if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
-    show_progress info "Installing VS Code extensions..."
-
     if [[ -n "$code_command" ]]; then
+      show_progress info "Installing VS Code extensions..."
       install_vscode_extensions "$code_command" "$remote_flag"
     else
-      show_progress info "VS Code command not available - skipping extensions"
-      show_progress info "Install VS Code and connect to WSL to install extensions"
+      # VS Code Server exists but CLI not available (e.g., su -l without active VS Code connection)
+      if is_wsl && [[ -d "$HOME/.vscode-server/bin" ]]; then
+        show_progress info "VS Code Server detected but not currently connected"
+        show_progress info "Extensions will be installed automatically when you open VS Code and connect to WSL"
+      else
+        show_progress info "VS Code not detected - skipping extension installation"
+        if is_wsl; then
+          show_progress info "Extensions will be installed after connecting VS Code to WSL"
+        fi
+      fi
     fi
 
     configure_vscode_settings
