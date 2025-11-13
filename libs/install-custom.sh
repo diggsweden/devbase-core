@@ -160,20 +160,7 @@ install_jmc() {
       local jmc_url="https://github.com/adoptium/jmc-build/releases/download/${jmc_version}/org.openjdk.jmc-${jmc_version}-linux.gtk.x86_64.tar.gz"
       local jmc_tar="${_DEVBASE_TEMP}/jmc.tar.gz"
 
-      # Check cache first if DEVBASE_DEB_CACHE is set (reusing same cache dir for all binaries)
-      if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-        local cached_tar="${DEVBASE_DEB_CACHE}/jmc-${jmc_version}.tar.gz"
-        if [[ -f "$cached_tar" ]]; then
-          show_progress info "Using cached JMC package"
-          cp "$cached_tar" "$jmc_tar"
-        elif retry_command download_file "$jmc_url" "$jmc_tar"; then
-          mkdir -p "${DEVBASE_DEB_CACHE}"
-          cp "$jmc_tar" "$cached_tar"
-        else
-          show_progress warning "JMC download failed - skipping"
-          return 0
-        fi
-      elif ! retry_command download_file "$jmc_url" "$jmc_tar"; then
+      if ! download_with_cache "$jmc_url" "$jmc_tar" "jmc-${jmc_version}.tar.gz" "JMC package"; then
         show_progress warning "JMC download failed - skipping"
         return 0
       fi
@@ -303,20 +290,7 @@ install_dbeaver() {
   local dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
   local dbeaver_deb="${_DEVBASE_TEMP}/dbeaver.deb"
 
-  # Check cache first if DEVBASE_DEB_CACHE is set
-  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-    local cached_deb="${DEVBASE_DEB_CACHE}/dbeaver-${dbeaver_version}.deb"
-    if [[ -f "$cached_deb" ]]; then
-      show_progress info "Using cached DBeaver package"
-      cp "$cached_deb" "$dbeaver_deb"
-    elif retry_command download_file "$dbeaver_url" "$dbeaver_deb"; then
-      mkdir -p "${DEVBASE_DEB_CACHE}"
-      cp "$dbeaver_deb" "$cached_deb"
-    else
-      show_progress warning "DBeaver download failed - skipping"
-      return 0
-    fi
-  elif ! retry_command download_file "$dbeaver_url" "$dbeaver_deb"; then
+  if ! download_with_cache "$dbeaver_url" "$dbeaver_deb" "dbeaver-${dbeaver_version}.deb" "DBeaver package"; then
     show_progress warning "DBeaver download failed - skipping"
     return 0
   fi
@@ -356,20 +330,7 @@ install_keystore_explorer() {
   local kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse_${kse_version#v}_all.deb"
   local kse_deb="${_DEVBASE_TEMP}/keystore-explorer.deb"
 
-  # Check cache first if DEVBASE_DEB_CACHE is set
-  if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-    local cached_deb="${DEVBASE_DEB_CACHE}/kse-${kse_version}.deb"
-    if [[ -f "$cached_deb" ]]; then
-      show_progress info "Using cached KeyStore Explorer package"
-      cp "$cached_deb" "$kse_deb"
-    elif retry_command download_file "$kse_url" "$kse_deb"; then
-      mkdir -p "${DEVBASE_DEB_CACHE}"
-      cp "$kse_deb" "$cached_deb"
-    else
-      show_progress warning "KeyStore Explorer download failed - skipping"
-      return 0
-    fi
-  elif ! retry_command download_file "$kse_url" "$kse_deb"; then
+  if ! download_with_cache "$kse_url" "$kse_deb" "kse-${kse_version}.deb" "KeyStore Explorer package"; then
     show_progress warning "KeyStore Explorer download failed - skipping"
     return 0
   fi
@@ -494,7 +455,7 @@ install_reuse() {
   # Install reuse with pipx (respects HTTP_PROXY/HTTPS_PROXY/PIP_INDEX_URL env vars)
   local output
   output=$(pipx install reuse 2>&1)
-  
+
   if echo "$output" | grep -qE "(installed package|already seems to be installed)"; then
     if echo "$output" | grep -q "already seems to be installed"; then
       show_progress success "reuse is already installed"

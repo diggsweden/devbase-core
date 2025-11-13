@@ -440,3 +440,74 @@ backup_if_exists() {
 run_mise_from_home_dir() {
   (cd "$HOME" && mise "$@")
 }
+
+# Brief: Download file with optional caching support
+# Params: $1 - url, $2 - target_file, $3 - cache_filename, $4 - package_name (for messages)
+# Uses: DEVBASE_DEB_CACHE (optional global), validate_optional_dir, retry_command, download_file (functions)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Downloads file, may cache it if DEVBASE_DEB_CACHE is set
+download_with_cache() {
+  local url="$1"
+  local target="$2"
+  local cache_filename="$3"
+  local package_name="${4:-package}"
+
+  validate_not_empty "$url" "Download URL" || return 1
+  validate_not_empty "$target" "Target file" || return 1
+  validate_not_empty "$cache_filename" "Cache filename" || return 1
+
+  if validate_optional_dir "DEVBASE_DEB_CACHE" "Package cache"; then
+    local cached_file="${DEVBASE_DEB_CACHE}/${cache_filename}"
+
+    if [[ -f "$cached_file" ]]; then
+      show_progress info "Using cached ${package_name}"
+      cp "$cached_file" "$target" && return 0
+      show_progress warning "Failed to copy from cache, will download"
+    fi
+
+    if retry_command download_file "$url" "$target"; then
+      mkdir -p "${DEVBASE_DEB_CACHE}"
+      cp "$target" "$cached_file" 2>/dev/null || true
+      return 0
+    fi
+    return 1
+  fi
+
+  retry_command download_file "$url" "$target"
+}
+
+# Brief: Enable and start systemd service with indented output
+# Params: $1 - service_name, $2 - description (for success message)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Enables and starts systemd service
+systemctl_enable_start() {
+  local service="$1"
+  local description="${2:-$service}"
+
+  validate_not_empty "$service" "Service name" || return 1
+
+  if sudo systemctl enable "$service" 2>&1 | sed 's/^/    /'; then
+    sudo systemctl start "$service" >/dev/null 2>&1 || true
+    show_progress success "${description} enabled and started"
+    return 0
+  fi
+  show_progress warning "Failed to enable ${description}"
+  return 1
+}
+
+# Brief: Disable and stop systemd service with indented output
+# Params: $1 - service_name, $2 - description (for success message)
+# Returns: 0 always
+# Side-effects: Disables and stops systemd service
+systemctl_disable_stop() {
+  local service="$1"
+  local description="${2:-$service}"
+
+  validate_not_empty "$service" "Service name" || return 1
+
+  if sudo systemctl stop "$service" >/dev/null 2>&1; then
+    sudo systemctl disable "$service" 2>&1 | sed 's/^/    /' || true
+    show_progress success "${description} disabled"
+  fi
+  return 0
+}

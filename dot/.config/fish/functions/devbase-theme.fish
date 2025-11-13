@@ -308,9 +308,7 @@ function __devbase_theme_update_vscode --description "Update VSCode theme"
         end
     else
         mkdir -p (dirname $settings_file)
-        echo '{
-  "workbench.colorTheme": "'$vscode_theme'"
-}' > $settings_file
+        printf '{\n  "workbench.colorTheme": "%s"\n}\n' "$vscode_theme" > $settings_file
     end
 end
 

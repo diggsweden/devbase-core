@@ -170,7 +170,18 @@ function __install_wt_inject_themes --description "Inject themes into settings.j
     set -l backup_file $argv[3]
     set -l temp_file (mktemp)
     
-    if echo "$themes_array" | jq -s '.[0] as $themes | input | del(.schemes[]? | select(.name | test("Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)"))) | .schemes += $themes' - "$wt_settings" > "$temp_file" 2>/dev/null
+    # jq filter: Remove old DevBase themes, then add new ones
+    # .[0] = themes array from stdin, .[1] = settings.json file (both slurped by -s)
+    set -l jq_filter '
+        .[0] as $themes 
+        | .[1] 
+        | del(.schemes[]? | select(.name | test(
+            "Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)"
+        ))) 
+        | .schemes += $themes
+    '
+    
+    if echo "$themes_array" | jq -s "$jq_filter" - "$wt_settings" > "$temp_file" 2>/dev/null
         if test -s "$temp_file"; and jq empty "$temp_file" 2>/dev/null
             if mv "$temp_file" "$wt_settings" 2>/dev/null
                 echo "✓ Windows Terminal: All 8 DevBase themes installed" >&2
