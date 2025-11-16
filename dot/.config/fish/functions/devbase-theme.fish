@@ -450,8 +450,8 @@ function __devbase_theme_update_terminals --description "Update all terminal emu
     set -l results ""
     
     # Windows Terminal
-    if functions -q update-windows-terminal-theme
-        if update-windows-terminal-theme
+    if functions -q __update_windows_terminal_theme
+        if __update_windows_terminal_theme
             set results "$results wt:true"
         else
             set results "$results wt:false"
@@ -461,8 +461,8 @@ function __devbase_theme_update_terminals --description "Update all terminal emu
     end
     
     # Ghostty
-    if functions -q update-ghostty-theme
-        if update-ghostty-theme
+    if functions -q __update_ghostty_theme
+        if __update_ghostty_theme
             set results "$results ghostty:true"
         else
             set results "$results ghostty:false"
@@ -472,8 +472,8 @@ function __devbase_theme_update_terminals --description "Update all terminal emu
     end
     
     # GNOME Terminal
-    if functions -q update-gnome-terminal-theme
-        if update-gnome-terminal-theme
+    if functions -q __update_gnome_terminal_theme
+        if __update_gnome_terminal_theme
             set results "$results gnome:true"
         else
             set results "$results gnome:false"

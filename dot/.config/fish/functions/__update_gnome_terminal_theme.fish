@@ -113,7 +113,7 @@ function __update_gnome_apply_colors --description "Apply colors to GNOME Termin
     and gsettings set $profile_path bold-color-same-as-fg true
 end
 
-function update-gnome-terminal-theme --description "Update GNOME Terminal theme on native Ubuntu"
+function __update_gnome_terminal_theme --description "Update GNOME Terminal theme on native Ubuntu"
     # Only run on native Linux (not WSL)
     if uname -r | grep -qi microsoft
         return 0

@@ -62,7 +62,7 @@ function __devbase_update_nag_print_notification --description "Print update ava
     printf "\n"
 end
 
-function devbase-update-nag --description "Check for devbase updates and notify user (once per day)"
+function __devbase_update_nag --description "Check for devbase updates and notify user (once per day)"
     set -l version_file "$HOME/.config/devbase/version"
     set -l check_file "$HOME/.config/devbase/daily_check_done"
     set -l current_date (date +%Y%m%d)

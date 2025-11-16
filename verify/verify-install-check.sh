@@ -702,17 +702,18 @@ check_config_files() {
   # Fish configuration files that DevBase creates
   local shell_files=(
     "$HOME/.config/fish/config.fish"
+    "$HOME/.config/fish/functions/__devbase_configure_proxy_curl.fish"
+    "$HOME/.config/fish/functions/__devbase_update_nag.fish"
+    "$HOME/.config/fish/functions/__devbase_verify_with_retry.fish"
+    "$HOME/.config/fish/functions/devbase-font.fish"
     "$HOME/.config/fish/functions/devbase-theme.fish"
-    "$HOME/.config/fish/functions/devbase-update-nag.fish"
     "$HOME/.config/fish/functions/install-windows-terminal-themes.fish"
-    "$HOME/.config/fish/functions/setup-java.fish"
-    "$HOME/.config/fish/functions/smart-copy.fish"
-    "$HOME/.config/fish/functions/ssh-agent-init.fish"
-    "$HOME/.config/fish/functions/terminal-title.fish"
-    "$HOME/.config/fish/functions/ulimits.fish"
-    "$HOME/.config/fish/functions/update-ghostty-theme.fish"
-    "$HOME/.config/fish/functions/update-windows-terminal-theme.fish"
-    "$HOME/.config/fish/functions/update-zellij-clipboard.fish"
+    "$HOME/.config/fish/functions/__smart_copy.fish"
+    "$HOME/.config/fish/functions/__ssh_agent_init.fish"
+    "$HOME/.config/fish/functions/__update_ghostty_theme.fish"
+    "$HOME/.config/fish/functions/__update_gnome_terminal_theme.fish"
+    "$HOME/.config/fish/functions/__update_windows_terminal_theme.fish"
+    "$HOME/.config/fish/functions/__update_zellij_clipboard.fish"
     "$HOME/.config/fish/conf.d/00-aliases.fish"
     "$HOME/.config/fish/conf.d/00-environment.fish"
     "$HOME/.config/fish/conf.d/01-keybindings.fish"
@@ -720,9 +721,11 @@ check_config_files() {
     "$HOME/.config/fish/conf.d/02-aliases.fish"
     "$HOME/.config/fish/conf.d/02-testcontainers-registry.fish"
     "$HOME/.config/fish/conf.d/04-ls-colors.fish"
-    "$HOME/.config/fish/conf.d/05-java-cacerts-check.fish"
     "$HOME/.config/fish/conf.d/06-go-config.fish"
     "$HOME/.config/fish/conf.d/07-cypress-registry.fish"
+    "$HOME/.config/fish/conf.d/08-fzf-integration.fish"
+    "$HOME/.config/fish/conf.d/09-terminal-title.fish"
+    "$HOME/.config/fish/conf.d/10-ulimits.fish"
   )
 
   print_item_list shell_files "file"
@@ -807,6 +810,53 @@ check_config_files() {
   )
 
   print_item_list devbase_files "file"
+}
+
+# Check if a systemd service is enabled and active
+# Params: $1 - service name, $2 - scope (user/system), $3 - type (optional, e.g., oneshot)
+check_systemd_service() {
+  local service_name="$1"
+  local scope="$2"
+  local service_type="${3:-service}"
+  
+  local systemctl_cmd="systemctl"
+  if [[ "$scope" == "user" ]]; then
+    systemctl_cmd="systemctl --user"
+  fi
+  
+  # Check if service exists
+  if ! $systemctl_cmd list-unit-files "$service_name" &>/dev/null 2>&1; then
+    printf "  %b⊘%b %s (not installed)\n" "${DIM}" "${NC}" "$service_name"
+    return
+  fi
+  
+  # Check if enabled
+  local enabled_status
+  enabled_status=$($systemctl_cmd is-enabled "$service_name" 2>&1)
+  
+  # Check if active (for oneshot services, check if it exited successfully)
+  local active_status
+  active_status=$($systemctl_cmd is-active "$service_name" 2>&1)
+  
+  if [[ "$service_type" == "oneshot" ]]; then
+    # For oneshot services, "inactive" after successful execution is normal
+    if [[ "$enabled_status" == "enabled" || "$enabled_status" == "static" ]]; then
+      printf "  %b✓%b %s (enabled)\n" "${GREEN}" "${NC}" "$service_name"
+    else
+      printf "  %b%s%b %s (not enabled: %s)\n" "${YELLOW}" "$WARN" "${NC}" "$service_name" "$enabled_status"
+    fi
+  else
+    # For regular services, check both enabled and active
+    if [[ "$enabled_status" == "enabled" && "$active_status" == "active" ]]; then
+      printf "  %b✓%b %s (enabled and active)\n" "${GREEN}" "${NC}" "$service_name"
+    elif [[ "$enabled_status" == "enabled" ]]; then
+      printf "  %b%s%b %s (enabled but not active: %s)\n" "${YELLOW}" "$WARN" "${NC}" "$service_name" "$active_status"
+    elif [[ "$active_status" == "active" ]]; then
+      printf "  %b%s%b %s (active but not enabled)\n" "${YELLOW}" "$WARN" "${NC}" "$service_name"
+    else
+      printf "  %b%s%b %s (not enabled: %s, not active: %s)\n" "${YELLOW}" "$WARN" "${NC}" "$service_name" "$enabled_status" "$active_status"
+    fi
+  fi
 }
 
 check_systemd_services() {
@@ -1234,20 +1284,55 @@ check_vscode_extensions() {
   local sorted_extensions
   mapfile -t sorted_extensions < <(printf '%s\n' "${extensions_list[@]}" | sort -f)
 
+  # Extension name mappings
+  declare -A ext_names=(
+    ["arcticicestudio.nord-visual-studio-code"]="Nord"
+    ["asciidoctor.asciidoctor-vscode"]="AsciiDoc"
+    ["asvetliakov.vscode-neovim"]="VSCode Neovim"
+    ["bradlc.vscode-tailwindcss"]="Tailwind CSS IntelliSense"
+    ["catppuccin.catppuccin-vsc"]="Catppuccin"
+    ["dbaeumer.vscode-eslint"]="ESLint"
+    ["dracula-theme.theme-dracula"]="Dracula Theme"
+    ["enkia.tokyo-night"]="Tokyo Night"
+    ["esbenp.prettier-vscode"]="Prettier"
+    ["jdinhlife.gruvbox"]="Gruvbox"
+    ["lokalise.i18n-ally"]="i18n Ally"
+    ["MS-SarifVSCode.sarif-viewer"]="SARIF Viewer"
+    ["pkief.material-icon-theme"]="Material Icon Theme"
+    ["redhat.java"]="Language Support for Java"
+    ["redhat.vscode-yaml"]="YAML"
+    ["ryanolsonx.solarized"]="Solarized"
+    ["sainnhe.everforest"]="Everforest"
+    ["shengchen.vscode-checkstyle"]="Checkstyle for Java"
+    ["sonarsource.sonarlint-vscode"]="SonarLint"
+    ["vscjava.vscode-java-debug"]="Debugger for Java"
+    ["vscjava.vscode-java-dependency"]="Project Manager for Java"
+    ["vscjava.vscode-java-pack"]="Extension Pack for Java"
+    ["vscjava.vscode-java-test"]="Test Runner for Java"
+    ["vscjava.vscode-maven"]="Maven for Java"
+    ["vue.volar"]="Vue Language Features"
+  )
+
   # Display sorted extensions
   for ext_id in "${sorted_extensions[@]}"; do
+    # Get friendly name if available
+    local ext_display="$ext_id"
+    if [[ -n "${ext_names[$ext_id]}" ]]; then
+      ext_display="$ext_id (${ext_names[$ext_id]})"
+    fi
+    
     # Check if installed (only if VS Code is available)
     if [[ -n "$installed_extensions" ]] && echo "$installed_extensions" | grep -qi "^${ext_id}$"; then
       ext_installed=$((ext_installed + 1))
-      printf "  %b✓%b %s\n" "${GREEN}" "${NC}" "$ext_id"
+      printf "  %b✓%b %s\n" "${GREEN}" "${NC}" "$ext_display"
     else
       ext_missing=$((ext_missing + 1))
       if [[ -z "$code_cmd" ]] && [[ "$extensions_found_via_fallback" == "false" ]]; then
         # VS Code not found and no fallback worked, show as gray/not checkable
-        printf "  %b%s%b %s\n" "${GRAY}" "$INFO" "${NC}" "$ext_id"
+        printf "  %b%s%b %s\n" "${GRAY}" "$INFO" "${NC}" "$ext_display"
       else
         # VS Code found (or extensions dir exists) but extension missing
-        printf "  %b✗%b %s\n" "${RED}" "${NC}" "$ext_id"
+        printf "  %b✗%b %s\n" "${RED}" "${NC}" "$ext_display"
       fi
     fi
   done

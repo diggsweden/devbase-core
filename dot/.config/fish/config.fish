@@ -11,8 +11,8 @@ else if test -x $HOME/.local/bin/mise
 end
 
 # Auto-add SSH key to agent (only in interactive shells)
-if status is-interactive; and functions -q ssh-agent-init
-    ssh-agent-init
+if status is-interactive; and functions -q __ssh_agent_init
+    __ssh_agent_init
 end
 
 # Configure curl for proxy environments if needed
@@ -29,13 +29,13 @@ starship init fish | source
 type -q go; and set -gx GOPATH $HOME/go; and fish_add_path $GOPATH/bin
 
 # Update check
-if status is-interactive; and functions -q devbase-update-nag
-    devbase-update-nag
+if status is-interactive; and functions -q __devbase_update_nag
+    __devbase_update_nag
 end
 
 # Update Zellij clipboard config based on environment
-if status is-interactive; and functions -q update-zellij-clipboard
-    update-zellij-clipboard
+if status is-interactive; and functions -q __update_zellij_clipboard
+    __update_zellij_clipboard
 end
 
 # Auto-start Zellij (must be after mise activation)

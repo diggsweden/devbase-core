@@ -21,9 +21,11 @@ install_certificates() {
   cert_count=$(find "${cert_src}" -maxdepth 1 -name "*.crt" -type f 2>/dev/null | wc -l)
   [[ $cert_count -eq 0 ]] && return 0
 
-  show_progress info "Installing certificates..."
+  show_progress info "Found $cert_count certificate(s) in custom config"
 
-  local processed=0
+  local newly_installed=0
+  local already_exists=0
+  local updated=0
   local skipped=0
   local domains_configured=0
 
@@ -33,14 +35,32 @@ install_certificates() {
     local cert_name
     cert_name=$(basename "$cert")
     local cert_basename="${cert_name%.crt}"
+    local target_cert="/usr/local/share/ca-certificates/${cert_name}"
 
+    # Validate certificate format
     if ! openssl x509 -in "$cert" -noout 2>/dev/null; then
       skipped=$((skipped + 1))
+      [[ "$DEBUG" == "1" ]] && echo "    Invalid certificate format: $cert_name"
       continue
     fi
 
-    sudo cp "$cert" "/usr/local/share/ca-certificates/${cert_name}"
+    # Check if certificate already exists and compare
+    if [[ -f "$target_cert" ]]; then
+      if cmp -s "$cert" "$target_cert"; then
+        already_exists=$((already_exists + 1))
+        [[ "$DEBUG" == "1" ]] && echo "    Already installed: $cert_name"
+      else
+        sudo cp "$cert" "$target_cert"
+        updated=$((updated + 1))
+        [[ "$DEBUG" == "1" ]] && echo "    Updated: $cert_name"
+      fi
+    else
+      sudo cp "$cert" "$target_cert"
+      newly_installed=$((newly_installed + 1))
+      [[ "$DEBUG" == "1" ]] && echo "    Newly installed: $cert_name"
+    fi
 
+    # Configure Git for this certificate's domain
     local cert_domain=""
     cert_domain=$(openssl x509 -in "$cert" -noout -subject 2>/dev/null |
       grep -oP 'CN\s*=\s*\K[^\s,]+' | head -1 || true)
@@ -52,20 +72,32 @@ install_certificates() {
     if configure_git_certificate "$cert_domain"; then
       domains_configured=$((domains_configured + 1))
     fi
-
-    processed=$((processed + 1))
   done
 
-  if [[ $processed -gt 0 ]]; then
+  # Only update system certificates if there were changes
+  if [[ $newly_installed -gt 0 ]] || [[ $updated -gt 0 ]]; then
+    show_progress info "Updating system trust store..."
     update_system_certificates
-
-    local msg="Certificates installed ($processed certs"
-    [[ $domains_configured -gt 0 ]] && msg="${msg}, $domains_configured Git domains"
-    [[ $skipped -gt 0 ]] && msg="${msg}, $skipped invalid"
-    msg="${msg})"
+    
+    # Build status message based on what happened
+    local msg=""
+    if [[ $newly_installed -gt 0 ]]; then
+      msg="Installed $newly_installed new certificate(s)"
+    fi
+    if [[ $updated -gt 0 ]]; then
+      [[ -n "$msg" ]] && msg="${msg}, updated $updated" || msg="Updated $updated certificate(s)"
+    fi
+    if [[ $already_exists -gt 0 ]]; then
+      [[ -n "$msg" ]] && msg="${msg}, $already_exists unchanged" || msg="$already_exists unchanged"
+    fi
+    [[ $domains_configured -gt 0 ]] && msg="${msg} (configured $domains_configured Git domain(s))"
+    [[ $skipped -gt 0 ]] && msg="${msg} ($skipped invalid skipped)"
+    
     show_progress success "$msg"
+  elif [[ $already_exists -gt 0 ]]; then
+    show_progress success "All $already_exists certificate(s) already installed (no changes needed)"
   else
-    show_progress warning "No valid certificates found"
+    show_progress warning "No valid certificates to install"
   fi
 }
 
@@ -94,7 +126,20 @@ configure_git_certificate() {
 # Returns: 0 always
 # Side-effects: Rebuilds system cert bundle, configures snap certs
 update_system_certificates() {
-  sudo update-ca-certificates 2>&1 | sed 's/^/    /'
+  if [[ "$DEBUG" == "1" ]]; then
+    sudo update-ca-certificates 2>&1 | sed 's/^/    /'
+  else
+    # Capture the summary line from update-ca-certificates
+    local result
+    result=$(sudo update-ca-certificates 2>&1)
+    local added=$(echo "$result" | grep -oP '\d+(?= added)' || echo "0")
+    local removed=$(echo "$result" | grep -oP '\d+(?= removed)' || echo "0")
+    
+    if [[ "$added" != "0" ]] || [[ "$removed" != "0" ]]; then
+      echo "    System trust store: $added added, $removed removed"
+    fi
+  fi
+  
   configure_snap_certificates
 
   return 0

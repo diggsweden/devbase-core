@@ -28,11 +28,8 @@ configure_proxy_settings() {
     }
     export -f curl
 
-    # Log this only once
-    if [[ -z "${DEVBASE_PROXY_CONFIGURED:-}" ]]; then
-      export DEVBASE_PROXY_CONFIGURED=1
-      show_progress info "Proxy detected - configured for better compatibility"
-    fi
+    # Mark as configured
+    export DEVBASE_PROXY_CONFIGURED=1
   fi
 }
 

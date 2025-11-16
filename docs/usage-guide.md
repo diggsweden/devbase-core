@@ -522,7 +522,7 @@ Controlled by environment variables:
 
 **Other Customizations:**
 
-- **Copy**: Uses `smart-copy` function for clipboard integration
+- **Copy**: Uses `__smart_copy` function for clipboard integration
 - **Default shell**: Fish
 - **Mouse mode**: Enabled
 - **Theme**: Follows system theme

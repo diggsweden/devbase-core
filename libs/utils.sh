@@ -486,13 +486,25 @@ systemctl_enable_start() {
 
   validate_not_empty "$service" "Service name" || return 1
 
-  if sudo systemctl enable "$service" 2>&1 | sed 's/^/    /'; then
+  # Capture output to filter it
+  local output
+  output=$(sudo systemctl enable "$service" 2>&1)
+  local result=$?
+  
+  if [[ $result -eq 0 ]]; then
+    # Success - only show verbose output in debug mode
+    if [[ "$DEBUG" == "1" ]]; then
+      echo "$output" | sed 's/^/    /'
+    fi
     sudo systemctl start "$service" >/dev/null 2>&1 || true
     show_progress success "${description} enabled and started"
     return 0
+  else
+    # Failure - always show error output
+    echo "$output" | sed 's/^/    /' >&2
+    show_progress warning "Failed to enable ${description}"
+    return 1
   fi
-  show_progress warning "Failed to enable ${description}"
-  return 1
 }
 
 # Brief: Disable and stop systemd service with indented output
@@ -506,7 +518,20 @@ systemctl_disable_stop() {
   validate_not_empty "$service" "Service name" || return 1
 
   if sudo systemctl stop "$service" >/dev/null 2>&1; then
-    sudo systemctl disable "$service" 2>&1 | sed 's/^/    /' || true
+    # Capture output to filter it
+    local output
+    output=$(sudo systemctl disable "$service" 2>&1)
+    local result=$?
+    
+    if [[ $result -eq 0 ]]; then
+      # Success - only show verbose output in debug mode
+      if [[ "$DEBUG" == "1" ]]; then
+        echo "$output" | sed 's/^/    /'
+      fi
+    else
+      # Failure - always show error output
+      echo "$output" | sed 's/^/    /' >&2
+    fi
     show_progress success "${description} disabled"
   fi
   return 0

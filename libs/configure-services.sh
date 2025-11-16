@@ -177,7 +177,7 @@ configure_clamav_service() {
 
   if [[ -d "$source_dir" ]]; then
     if sudo cp "$source_dir"/*.{service,timer} "$systemd_dir"/ 2>/dev/null; then
-      sudo systemctl daemon-reload 2>&1 | sed 's/^/    /'
+      sudo systemctl daemon-reload >/dev/null 2>&1
       systemctl_enable_start "clamav-daily-scan.timer" "ClamAV daily scan (runs 2-4 AM)" || {
         show_progress error "Failed to enable ClamAV daily scan"
         return 1

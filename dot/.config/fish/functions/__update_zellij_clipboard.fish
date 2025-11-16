@@ -1,4 +1,4 @@
-function update-zellij-clipboard --description "Auto-update Zellij clipboard config for current environment"
+function __update_zellij_clipboard --description "Auto-update Zellij clipboard config for current environment"
     set -l config_file "$HOME/.config/zellij/config.kdl"
     test -f "$config_file" || return 0
 
@@ -18,7 +18,7 @@ function update-zellij-clipboard --description "Auto-update Zellij clipboard con
     else if type -q xsel
         set needed_cmd "xsel --clipboard"
     else
-        set needed_cmd "smart-copy"
+        set needed_cmd "__smart_copy"
     end
 
     if test "$current_cmd" != "$needed_cmd"

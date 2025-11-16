@@ -1,4 +1,4 @@
-# ~/.config/fish/conf.d/terminal-title.fish
+# ~/.config/fish/conf.d/09-terminal-title.fish
 # Dynamic terminal title using Fish's built-in function
 
 if status is-interactive

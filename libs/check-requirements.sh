@@ -189,14 +189,8 @@ check_required_tools() {
 # Side-effects: Displays Nerd Font warning and installation instructions
 _check_wsl_nerd_font_prereq() {
   printf "\n"
-  show_progress warning "WSL Prerequisite: Nerd Font Required"
-  printf "\n"
-  printf "  %bDevBase requires a Nerd Font for proper icon display in terminal apps.%b\n" "${DEVBASE_COLORS[BOLD]}" "${DEVBASE_COLORS[NC]}"
-  printf "  %bWithout it, you'll see boxes/question marks instead of icons.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "\n"
-  printf "  %bNerd Fonts must be installed on Windows (not in WSL).%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
-  printf "\n"
-  printf "  %bNote: Setup will continue, but without Nerd Font you will get odd characters in apps .%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  show_progress warning "WSL: Nerd Font needed (install on Windows side)"
+  printf "  %bIf you see strange chars (boxes/�), install a Nerd Font on Windows%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "\n"
 
   return 0

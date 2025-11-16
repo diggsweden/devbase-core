@@ -295,7 +295,7 @@ function __update_wt_prepare_theme_data --description "Get theme scheme name and
     return 0
 end
 
-function update-windows-terminal-theme --description "Update Windows Terminal color scheme (WSL only)"
+function __update_windows_terminal_theme --description "Update Windows Terminal color scheme (WSL only)"
     # Validate environment
     if not __update_wt_validate_environment
         return 0

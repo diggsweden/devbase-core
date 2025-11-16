@@ -267,7 +267,7 @@ detect_clipboard_utility() {
   elif command -v xsel &>/dev/null; then
     echo "xsel --clipboard"
   else
-    echo "smart-copy"
+    echo "__smart_copy"
   fi
 }
 
@@ -402,11 +402,15 @@ set -l no_proxy_hosts "${no_proxy_hosts}"
 # Use DEVBASE_NO_PROXY_JAVA if provided (should be in pipe-separated format)
 set -l no_proxy_java "$DEVBASE_NO_PROXY_JAVA"
 
-# Preserve existing JAVA_TOOL_OPTIONS (like trustStore settings) and append proxy settings
-if test -n "\$JAVA_TOOL_OPTIONS"
-    set -gx JAVA_TOOL_OPTIONS "\$JAVA_TOOL_OPTIONS -Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
-else
-    set -gx JAVA_TOOL_OPTIONS "-Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
+# Set Java proxy settings (check if already present to avoid duplication)
+# Only append proxy settings if they're not already there
+if not string match -q "*proxyHost*" "\$JAVA_TOOL_OPTIONS"
+    # Preserve existing JAVA_TOOL_OPTIONS (like trustStore settings) and append proxy settings
+    if test -n "\$JAVA_TOOL_OPTIONS"
+        set -gx JAVA_TOOL_OPTIONS "\$JAVA_TOOL_OPTIONS -Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
+    else
+        set -gx JAVA_TOOL_OPTIONS "-Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
+    end
 end
 
 # Gradle proxy settings (including nonProxyHosts to match JAVA_TOOL_OPTIONS)

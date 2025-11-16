@@ -1,4 +1,4 @@
-function ssh-agent-init --description "Auto-add devbase SSH key to agent if not already loaded"
+function __ssh_agent_init --description "Auto-add devbase SSH key to agent if not already loaded"
     # Find devbase SSH key (try common patterns)
     set -l devbase_key ""
     for key_pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase

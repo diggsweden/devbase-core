@@ -19,11 +19,8 @@ function __devbase_configure_proxy_curl --description "Internal: Configure curl 
             command curl --no-keepalive --no-sessionid -H "Connection: close" $argv
         end
         
-        # Only show message once per session
-        if not set -q DEVBASE_PROXY_CURL_CONFIGURED
-            set -gx DEVBASE_PROXY_CURL_CONFIGURED 1
-            echo "Proxy detected - curl configured for better compatibility" >&2
-        end
+        # Mark as configured to avoid re-running
+        set -gx DEVBASE_PROXY_CURL_CONFIGURED 1
     end
 end
 

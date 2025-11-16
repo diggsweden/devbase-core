@@ -240,6 +240,8 @@ collect_theme_preference() {
   printf "\n"
   print_section "Theme Selection" "${DEVBASE_COLORS[BOLD_CYAN]}"
   printf "\n"
+  printf "  %bYou can change themes anytime after install with: devbase-theme <name>%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "\n"
   printf "  %bDark themes:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "    1) everforest-dark   (default)  - Soft, warm, easy on eyes\n"
   printf "    2) catppuccin-mocha              - Pastel, cozy, modern\n"

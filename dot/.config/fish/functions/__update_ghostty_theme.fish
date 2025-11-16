@@ -1,4 +1,4 @@
-function update-ghostty-theme --description "Update Ghostty theme on native Ubuntu"
+function __update_ghostty_theme --description "Update Ghostty theme on native Ubuntu"
     # Only run on native Linux (not WSL)
     if uname -r | grep -qi microsoft
         return 0

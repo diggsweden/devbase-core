@@ -1,4 +1,4 @@
-# ~/.config/fish/conf.d/ulimits.fish
+# ~/.config/fish/conf.d/10-ulimits.fish
 # Set development-friendly resource limits
 
 function setup_ulimits --description "Set development resource limits"

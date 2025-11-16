@@ -11,11 +11,11 @@ export GRAY='\033[0;90m'
 export BOLD='\033[1m'
 export NC='\033[0m' # No Color
 
-# Unicode symbols
+# Unicode symbols (matching DevBase symbols)
 export CHECK='✓'
 export CROSS='✗'
-export WARN='⚠'
-export INFO='ℹ'
+export WARN='‼'
+export INFO='ⓘ'
 export ARROW='→'
 
 # Helper functions for colored output
