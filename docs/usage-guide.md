@@ -200,7 +200,7 @@ Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows
 | **btop** | Official | 10 from [btop official repo](https://github.com/aristocratos/btop/tree/main/themes), 2 from [catppuccin/btop](https://github.com/catppuccin/btop) |
 | **k9s** | Official | 8 from [k9s official skins](https://github.com/derailed/k9s/tree/master/skins), 2 from [catppuccin/k9s](https://github.com/catppuccin/k9s) |
 | **eza** | Official + Custom | 14 from [eza-community/eza-themes](https://github.com/eza-community/eza-themes), 2 custom (nord.yml, solarized-light.yml) |
-| **Windows Terminal** | Custom | Custom JSON schemes using [official color palettes](https://windowsterminalthemes.dev/) (Nord, Dracula, Solarized, etc.) |
+| **Windows Terminal** | Mixed | Uses built-in Solarized themes, custom JSON for others (Nord, Dracula, Everforest, etc.) |
 | **Ghostty** | Built-in | Uses [Ghostty built-in themes](https://ghostty.org/) via theme names |
 | **bat/delta** | Built-in | Uses bat/delta built-in syntax themes |
 | **FZF** | Custom | Custom color schemes matching theme palettes |
@@ -2688,10 +2688,10 @@ Affects: bat, delta, btop, eza, FZF, K9s, Neovim, vifm, Lazygit, Zellij, Ghostty
 
 **WSL Users:** DevBase now automatically updates Windows Terminal color schemes!
 
-- `devbase-theme` automatically changes Windows Terminal colors
-- Dark themes → "One Half Dark"
-- Light themes → "One Half Light"
+- Run `install-windows-terminal-themes` once to install custom themes (10 themes, Solarized uses built-in)
+- `devbase-theme` automatically changes Windows Terminal colors to match
 - Changes apply immediately (no restart needed)
+- Solarized themes use Windows Terminal's built-in versions
 
 ---
 

@@ -16,8 +16,8 @@ declare -gA THEME_CONFIGS
 # Manual fix required after running shfmt
 
 # Everforest themes
-THEME_CONFIGS[everforest-dark]="dark|Monokai Extended|everforest-dark-hard|Monokai Extended|everforest-dark|everforest|gruvbox|everforest-dark"
-THEME_CONFIGS[everforest-light]="light|GitHub|everforest-light-medium|GitHub|everforest-light|everforest|solarized-light|everforest-light"
+THEME_CONFIGS[everforest-dark]="dark|Monokai Extended|everforest-dark-hard|Monokai Extended|everforest-dark|everforest|everforest-dark|everforest-dark"
+THEME_CONFIGS[everforest-light]="light|GitHub|everforest-light-medium|GitHub|everforest-light|everforest|everforest-light|everforest-light"
 
 # Catppuccin themes
 THEME_CONFIGS[catppuccin-mocha]="dark|Dracula|catppuccin_mocha|Dracula|catppuccin-mocha|catppuccin-mocha|solarized-dark|catppuccin-mocha"

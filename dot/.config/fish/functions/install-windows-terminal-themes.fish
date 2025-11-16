@@ -46,8 +46,14 @@ function __install_wt_detect_username --description "Detect Windows username usi
         for user_dir in /mnt/c/Users/*
             set -l dir_name (basename "$user_dir")
             if not string match -qr '^(Public|Default|All Users|Default User)$' "$dir_name"
-                if test -f "$user_dir/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"; or test -f "$user_dir/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
-                    set win_user "$dir_name"
+                # Check for any Windows Terminal package
+                for pkg_dir in $user_dir/AppData/Local/Packages/Microsoft.WindowsTerminal_*
+                    if test -f "$pkg_dir/LocalState/settings.json"
+                        set win_user "$dir_name"
+                        break
+                    end
+                end
+                if test -n "$win_user"
                     break
                 end
             end
@@ -65,16 +71,16 @@ end
 
 function __install_wt_find_settings_file --description "Find Windows Terminal settings.json path"
     set -l win_user $argv[1]
+    set -l packages_dir "/mnt/c/Users/$win_user/AppData/Local/Packages"
+    
+    # Find the Windows Terminal package directory (name can vary)
     set -l wt_settings ""
-    
-    set -l possible_paths \
-        "/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json" \
-        "/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
-    
-    for path in $possible_paths
-        if test -f "$path"
-            set wt_settings "$path"
-            break
+    if test -d "$packages_dir"
+        for pkg_dir in $packages_dir/Microsoft.WindowsTerminal_*
+            if test -f "$pkg_dir/LocalState/settings.json"
+                set wt_settings "$pkg_dir/LocalState/settings.json"
+                break
+            end
         end
     end
     
@@ -133,6 +139,7 @@ end
 function __install_wt_build_themes_array --description "Build JSON array from theme files"
     set -l theme_dir $argv[1]
     
+    # Skip solarized themes since Windows Terminal has them built-in
     set -l theme_files \
         "catppuccin-latte.json" \
         "catppuccin-mocha.json" \
@@ -142,8 +149,6 @@ function __install_wt_build_themes_array --description "Build JSON array from th
         "gruvbox-dark.json" \
         "gruvbox-light.json" \
         "nord.json" \
-        "solarized-dark.json" \
-        "solarized-light.json" \
         "tokyonight-day.json" \
         "tokyonight-night.json"
     
@@ -170,13 +175,14 @@ function __install_wt_inject_themes --description "Inject themes into settings.j
     set -l backup_file $argv[3]
     set -l temp_file (mktemp)
     
-    # jq filter: Remove old DevBase themes, then add new ones
+    # jq filter: Remove old DevBase themes (except Solarized), then add new ones
     # .[0] = themes array from stdin, .[1] = settings.json file (both slurped by -s)
+    # We don't remove or add Solarized themes since they're built-in
     set -l jq_filter '
         .[0] as $themes 
         | .[1] 
         | del(.schemes[]? | select(.name | test(
-            "Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)|Nord|Dracula|Solarized (Dark|Light)"
+            "Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)|Nord|Dracula"
         ))) 
         | .schemes += $themes
     '
@@ -184,7 +190,6 @@ function __install_wt_inject_themes --description "Inject themes into settings.j
     if echo "$themes_array" | jq -s "$jq_filter" - "$wt_settings" > "$temp_file" 2>/dev/null
         if test -s "$temp_file"; and jq empty "$temp_file" 2>/dev/null
             if mv "$temp_file" "$wt_settings" 2>/dev/null
-                echo "✓ Windows Terminal: All 12 DevBase themes installed" >&2
                 return 0
             else
                 cp "$backup_file" "$wt_settings" 2>/dev/null
@@ -235,5 +240,10 @@ function install-windows-terminal-themes --description "Install all DevBase them
     set -l themes_array (__install_wt_build_themes_array $theme_dir)
     
     # Inject themes
-    __install_wt_inject_themes $themes_array $wt_settings $backup_file
+    if __install_wt_inject_themes $themes_array $wt_settings $backup_file
+        echo "✓ Windows Terminal: 10 DevBase themes installed (Solarized themes use built-in versions)" >&2
+    else
+        echo "✗ Windows Terminal: Failed to install themes" >&2
+        return 1
+    end
 end

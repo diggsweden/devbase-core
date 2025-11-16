@@ -16,7 +16,7 @@ function __devbase_theme_show_usage --description "Display theme usage informati
     printf " (%s)\n" "$theme_variant"
 
     printf "\nAvailable themes:\n"
-    printf "  Everforest:  everforest-dark (default), everforest-light\n"
+    printf "  Everforest:  everforest-dark, everforest-light\n"
     printf "  Catppuccin:  catppuccin-mocha, catppuccin-latte\n"
     printf "  Tokyo Night: tokyonight-night, tokyonight-day\n"
     printf "  Gruvbox:     gruvbox-dark, gruvbox-light\n"
@@ -149,7 +149,7 @@ function __devbase_theme_get_k9s_skin
         case tokyonight-night
             echo "gruvbox-dark"
         case tokyonight-day
-            echo "everforest-light"
+            echo "gruvbox-light"
         case gruvbox-dark
             echo "gruvbox-dark"
         case gruvbox-light
@@ -268,15 +268,24 @@ function __devbase_theme_update_vifm --description "Update vifm colorscheme"
     end
     
     switch $theme_name
+        case everforest-dark
+            sed -i 's/^colorscheme .*/colorscheme everforest-dark/' ~/.config/vifm/vifmrc
+        case everforest-light
+            sed -i 's/^colorscheme .*/colorscheme everforest-light/' ~/.config/vifm/vifmrc
         case solarized-dark
             sed -i 's/^colorscheme .*/colorscheme solarized-dark/' ~/.config/vifm/vifmrc
         case solarized-light
             sed -i 's/^colorscheme .*/colorscheme solarized-light/' ~/.config/vifm/vifmrc
         case gruvbox-dark
             sed -i 's/^colorscheme .*/colorscheme gruvbox/' ~/.config/vifm/vifmrc
-        case everforest-dark catppuccin-mocha tokyonight-night nord dracula
+        case gruvbox-light
+            # No gruvbox-light theme for vifm, use solarized-light
+            sed -i 's/^colorscheme .*/colorscheme solarized-light/' ~/.config/vifm/vifmrc
+        case catppuccin-mocha tokyonight-night nord dracula
+            # These use gruvbox as fallback (dark themes)
             sed -i 's/^colorscheme .*/colorscheme gruvbox/' ~/.config/vifm/vifmrc
-        case everforest-light catppuccin-latte tokyonight-day gruvbox-light
+        case catppuccin-latte tokyonight-day
+            # These use solarized-light as fallback (light themes)
             sed -i 's/^colorscheme .*/colorscheme solarized-light/' ~/.config/vifm/vifmrc
     end
 end
@@ -287,6 +296,9 @@ function __devbase_theme_get_vscode_settings_path --description "Get VSCode sett
         return 0
     else if test -d ~/.config/Code/User
         echo ~/.config/Code/User/settings.json
+        return 0
+    else if test -d ~/.config/vscode
+        echo ~/.config/vscode/settings.json
         return 0
     end
     return 1
@@ -357,9 +369,13 @@ function __devbase_theme_configure_git --description "Configure git delta settin
     
     git config --global delta.syntax-theme $bat_theme
     if __devbase_theme_is_light $theme_name
-        git config --global delta.dark "false"
+        # Use delta's built-in light mode
+        git config --global delta.light "true"
+        git config --global --unset delta.dark 2>/dev/null
     else
+        # Use delta's built-in dark mode
         git config --global delta.dark "true"
+        git config --global --unset delta.light 2>/dev/null
     end
 end
 
@@ -386,7 +402,13 @@ function __devbase_theme_update_k9s --description "Update K9s skin configuration
     set -l k9s_skin (__devbase_theme_get_k9s_skin $theme_name)
     
     if test -f ~/.config/k9s/config.yaml
-        sed -i "s/^  skin: .*/  skin: $k9s_skin/" ~/.config/k9s/config.yaml
+        # Try new structure first (4 spaces, under ui:)
+        if grep -q "^    skin:" ~/.config/k9s/config.yaml
+            sed -i "s/^    skin: .*/    skin: $k9s_skin/" ~/.config/k9s/config.yaml
+        # Try old structure (2 spaces, at root level)
+        else if grep -q "^  skin:" ~/.config/k9s/config.yaml
+            sed -i "s/^  skin: .*/  skin: $k9s_skin/" ~/.config/k9s/config.yaml
+        end
     end
 end
 
@@ -505,11 +527,16 @@ function __devbase_theme_parse_terminal_results --description "Parse terminal up
 end
 
 function devbase-theme --description "Set theme for multiple CLI tools"
-    set -l theme_name $argv[1]
-    
-    # Validate input
-    if test -z "$theme_name"
+    if test (count $argv) -eq 0
+        echo "Error: Theme name required"
+        echo
         __devbase_theme_show_usage
+        return 1
+    end
+    
+    set -l theme_name $argv[1]
+
+    if not __devbase_theme_validate $theme_name
         return 1
     end
     

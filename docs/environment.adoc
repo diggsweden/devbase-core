@@ -131,3 +131,51 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 |===
 
 These variables affect installation but are NOT exported to your shell.
+
+== Proxy Configuration
+
+=== Runtime Proxy Handling
+
+When DevBase detects proxy environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy`, `https_proxy`), it automatically configures tools for better compatibility with corporate proxies:
+
+==== Automatic Configuration
+
+DevBase sets the following when a proxy is detected:
+
+[cols="2,3", options="header"]
+|===
+| Configuration | Purpose
+
+| `CURLOPT_FORBID_REUSE=1`
+| Prevents connection reuse issues with proxy authentication
+
+| `CURLOPT_FRESH_CONNECT=1`
+| Forces fresh connections for each request
+
+| `WGET_OPTIONS="--no-http-keep-alive"`
+| Disables HTTP keep-alive for wget
+
+| curl wrapper function
+| Adds `--no-keepalive --no-sessionid -H "Connection: close"` to all curl commands
+|===
+
+This configuration happens automatically:
+
+- **During installation**: In `libs/handle-network.sh`
+- **At runtime**: Via `~/.config/fish/functions/configure-proxy-curl.fish` (loaded by Fish config)
+
+==== Manual Testing
+
+If experiencing proxy issues, test connectivity with:
+
+[source,bash]
+----
+# Test all DevBase dependencies
+./verify/verify-proxy-access.sh
+
+# Test with forced no-keepalive mode
+./verify/verify-proxy-access.sh --no-keepalive
+
+# Test with actual downloads
+./verify/verify-proxy-access.sh --download-test --no-keepalive
+----

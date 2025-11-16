@@ -1,0 +1,770 @@
+#!/usr/bin/env bash
+#
+# verify-proxy-access.sh - Test connectivity to DevBase external dependencies
+#
+# Usage: ./verify-proxy-access.sh [options]
+#
+
+set -uo pipefail
+
+# Color codes
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly GRAY='\033[0;90m'
+readonly NC='\033[0m'
+readonly BOLD='\033[1m'
+
+# Configuration
+PROXY_URL="${PROXY_URL:-}"
+NO_PROXY_MODE="${NO_PROXY_MODE:-false}"
+TEST_TIMEOUT="${TEST_TIMEOUT:-15}"
+VERBOSE="${VERBOSE:-false}"
+DOWNLOAD_TEST="${DOWNLOAD_TEST:-false}"
+NO_KEEPALIVE="${NO_KEEPALIVE:-false}"
+
+# Results
+declare -A TEST_RESULTS
+declare -A RESPONSE_TIMES
+declare -a FAILED_URLS=()
+declare -a PASSED_URLS=()
+TOTAL_TESTS=0
+PASSED_TESTS=0
+FAILED_TESTS=0
+
+# Download test results
+declare -A DOWNLOAD_SPEEDS
+declare -A DOWNLOAD_SIZES
+FASTEST_DOWNLOAD_DOMAIN=""
+FASTEST_DOWNLOAD_SPEED=0
+SLOWEST_DOWNLOAD_DOMAIN=""
+SLOWEST_DOWNLOAD_SPEED=999999
+
+# ============================================================================
+# URL List - All external endpoints DevBase needs
+# ============================================================================
+
+readonly URLS='
+# Core
+https://github.com
+https://api.github.com
+https://raw.githubusercontent.com
+https://gitlab.com
+https://bitbucket.org
+https://api.bitbucket.org
+https://codeberg.org
+https://gitea.com
+https://code.europa.eu
+https://opencode.de
+
+# Language Runtimes
+https://nodejs.org
+https://www.python.org
+https://go.dev
+https://cache.ruby-lang.org
+https://static.rust-lang.org
+https://adoptium.net
+
+# Package Registries
+https://registry.npmjs.org
+https://registry.yarnpkg.com
+https://pypi.org
+https://files.pythonhosted.org
+https://conda.anaconda.org
+https://proxy.golang.org
+https://pkg.go.dev
+https://rubygems.org
+https://index.crates.io
+https://crates.io
+https://repo.maven.apache.org/maven2
+https://repo1.maven.org/maven2
+https://maven.google.com
+https://plugins.gradle.org
+
+# Container Registries
+https://hub.docker.com
+https://registry-1.docker.io
+https://auth.docker.io
+https://ghcr.io
+https://gcr.io
+https://quay.io
+https://registry.gitlab.com
+
+# Tools
+https://kubernetes.io
+https://helm.sh
+https://releases.hashicorp.com
+https://registry.terraform.io
+https://mirror.openshift.com
+https://access.redhat.com
+https://code.visualstudio.com
+https://marketplace.visualstudio.com
+https://update.code.visualstudio.com
+https://download.jetbrains.com
+https://plugins.jetbrains.com
+https://snapcraft.io
+https://flathub.org
+'
+
+
+
+# ============================================================================
+# Functions
+# ============================================================================
+
+get_all_urls() {
+  printf "%s\n" "$URLS" | grep -E '^https?://' | grep -v '^#'
+}
+
+test_url() {
+  local url="$1"
+  local proxy="${2:-}"
+  
+  # Extract domain for display
+  local domain
+  domain=$(printf "%s" "$url" | sed -E 's|^https?://||' | cut -d/ -f1)
+  
+  # Show progress
+  if [[ "$VERBOSE" == "true" ]]; then
+    printf "  %-50s " "${url:0:50}"
+  else
+    printf "  %-40s " "${domain:0:40}"
+  fi
+  
+  local start_time=$(($(date +%s%N) / 1000000))
+  local success=false
+  local http_code=""
+  
+  # Special handling for known slow sites
+  local timeout="$TEST_TIMEOUT"
+  case "$domain" in
+    snapcraft.io|flathub.org|gcr.io)
+      timeout="30"  # These sites can be slow
+      ;;
+  esac
+  
+  # Test with curl
+  if command -v curl &>/dev/null; then
+    local curl_opts=(
+      --silent
+      --location
+      --max-time "$timeout"
+      --connect-timeout "$timeout"
+      --write-out "%{http_code}"
+      --output /dev/null
+    )
+    
+    # Disable connection reuse if requested
+    if [[ "$NO_KEEPALIVE" == "true" ]]; then
+      curl_opts+=(-H "Connection: close" --no-keepalive --no-sessionid)
+    fi
+    
+    [[ -n "$proxy" ]] && [[ "$NO_PROXY_MODE" != "true" ]] && curl_opts+=(--proxy "$proxy")
+    [[ "$NO_PROXY_MODE" == "true" ]] && curl_opts+=(--noproxy '*')
+    
+    if http_code=$(curl "${curl_opts[@]}" "$url" 2>/dev/null); then
+      [[ "$http_code" =~ ^[2345] ]] && success=true
+    fi
+  fi
+  
+  # Fallback to wget if curl failed
+  if [[ "$success" == "false" ]] && command -v wget &>/dev/null; then
+    if [[ -n "$proxy" ]] && [[ "$NO_PROXY_MODE" != "true" ]]; then
+      export http_proxy="$proxy" https_proxy="$proxy"
+    elif [[ "$NO_PROXY_MODE" == "true" ]]; then
+      unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    fi
+    
+    if wget --quiet --timeout="$timeout" --tries=1 -O /dev/null "$url" 2>/dev/null; then
+      success=true
+      http_code="200"  # wget doesn't give us the code easily
+    fi
+  fi
+  
+  # Store and display results  
+  if [[ "$success" == "true" ]]; then
+    local elapsed=$(($(date +%s%N) / 1000000 - start_time))
+    case "$http_code" in
+      2*) printf "${GREEN}✓${NC} (%d ms)\n" "$elapsed" ;;
+      3*) printf "${GREEN}✓${NC} (redirect, %d ms)\n" "$elapsed" ;;
+      403) printf "${YELLOW}✓${NC} (403 forbidden)\n" ;;
+      401) printf "${YELLOW}✓${NC} (401 auth required)\n" ;;
+      404) printf "${YELLOW}✓${NC} (404 not found)\n" ;;
+      4*|5*) printf "${YELLOW}✓${NC} (HTTP $http_code)\n" ;;
+      *) printf "${GREEN}✓${NC}\n" ;;
+    esac
+    TEST_RESULTS["$url"]="pass"
+    RESPONSE_TIMES["$url"]="$elapsed"
+    PASSED_URLS+=("$url")
+    ((PASSED_TESTS++))
+  else
+    printf "${RED}✗${NC}\n"
+    TEST_RESULTS["$url"]="fail"
+    FAILED_URLS+=("$url")
+    ((FAILED_TESTS++))
+  fi
+  
+  ((TOTAL_TESTS++))
+}
+
+check_dns() {
+  printf "\n${BOLD}DNS Resolution:${NC}\n"
+  printf "%s\n" "--------------------------------"
+  
+  local urls
+  mapfile -t urls < <(get_all_urls)
+  
+  # Extract unique domains
+  local domains=()
+  for url in "${urls[@]}"; do
+    local domain
+    domain=$(printf "%s" "$url" | sed -E 's|^https?://||' | cut -d/ -f1 | cut -d: -f1)
+    [[ ! " ${domains[@]} " =~ " ${domain} " ]] && domains+=("$domain")
+  done
+  
+  # Sort domains
+  IFS=$'\n' domains=($(sort -u <<<"${domains[*]}"))
+  
+  local resolved=0
+  local failed=0
+  
+  for domain in "${domains[@]}"; do
+    printf "  %-35s " "${domain:0:35}"
+    if timeout 2 host "$domain" &>/dev/null || timeout 2 nslookup "$domain" &>/dev/null 2>&1 || timeout 2 dig "$domain" +short &>/dev/null 2>&1; then
+      printf "${GREEN}✓${NC}\n"
+      ((resolved++))
+    else
+      printf "${RED}✗${NC}\n"
+      ((failed++))
+    fi
+  done
+  
+  printf "\n  ${CYAN}Summary: ${GREEN}%d resolved${NC}, ${RED}%d failed${NC} out of %d domains\n" \
+    "$resolved" "$failed" "${#domains[@]}"
+}
+
+test_download() {
+  local domain="$1"
+  local proxy="${2:-}"
+  
+  # Map domains to known downloadable files (2-10MB range)
+  local download_url=""
+  local file_desc=""
+  
+  case "$domain" in
+    github.com|api.github.com|raw.githubusercontent.com)
+      download_url="https://github.com/kubernetes/kubernetes/archive/v1.28.0.tar.gz"
+      file_desc="Kubernetes source (8MB)"
+      ;;
+    gitlab.com)
+      download_url="https://gitlab.com/gitlab-org/gitlab-runner/-/archive/v16.0.0/gitlab-runner-v16.0.0.tar.gz"
+      file_desc="GitLab Runner (5MB)"
+      ;;
+    bitbucket.org|api.bitbucket.org)
+      # Bitbucket no longer provides reliable public downloads
+      return 0
+      ;;
+    nodejs.org)
+      download_url="https://nodejs.org/dist/v20.0.0/node-v20.0.0-linux-x64.tar.gz"
+      file_desc="Node.js Linux binary (40MB)"
+      ;;
+    www.python.org)
+      download_url="https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tar.xz"
+      file_desc="Python source (20MB)"
+      ;;
+    go.dev|proxy.golang.org|pkg.go.dev)
+      download_url="https://proxy.golang.org/github.com/gin-gonic/gin/@v/v1.9.1.zip"
+      file_desc="Gin framework (210KB)"
+      ;;
+    cache.ruby-lang.org)
+      download_url="https://cache.ruby-lang.org/pub/ruby/3.3/ruby-3.3.0.tar.gz"
+      file_desc="Ruby source (20MB)"
+      ;;
+    adoptium.net)
+      download_url="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jre_x64_linux_hotspot_21.0.1_12.tar.gz"
+      file_desc="OpenJDK 21 JRE (50MB)"
+      ;;
+    pypi.org|files.pythonhosted.org)
+      download_url="https://files.pythonhosted.org/packages/source/p/pip/pip-23.3.2.tar.gz"
+      file_desc="pip source (2MB)"
+      ;;
+    rubygems.org)
+      download_url="https://rubygems.org/downloads/bundler-2.5.3.gem"
+      file_desc="Bundler gem (400KB)"
+      ;;
+    crates.io|index.crates.io)
+      download_url="https://crates.io/api/v1/crates/serde/1.0.195/download"
+      file_desc="Serde crate (100KB)"
+      ;;
+    repo.maven.apache.org|repo1.maven.org)
+      download_url="https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.2.0/spring-boot-3.2.0.jar"
+      file_desc="Spring Boot (1MB)"
+      ;;
+    maven.google.com)
+      download_url="https://maven.google.com/androidx/core/core/1.12.0/core-1.12.0.aar"
+      file_desc="AndroidX Core (1MB)"
+      ;;
+    plugins.gradle.org)
+      download_url="https://plugins.gradle.org/m2/com/gradle/gradle-enterprise-gradle-plugin/3.16/gradle-enterprise-gradle-plugin-3.16.jar"
+      file_desc="Gradle plugin (10MB)"
+      ;;
+    registry.npmjs.org)
+      download_url="https://registry.npmjs.org/typescript/-/typescript-5.3.3.tgz"
+      file_desc="TypeScript (7MB)"
+      ;;
+    registry.yarnpkg.com)
+      download_url="https://registry.yarnpkg.com/webpack/-/webpack-5.89.0.tgz"
+      file_desc="Webpack (2MB)"
+      ;;
+    conda.anaconda.org)
+      download_url="https://conda.anaconda.org/conda-forge/linux-64/pandas-2.1.4-py311h320fe9a_0.conda"
+      file_desc="Pandas (12MB)"
+      ;;
+    hub.docker.com|registry-1.docker.io|auth.docker.io)
+      # Docker registry needs auth, skip
+      return 0
+      ;;
+    codeberg.org)
+      download_url="https://codeberg.org/forgejo/forgejo/archive/v1.21.3-0.tar.gz"
+      file_desc="Forgejo source (30MB)"
+      ;;
+    gitea.com)
+      download_url="https://github.com/go-gitea/gitea/releases/download/v1.21.3/gitea-1.21.3-linux-amd64.xz"
+      file_desc="Gitea binary (61MB)"
+      ;;
+    code.europa.eu)
+      # EU code hosting, no standard downloads
+      return 0
+      ;;
+    opencode.de)
+      # German gov hosting, no public downloads
+      return 0
+      ;;
+    ghcr.io|gcr.io|quay.io|registry.gitlab.com)
+      # Container registries need auth
+      return 0
+      ;;
+    releases.hashicorp.com)
+      download_url="https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip"
+      file_desc="Terraform (25MB)"
+      ;;
+    registry.terraform.io)
+      download_url="https://registry.terraform.io/v1/modules/terraform-aws-modules/vpc/aws/versions"
+      file_desc="Terraform registry metadata"
+      ;;
+    kubernetes.io)
+      download_url="https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
+      file_desc="kubectl (50MB)"
+      ;;
+    helm.sh)
+      download_url="https://get.helm.sh/helm-v3.13.3-linux-amd64.tar.gz"
+      file_desc="Helm (16MB)"
+      ;;
+    download.jetbrains.com)
+      download_url="https://download.jetbrains.com/toolbox/jetbrains-toolbox-2.1.3.18901.tar.gz"
+      file_desc="JetBrains Toolbox (70MB)"
+      ;;
+    plugins.jetbrains.com)
+      download_url="https://plugins.jetbrains.com/plugin/download?updateId=467898"
+      file_desc="Kotlin plugin"
+      ;;
+    mirror.openshift.com)
+      download_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz"
+      file_desc="OpenShift CLI (60MB)"
+      ;;
+    access.redhat.com)
+      # Requires Red Hat account
+      return 0
+      ;;
+    code.visualstudio.com|marketplace.visualstudio.com|update.code.visualstudio.com)
+      download_url="https://update.code.visualstudio.com/latest/server-linux-x64/stable"
+      file_desc="VS Code Server (69MB)"
+      ;;
+    snapcraft.io)
+      download_url="https://api.snapcraft.io/api/v1/snaps/download/3Gr8EUWpYLM6PAGXr1MdmSymLrbpqQht_161.snap"
+      file_desc="Core20 snap (65MB)"
+      ;;
+    flathub.org)
+      download_url="https://dl.flathub.org/repo/appstream/x86_64/appstream.xml.gz"
+      file_desc="Flathub metadata (5MB)"
+      ;;
+    static.rust-lang.org)
+      download_url="https://static.rust-lang.org/dist/rust-std-1.75.0-x86_64-unknown-linux-gnu.tar.gz"
+      file_desc="Rust std library (43MB)"
+      ;;
+    *)
+      # No known download for this domain
+      return 0
+      ;;
+  esac
+  
+  [[ -z "$download_url" ]] && return 0
+  
+  printf "\n  ${BOLD}%-35s${NC} %s\n" "${domain:0:35}" "$file_desc"
+  
+  local temp_file="/tmp/devbase-test-$(basename "$download_url")"
+  local start_time=$(($(date +%s%N) / 1000000))
+  
+  # Use curl with progress bar if available
+  if command -v curl &>/dev/null; then
+    local curl_opts=(
+      --location
+      --max-time 60
+      --connect-timeout 10
+      --output "$temp_file"
+      --write-out "\n%{http_code}:%{size_download}:%{time_total}"
+      --progress-bar
+      --retry 2
+      --retry-delay 2
+    )
+    
+    # Disable connection reuse if requested (helps with proxy auth issues)
+    if [[ "$NO_KEEPALIVE" == "true" ]]; then
+      curl_opts+=(-H "Connection: close" --no-keepalive --no-sessionid)
+    fi
+    
+    [[ -n "$proxy" ]] && [[ "$NO_PROXY_MODE" != "true" ]] && curl_opts+=(--proxy "$proxy")
+    [[ "$NO_PROXY_MODE" == "true" ]] && curl_opts+=(--noproxy '*')
+    
+    printf "  "  # Indent for progress bar
+    local result
+    if result=$(curl "${curl_opts[@]}" "$download_url" 2>&1); then
+      # Extract the last line with metrics
+      local metrics
+      metrics=$(echo "$result" | tail -1)
+      local http_code="${metrics%%:*}"
+      metrics="${metrics#*:}"
+      local size="${metrics%%:*}"
+      local total_time="${metrics##*:}"
+      
+      if [[ "$http_code" =~ ^[23] ]] && [[ "$size" -gt 0 ]]; then
+        local size_display
+        if [[ $size -lt 1048576 ]]; then
+          # Show KB for files under 1MB
+          size_display="$((size / 1024))KB"
+        else
+          # Show MB for larger files
+          size_display="$((size / 1048576))MB"
+        fi
+        local speed_mbps
+        # Calculate speed in Mbps from total_time (in seconds) - use LC_NUMERIC=C for consistent formatting
+        speed_mbps=$(LC_NUMERIC=C awk -v size="$size" -v time="$total_time" 'BEGIN {printf "%.1f", (size * 8 / 1000000) / time}')
+        # Convert comma to dot for consistent decimal separator
+        total_time="${total_time//,/.}"
+        LC_NUMERIC=C printf "  ${GREEN}✓${NC} Downloaded %s in %.1fs (%s Mbps)\n" "$size_display" "$total_time" "$speed_mbps"
+        
+        # Track download speeds for summary
+        DOWNLOAD_SPEEDS["$domain"]="$speed_mbps"
+        DOWNLOAD_SIZES["$domain"]="$size_display"
+        
+        # Compare for fastest/slowest (only for files > 1MB to be fair)
+        if [[ $size -gt 1048576 ]]; then
+          local speed_float="${speed_mbps//,/.}"
+          if awk -v s="$speed_float" -v f="$FASTEST_DOWNLOAD_SPEED" 'BEGIN {exit !(s > f)}' 2>/dev/null; then
+            FASTEST_DOWNLOAD_SPEED="$speed_float"
+            FASTEST_DOWNLOAD_DOMAIN="$domain"
+          fi
+          if awk -v s="$speed_float" -v sl="$SLOWEST_DOWNLOAD_SPEED" 'BEGIN {exit !(s < sl)}' 2>/dev/null; then
+            SLOWEST_DOWNLOAD_SPEED="$speed_float"
+            SLOWEST_DOWNLOAD_DOMAIN="$domain"
+          fi
+        fi
+      else
+        printf "  ${RED}✗${NC} HTTP $http_code\n"
+      fi
+    else
+      printf "  ${RED}✗${NC} Download failed\n"
+    fi
+  # Fallback to wget with progress bar
+  elif command -v wget &>/dev/null; then
+    if [[ -n "$proxy" ]] && [[ "$NO_PROXY_MODE" != "true" ]]; then
+      export http_proxy="$proxy" https_proxy="$proxy"
+    elif [[ "$NO_PROXY_MODE" == "true" ]]; then
+      unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    fi
+    
+    printf "  "  # Indent for progress bar
+    if wget --progress=bar:force --timeout=60 --tries=1 -O "$temp_file" "$download_url" 2>&1 | grep -E "%" ; then
+      local size
+      size=$(stat -c%s "$temp_file" 2>/dev/null || stat -f%z "$temp_file" 2>/dev/null || echo 0)
+      local elapsed=$(($(date +%s%N) / 1000000 - start_time))
+      if [[ "$size" -gt 0 ]]; then
+        local size_display
+        if [[ $size -lt 1048576 ]]; then
+          size_display="$((size / 1024))KB"
+        else
+          size_display="$((size / 1048576))MB"
+        fi
+        local speed=$((size * 8 / elapsed / 1000))  # Mbps
+        printf "  ${GREEN}✓${NC} Downloaded %s in %dms (%d Mbps)\n" "$size_display" "$elapsed" "$speed"
+        
+        # Track download speeds for summary
+        DOWNLOAD_SPEEDS["$domain"]="$speed"
+        DOWNLOAD_SIZES["$domain"]="$size_display"
+        
+        # Compare for fastest/slowest (only for files > 1MB to be fair)
+        if [[ $size -gt 1048576 ]]; then
+          if [[ $speed -gt ${FASTEST_DOWNLOAD_SPEED%.*} ]]; then
+            FASTEST_DOWNLOAD_SPEED="$speed"
+            FASTEST_DOWNLOAD_DOMAIN="$domain"
+          fi
+          if [[ $speed -lt ${SLOWEST_DOWNLOAD_SPEED%.*} ]]; then
+            SLOWEST_DOWNLOAD_SPEED="$speed"
+            SLOWEST_DOWNLOAD_DOMAIN="$domain"
+          fi
+        fi
+      else
+        printf "  ${RED}✗${NC} Download failed\n"
+      fi
+    else
+      printf "  ${RED}✗${NC} Download failed\n"
+    fi
+  fi
+}
+
+run_download_tests() {
+  printf "\n${BOLD}Download Tests:${NC}\n"
+  printf "%s\n" "--------------------------------"
+  printf "${GRAY}Downloading actual files (this may take time)...${NC}\n\n"
+  
+  # Get unique domains from our URL list
+  local domains=()
+  local urls
+  mapfile -t urls < <(get_all_urls)
+  
+  for url in "${urls[@]}"; do
+    local domain
+    domain=$(printf "%s" "$url" | sed -E 's|^https?://||' | cut -d/ -f1)
+    [[ ! " ${domains[@]} " =~ " ${domain} " ]] && domains+=("$domain")
+  done
+  
+  # Test downloads for each unique domain
+  for domain in "${domains[@]:0:15}"; do  # Limit to first 15 for speed
+    test_download "$domain" "$PROXY_URL"
+  done
+  
+  printf "\n${CYAN}Download tests completed${NC}\n"
+  
+  # Show fastest and slowest downloads
+  if [[ -n "$FASTEST_DOWNLOAD_DOMAIN" ]] && [[ -n "$SLOWEST_DOWNLOAD_DOMAIN" ]]; then
+    printf "\n${BOLD}Download Performance:${NC}\n"
+    printf "  ${GREEN}Fastest: %s${NC} - %s at %s Mbps\n" \
+      "$FASTEST_DOWNLOAD_DOMAIN" "${DOWNLOAD_SIZES[$FASTEST_DOWNLOAD_DOMAIN]}" "$FASTEST_DOWNLOAD_SPEED"
+    printf "  ${YELLOW}Slowest: %s${NC} - %s at %s Mbps\n" \
+      "$SLOWEST_DOWNLOAD_DOMAIN" "${DOWNLOAD_SIZES[$SLOWEST_DOWNLOAD_DOMAIN]}" "$SLOWEST_DOWNLOAD_SPEED"
+  fi
+}
+
+show_summary() {
+  printf "\n${BOLD}Summary:${NC}\n"
+  printf "  Total URLs tested: %d\n" "$TOTAL_TESTS"
+  printf "  ${GREEN}Passed: %d${NC}\n" "$PASSED_TESTS"
+  printf "  ${RED}Failed: %d${NC}\n" "$FAILED_TESTS"
+  
+  # Show failed URLs
+  if [[ ${#FAILED_URLS[@]} -gt 0 ]]; then
+    printf "\n${RED}Failed URLs:${NC}\n"
+    for url in "${FAILED_URLS[@]:0:10}"; do
+      local domain
+      domain=$(printf "%s" "$url" | sed -E 's|^https?://||' | cut -d/ -f1)
+      printf "    • %s\n" "$domain"
+    done
+    [[ ${#FAILED_URLS[@]} -gt 10 ]] && printf "    ... and %d more\n" $((${#FAILED_URLS[@]} - 10))
+  fi
+  
+  # Performance
+  if [[ ${#RESPONSE_TIMES[@]} -gt 0 ]]; then
+    printf "\n${BOLD}Performance:${NC}\n"
+    local total_time=0
+    local slow_count=0
+    local fast_count=0
+    
+    # Find fastest and slowest
+    local fastest_time=999999
+    local slowest_time=0
+    local fastest_url=""
+    local slowest_url=""
+    
+    for url in "${!RESPONSE_TIMES[@]}"; do
+      local time="${RESPONSE_TIMES[$url]}"
+      total_time=$((total_time + time))
+      [[ $time -gt 5000 ]] && ((slow_count++))
+      [[ $time -lt 500 ]] && ((fast_count++))
+      
+      if [[ $time -lt $fastest_time ]]; then
+        fastest_time=$time
+        fastest_url=$url
+      fi
+      
+      if [[ $time -gt $slowest_time ]]; then
+        slowest_time=$time
+        slowest_url=$url
+      fi
+    done
+    
+    local avg_time=$((total_time / ${#RESPONSE_TIMES[@]}))
+    printf "  Average response time: %d ms\n" "$avg_time"
+    printf "  Fast responses (<500ms): %d\n" "$fast_count"
+    [[ $slow_count -gt 0 ]] && printf "  ${YELLOW}Slow responses (>5s): %d${NC}\n" "$slow_count"
+    
+    printf "\n${BOLD}Fastest Lookup:${NC}\n"
+    local fastest_domain
+    fastest_domain=$(printf "%s" "$fastest_url" | sed -E 's|^https?://||' | cut -d/ -f1)
+    printf "  ${GREEN}%s${NC} - %d ms\n" "$fastest_domain" "$fastest_time"
+    
+    printf "\n${BOLD}Slowest Lookup:${NC}\n"
+    local slowest_domain
+    slowest_domain=$(printf "%s" "$slowest_url" | sed -E 's|^https?://||' | cut -d/ -f1)
+    printf "  ${YELLOW}%s${NC} - %d ms\n" "$slowest_domain" "$slowest_time"
+  fi
+  
+  local success_rate=$((TOTAL_TESTS > 0 ? PASSED_TESTS * 100 / TOTAL_TESTS : 0))
+  printf "\nSuccess rate: "
+  if [[ $success_rate -ge 90 ]]; then
+    printf "${GREEN}%d%%${NC}\n" "$success_rate"
+  elif [[ $success_rate -ge 70 ]]; then
+    printf "${YELLOW}%d%%${NC}\n" "$success_rate"
+  else
+    printf "${RED}%d%%${NC}\n" "$success_rate"
+  fi
+}
+
+usage() {
+  cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Test connectivity to DevBase external dependencies
+
+OPTIONS:
+  --proxy URL       Test with specific proxy URL
+  --no-proxy        Force direct connection, ignore proxy environment
+  --no-keepalive    Disable connection reuse (for problematic proxies)
+  --verbose         Show detailed output
+  --download-test   Test downloading actual files from services
+  --timeout SECS    Connection timeout (default: 15)
+  --help            Show this help
+
+EXAMPLES:
+  $(basename "$0")                                    # Test with system proxy
+  $(basename "$0") --proxy http://proxy:8080         # Test with specific proxy
+  $(basename "$0") --no-proxy                        # Test direct connection
+  $(basename "$0") --download-test                   # Test with file downloads
+
+EOF
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+main() {
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --proxy)
+        PROXY_URL="$2"
+        shift 2
+        ;;
+      --no-proxy)
+        NO_PROXY_MODE="true"
+        PROXY_URL=""
+        shift
+        ;;
+      --no-keepalive)
+        NO_KEEPALIVE="true"
+        shift
+        ;;
+      --verbose)
+        VERBOSE="true"
+        shift
+        ;;
+      --download-test)
+        DOWNLOAD_TEST="true"
+        shift
+        ;;
+      --timeout)
+        TEST_TIMEOUT="$2"
+        shift 2
+        ;;
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      *)
+        printf "Unknown option: %s\n" "$1"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+  
+  # Check for required commands
+  if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
+    printf "${RED}Error: Neither curl nor wget found${NC}\n"
+    exit 1
+  fi
+  
+  # Use system proxy if not specified
+  if [[ "$NO_PROXY_MODE" != "true" ]] && [[ -z "$PROXY_URL" ]]; then
+    PROXY_URL="${HTTP_PROXY:-${http_proxy:-}}"
+  fi
+  
+  printf "${BOLD}DevBase Proxy & Network Connectivity Test${NC}\n"
+  printf "==========================================\n"
+  
+  # Show proxy configuration
+  if [[ "$NO_PROXY_MODE" == "true" ]]; then
+    printf "Mode: ${YELLOW}Direct connection (no proxy)${NC}\n"
+  elif [[ -n "$PROXY_URL" ]]; then
+    printf "Proxy: ${BLUE}%s${NC}\n" "$PROXY_URL"
+  else
+    printf "Mode: Direct connection\n"
+  fi
+  
+  # Show if connection reuse is disabled
+  if [[ "$NO_KEEPALIVE" == "true" ]]; then
+    printf "Connection: ${YELLOW}No keepalive (new connection per request)${NC}\n"
+  fi
+  
+  # DNS check
+  check_dns
+  
+  # Test URLs
+  printf "\n${BOLD}Service Connectivity:${NC}\n"
+  printf "%s\n" "--------------------------------"
+  
+  # Test all URLs
+  local urls
+  mapfile -t urls < <(get_all_urls)
+  
+  local total=${#urls[@]}
+  local current=0
+  
+  for url in "${urls[@]}"; do
+    ((current++))
+    
+    # Show progress if not verbose
+    if [[ "$VERBOSE" != "true" ]]; then
+      printf "\r  %d/%d " "$current" "$total"
+    fi
+    
+    test_url "$url" "$PROXY_URL" || true
+  done
+  
+  printf "\n  ${CYAN}All URL tests completed${NC}\n"
+  
+  # Download tests if requested
+  if [[ "$DOWNLOAD_TEST" == "true" ]]; then
+    run_download_tests
+  fi
+  
+  # Summary
+  show_summary
+  
+  # Exit code
+  [[ $FAILED_TESTS -eq 0 ]] && exit 0 || exit 1
+}
+
+main "$@"

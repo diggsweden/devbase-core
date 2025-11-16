@@ -76,7 +76,7 @@ k9s:
       fgColor: *foreground
       bgColor: *background
       cursorFgColor: white
-      cursorBgColor: *background
+      cursorBgColor: *current_line
       markColor: darkgoldenrod
       header:
         fgColor: *foreground

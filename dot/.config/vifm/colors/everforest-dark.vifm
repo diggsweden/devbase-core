@@ -1,0 +1,36 @@
+" VIFM COLORS
+" Everforest Dark
+" Based on: https://github.com/sainnhe/everforest
+
+highlight clear
+
+" Everforest Dark - optimized for dark terminals
+" Uses transparent backgrounds to work with terminal theme
+
+" Main window - transparent to show terminal bg
+highlight Win             cterm=none ctermfg=7         ctermbg=none
+highlight OtherWin        cterm=none ctermfg=8         ctermbg=none
+
+" UI elements - subtle highlighting
+highlight TopLine         cterm=none ctermfg=2         ctermbg=none
+highlight TopLineSel      cterm=bold ctermfg=2         ctermbg=none
+highlight StatusLine      cterm=none ctermfg=7         ctermbg=none
+highlight Border          cterm=none ctermfg=8         ctermbg=none
+
+" Selection - good contrast
+highlight Selected        cterm=bold ctermfg=0         ctermbg=2
+highlight CurrLine        cterm=none ctermfg=none      ctermbg=8
+
+" Command line
+highlight WildMenu        cterm=reverse ctermfg=2      ctermbg=none
+highlight CmdLine         cterm=none ctermfg=7         ctermbg=none
+highlight ErrorMsg        cterm=bold ctermfg=1         ctermbg=none
+
+" File types - bright colors for dark bg
+highlight Directory       cterm=bold ctermfg=2         ctermbg=none
+highlight Link            cterm=none ctermfg=6         ctermbg=none
+highlight BrokenLink      cterm=bold ctermfg=1         ctermbg=none
+highlight Socket          cterm=none ctermfg=5         ctermbg=none
+highlight Device          cterm=none ctermfg=3         ctermbg=none
+highlight Fifo            cterm=none ctermfg=6         ctermbg=none
+highlight Executable      cterm=bold ctermfg=1         ctermbg=none

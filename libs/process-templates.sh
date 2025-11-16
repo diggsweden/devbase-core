@@ -298,6 +298,11 @@ process_all_templates() {
     cp "${DEVBASE_FILES}/fish-functions/devbase-proxy.fish" "$proxy_func_target"
   fi
 
+  # Always install proxy-curl configuration for Fish (checks for proxy at runtime)
+  local curl_func_target="${temp_dir}/.config/fish/functions/__devbase_configure_proxy_curl.fish"
+  mkdir -p "$(dirname "$curl_func_target")"
+  cp "${DEVBASE_DOT}/.config/fish/functions/__devbase_configure_proxy_curl.fish" "$curl_func_target"
+
   if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"

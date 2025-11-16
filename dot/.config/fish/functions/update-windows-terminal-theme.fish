@@ -23,10 +23,12 @@ function __update_wt_detect_username --description "Detect Windows username"
             set -l dir_name (basename "$user_dir")
             # Skip system directories
             if not string match -qr '^(Public|Default|All Users|Default User)$' "$dir_name"
-                # Check if this user has a Windows Terminal settings file
-                if test -f "$user_dir/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"; or test -f "$user_dir/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
-                    echo $dir_name
-                    return 0
+                # Check for any Windows Terminal package
+                for pkg_dir in $user_dir/AppData/Local/Packages/Microsoft.WindowsTerminal_*
+                    if test -f "$pkg_dir/LocalState/settings.json"
+                        echo $dir_name
+                        return 0
+                    end
                 end
             end
         end
@@ -37,14 +39,15 @@ end
 
 function __update_wt_find_settings_path --description "Find Windows Terminal settings.json path"
     set -l win_user $argv[1]
-    set -l possible_paths \
-        "/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json" \
-        "/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+    set -l packages_dir "/mnt/c/Users/$win_user/AppData/Local/Packages"
     
-    for path in $possible_paths
-        if test -f "$path"
-            echo $path
-            return 0
+    # Find the Windows Terminal package directory (name can vary)
+    if test -d "$packages_dir"
+        for pkg_dir in $packages_dir/Microsoft.WindowsTerminal_*
+            if test -f "$pkg_dir/LocalState/settings.json"
+                echo "$pkg_dir/LocalState/settings.json"
+                return 0
+            end
         end
     end
     
@@ -106,10 +109,9 @@ function __update_wt_get_scheme_file --description "Get Windows Terminal scheme 
             echo "nord.json"
         case dracula
             echo "dracula.json"
-        case solarized-dark
-            echo "solarized-dark.json"
-        case solarized-light
-            echo "solarized-light.json"
+        case solarized-dark solarized-light
+            # Built-in themes, no file needed
+            echo ""
         case '*'
             echo "everforest-dark-hard.json"
     end
@@ -145,15 +147,49 @@ function __update_wt_apply_scheme --description "Apply Windows Terminal color sc
         return 1
     end
     
-    # Verify scheme exists in settings
-    if not jq -e --arg scheme "$wt_scheme_name" '.schemes[]? | select(.name == $scheme)' "$wt_settings" >/dev/null 2>&1
+    # For Solarized themes, don't check if they exist (they're built-in)
+    # For other themes, verify they exist in settings
+    if not string match -q "Solarized*" "$wt_scheme_name"
+        if not jq -e --arg scheme "$wt_scheme_name" '.schemes[]? | select(.name == $scheme)' "$wt_settings" >/dev/null 2>&1
         echo "✗ Windows Terminal: Scheme '$wt_scheme_name' not installed in settings.json" >&2
+        echo "  Settings: $wt_settings" >&2
+        echo "  Looking for: '$wt_scheme_name'" >&2
+        
+        # List ALL schemes in the file for debugging
+        set -l all_schemes (jq -r '.schemes[]?.name // empty' "$wt_settings" 2>/dev/null)
+        set -l scheme_count (count $all_schemes)
+        
+        if test $scheme_count -gt 0
+            echo "  Total schemes in file: $scheme_count" >&2
+            
+            # Check for DevBase themes specifically - show FULL names
+            set -l devbase_schemes
+            for scheme in $all_schemes
+                if string match -r -q "(Everforest|Catppuccin|TokyoNight|Tokyo Night|Gruvbox|Nord|Dracula|Solarized)" "$scheme"
+                    set -a devbase_schemes "$scheme"
+                end
+            end
+            
+            if test -n "$devbase_schemes"
+                echo "  DevBase themes found:" >&2
+                for scheme in $devbase_schemes
+                    echo "    - '$scheme'" >&2
+                end
+            else
+                echo "  No DevBase themes found in settings.json" >&2
+            end
+        else
+            echo "  No schemes found in settings.json" >&2
+        end
+        
         echo "  Run install-windows-terminal-themes to install schemes" >&2
         rm -f "$temp_file"
         return 1
     end
+    end
     
     # Apply the color scheme change
+    # Solarized themes use built-in names, others use what we installed
     if not jq --arg scheme_name "$wt_scheme_name" '.profiles.defaults.colorScheme = $scheme_name' "$wt_settings" > "$temp_file" 2>&1
         set -l jq_error (jq --arg scheme_name "$wt_scheme_name" '.profiles.defaults.colorScheme = $scheme_name' "$wt_settings" 2>&1)
         echo "✗ Windows Terminal: jq command failed" >&2
@@ -238,6 +274,14 @@ function __update_wt_prepare_theme_data --description "Get theme scheme name and
     set -l wt_scheme_name (__update_wt_get_scheme_name $devbase_theme)
     set -l wt_scheme_file (__update_wt_get_scheme_file $devbase_theme)
     
+    # Check if this is a built-in theme (no file needed)
+    if test -z "$wt_scheme_file"
+        # Built-in theme like Solarized, just return the scheme name
+        echo "$wt_scheme_name"
+        return 0
+    end
+    
+    # For custom themes, validate the file exists
     set -l theme_source (__update_wt_find_theme_file $wt_scheme_file)
     if test -z "$theme_source"
         echo "✗ Windows Terminal: Theme file not found for $devbase_theme" >&2

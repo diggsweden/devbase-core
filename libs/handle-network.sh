@@ -7,6 +7,38 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
+# Configure curl for proxy environments to avoid connection reuse issues
+# Some corporate proxies have problems with persistent connections
+configure_proxy_settings() {
+  if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
+    # Use curl's environment variables for proxy compatibility
+    # These are respected by libcurl and curl command
+
+    # Disable connection reuse - curl checks these env vars
+    export CURLOPT_FORBID_REUSE=1
+    export CURLOPT_FRESH_CONNECT=1
+
+    # For wget compatibility
+    export WGET_OPTIONS="--no-http-keep-alive"
+
+    # Create a custom curl alias with required options
+    # This way all curl calls in subshells will use these options
+    curl() {
+      command curl --no-keepalive --no-sessionid -H "Connection: close" "$@"
+    }
+    export -f curl
+
+    # Log this only once
+    if [[ -z "${DEVBASE_PROXY_CONFIGURED:-}" ]]; then
+      export DEVBASE_PROXY_CONFIGURED=1
+      show_progress info "Proxy detected - configured for better compatibility"
+    fi
+  fi
+}
+
+# Call the configuration function
+configure_proxy_settings
+
 # Brief: Verify file checksum from URL
 # Params: $1-target_file $2-checksum_url $3-timeout
 # Returns: 0 if checksum matches, 1 if mismatch

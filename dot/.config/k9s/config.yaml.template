@@ -3,32 +3,39 @@
 # Theme: ${DEVBASE_THEME}
 
 k9s:
-  # Refresh rate in milliseconds
-  refreshRate: 2000
+  # Refresh rate in seconds
+  refreshRate: 2
   
-  # Max number of lines to keep in logs view
+  # Max number of retries for API server connection
   maxConnRetry: 5
-  
-  # Enable mouse support
-  enableMouse: true
-  
-  # Headless mode (no UI)
-  headless: false
-  
-  # Skin/theme name (references files in ~/.config/k9s/skins/)
-  skin: ${K9S_SKIN}
-  
-  # Log level (info, warn, debug, trace, error)
-  logLevel: info
-  
-  # Log request body
-  logRequestBody: false
   
   # Skip latest revision check
   skipLatestRevCheck: false
   
-  # Disable warnings
+  # Disable pod counting
   disablePodCounting: false
+  
+  # UI configuration
+  ui:
+    # Enable mouse support
+    enableMouse: true
+    
+    # Headless mode (no UI header)
+    headless: false
+    
+    # Skin/theme name (references files in ~/.config/k9s/skins/)
+    skin: ${K9S_SKIN}
+  
+  # Logger configuration
+  logger:
+    # Log level (info, warn, debug, trace, error)
+    level: info
+    
+    # Number of log lines to tail
+    tail: 100
+    
+    # Total number of log lines in buffer
+    buffer: 5000
   
   # Shell pod command (default)
   shellPod:

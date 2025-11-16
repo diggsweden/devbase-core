@@ -15,6 +15,13 @@ if status is-interactive; and functions -q ssh-agent-init
     ssh-agent-init
 end
 
+# Configure curl for proxy environments if needed
+# The function is in ~/.config/fish/functions/ and will be autoloaded
+# We just need to call it if proxy is set
+if set -q HTTP_PROXY; or set -q HTTPS_PROXY; or set -q http_proxy; or set -q https_proxy
+    __devbase_configure_proxy_curl
+end
+
 # Starship prompt
 starship init fish | source
 

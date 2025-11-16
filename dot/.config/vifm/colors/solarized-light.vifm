@@ -5,7 +5,7 @@
 highlight clear
 
 highlight Win             cterm=none ctermfg=default    ctermbg=none
-highlight OtherWin        cterm=none ctermfg=default    ctermbg=white
+highlight OtherWin        cterm=none ctermfg=default    ctermbg=none
 
 highlight TopLine         cterm=none ctermfg=blue       ctermbg=white
 highlight TopLineSel      cterm=none,underline ctermfg=blue       ctermbg=15

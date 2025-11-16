@@ -65,7 +65,57 @@ just dev-tools-install      # Install project development tools (from .mise.toml
 just dev-tools-update       # Update devbase tools
 ----
 
+=== Testing and Verification Scripts
+
+DevBase includes several verification scripts to test functionality:
+
+==== Network and Proxy Verification
+
+[source,bash]
+----
+./verify/verify-proxy-access.sh        # Test connectivity to all DevBase dependencies
+./verify/verify-proxy-access.sh --help  # Show all options
+
+# Common usage:
+./verify/verify-proxy-access.sh --proxy http://proxy:8080  # Test with specific proxy
+./verify/verify-proxy-access.sh --no-proxy                # Test direct connection
+./verify/verify-proxy-access.sh --download-test           # Test actual file downloads
+./verify/verify-proxy-access.sh --no-keepalive            # Disable connection reuse (for problematic proxies)
+----
+
+This script tests connectivity to:
+- Git hosting services (GitHub, GitLab, Bitbucket, etc.)
+- Language runtimes (Node.js, Python, Go, Ruby, Java)
+- Package registries (npm, PyPI, Maven, Cargo, etc.)
+- Container registries (Docker Hub, GHCR, Quay)
+- Development tools sources
+
+The `--download-test` option performs actual file downloads to verify bandwidth and throughput.
+Use `--no-keepalive` if experiencing "Proxy Authentication Required" errors with corporate proxies.
+
+==== Theme Testing
+
+[source,bash]
+----
+./verify/test-themes.fish              # Preview all available themes in Fish shell
+----
+
+This Fish script allows you to:
+- Preview all 10 available themes interactively
+- See how each theme looks with your terminal
+- Test theme switching functionality
+- Verify theme application across all supported tools
+
+NOTE: This script requires Fish shell to be installed and configured.
+
 == Testing Changes
+
+Before testing with a clean user account, you can use the verification scripts to test specific functionality:
+
+- `./verify/verify-proxy-access.sh` - Test network connectivity and proxy configuration
+- `./verify/test-themes.fish` - Preview and test theme functionality
+- `just verify` - Run all code quality checks
+- `just devbase-install-verify` - Verify installation completeness
 
 === Test with Clean User Account
 
@@ -167,7 +217,11 @@ dot/                    # User config templates (XDG compliant)
 devbase_files/          # Additional resources (systemd units, fish functions)
 environments/           # Environment variable templates
 docs/                   # Documentation (AsciiDoc)
-verify/                 # Verification scripts
+verify/                 # Verification and testing scripts
+  verify-proxy-access.sh  # Network/proxy connectivity tester
+  test-themes.fish        # Theme preview and testing
+  verify-install-check.sh # Installation verification
+  verify-base-lib.sh      # Library function tests
 development/            # Development utilities
   just/                 # Just task runner recipes (linters, checks)
   devcerts/             # Local development certificates (mkcert)

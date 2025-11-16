@@ -101,8 +101,6 @@ _build_themes_json_array() {
     "gruvbox-dark.json"
     "gruvbox-light.json"
     "nord.json"
-    "solarized-dark.json"
-    "solarized-light.json"
     "tokyonight-day.json"
     "tokyonight-night.json"
   )
@@ -141,7 +139,15 @@ _inject_themes_to_settings() {
   local temp_file
   temp_file=$(mktemp)
 
-  if jq --argjson themes "$themes_array" 'del(.schemes[]? | select(.name | test("Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)|Nord|Dracula|Solarized (Dark|Light)"))) | .schemes += $themes' "$wt_settings" >"$temp_file" 2>&1; then
+  # shellcheck disable=SC2016 # $themes is a jq variable, not a shell variable
+  local jq_filter='
+    .[0] as $themes
+    | .[1]
+    | del(.schemes[]? | select(.name | test("Everforest (Dark Hard|Light Med)|Catppuccin (Mocha|Latte)|TokyoNight (Night|Day)|Gruvbox (Dark|Light)|Nord|Dracula|Solarized (Dark|Light)")))
+    | .schemes += $themes
+  '
+
+  if echo "$themes_array" | jq -s "$jq_filter" - "$wt_settings" >"$temp_file" 2>&1; then
     # Validate output is valid JSON and non-empty
     if [[ -s "$temp_file" ]] && jq empty "$temp_file" 2>/dev/null; then
       # Use atomic move for safety
@@ -240,9 +246,11 @@ install_windows_terminal_themes() {
   # Inject themes into settings.json
   if _inject_themes_to_settings "$wt_settings" "$themes_array" "$backup_file"; then
     printf "  %b✓%b Windows Terminal: All 12 DevBase themes installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" >&2
+    echo "Themes installed successfully" >&2
     return 0
   else
     printf "  %b✗%b Windows Terminal: Failed to update settings.json\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    echo "Failed to inject themes" >&2
     return 1
   fi
 }
