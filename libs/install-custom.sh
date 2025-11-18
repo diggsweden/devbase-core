@@ -427,44 +427,8 @@ install_fisher() {
   return 0
 }
 
-# Brief: Install reuse tool using pipx
-# Params: None
-# Uses: command_exists, show_progress (functions/globals)
-# Returns: 0 on success, 1 on failure
-# Side-effects: Installs reuse via pipx (uses system proxy and registry env vars)
-install_reuse() {
-  show_progress info "Installing reuse (license compliance tool)..."
-
-  if ! command_exists pipx; then
-    show_progress error "pipx not found - cannot install reuse"
-    return 1
-  fi
-
-  # Set PIP_INDEX_URL if custom PyPI registry is configured
-  if [[ -n "${DEVBASE_PYPI_REGISTRY:-}" ]]; then
-    export PIP_INDEX_URL="${DEVBASE_PYPI_REGISTRY}"
-    show_progress info "Using custom PyPI registry: ${DEVBASE_PYPI_REGISTRY}"
-  fi
-
-  # Install reuse with pipx (respects HTTP_PROXY/HTTPS_PROXY/PIP_INDEX_URL env vars)
-  local output
-  output=$(pipx install reuse 2>&1)
-
-  if echo "$output" | grep -qE "(installed package|already seems to be installed)"; then
-    if echo "$output" | grep -q "already seems to be installed"; then
-      show_progress success "reuse is already installed"
-    else
-      show_progress success "reuse installed successfully"
-    fi
-    return 0
-  else
-    show_progress error "Failed to install reuse via pipx"
-    if [[ -n "$output" ]]; then
-      printf "  Error details: %s\n" "$output" >&2
-    fi
-    return 1
-  fi
-}
+# Note: install_reuse() function removed - reuse is now managed by mise
+# See .mise.toml: "pipx:reuse" = "6.2.0"
 
 # Brief: Determine font details (name, zip, directory, display name, timeout) from font choice
 # Params: $1 - font choice name

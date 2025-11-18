@@ -572,7 +572,7 @@ handle_wsl_restart() {
 
 # Brief: Install all development tools (APT, snap, mise, custom tools)
 # Params: None
-# Uses: install_apt_packages, install_snap_packages, install_mise_and_tools, install_fisher, install_reuse, install_nerd_fonts, install_lazyvim, install_jmc, install_oc_kubectl, install_vscode, install_dbeaver, install_keystore_explorer, install_intellij_idea, install_k3s, die, show_progress (functions)
+# Uses: install_apt_packages, install_snap_packages, install_mise_and_tools, install_fisher, install_nerd_fonts, install_lazyvim, install_jmc, install_oc_kubectl, install_vscode, install_dbeaver, install_keystore_explorer, install_intellij_idea, install_k3s, die, show_progress (functions)
 # Returns: 0 always (critical failures call die)
 # Side-effects: Installs all configured development tools
 download_and_install_tools() {
@@ -580,7 +580,6 @@ download_and_install_tools() {
   install_snap_packages || die "Failed to install snap packages"
   install_mise_and_tools || die "Failed to install mise and development tools"
   install_fisher || show_progress warning "Fisher/fzf.fish setup failed (continuing)"
-  install_reuse || show_progress warning "reuse installation failed (continuing)"
   install_nerd_fonts || show_progress warning "Nerd Font installation failed (continuing)"
   install_lazyvim || show_progress warning "LazyVim setup failed (continuing)"
   install_jmc || show_progress warning "JMC setup failed (continuing)"
