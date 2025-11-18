@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Verify JMC_DOWNLOAD is set (should be set earlier in the process)
-if [[ -z "$JMC_DOWNLOAD" ]]; then
-  JMC_DOWNLOAD="https://download.oracle.com/java/GA"
-fi
-
 # Brief: Fetch VS Code package SHA256 checksum from official API
 # Params: $1 - version (e.g. "1.85.1"), $2 - platform (default: "linux-deb-x64")
 # Uses: command_exists, validate_not_empty (functions)
@@ -135,7 +130,7 @@ install_lazyvim() {
 
 # Brief: Install Oracle JDK Mission Control (JMC) for Java profiling
 # Params: None
-# Uses: _DEVBASE_TEMP, XDG_DATA_HOME, XDG_BIN_HOME, TOOL_VERSIONS, JMC_DOWNLOAD, validate_var_set, command_exists, show_progress, retry_command, download_file, backup_if_exists (globals/functions)
+# Uses: _DEVBASE_TEMP, XDG_DATA_HOME, XDG_BIN_HOME, TOOL_VERSIONS, validate_var_set, command_exists, show_progress, retry_command, download_file, backup_if_exists (globals/functions)
 # Returns: 0 always (prints warnings on failure)
 # Side-effects: Downloads and extracts JMC, creates symlink in XDG_BIN_HOME
 install_jmc() {
