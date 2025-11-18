@@ -404,7 +404,7 @@ set -l no_proxy_java "$DEVBASE_NO_PROXY_JAVA"
 
 # Set Java proxy settings (check if already present to avoid duplication)
 # Only append proxy settings if they're not already there
-if not string match -q "*proxyHost*" "\$JAVA_TOOL_OPTIONS"
+if not string match -q -- "*proxyHost*" "\$JAVA_TOOL_OPTIONS"
     # Preserve existing JAVA_TOOL_OPTIONS (like trustStore settings) and append proxy settings
     if test -n "\$JAVA_TOOL_OPTIONS"
         set -gx JAVA_TOOL_OPTIONS "\$JAVA_TOOL_OPTIONS -Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
