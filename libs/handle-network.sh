@@ -284,18 +284,18 @@ check_network_connectivity() {
 
 # Brief: Check if configured proxy is working
 # Params: $1 - timeout in seconds (default: 5)
-# Uses: DEVBASE_PROXY_URL (global, optional)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT (global, optional)
 # Returns: 0 on success, 1 if proxy not working
 # Side-effects: Tests proxy connection
 check_proxy_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 0
 
   # Test with a site that should go through proxy (github.com is not in NO_PROXY)
   if curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) https://github.com &>/dev/null; then
-    show_progress info "Proxy works: ${DEVBASE_PROXY_URL}"
+    show_progress info "Proxy works: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
   else
-    show_progress error "Proxy not working: ${DEVBASE_PROXY_URL}"
+    show_progress error "Proxy not working: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
     return 1
   fi
   return 0
@@ -303,22 +303,25 @@ check_proxy_connectivity() {
 
 # Brief: Check if configured container registry is accessible
 # Params: $1 - timeout in seconds (default: 5)
-# Uses: DEVBASE_REGISTRY_URL (global, optional)
+# Uses: DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT (global, optional)
 # Returns: 0 always (warnings only, non-fatal)
 # Side-effects: Tests registry connection
 check_registry_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]] && return 0
+
+  # Build registry URL - try HTTPS first (common for registries)
+  local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
   # Simple connectivity check with --insecure (ignoring cert issues)
   # curl will automatically use http_proxy/https_proxy/no_proxy env vars
-  curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "${DEVBASE_REGISTRY_URL}" -o /dev/null
+  curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "${registry_url}" -o /dev/null
   local curl_exit=$?
 
   if [[ $curl_exit -eq 0 ]]; then
-    show_progress success "Registry accessible: ${DEVBASE_REGISTRY_URL}"
+    show_progress success "Registry accessible: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
   else
-    show_progress warning "Registry unreachable: ${DEVBASE_REGISTRY_URL} (exit code: $curl_exit)"
+    show_progress warning "Registry unreachable: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT} (exit code: $curl_exit)"
   fi
   return 0
 }

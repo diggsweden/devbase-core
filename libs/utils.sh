@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Brief: Generate a random 7-character SSH passphrase
+# Brief: Generate a random 12-character SSH passphrase (NIST minimum)
 # Params: None
 # Returns: Echoes passphrase to stdout
 # Side-effects: None
 generate_ssh_passphrase() {
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 6 | head -c 7
+    openssl rand -base64 12 | head -c 12
   else
-    tr -dc 'A-Za-z0-9' </dev/urandom | head -c 7
+    tr -dc 'A-Za-z0-9' </dev/urandom | head -c 12
   fi
 }
 
@@ -490,10 +490,10 @@ systemctl_enable_start() {
   local output
   output=$(sudo systemctl enable "$service" 2>&1)
   local result=$?
-  
+
   if [[ $result -eq 0 ]]; then
     # Success - only show verbose output in debug mode
-    if [[ "$DEBUG" == "1" ]]; then
+    if [[ "$DEVBASE_DEBUG" == "1" ]]; then
       echo "$output" | sed 's/^/    /'
     fi
     sudo systemctl start "$service" >/dev/null 2>&1 || true
@@ -522,10 +522,10 @@ systemctl_disable_stop() {
     local output
     output=$(sudo systemctl disable "$service" 2>&1)
     local result=$?
-    
+
     if [[ $result -eq 0 ]]; then
       # Success - only show verbose output in debug mode
-      if [[ "$DEBUG" == "1" ]]; then
+      if [[ "$DEVBASE_DEBUG" == "1" ]]; then
         echo "$output" | sed 's/^/    /'
       fi
     else

@@ -26,13 +26,12 @@ trap handle_interrupt INT TERM
 # ============================================================================
 # Import environment variables that may be set by user/environment before running setup.sh
 # Importing here with empty defaults enables fail-fast (set -u) for the rest of the script
-# Any typo in variable names will cause immediate crash instead of silent empty string
 #
 # For complete documentation: docs/environment.adoc
 
 # User-provided overrides
 DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}"      # Custom config directory path
-DEBUG="${DEBUG:-}"                                # Debug mode (set DEBUG=1 for verbose output)
+DEVBASE_DEBUG="${DEVBASE_DEBUG:-}"                # Debug mode (set DEVBASE_DEBUG=1 for verbose output)
 DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}" # Theme choice (default: everforest-dark)
 DEVBASE_FONT="${DEVBASE_FONT:-monaspace}"         # Font choice (default: monaspace)
 EDITOR="${EDITOR:-nvim}"                          # Default editor: nvim or nano
@@ -47,16 +46,15 @@ XDG_CACHE_HOME="${XDG_CACHE_HOME:-${HOME}/.cache}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
 
-# Network configuration (may be set by org.env file when sourced)
-DEVBASE_PROXY_URL="${DEVBASE_PROXY_URL:-}"
-DEVBASE_NO_PROXY_DOMAINS="${DEVBASE_NO_PROXY_DOMAINS:-}"
-DEVBASE_REGISTRY_URL="${DEVBASE_REGISTRY_URL:-}"
-DEVBASE_EMAIL_DOMAIN="${DEVBASE_EMAIL_DOMAIN:-}"
-DEVBASE_LOCALE="${DEVBASE_LOCALE:-}"
-DEVBASE_CONTAINERS_REGISTRY="${DEVBASE_CONTAINERS_REGISTRY:-}"
-DEVBASE_PYPI_REGISTRY="${DEVBASE_PYPI_REGISTRY:-}"
+# Network configuration (may be set by customization (org.env, see docs))
 DEVBASE_PROXY_HOST="${DEVBASE_PROXY_HOST:-}"
 DEVBASE_PROXY_PORT="${DEVBASE_PROXY_PORT:-}"
+DEVBASE_NO_PROXY_DOMAINS="${DEVBASE_NO_PROXY_DOMAINS:-}"
+DEVBASE_REGISTRY_HOST="${DEVBASE_REGISTRY_HOST:-}"
+DEVBASE_REGISTRY_PORT="${DEVBASE_REGISTRY_PORT:-}"
+DEVBASE_EMAIL_DOMAIN="${DEVBASE_EMAIL_DOMAIN:-}"
+DEVBASE_LOCALE="${DEVBASE_LOCALE:-}"
+DEVBASE_PYPI_REGISTRY="${DEVBASE_PYPI_REGISTRY:-}"
 
 # Custom configuration paths (set by find_custom_directory() if custom dir exists)
 # Initialized here to avoid unbound variable errors with set -u
@@ -80,22 +78,14 @@ DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-}" # Install VSCode exte
 DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-}"         # Install VSCode Neovim extension
 
 # SSH key management configuration
-DEVBASE_SSH_KEY_TYPE="${DEVBASE_SSH_KEY_TYPE:-ed25519}"                   # SSH key type: ed25519, ecdsa, ed25519-sk, ecdsa-sk
-DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"        # SSH key filename
-DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}"                      # SSH key action: new, keep, or import
-DEVBASE_SSH_KEY_PATH="${DEVBASE_SSH_KEY_PATH:-~/.ssh/id_ed25519_devbase}" # SSH key path (deprecated, use DEVBASE_SSH_KEY_NAME)
-DEVBASE_SSH_ALLOW_EMPTY_PW="${DEVBASE_SSH_ALLOW_EMPTY_PW:-false}"         # Allow empty SSH key passphrase
-GENERATED_SSH_PASSPHRASE="${GENERATED_SSH_PASSPHRASE:-false}"             # Flag: passphrase was auto-generated
-
-# Environment and Git configuration
-DEVBASE_GIT_DEFAULT_BRANCH="${DEVBASE_GIT_DEFAULT_BRANCH:-main}" # Default Git branch name
-DEVBASE_ENV_NAME="${DEVBASE_ENV_NAME:-default}"                  # Environment name
+DEVBASE_SSH_KEY_TYPE="${DEVBASE_SSH_KEY_TYPE:-ed25519}"            # SSH key type: ed25519, ecdsa, ed25519-sk, ecdsa-sk
+DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}" # SSH key filename
+DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}"               # SSH key action: new, keep, or import
+GENERATED_SSH_PASSPHRASE="${GENERATED_SSH_PASSPHRASE:-false}"      # Flag: passphrase was auto-generated
 
 # Advanced configuration (offline installs, registry overrides)
-DEVBASE_DEB_CACHE="${DEVBASE_DEB_CACHE:-}"                   # Path to offline .deb package cache
-JMC_DOWNLOAD="${JMC_DOWNLOAD:-}"                             # JMC download URL override
-DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}"           # Java-specific no-proxy domains
-DEVBASE_REGISTRY_CONTAINER="${DEVBASE_REGISTRY_CONTAINER:-}" # Container registry override
+DEVBASE_DEB_CACHE="${DEVBASE_DEB_CACHE:-}"         # Path to offline .deb package cache
+DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}" # Java-specific no-proxy domains
 
 # Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
@@ -112,8 +102,8 @@ NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 #   _DEVBASE_CUSTOM_HOOKS, _DEVBASE_CUSTOM_TEMPLATES, _DEVBASE_CUSTOM_SSH
 #
 # Environment & Network:
-#   DEVBASE_ENV, DEVBASE_ENV_FILE, DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS,
-#   DEVBASE_REGISTRY_URL, DEVBASE_CONTAINERS_REGISTRY, DEVBASE_EMAIL_DOMAIN
+#   DEVBASE_ENV, DEVBASE_ENV_FILE, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT,
+#   DEVBASE_NO_PROXY_DOMAINS, DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, DEVBASE_EMAIL_DOMAIN
 #
 # Installation Settings:
 #   DEVBASE_THEME, DEVBASE_CACHE_DIR, DEVBASE_CONFIG_DIR, DEVBASE_BACKUP_DIR,
@@ -279,8 +269,8 @@ find_custom_directory() {
     export _DEVBASE_CUSTOM_SSH="$fullpath/ssh"
     export _DEVBASE_CUSTOM_PACKAGES="$fullpath/packages"
 
-    # Debug output if DEBUG is set (see docs/environment.adoc)
-    if [[ "${DEBUG}" == "1" ]]; then
+    # Debug output if DEVBASE_DEBUG is set (see docs/environment.adoc)
+    if [[ "${DEVBASE_DEBUG}" == "1" ]]; then
       show_progress info "DEVBASE_CUSTOM_DIR=${DEVBASE_CUSTOM_DIR}"
       show_progress info "DEVBASE_CUSTOM_ENV=${DEVBASE_CUSTOM_ENV}"
       show_progress info "_DEVBASE_CUSTOM_CERTS=${_DEVBASE_CUSTOM_CERTS}"
@@ -322,14 +312,16 @@ load_environment_configuration() {
   done
 
   # NOTE: This is expected to set org-specific variables like:
-  #   DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS, DEVBASE_REGISTRY_URL, etc.
+  #   DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_NO_PROXY_DOMAINS,
+  #   DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, etc.
   # shellcheck disable=SC1090 # Dynamic source path
   source "${_DEVBASE_ENV_FILE}"
 
-  # Export registry URLs immediately after loading environment
+  # Export registry settings immediately after loading environment
   # This ensures they're available for connectivity checks and installations
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
-    export DEVBASE_REGISTRY_URL
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" ]]; then
+    export DEVBASE_REGISTRY_HOST
+    export DEVBASE_REGISTRY_PORT
   fi
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     export DEVBASE_PYPI_REGISTRY
@@ -338,14 +330,14 @@ load_environment_configuration() {
 
 # Brief: Configure proxy environment variables for network operations
 # Params: None
-# Uses: DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS (globals, optional)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_NO_PROXY_DOMAINS (globals, optional)
 # Modifies: http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
 #           (all exported)
 # Returns: 0 always
 # Side-effects: Sets proxy for all subsequent network operations
 configure_proxy_settings() {
-  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
-    local proxy_url="${DEVBASE_PROXY_URL}"
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+    local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
 
     export http_proxy="${proxy_url}"
     export https_proxy="${proxy_url}"
@@ -369,39 +361,54 @@ mask_url_credentials() {
 
 # Brief: Check if required configuration variables are set
 # Params: None
-# Uses: DEVBASE_PROXY_URL, DEVBASE_REGISTRY_URL, _DEVBASE_ENV_FILE (globals)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, _DEVBASE_ENV_FILE (globals)
 # Returns: 0 always (warnings only, non-fatal)
-# Side-effects: Displays warnings if variables are missing
+# Side-effects: Displays warnings if host/port pairs are incomplete, exits on validation error
 check_required_config_variables() {
-  local required_vars=()
-  local missing_vars=()
+  # Validate proxy configuration
+  if [[ -n "${DEVBASE_PROXY_HOST}" ]]; then
+    if [[ -z "${DEVBASE_PROXY_PORT}" ]]; then
+      show_progress error "DEVBASE_PROXY_HOST is set but DEVBASE_PROXY_PORT is missing"
+      show_progress info "Check ${_DEVBASE_ENV_FILE}"
+      exit 1
+    fi
+    validate_not_empty "${DEVBASE_PROXY_HOST}" "DEVBASE_PROXY_HOST" || exit 1
+    validate_not_empty "${DEVBASE_PROXY_PORT}" "DEVBASE_PROXY_PORT" || exit 1
+  elif [[ -n "${DEVBASE_PROXY_PORT}" ]]; then
+    show_progress error "DEVBASE_PROXY_PORT is set but DEVBASE_PROXY_HOST is missing"
+    show_progress info "Check ${_DEVBASE_ENV_FILE}"
+    exit 1
+  fi
 
-  [[ -n "${DEVBASE_PROXY_URL}" ]] && required_vars+=("DEVBASE_PROXY_URL")
-  [[ -n "${DEVBASE_REGISTRY_URL}" ]] && required_vars+=("DEVBASE_REGISTRY_URL")
-
-  for var in "${required_vars[@]}"; do
-    [[ -z "${!var:-}" ]] && missing_vars+=("$var")
-  done
-
-  if [[ ${#missing_vars[@]} -gt 0 ]]; then
-    show_progress warning "Missing custom configuration variables: ${missing_vars[*]}"
-    show_progress info "These should be defined in: ${_DEVBASE_ENV_FILE}"
+  # Validate registry configuration
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" ]]; then
+    if [[ -z "${DEVBASE_REGISTRY_PORT}" ]]; then
+      show_progress error "DEVBASE_REGISTRY_HOST is set but DEVBASE_REGISTRY_PORT is missing"
+      show_progress info "Check ${_DEVBASE_ENV_FILE}"
+      exit 1
+    fi
+    validate_not_empty "${DEVBASE_REGISTRY_HOST}" "DEVBASE_REGISTRY_HOST" || exit 1
+    validate_not_empty "${DEVBASE_REGISTRY_PORT}" "DEVBASE_REGISTRY_PORT" || exit 1
+  elif [[ -n "${DEVBASE_REGISTRY_PORT}" ]]; then
+    show_progress error "DEVBASE_REGISTRY_PORT is set but DEVBASE_REGISTRY_HOST is missing"
+    show_progress info "Check ${_DEVBASE_ENV_FILE}"
+    exit 1
   fi
 }
 
 # Brief: Display network configuration (proxy, registry, no-proxy)
 # Params: None
-# Uses: DEVBASE_PROXY_URL, DEVBASE_REGISTRY_URL, DEVBASE_NO_PROXY_DOMAINS (globals)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, DEVBASE_NO_PROXY_DOMAINS (globals)
 # Returns: 0 always
 # Side-effects: Displays info messages
 display_network_configuration() {
-  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
-    local masked_proxy=$(echo "${DEVBASE_PROXY_URL}" | mask_url_credentials)
-    show_progress info "Proxy URL: ${masked_proxy}"
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+    show_progress info "Proxy: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
   fi
 
-  [[ -n "${DEVBASE_REGISTRY_URL}" ]] &&
-    show_progress info "Registry URL: ${DEVBASE_REGISTRY_URL}"
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
+    show_progress info "Registry: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+  fi
 
   [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]] &&
     show_progress info "No-proxy domains: ${DEVBASE_NO_PROXY_DOMAINS}"
@@ -453,7 +460,7 @@ display_ssh_proxy_configuration() {
     "${_DEVBASE_CUSTOM_SSH}/custom.config" 2>/dev/null |
     paste -sd "," -)
 
-  if [[ -n "$ssh_proxied_hosts" ]] && [[ -n "${DEVBASE_PROXY_HOST}" ]] && [[ -n "${DEVBASE_PROXY_PORT}" ]]; then
+  if [[ -n "$ssh_proxied_hosts" ]] && [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
     show_progress info "SSH proxy: ${ssh_proxied_hosts} → ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
   fi
 }
@@ -500,7 +507,8 @@ test_generic_network_connectivity() {
 
 set_default_values() {
   # Export variables that were initialized in IMPORT section with defaults
-  export DEVBASE_PROXY_URL DEVBASE_NO_PROXY_DOMAINS DEVBASE_REGISTRY_URL
+  export DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT DEVBASE_NO_PROXY_DOMAINS
+  export DEVBASE_REGISTRY_HOST DEVBASE_REGISTRY_PORT
   export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_BIN_HOME
   export DEVBASE_THEME DEVBASE_FONT
 
@@ -509,8 +517,8 @@ set_default_values() {
   export DEVBASE_CONFIG_DIR="${XDG_CONFIG_HOME}/devbase"
   export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
 
-  # Debug output if DEBUG environment variable is set
-  if [[ "${DEBUG}" == "1" ]]; then
+  # Debug output if DEVBASE_DEBUG environment variable is set
+  if [[ "${DEVBASE_DEBUG}" == "1" ]]; then
     show_progress info "Debug mode enabled"
     show_progress info "DEVBASE_ROOT=${DEVBASE_ROOT}"
     # shellcheck disable=SC2153 # _DEVBASE_FROM_GIT set in this function before this point
@@ -518,7 +526,9 @@ set_default_values() {
     show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
     # shellcheck disable=SC2153 # _DEVBASE_ENV set by detect_environment() before this function is called
     show_progress info "_DEVBASE_ENV=${_DEVBASE_ENV}"
-    [[ -n "${DEVBASE_PROXY_URL}" ]] && show_progress info "Proxy configured: ${DEVBASE_PROXY_URL}"
+    if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+      show_progress info "Proxy configured: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+    fi
   fi
 }
 

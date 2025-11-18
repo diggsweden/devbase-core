@@ -121,13 +121,21 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 | `localhost,127.0.0.1`
 | Domains to bypass proxy
 
-| `DEVBASE_PROXY_URL`
+| `DEVBASE_PROXY_HOST`
 | _(none)_
-| Organization proxy URL
+| Organization proxy hostname
 
-| `DEVBASE_REGISTRY_URL`
+| `DEVBASE_PROXY_PORT`
 | _(none)_
-| Internal package registry
+| Organization proxy port
+
+| `DEVBASE_REGISTRY_HOST`
+| _(none)_
+| Internal package registry hostname
+
+| `DEVBASE_REGISTRY_PORT`
+| _(none)_
+| Internal package registry port
 |===
 
 These variables affect installation but are NOT exported to your shell.

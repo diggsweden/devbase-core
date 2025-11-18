@@ -1,5 +1,5 @@
 # Container Registry Configuration for Podman/Buildah/Skopeo
-# Generated from DEVBASE_REGISTRY_URL during devbase installation
+# Generated from DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT during devbase installation
 # See containers-registries.conf(5) for detailed syntax documentation
 #
 # This configuration:
@@ -12,7 +12,7 @@
 # Unqualified image search order (e.g., "podman pull nginx" without registry prefix)
 # Images are searched in this order until found
 #
-# The internal registry (port 5050) is a Docker group registry that aggregates
+# The internal registry is a Docker group registry that aggregates
 # all proxy repositories, allowing unqualified pulls to check cached images first.
 #
 # RECOMMENDATION: Use qualified registry names when you know the source:

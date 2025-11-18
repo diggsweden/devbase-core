@@ -731,12 +731,12 @@ check_config_files() {
   print_item_list shell_files "file"
 
   # Conditionally check proxy.fish if proxy is configured
-  if [[ -n "${DEVBASE_PROXY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
     if [[ -f "$HOME/.config/fish/functions/proxy.fish" ]]; then
       printf "  %b✓%b %s
 " "${GREEN}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
     else
-      printf "  %b✗%b %s (expected with DEVBASE_PROXY_URL)
+      printf "  %b✗%b %s (expected with DEVBASE_PROXY_HOST/PORT)
 " "${RED}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
     fi
   fi
@@ -755,7 +755,7 @@ check_config_files() {
   )
 
   # Only check registries.conf if a registry is configured
-  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_HOST:-}" && -n "${DEVBASE_REGISTRY_PORT:-}" ]]; then
     dev_files+=("$CONFIG_HOME/containers/registries.conf")
   fi
 
@@ -795,7 +795,7 @@ check_config_files() {
   )
 
   # Only check registries.conf if a registry is configured
-  if [[ -n "${DEVBASE_CONTAINERS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_REGISTRY_URL:-}" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_HOST:-}" && -n "${DEVBASE_REGISTRY_PORT:-}" ]]; then
     tool_configs+=("$HOME/.config/containers/registries.conf")
   fi
 
@@ -818,26 +818,26 @@ check_systemd_service() {
   local service_name="$1"
   local scope="$2"
   local service_type="${3:-service}"
-  
+
   local systemctl_cmd="systemctl"
   if [[ "$scope" == "user" ]]; then
     systemctl_cmd="systemctl --user"
   fi
-  
+
   # Check if service exists
   if ! $systemctl_cmd list-unit-files "$service_name" &>/dev/null 2>&1; then
     printf "  %b⊘%b %s (not installed)\n" "${DIM}" "${NC}" "$service_name"
     return
   fi
-  
+
   # Check if enabled
   local enabled_status
   enabled_status=$($systemctl_cmd is-enabled "$service_name" 2>&1)
-  
+
   # Check if active (for oneshot services, check if it exited successfully)
   local active_status
   active_status=$($systemctl_cmd is-active "$service_name" 2>&1)
-  
+
   if [[ "$service_type" == "oneshot" ]]; then
     # For oneshot services, "inactive" after successful execution is normal
     if [[ "$enabled_status" == "enabled" || "$enabled_status" == "static" ]]; then
@@ -1320,7 +1320,7 @@ check_vscode_extensions() {
     if [[ -n "${ext_names[$ext_id]}" ]]; then
       ext_display="$ext_id (${ext_names[$ext_id]})"
     fi
-    
+
     # Check if installed (only if VS Code is available)
     if [[ -n "$installed_extensions" ]] && echo "$installed_extensions" | grep -qi "^${ext_id}$"; then
       ext_installed=$((ext_installed + 1))

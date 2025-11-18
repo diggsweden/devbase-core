@@ -23,18 +23,14 @@ function devbase-proxy --description "Manage proxy settings: devbase-proxy [on|o
 end
 
 function _proxy_enable --description "Enable all proxy settings"
-    # Use organization proxy settings from environment
-    # Falls back to environment variables or empty if not configured
-    set -l proxy_url "$DEVBASE_PROXY_URL"
+    # Use proxy settings from environment (set during devbase installation)
+    set -l proxy_url "$HTTP_PROXY"
     
     # Check if proxy URL is configured
     if test -z "$proxy_url"
-        if test -n "$HTTP_PROXY"
-            set proxy_url "$HTTP_PROXY"
-        else
-            printf "Error: No proxy configured (set DEVBASE_PROXY_URL or HTTP_PROXY)\n"
-            return 1
-        end
+        printf "Error: No proxy configured in environment\n"
+        printf "Hint: Proxy is configured during devbase installation via DEVBASE_PROXY_HOST/PORT\n"
+        return 1
     end
     
     # Use organization no_proxy or default

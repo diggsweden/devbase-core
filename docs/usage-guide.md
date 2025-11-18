@@ -169,7 +169,7 @@ devbase-proxy status  # Show current proxy status
 
 - Configures HTTP_PROXY, HTTPS_PROXY, NO_PROXY
 - Automatically configures APT and Snap proxies
-- Uses DEVBASE_PROXY_URL and DEVBASE_NO_PROXY_DOMAINS
+- Uses proxy settings from Fish config (set during installation from DEVBASE_PROXY_HOST/PORT)
 
 **devbase-theme** - Set consistent themes across CLI tools:
 

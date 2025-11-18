@@ -309,7 +309,7 @@ devbase_files/
 ├── systemd/            # Systemd unit files
 │   └── user/           # User services (podman, wayland-socket-symlink)
 ├── fish-functions/     # Conditionally installed Fish functions
-│   └── proxy.fish      # Proxy management (only if DEVBASE_PROXY_URL set)
+│   └── devbase-proxy.fish  # Proxy management (only if DEVBASE_PROXY_HOST/PORT set)
 ├── certificates-example/ # Example CA certificates
 ├── sudo-keep-proxyenv/ # Sudoers config for proxy preservation
 ├── systemd/            # Systemd unit files

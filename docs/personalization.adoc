@@ -4,7 +4,7 @@
 
 DevBase ships config files with names starting with `00-`, `01-`, and `02-` (e.g., `00-environment.fish`, `01-keybindings.fish`, `02-aliases.fish`). These files are overwritten during reinstalls.
 
-To preserve your personal customizations, create files with different names like `10-personal.fish` or `20-work.fish`. These won't conflict with DevBase files and will be preserved across reinstalls.
+To preserve your personal customizations, create files with different names like `50-personal.fish` or `60-work.fish`. These won't conflict with DevBase files and will be preserved across reinstalls.
 
 == Fish Shell
 
@@ -22,7 +22,7 @@ DevBase provides these default aliases:
 
 [source,bash]
 ----
-# Add to ~/.config/fish/conf.d/10-personal.fish
+# Add to ~/.config/fish/conf.d/50-personal.fish
 alias ll='ls -la'
 alias dc='docker compose'
 alias gs='git status'
@@ -136,7 +136,7 @@ Override for your user only without affecting system:
 
 [source,bash]
 ----
-# Add to ~/.config/fish/conf.d/10-locale.fish
+# Add to ~/.config/fish/conf.d/50-locale.fish
 set -gx LANG en_US.UTF-8
 set -gx LC_ALL en_US.UTF-8
 
@@ -348,19 +348,19 @@ Enable or disable automatic Zellij startup:
 [source,bash]
 ----
 # Create personal config if it doesn't exist
-touch ~/.config/fish/conf.d/10-personal.fish
+touch ~/.config/fish/conf.d/50-personal.fish
 
 # Enable Zellij autostart (edit the file to add this line)
-echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "true"' >> ~/.config/fish/conf.d/10-personal.fish
+echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "true"' >> ~/.config/fish/conf.d/50-personal.fish
 
 # Or disable Zellij autostart
-# echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "false"' >> ~/.config/fish/conf.d/10-personal.fish
+# echo 'set -gx DEVBASE_ZELLIJ_AUTOSTART "false"' >> ~/.config/fish/conf.d/50-personal.fish
 
 # Reload config
 exec fish
 ----
 
-TIP: To avoid duplicates, edit `10-personal.fish` directly instead of appending.
+TIP: To avoid duplicates, edit `50-personal.fish` directly instead of appending.
 
 == Editor Preference
 
@@ -368,7 +368,7 @@ Change your default editor after installation:
 
 [source,bash]
 ----
-# Edit ~/.config/fish/conf.d/10-personal.fish and add:
+# Edit ~/.config/fish/conf.d/50-personal.fish and add:
 
 # For Neovim:
 set -gx EDITOR nvim
@@ -384,7 +384,7 @@ exec fish
 
 == Environment Variables
 
-Add custom environment variables to `~/.config/fish/conf.d/10-env.fish`:
+Add custom environment variables to `~/.config/fish/conf.d/50-env.fish`:
 
 [source,bash]
 ----
@@ -402,7 +402,7 @@ Customize the Fish shell greeting:
 
 [source,bash]
 ----
-# Add to ~/.config/fish/conf.d/10-personal.fish
+# Add to ~/.config/fish/conf.d/50-personal.fish
 
 # Custom greeting
 set -g fish_greeting "Welcome back, $USER!"
@@ -443,7 +443,7 @@ DevBase configuration files are located in:
   * `00-*.fish` - DevBase managed (overwritten on reinstall)
   * `01-*.fish` - DevBase managed (overwritten on reinstall)
   * `02-*.fish` - DevBase managed (overwritten on reinstall)
-  * `10-*.fish` - Your personal configs (preserved)
+  * `50-*.fish` - Your personal configs (preserved)
   * `20-*.fish` - Your personal configs (preserved)
 
 === Git
@@ -479,4 +479,4 @@ DevBase configuration files are located in:
 === User Binaries
 - Personal scripts: `~/.local/bin/` (in PATH)
 
-TIP: Files in `~/.config/fish/conf.d/` with names `10-*` through `98-*` are never touched by DevBase - perfect for personal customizations.
+TIP: Files in `~/.config/fish/conf.d/` with names `50-*` through `99-*` are never touched by DevBase - perfect for personal customizations.

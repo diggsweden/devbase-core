@@ -132,13 +132,13 @@ validate_environment() {
 
 # Brief: Configure sudo to preserve proxy environment variables
 # Params: None
-# Uses: DEVBASE_FILES, DEVBASE_PROXY_URL, validate_var_set, show_progress (globals/functions)
+# Uses: DEVBASE_FILES, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, validate_var_set, show_progress (globals/functions)
 # Returns: 0 always, 1 if validation fails
 # Side-effects: Copies sudoers config file if proxy is configured
 setup_sudo_and_system() {
   validate_var_set "DEVBASE_FILES" || return 1
 
-  if [[ -n "${DEVBASE_PROXY_URL}" ]] && [[ -f "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]] && [[ -f "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" ]]; then
     show_progress info "Configuring sudo proxy preservation..."
     sudo cp "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" /etc/sudoers.d/
     sudo chmod 0440 /etc/sudoers.d/sudokeepenv
@@ -373,9 +373,8 @@ _summary_network_config() {
 
 NETWORK CONFIGURATION
 =====================
-  • Proxy: $(if [[ -n "${DEVBASE_PROXY_URL}" ]]; then echo "${DEVBASE_PROXY_URL}" | sed 's|://[^@]*@|://***:***@|'; else echo "not configured"; fi)
-  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then echo "${DEVBASE_REGISTRY_URL}"; else echo "not configured"; fi)
-  • Container Registry: $(if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then echo "${DEVBASE_CONTAINERS_REGISTRY}"; else echo "not configured"; fi)
+  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then echo "${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
+  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then echo "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"; else echo "not configured"; fi)
 EOF
 }
 
@@ -720,7 +719,7 @@ _display_ssh_config() {
   print_box_line "SSH Key:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
     print_box_line "  • Action: Generate new key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Location: ${DEVBASE_SSH_KEY_PATH}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+    print_box_line "  • Location: ${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     if [[ -n "${DEVBASE_SSH_PASSPHRASE}" ]]; then
       print_box_line "  • Protection: With passphrase" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     else
@@ -730,7 +729,7 @@ _display_ssh_config() {
     print_box_line "  • Action: No SSH key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   else
     print_box_line "  • Action: Keep existing key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Location: ${DEVBASE_SSH_KEY_PATH}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+    print_box_line "  • Location: ${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
   fi
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 }
@@ -828,7 +827,7 @@ display_configuration_summary() {
   validate_var_set "DEVBASE_GIT_EMAIL" || return 1
   validate_var_set "DEVBASE_THEME" || return 1
   validate_var_set "DEVBASE_SSH_KEY_ACTION" || return 1
-  validate_var_set "DEVBASE_SSH_KEY_PATH" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
 
   printf "\n"
   print_box_top "Configuration Summary" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"

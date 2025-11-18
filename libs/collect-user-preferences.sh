@@ -41,9 +41,7 @@ setup_non_interactive_mode() {
   export DEVBASE_GIT_AUTHOR="${GIT_NAME}"
   # shellcheck disable=SC2153
   export DEVBASE_GIT_EMAIL="${GIT_EMAIL}"
-  export DEVBASE_GIT_DEFAULT_BRANCH="$DEVBASE_GIT_DEFAULT_BRANCH"
   export DEVBASE_THEME="${DEVBASE_THEME}"
-  export DEVBASE_ENV_NAME="$DEVBASE_ENV_NAME"
   export DEVBASE_INSTALL_DEVTOOLS="$DEVBASE_INSTALL_DEVTOOLS"
   export DEVBASE_INSTALL_LAZYVIM="$DEVBASE_INSTALL_LAZYVIM"
 
@@ -78,7 +76,6 @@ setup_non_interactive_mode() {
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
   printf "  Git Email: %s\n" "$DEVBASE_GIT_EMAIL"
   printf "  Theme: %s\n" "$DEVBASE_THEME"
-  printf "  Environment: %s\n" "$DEVBASE_ENV_NAME"
   if [[ "$GENERATED_SSH_PASSPHRASE" == "true" ]]; then
     printf "  SSH Key: Generated with secure passphrase\n"
   fi
@@ -216,7 +213,7 @@ get_git_email() {
 # Brief: Collect all git configuration from user
 # Params: None
 # Uses: print_section, get_git_author_name, get_git_email, DEVBASE_COLORS (functions/globals)
-# Modifies: DEVBASE_GIT_DEFAULT_BRANCH (exported)
+# Modifies: DEVBASE_GIT_AUTHOR, DEVBASE_GIT_EMAIL (exported)
 # Returns: 0 always (implicit)
 # Side-effects: Prints section header, calls other collection functions
 collect_git_configuration() {
@@ -226,8 +223,6 @@ collect_git_configuration() {
 
   get_git_author_name
   get_git_email
-
-  export DEVBASE_GIT_DEFAULT_BRANCH="main"
 }
 
 # Brief: Prompt user to select color theme
@@ -317,40 +312,30 @@ collect_font_preference() {
 
 # Brief: Prompt for SSH key passphrase with confirmation
 # Params: None
-# Uses: print_prompt, show_progress, DEVBASE_SSH_ALLOW_EMPTY_PW, DEVBASE_COLORS (globals)
+# Uses: print_prompt, show_progress, DEVBASE_COLORS (globals)
 # Modifies: DEVBASE_SSH_PASSPHRASE (exported)
 # Returns: 0 always (implicit)
-# Side-effects: Reads password from stdin (hidden), validates length, requires confirmation
+# Side-effects: Reads password from stdin (hidden), validates min 12 chars per NIST, requires confirmation
 prompt_for_ssh_passphrase() {
   local ssh_pass=""
   while true; do
-    print_prompt "SSH key passphrase (min 6 chars)" ""
+    print_prompt "SSH key passphrase (min 12 chars)" ""
     read -s -r ssh_pass
     printf "\n"
 
-    if [[ -z "$ssh_pass" ]]; then
-      if [[ "$DEVBASE_SSH_ALLOW_EMPTY_PW" == "true" ]]; then
-        show_progress info "No passphrase set (allowed by config)"
-        break
-      else
-        show_progress validation "Passphrase must be at least 6 characters for security"
-        continue
-      fi
-    elif [[ ${#ssh_pass} -lt 6 ]]; then
-      show_progress validation "Too short - use at least 6 characters"
+    if [[ ${#ssh_pass} -lt 12 ]]; then
+      show_progress validation "Passphrase must be at least 12 characters (NIST recommendation)"
       continue
     fi
 
-    if [[ -n "$ssh_pass" ]]; then
-      print_prompt "Confirm passphrase" ""
-      read -s -r ssh_pass2
-      printf "\n"
-      if [[ "$ssh_pass" != "$ssh_pass2" ]]; then
-        show_progress validation "Passphrases don't match - try again"
-        continue
-      fi
-      printf "  %b✓%b Passphrase set\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    print_prompt "Confirm passphrase" ""
+    read -s -r ssh_pass2
+    printf "\n"
+    if [[ "$ssh_pass" != "$ssh_pass2" ]]; then
+      show_progress validation "Passphrases don't match - try again"
+      continue
     fi
+    printf "  %b✓%b Passphrase set\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     break
   done
   export DEVBASE_SSH_PASSPHRASE="${ssh_pass}"
@@ -398,7 +383,7 @@ handle_new_ssh_key() {
 # Brief: Collect SSH key configuration from user
 # Params: None
 # Uses: print_section, handle_existing_ssh_key, handle_new_ssh_key, HOME, DEVBASE_COLORS (globals)
-# Modifies: DEVBASE_SSH_KEY_PATH (exported)
+# Modifies: DEVBASE_SSH_KEY_ACTION (exported via handle_* functions)
 # Returns: 0 always (implicit)
 # Side-effects: Prints section header, checks for existing key file
 collect_ssh_configuration() {
@@ -409,7 +394,6 @@ collect_ssh_configuration() {
   printf "\n"
   printf "  %bSSH keys are used for secure authentication with Git and remote servers.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
-  export DEVBASE_SSH_KEY_PATH="$ssh_key_path"
 
   if [[ -f "$ssh_key_path" ]]; then
     handle_existing_ssh_key "$ssh_key_path"
@@ -618,7 +602,7 @@ git:
 
 ssh:
   key_action: ${DEVBASE_SSH_KEY_ACTION}
-  key_path: ${DEVBASE_SSH_KEY_PATH}
+  key_name: ${DEVBASE_SSH_KEY_NAME}
 
 editor:
   default: ${EDITOR}

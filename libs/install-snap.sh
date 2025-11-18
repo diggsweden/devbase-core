@@ -77,17 +77,19 @@ load_snap_packages() {
 
 # Brief: Configure snap package manager proxy settings
 # Params: None
-# Uses: DEVBASE_PROXY_URL (global, optional)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT (global, optional)
 # Returns: 0 always
 # Side-effects: Sets snap system proxy configuration
 configure_snap_proxy() {
-  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 0
   command -v snap &>/dev/null || return 0
+
+  local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
 
   sudo snap unset system proxy.http 2>/dev/null || true
   sudo snap unset system proxy.https 2>/dev/null || true
-  sudo snap set system proxy.http="${DEVBASE_PROXY_URL}" || show_progress warning "Failed to set snap http proxy"
-  sudo snap set system proxy.https="${DEVBASE_PROXY_URL}" || show_progress warning "Failed to set snap https proxy"
+  sudo snap set system proxy.http="${proxy_url}" || show_progress warning "Failed to set snap http proxy"
+  sudo snap set system proxy.https="${proxy_url}" || show_progress warning "Failed to set snap https proxy"
 
   return 0
 }

@@ -40,7 +40,7 @@ install_certificates() {
     # Validate certificate format
     if ! openssl x509 -in "$cert" -noout 2>/dev/null; then
       skipped=$((skipped + 1))
-      [[ "$DEBUG" == "1" ]] && echo "    Invalid certificate format: $cert_name"
+      [[ "$DEVBASE_DEBUG" == "1" ]] && echo "    Invalid certificate format: $cert_name"
       continue
     fi
 
@@ -48,16 +48,16 @@ install_certificates() {
     if [[ -f "$target_cert" ]]; then
       if cmp -s "$cert" "$target_cert"; then
         already_exists=$((already_exists + 1))
-        [[ "$DEBUG" == "1" ]] && echo "    Already installed: $cert_name"
+        [[ "$DEVBASE_DEBUG" == "1" ]] && echo "    Already installed: $cert_name"
       else
         sudo cp "$cert" "$target_cert"
         updated=$((updated + 1))
-        [[ "$DEBUG" == "1" ]] && echo "    Updated: $cert_name"
+        [[ "$DEVBASE_DEBUG" == "1" ]] && echo "    Updated: $cert_name"
       fi
     else
       sudo cp "$cert" "$target_cert"
       newly_installed=$((newly_installed + 1))
-      [[ "$DEBUG" == "1" ]] && echo "    Newly installed: $cert_name"
+      [[ "$DEVBASE_DEBUG" == "1" ]] && echo "    Newly installed: $cert_name"
     fi
 
     # Configure Git for this certificate's domain
@@ -78,7 +78,7 @@ install_certificates() {
   if [[ $newly_installed -gt 0 ]] || [[ $updated -gt 0 ]]; then
     show_progress info "Updating system trust store..."
     update_system_certificates
-    
+
     # Build status message based on what happened
     local msg=""
     if [[ $newly_installed -gt 0 ]]; then
@@ -92,7 +92,7 @@ install_certificates() {
     fi
     [[ $domains_configured -gt 0 ]] && msg="${msg} (configured $domains_configured Git domain(s))"
     [[ $skipped -gt 0 ]] && msg="${msg} ($skipped invalid skipped)"
-    
+
     show_progress success "$msg"
   elif [[ $already_exists -gt 0 ]]; then
     show_progress success "All $already_exists certificate(s) already installed (no changes needed)"
@@ -126,7 +126,7 @@ configure_git_certificate() {
 # Returns: 0 always
 # Side-effects: Rebuilds system cert bundle, configures snap certs
 update_system_certificates() {
-  if [[ "$DEBUG" == "1" ]]; then
+  if [[ "$DEVBASE_DEBUG" == "1" ]]; then
     sudo update-ca-certificates 2>&1 | sed 's/^/    /'
   else
     # Capture the summary line from update-ca-certificates
@@ -134,12 +134,12 @@ update_system_certificates() {
     result=$(sudo update-ca-certificates 2>&1)
     local added=$(echo "$result" | grep -oP '\d+(?= added)' || echo "0")
     local removed=$(echo "$result" | grep -oP '\d+(?= removed)' || echo "0")
-    
+
     if [[ "$added" != "0" ]] || [[ "$removed" != "0" ]]; then
       echo "    System trust store: $added added, $removed removed"
     fi
   fi
-  
+
   configure_snap_certificates
 
   return 0

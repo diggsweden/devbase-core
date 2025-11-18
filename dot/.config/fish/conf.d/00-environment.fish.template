@@ -64,9 +64,6 @@ end
 # Zellij auto-start configuration
 set -gx DEVBASE_ZELLIJ_AUTOSTART "${DEVBASE_ZELLIJ_AUTOSTART}"
 
-# Registry configuration from devbase setup
-set -gx DEVBASE_REGISTRY_URL "${DEVBASE_REGISTRY_URL}"
-set -gx DEVBASE_CONTAINERS_REGISTRY "${DEVBASE_CONTAINERS_REGISTRY}"
-
-# Proxy configuration variables are now handled by generate_fish_proxy_config()
-# in libs/config.sh which generates 00-proxy.fish separately
+# Registry and proxy configurations are now handled by:
+# - generate_fish_registry_config() -> 00-registry.fish
+# - generate_fish_proxy_config() -> 00-proxy.fish

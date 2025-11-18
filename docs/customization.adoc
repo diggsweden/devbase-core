@@ -60,18 +60,20 @@ export DEVBASE_CUSTOM_DIR=/path/to/custom
 DEVBASE_EMAIL_DOMAIN="@company.com"
 
 # Network - Proxy configuration
-DEVBASE_PROXY_URL="http://proxy.company.com:8080"
+DEVBASE_PROXY_HOST="proxy.company.com"
+DEVBASE_PROXY_PORT="8080"
 DEVBASE_NO_PROXY_DOMAINS="*.company.com,localhost"
 
 # Container registry (optional)
-DEVBASE_REGISTRY_URL="https://registry.company.com"
+DEVBASE_REGISTRY_HOST="registry.company.com"
+DEVBASE_REGISTRY_PORT="5000"
 ----
 
 NOTE: Configure `/etc/hosts` manually if you need custom host entries. Use hooks for automation.
 
 === Proxy Configuration
 
-When `DEVBASE_PROXY_URL` is set, DevBase automatically:
+When `DEVBASE_PROXY_HOST` and `DEVBASE_PROXY_PORT` are set, DevBase automatically:
 
 1. **Configures environment variables:**
    - Sets standard proxy variables: `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` (and lowercase variants)
@@ -293,8 +295,8 @@ Instead of maintaining multiple monolithic XML templates, Maven settings are com
 
 Files:
 - `base.yaml` - XML namespaces and document structure
-- `proxy.yaml` - HTTP/HTTPS proxy configuration (included if `DEVBASE_PROXY_URL` set)
-- `registry.yaml` - Internal registry mirrors (included if `DEVBASE_REGISTRY_URL` set)
+- `proxy.yaml` - HTTP/HTTPS proxy configuration (included if `DEVBASE_PROXY_HOST` and `DEVBASE_PROXY_PORT` set)
+- `registry.yaml` - Internal registry mirrors (included if `DEVBASE_REGISTRY_HOST` and `DEVBASE_REGISTRY_PORT` set)
 
 How it works:
 1. Fragments selected based on environment variables
@@ -377,12 +379,13 @@ Templates support environment variable substitution:
 
 [source,bash]
 ----
-# Available variables
-${DEVBASE_PROXY_URL}          # Organization proxy
-${DEVBASE_REGISTRY_URL}       # Container registry
+# Available variables (constructed from HOST+PORT during setup)
+${DEVBASE_REGISTRY_URL}       # Container registry URL (built from HOST+PORT for Maven/Gradle)
 ${DEVBASE_EMAIL_DOMAIN}       # Email domain
 ${USER}                       # Username
 ${HOME}                       # Home directory
+${DEVBASE_PROXY_HOST}         # Proxy hostname
+${DEVBASE_PROXY_PORT}         # Proxy port
 
 # Syntax
 ${VARIABLE_NAME}              # Replaced with value
@@ -672,14 +675,14 @@ devbase-custom-config/
 
 These are automatically overlaid during installation.
 
-WARNING: Existing hooks from templates (01-*, 02-*, 03-*) are **overwritten** on re-install to ensure updates. User-added hooks (10-*, 99-*) are preserved.
+WARNING: Existing hooks from templates (01-*, 02-*, 03-*) are **overwritten** on re-install to ensure updates. User-added hooks (50-*, 99-*) are preserved.
 
 === Execution Order
 
 Scripts run in sorted alphabetical order. Use numeric prefixes:
 
-- `01-03` - DevBase core checks (updated on re-install)
-- `10-99` - User/team custom checks (preserved on re-install)
+- `01-49` - DevBase core checks (updated on re-install)
+- `50-99` - User/team custom checks (preserved on re-install)
 
 === Disabling Hooks
 

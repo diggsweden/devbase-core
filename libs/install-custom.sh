@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-if [[ -z "${DEVBASE_ROOT:-}" ]]; then
-  echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
-  return 1 2>/dev/null || exit 1
-fi
-
 # Verify JMC_DOWNLOAD is set (should be set earlier in the process)
 if [[ -z "$JMC_DOWNLOAD" ]]; then
   JMC_DOWNLOAD="https://download.oracle.com/java/GA"
@@ -435,7 +429,7 @@ install_fisher() {
 
 # Brief: Install reuse tool using pipx
 # Params: None
-# Uses: command_exists, show_progress, DEVBASE_REGISTRY_URL (functions/globals)
+# Uses: command_exists, show_progress (functions/globals)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Installs reuse via pipx (uses system proxy and registry env vars)
 install_reuse() {

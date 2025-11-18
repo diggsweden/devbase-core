@@ -157,17 +157,19 @@ configure_git_user() {
 
 # Brief: Configure Git to use proxy for HTTP(S) operations
 # Params: None
-# Uses: DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS (globals)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_NO_PROXY_DOMAINS (globals)
 # Returns: 0 if configured, 1 if no proxy set
 # Side-effects: Sets global git config for proxy
 configure_git_proxy() {
-  [[ -z "${DEVBASE_PROXY_URL}" ]] && return 1
+  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 1
+
+  local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
 
   git config --global --unset-all http.proxy 2>/dev/null || true
   git config --global --unset-all https.proxy 2>/dev/null || true
 
-  git config --global http.proxy "${DEVBASE_PROXY_URL}"
-  git config --global https.proxy "${DEVBASE_PROXY_URL}"
+  git config --global http.proxy "${proxy_url}"
+  git config --global https.proxy "${proxy_url}"
 
   if [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]]; then
     IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"

@@ -1,3 +1,14 @@
+#!/usr/bin/env fish
+# WARNING: This file (00-aliases.fish) is managed by dev-base and will be OVERWRITTEN on reinstall
+# 
+# TO ADD YOUR OWN ALIASES:
+# Create a file named 50-my-aliases.fish (or any number 50-99) in this directory
+# Example: ~/.config/fish/conf.d/50-my-aliases.fish
+# 
+# Files numbered 50-99 are preserved during reinstallation
+# See: https://github.com/org/devbase-core/blob/main/docs/configuration/personalization.adoc
+#
+
 # ~/.config/fish/conf.d/aliases.fish
 # Aliases for command behavior changes
 # Auto-sourced by Fish on startup

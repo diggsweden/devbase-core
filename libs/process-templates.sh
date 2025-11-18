@@ -287,7 +287,7 @@ process_all_templates() {
     [[ "$template" == *.template ]] && rm "$template"
   done < <(find "${temp_dir}" -name "*.template" -type f -print0)
 
-  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
     local proxy_target="${temp_dir}/.config/fish/conf.d/00-proxy.fish"
     mkdir -p "$(dirname "$proxy_target")"
     generate_fish_proxy_config "$proxy_target"
@@ -303,7 +303,7 @@ process_all_templates() {
   mkdir -p "$(dirname "$curl_func_target")"
   cp "${DEVBASE_DOT}/.config/fish/functions/__devbase_configure_proxy_curl.fish" "$curl_func_target"
 
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -372,7 +372,7 @@ parse_url() {
 
 # Brief: Generate Fish shell proxy configuration file
 # Params: $1 - target file path
-# Uses: DEVBASE_PROXY_URL, DEVBASE_NO_PROXY_DOMAINS, DEVBASE_NO_PROXY_JAVA, parse_url, validate_not_empty (globals/functions)
+# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_NO_PROXY_DOMAINS, DEVBASE_NO_PROXY_JAVA, validate_not_empty (globals/functions)
 # Returns: 0 on success, 1 on validation failure
 # Side-effects: Creates proxy config file with HTTP_PROXY, HTTPS_PROXY, and Java proxy settings
 generate_fish_proxy_config() {
@@ -381,20 +381,20 @@ generate_fish_proxy_config() {
 
   mkdir -p "$(dirname "$target")"
 
-  if [[ -n "${DEVBASE_PROXY_URL}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
     local no_proxy_hosts="${DEVBASE_NO_PROXY_DOMAINS}"
-
-    local proxy_host
-    proxy_host=$(parse_url "${DEVBASE_PROXY_URL}" host)
-    local proxy_port
-    proxy_port=$(parse_url "${DEVBASE_PROXY_URL}" port)
+    local proxy_host="${DEVBASE_PROXY_HOST}"
+    local proxy_port="${DEVBASE_PROXY_PORT}"
+    local proxy_url="http://${proxy_host}:${proxy_port}"
 
     cat >"$target" <<EOF
 # Proxy configuration for development tools
-# Generated from DEVBASE_PROXY_URL during setup
-# Note: DEVBASE_PROXY_URL is not exported at runtime (only used during setup)
+# Generated from DEVBASE_PROXY_HOST and DEVBASE_PROXY_PORT during setup
 
 set -l no_proxy_hosts "${no_proxy_hosts}"
+
+# Export no-proxy domains for runtime tools
+set -gx DEVBASE_NO_PROXY_DOMAINS "${no_proxy_hosts}"
 
 # Java proxy settings (Java expects pipe separator for nonProxyHosts)
 # Note: Java doesn't support authenticated proxies via system properties.
@@ -417,8 +417,8 @@ end
 set -gx GRADLE_OPTS "-Dhttp.proxyHost=${proxy_host} -Dhttp.proxyPort=${proxy_port} -Dhttps.proxyHost=${proxy_host} -Dhttps.proxyPort=${proxy_port} -Dhttp.nonProxyHosts=\$no_proxy_java"
 
 # Standard proxy environment variables
-set -gx HTTP_PROXY "${DEVBASE_PROXY_URL}"
-set -gx HTTPS_PROXY "${DEVBASE_PROXY_URL}"
+set -gx HTTP_PROXY "${proxy_url}"
+set -gx HTTPS_PROXY "${proxy_url}"
 set -gx NO_PROXY "\$no_proxy_hosts"
 
 set -gx http_proxy "\$HTTP_PROXY"
@@ -428,7 +428,8 @@ EOF
   else
     cat >"$target" <<'EOF'
 # Proxy configuration disabled
-# Set DEVBASE_PROXY_URL to enable (e.g., http://proxy.company.com:8080)
+# Set DEVBASE_PROXY_HOST and DEVBASE_PROXY_PORT to enable
+# Example: DEVBASE_PROXY_HOST="proxy.company.com" DEVBASE_PROXY_PORT="8080"
 EOF
   fi
 
@@ -458,23 +459,25 @@ generate_fish_registry_config() {
   local target="$1"
   mkdir -p "$(dirname "$target")"
 
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
-    local registry_host
-    registry_host=$(extract_hostname "${DEVBASE_REGISTRY_URL}")
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
+    local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
     cat >"$target" <<EOF
 # Registry configuration for development tools
-# Generated from DEVBASE_REGISTRY_URL during setup
-# Note: DEVBASE_REGISTRY_URL is not exported at runtime (only used during setup)
+# Generated from DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT during setup
+
+# Export registry URL for runtime tools (npm, cypress, etc.)
+set -gx DEVBASE_REGISTRY_URL "${registry_url}"
 
 # Testcontainers registry configuration
-set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_CONTAINERS_REGISTRY:-${DEVBASE_REGISTRY_URL}:5050}/"
+set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}/"
 
 EOF
   else
     cat >"$target" <<'EOF'
 # Registry configuration disabled
-# Set DEVBASE_REGISTRY_URL to enable (e.g., https://registry.company.com)
+# Set DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT to enable
+# Example: DEVBASE_REGISTRY_HOST="registry.company.com" DEVBASE_REGISTRY_PORT="5000"
 EOF
   fi
   return 0
@@ -495,7 +498,7 @@ process_template_file() {
     ;;
   .testcontainers.properties)
     # Skip if no container registry configured
-    if [[ -z "${DEVBASE_CONTAINERS_REGISTRY}" ]] && [[ -z "${DEVBASE_REGISTRY_URL}" ]]; then
+    if [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]]; then
       rm "$file" 2>/dev/null || true
       return 0
     fi
@@ -651,7 +654,7 @@ _process_maven_yaml_add_proxy() {
   local -n fragments=$3
   local -n desc=$4
 
-  if [[ -n "${DEVBASE_PROXY_URL}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
     local proxy_processed="${temp_dir}/proxy.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed"
     fragments+=("$proxy_processed")
@@ -670,7 +673,10 @@ _process_maven_yaml_add_registry() {
   local -n fragments=$3
   local -n desc=$4
 
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
+    # Build registry URL for Maven template
+    export DEVBASE_REGISTRY_URL="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+
     local registry_processed="${temp_dir}/registry.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
     fragments+=("$registry_processed")
@@ -778,7 +784,10 @@ process_maven_templates_yaml() {
 
 process_gradle_templates() {
   # Skip if no registry configured
-  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]] && return 0
+
+  # Build registry URL for Gradle template
+  export DEVBASE_REGISTRY_URL="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
   local gradle_templates_dir="${DEVBASE_FILES}/gradle-templates"
   local target_file="${HOME}/.gradle/init.gradle"
@@ -810,26 +819,12 @@ process_container_templates() {
   mkdir -p "$(dirname "$target_file")"
 
   # Skip registries.conf generation if no registry configured
-  if [[ -z "${DEVBASE_CONTAINERS_REGISTRY}" ]] && [[ -z "${DEVBASE_REGISTRY_URL}" ]]; then
+  if [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]]; then
     return 0
   fi
 
-  # Derive DEVBASE_REGISTRY_CONTAINER if not set
-  # Extract host:port from registry URL (without protocol and path)
-  if [[ -z "$DEVBASE_REGISTRY_CONTAINER" ]]; then
-    export DEVBASE_REGISTRY_CONTAINER
-    if [[ -n "${DEVBASE_CONTAINERS_REGISTRY}" ]]; then
-      # Remove protocol and path: "https://host:port/path" -> "host:port"
-      DEVBASE_REGISTRY_CONTAINER=$(echo "${DEVBASE_CONTAINERS_REGISTRY}" |
-        sed -E 's|^[^:]+://||' | # Remove protocol
-        sed -E 's|/.*$||')       # Remove path
-    elif [[ -n "${DEVBASE_REGISTRY_URL}" ]]; then
-      # Remove protocol and path: "https://host:port/path" -> "host:port"
-      DEVBASE_REGISTRY_CONTAINER=$(echo "${DEVBASE_REGISTRY_URL}" |
-        sed -E 's|^[^:]+://||' | # Remove protocol
-        sed -E 's|/.*$||')       # Remove path
-    fi
-  fi
+  # Build DEVBASE_REGISTRY_CONTAINER for template (host:port format)
+  export DEVBASE_REGISTRY_CONTAINER="${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "registries.conf.template" "Custom registry template"; then

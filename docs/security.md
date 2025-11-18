@@ -14,7 +14,7 @@
 | | Input validation | ✅ Enabled | Whitelisted inputs | No arbitrary execution |
 | | Dangerous patterns | ✅ None found | `curl\|sh`, `rm -rf /`, `chmod 777` | Zero matches |
 | **Credentials** | No hardcoded secrets | ✅ Verified | Gitleaks scans | Zero matches |
-| | Password policy | ✅ Enabled | 6-char minimum | SSH passphrase validation |
+| | Password policy | ✅ Enabled | 12-char minimum (NIST) | SSH passphrase validation |
 | | Secure permissions | ✅ Enabled | SSH 600/700, configs 600 | Enforced at creation |
 | **Cryptography** | Secure SSH | ✅ Enabled | ED25519, ChaCha20-Poly1305 | Default configuration |
 | | SSH key type | ✅ Strong | ED25519 (256-bit) | Modern standard |
@@ -249,23 +249,26 @@ No sudo for: tool installations, config files, shell setup, git config.
 
 ### Password Policy
 
-DevBase enforces a minimum password length policy for SSH key passphrases to ensure adequate security.
+DevBase enforces a minimum password length policy for SSH key passphrases based on NIST SP 800-63B guidelines.
 
 **SSH Passphrase Requirements:**
 
-- **Minimum length**: 6 characters
-- **Validation**: Interactive prompt rejects passphrases shorter than 6 characters
-- **Override**: Can be bypassed with `DEVBASE_SSH_ALLOW_EMPTY_PW=true` (not recommended)
-- **Location**: `libs/collect-user-preferences.sh:248` (`prompt_for_ssh_passphrase()` function)
+- **Minimum length**: 12 characters (enforced)
+- **Standard**: NIST SP 800-63B recommends minimum 12 characters for memorized secrets
+- **Validation**: Interactive prompt rejects passphrases shorter than 12 characters
+- **No bypass**: Policy is always enforced, no configuration override available
+- **Location**: `libs/collect-user-preferences.sh` (`prompt_for_ssh_passphrase()` function)
+
+**Reference**: [NIST Special Publication 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) - Digital Identity Guidelines
 
 **Example validation flow:**
 
 ```bash
-SSH key passphrase (min 6 chars): ***
-❌ Too short - use at least 6 characters
+SSH key passphrase (min 12 chars): ***
+❌ Passphrase must be at least 12 characters (NIST recommendation)
 
-SSH key passphrase (min 6 chars): ******
-Confirm passphrase: ******
+SSH key passphrase (min 12 chars): ************
+Confirm passphrase: ************
 ✅ Passphrase accepted
 ```
 
@@ -287,12 +290,17 @@ read -r -s sudo_password # Silent, unset immediately
 
 #### Proxy Credentials
 
+**Note:** DevBase now uses `DEVBASE_PROXY_HOST` and `DEVBASE_PROXY_PORT` for proxy configuration. For authenticated proxies, credentials can be included in custom configuration.
+
 ```bash
-export DEVBASE_PROXY_URL="http://${USER}:mypass@proxy:8080"
+# Basic proxy (no auth)
+DEVBASE_PROXY_HOST="proxy.company.com"
+DEVBASE_PROXY_PORT="8080"
+
+# For authenticated proxy setup, see customization docs
 ```
 
-- Default: `mypass` (placeholder)
-- Masked in output: `://***:***@`
+- Credentials masked in output: `://***:***@`
 - Visible in process env (standard for HTTP proxies)
 
 ## Code Safety
@@ -495,9 +503,12 @@ curl --connect-timeout 30 --max-time 90 "$url"
 
 #### Proxy Support
 
+DevBase automatically configures proxy environment variables from `DEVBASE_PROXY_HOST` and `DEVBASE_PROXY_PORT`:
+
 ```bash
-export HTTP_PROXY="$DEVBASE_PROXY_URL"
-export HTTPS_PROXY="$DEVBASE_PROXY_URL"
+# These are set automatically during installation
+export HTTP_PROXY="http://proxy.company.com:8080"
+export HTTPS_PROXY="http://proxy.company.com:8080"
 export NO_PROXY="localhost,127.0.0.1,*.internal"
 ```
 

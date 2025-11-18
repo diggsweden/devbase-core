@@ -7,14 +7,14 @@ image::assets/floppy.png[DevBase Core,200,align="center"]
 Transforms a fresh Ubuntu installation into a opinionated configured development environment.
 DevBase provides sensible defaults while customizable for organizational or personal needs.
 
-== What You Get
+== What Do You Get?
 
 * **Modern CLI tools** - ripgrep, fzf, bat, eza, delta... and more
 * **Development environments** - Node.js, Python, Go, Java, Rust, Ruby
 * **Container tools** - Podman, Docker Compose, k9s, kubectl.. and more 
 * **Smart shell** - Fish with autocompletions and syntax highlighting
-* **Modern terminal** - Zellij multiplexer
-* **Security** - ClamAV, fail2ban, automatic security updates, lynis, secure SSH (ED25519) key generation, checksum verification and more
+* **Modern terminal** - Zellij multiplexer, Ghostty and more
+* **Security** - ClamAV, fail2ban, automatic security updates, lynis, secure SSH key generation, checksum verification and more
 
 Built on principles from https://web.archive.org/web/20250411215614/https://gabevenberg.com/posts/cli-renaissance/[The Modern CLI Renaissance] - with a mix of TUI, CLI and GUI's.
 

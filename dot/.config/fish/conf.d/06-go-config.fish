@@ -17,9 +17,10 @@ end
 #    However, on Linux it reads from standard locations including /etc/ssl/certs/
 # c) GOBIN is set to ~/.local/bin (already in PATH via devbase)
 
-# If Digg has a Go module proxy, uncomment and configure:
+# If using a Go module proxy, uncomment and configure:
+# (DEVBASE_REGISTRY_URL is set by 00-registry.fish when registry is configured)
 # if test -n "$DEVBASE_REGISTRY_URL"
 #     set -gx GOPROXY "$DEVBASE_REGISTRY_URL/repository/go-proxy"
-#     set -gx GONOSUMDB "*.digg.se,*.sgit.se"
-#     set -gx GONOPROXY "*.digg.se,*.sgit.se"
+#     set -gx GONOSUMDB "*.internal"
+#     set -gx GONOPROXY "*.internal"
 # end
