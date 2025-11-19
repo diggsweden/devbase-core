@@ -9,11 +9,9 @@ fi
 
 # Configure curl for proxy environments to avoid connection reuse issues
 # Some corporate proxies have problems with persistent connections
-configure_proxy_settings() {
+# NOTE: This function is called from setup.sh AFTER proxy env vars are exported
+configure_curl_for_proxy() {
   if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
-    # Use curl's environment variables for proxy compatibility
-    # These are respected by libcurl and curl command
-
     # Disable connection reuse - curl checks these env vars
     export CURLOPT_FORBID_REUSE=1
     export CURLOPT_FRESH_CONNECT=1
@@ -32,9 +30,6 @@ configure_proxy_settings() {
     export DEVBASE_PROXY_CONFIGURED=1
   fi
 }
-
-# Call the configuration function
-configure_proxy_settings
 
 # Brief: Verify file checksum from URL
 # Params: $1-target_file $2-checksum_url $3-timeout
