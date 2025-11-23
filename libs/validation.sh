@@ -156,3 +156,126 @@ validate_optional_dir() {
 
   return 0
 }
+
+# Brief: Validate that template variables are set in environment
+# Params: $1 - template_file (for error messages)
+#         $2 - vars_to_check (space-separated list like "$VAR1 $VAR2")
+# Uses: DEVBASE_REQUIRED_TEMPLATE_VARS, DEVBASE_OPTIONAL_TEMPLATE_VARS, DEVBASE_RUNTIME_TEMPLATE_VARS, show_progress
+# Returns: 0 if all required vars are set, 1 if any required var is missing
+# Side-effects: Prints info for missing optional vars, warnings for unknown vars, errors for missing required vars
+validate_template_variables() {
+  local template_file="$1"
+  local vars_to_check="$2"
+
+  # Define required variables (must be set - these are actually used in templates)
+  local -a DEVBASE_REQUIRED_TEMPLATE_VARS=(
+    "HOME"
+    "EDITOR"
+    "VISUAL"
+    "XDG_CONFIG_HOME"
+    "DEVBASE_THEME"
+    "DEVBASE_ZELLIJ_AUTOSTART"
+    "BAT_THEME"
+    "BTOP_THEME"
+    "DELTA_SYNTAX_THEME"
+    "DELTA_FEATURES"
+    "DELTA_DARK"
+    "ZELLIJ_THEME"
+    "ZELLIJ_COPY_COMMAND"
+    "THEME_BACKGROUND"
+    "LAZYGIT_LIGHT_THEME"
+    "VIFM_COLORSCHEME"
+    "K9S_SKIN"
+  )
+
+  # Define optional variables (warnings only if missing - features are disabled if not set)
+  local -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
+    "DEVBASE_CUSTOM_CERTS"
+    "DEVBASE_PROXY_HOST"
+    "DEVBASE_PROXY_PORT"
+    "DEVBASE_NO_PROXY_DOMAINS"
+    "DEVBASE_REGISTRY_HOST"
+    "DEVBASE_REGISTRY_PORT"
+    "DEVBASE_REGISTRY_URL"
+    "DEVBASE_REGISTRY_CONTAINER"
+    "DEVBASE_PYPI_REGISTRY"
+  )
+
+  # Define runtime variables (not replaced by envsubst, evaluated at runtime by shell)
+  # These are variables that appear in templates but should remain as literal $VAR syntax
+  local -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
+    "XDG_RUNTIME_DIR"
+    "USER_UID"
+  )
+
+  local missing_required=()
+  local missing_optional=()
+  local unknown_vars=()
+
+  # Check each variable found in template
+  for var in $vars_to_check; do
+    local var_name="${var#\$}" # Remove $ prefix
+
+    # Skip if variable is actually set (has non-empty value)
+    if [[ -n "${!var_name:-}" ]]; then
+      continue
+    fi
+
+    # Variable is NOT set - categorize it
+    local is_required=false
+    local is_optional=false
+    local is_runtime=false
+
+    for req_var in "${DEVBASE_REQUIRED_TEMPLATE_VARS[@]}"; do
+      if [[ "$var_name" == "$req_var" ]]; then
+        is_required=true
+        break
+      fi
+    done
+
+    if [[ "$is_required" == false ]]; then
+      for opt_var in "${DEVBASE_OPTIONAL_TEMPLATE_VARS[@]}"; do
+        if [[ "$var_name" == "$opt_var" ]]; then
+          is_optional=true
+          break
+        fi
+      done
+    fi
+
+    if [[ "$is_required" == false ]] && [[ "$is_optional" == false ]]; then
+      for runtime_var in "${DEVBASE_RUNTIME_TEMPLATE_VARS[@]}"; do
+        if [[ "$var_name" == "$runtime_var" ]]; then
+          is_runtime=true
+          break
+        fi
+      done
+    fi
+
+    if [[ "$is_required" == true ]]; then
+      missing_required+=("$var_name")
+    elif [[ "$is_optional" == true ]]; then
+      missing_optional+=("$var_name")
+    elif [[ "$is_runtime" == false ]]; then
+      # Only add to unknown if it's not a runtime variable
+      unknown_vars+=("$var_name")
+    fi
+  done
+
+  # Report unknown variables (not in either list)
+  if [[ ${#unknown_vars[@]} -gt 0 ]]; then
+    for var in "${unknown_vars[@]}"; do
+      show_progress warning "Unknown variable in template $(basename "$template_file"): $var"
+    done
+  fi
+
+  # Report missing required variables (ERROR - fail)
+  if [[ ${#missing_required[@]} -gt 0 ]]; then
+    show_progress error "Template processing failed for $(basename "$template_file"): Required variables not set"
+    for var in "${missing_required[@]}"; do
+      printf "      Missing: %s\n" "$var"
+    done
+    return 1
+  fi
+
+  return 0
+}

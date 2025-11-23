@@ -24,3 +24,4 @@ ExecStart=/usr/bin/clamscan \
 # Lowest priority to minimize impact on interactive performance
 Nice=19
 IOSchedulingClass=idle
+CPUQuota=25%

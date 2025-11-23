@@ -178,7 +178,6 @@ setup_installation_paths() {
   validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "_DEVBASE_TEMP" || return 1
 
-  # shellcheck disable=SC2153 # DEVBASE_DOT is validated above and set in setup.sh
   _VERSIONS_FILE="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
 
   return 0
@@ -196,7 +195,6 @@ cleanup() {
 
   local config_files=(
     "${DEVBASE_FILES}/unattended-upgrades-debian/50unattended-upgrades:/etc/apt/apt.conf.d/50unattended-upgrades"
-    "${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua:${XDG_CONFIG_HOME}/nvim/lua/plugins/colorscheme.lua"
   )
 
   for mapping in "${config_files[@]}"; do
@@ -464,15 +462,36 @@ show_completion_message() {
     print_box_line "  2. Re-run setup.sh to apply custom settings" "$box_width"
   fi
 
-  # Check Secure Boot status (native Linux only)
-  if ! check_secure_boot 2>/dev/null; then
-    print_box_line "" "$box_width"
-    print_box_line "!!! SECURITY WARNING !!!" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
-    print_box_line "Secure Boot is DISABLED on this machine" "$box_width" "${DEVBASE_COLORS[BOLD_YELLOW]}"
-    print_box_line "Action required: Enable Secure Boot in UEFI/BIOS settings" "$box_width" "${DEVBASE_COLORS[BLINK_SLOW]}${DEVBASE_COLORS[BOLD_YELLOW]}"
-  fi
-
   print_box_bottom "$box_width"
+
+  # Check Secure Boot status after box (native Linux only)
+  local sb_mode
+  sb_mode=$(get_secure_boot_mode)
+
+  # Display Secure Boot warnings outside the box
+  case "$sb_mode" in
+    disabled)
+      printf "\n"
+      show_progress warning "Secure Boot is currently disabled"
+      show_progress warning "For better security, consider enabling it in your UEFI/EFI/BIOS settings"
+      show_progress warning "If you're unsure what this means, please consult your system administrator"
+      ;;
+    setup)
+      printf "\n"
+      show_progress warning "Secure Boot is in Setup Mode (temporary state during key enrollment)"
+      show_progress warning "Unsigned kernel modules work now but will be blocked after completing setup"
+      show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
+      show_progress warning "If you're unsure what this means, please consult your system administrator"
+      ;;
+    audit)
+      printf "\n"
+      show_progress warning "Secure Boot is in Audit Mode (logging violations but not blocking)"
+      show_progress warning "Unsigned kernel modules currently work but violations are being logged"
+      show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
+      show_progress warning "If you're unsure what this means, please consult your system administrator"
+      ;;
+  esac
+
   return 0
 }
 
@@ -706,7 +725,7 @@ _display_theme_config() {
 
   # Only display font on native Linux (WSL manages fonts via Windows Terminal)
   if [[ "${_DEVBASE_ENV}" != "wsl-ubuntu" ]] && [[ -n "${DEVBASE_FONT}" ]]; then
-    # shellcheck disable=SC2153 # DEVBASE_FONT is set in setup.sh
+    validate_var_set "DEVBASE_FONT" || return 1
     font_display=$(_get_font_display_name "${DEVBASE_FONT}")
     print_box_line "Font:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     print_box_line "  • ${font_display}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"

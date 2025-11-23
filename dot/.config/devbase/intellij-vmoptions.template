@@ -30,7 +30,7 @@
 
 # Disable specific JVM optimizations that can cause issues
 -XX:+HeapDumpOnOutOfMemoryError
--XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
+-XX:HeapDumpPath=$HOME/java_error_in_idea.hprof
 
 # Prevent IDE from stealing focus
 -Djdk.attach.allowAttachSelf=true

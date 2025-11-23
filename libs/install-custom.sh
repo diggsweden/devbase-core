@@ -113,7 +113,6 @@ install_lazyvim() {
     theme_background="light"
   fi
 
-  # shellcheck disable=SC2153 # DEVBASE_DOT is exported in setup.sh
   local colorscheme_template="${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
   local colorscheme_target="$nvim_config/lua/plugins/colorscheme.lua"
 
@@ -123,6 +122,17 @@ install_lazyvim() {
     show_progress success "LazyVim colorscheme configured (${DEVBASE_THEME})"
   else
     show_progress warning "Colorscheme template not found"
+  fi
+
+  # Copy treesitter config to prevent compilation issues in VSCode
+  local treesitter_source="${DEVBASE_DOT}/.config/nvim/lua/plugins/treesitter.lua"
+  local treesitter_target="$nvim_config/lua/plugins/treesitter.lua"
+
+  if [[ -f "$treesitter_source" ]]; then
+    cp "$treesitter_source" "$treesitter_target"
+    show_progress success "LazyVim treesitter configured (VSCode-compatible)"
+  else
+    show_progress warning "Treesitter config not found"
   fi
 
   return 0

@@ -68,7 +68,8 @@ validate_critical_versions() {
 # Returns: 0 always
 # Side-effects: Modifies mise config.toml in dotfiles
 sync_mise_config_versions() {
-  # shellcheck disable=SC2153 # DEVBASE_DOT is set in setup.sh and exported
+  validate_var_set "DEVBASE_DOT" || return 1
+  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   local mise_config_src="${DEVBASE_DOT}/.config/mise/config.toml"
   [[ ! -f "$mise_config_src" ]] && return 0
 
@@ -242,6 +243,8 @@ install_mise() {
   # Activate mise for current shell session
   # This sets up PATH and environment properly
   if [[ -x "$mise_path" ]]; then
+    # Ensure PROMPT_COMMAND is set to avoid unbound variable error with set -u
+    : "${PROMPT_COMMAND:=}"
     eval "$("$mise_path" activate bash)"
   else
     die "Mise binary exists but is not executable at $mise_path (permissions: $(ls -l "$mise_path" 2>&1))"
@@ -274,7 +277,7 @@ install_mise_tools() {
   fi
 
   # Trust the config file we just copied
-  mise trust --all || true
+  run_mise_from_home_dir trust --all || true
 
   local tools_before
   tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)

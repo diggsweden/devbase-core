@@ -242,6 +242,21 @@ _backup_vscode_settings() {
   return 1
 }
 
+_expand_vscode_template_paths() {
+  local settings_template="$1"
+
+  # Determine if we're in WSL
+  local use_wsl="false"
+  if is_wsl; then
+    use_wsl="true"
+  fi
+
+  # Expand template variables
+  sed -e "s|\${userHome}|$HOME|g" \
+    -e "s|\${USE_WSL}|$use_wsl|g" \
+    "$settings_template"
+}
+
 _merge_vscode_settings_jq() {
   local settings_target="$1"
   local vscode_theme="$2"
@@ -251,7 +266,7 @@ _merge_vscode_settings_jq() {
   local new_settings='{"workbench.colorTheme": "'$vscode_theme'"}'
 
   if [[ "$configure_neovim" == "true" ]]; then
-    new_settings=$(jq -s '.[0] * .[1]' <(echo "$new_settings") "$settings_template")
+    new_settings=$(jq -s '.[0] * .[1]' <(echo "$new_settings") <(_expand_vscode_template_paths "$settings_template"))
   fi
 
   echo "$new_settings" | jq -s '.[0] * .[1]' "$settings_target" - >"${settings_target}.tmp"
@@ -264,14 +279,14 @@ _merge_vscode_settings_manual() {
   local existing_settings="$3"
 
   local new_settings
-  new_settings=$(grep -Ev '^[{}]' "$settings_template")
+  new_settings=$(_expand_vscode_template_paths "$settings_template" | grep -Ev '^[{}]')
 
   if echo "$existing_settings" | grep -q '".*":'; then
     echo "${existing_settings%\}}" >"$settings_target"
     echo ",${new_settings}" >>"$settings_target"
     echo "}" >>"$settings_target"
   else
-    cp "$settings_template" "$settings_target"
+    _expand_vscode_template_paths "$settings_template" >"$settings_target"
   fi
 }
 
@@ -282,7 +297,7 @@ _create_new_vscode_settings_jq() {
   local settings_template="$4"
 
   if [[ "$configure_neovim" == "true" ]]; then
-    jq --arg theme "$vscode_theme" '. + {"workbench.colorTheme": $theme}' "$settings_template" >"$settings_target"
+    _expand_vscode_template_paths "$settings_template" | jq --arg theme "$vscode_theme" '. + {"workbench.colorTheme": $theme}' >"$settings_target"
   else
     echo '{"workbench.colorTheme": "'"$vscode_theme"'"}' | jq '.' >"$settings_target"
   fi
@@ -295,7 +310,7 @@ _create_new_vscode_settings_manual() {
   local settings_template="$4"
 
   if [[ "$configure_neovim" == "true" ]]; then
-    cp "$settings_template" "$settings_target"
+    _expand_vscode_template_paths "$settings_template" >"$settings_target"
     local content
     content=$(cat "$settings_target")
     echo "${content%\}}" >"$settings_target"
@@ -315,7 +330,8 @@ configure_vscode_settings() {
   show_progress info "Configuring VS Code settings..."
 
   local configure_neovim="${DEVBASE_VSCODE_NEOVIM}"
-  # shellcheck disable=SC2153  # DEVBASE_DOT is exported in setup.sh
+  validate_var_set "DEVBASE_DOT" || return 1
+  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   local settings_template="${DEVBASE_DOT}/.config/vscode/settings.json"
 
   # Get settings directory
@@ -344,13 +360,15 @@ configure_vscode_settings() {
     local existing_settings
     existing_settings=$(cat "$settings_target")
 
-    # Skip if neovim already configured
+    # Skip neovim configuration if already present
+    local skip_neovim="false"
     if echo "$existing_settings" | grep -q "vscode-neovim"; then
-      show_progress info "Neovim settings already configured, skipping"
-      return 0
+      show_progress info "Neovim settings already configured, skipping neovim configuration"
+      skip_neovim="true"
+      configure_neovim="false"
     fi
 
-    # Merge settings
+    # Always update theme, but conditionally add neovim settings
     if command -v jq &>/dev/null; then
       _merge_vscode_settings_jq "$settings_target" "$vscode_theme" "$configure_neovim" "$settings_template"
       show_progress success "VS Code settings merged successfully"

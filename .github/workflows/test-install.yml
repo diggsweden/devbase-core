@@ -59,4 +59,3 @@ jobs:
         run: |
           sudo -v
           ./verify/verify-install-check.sh
-

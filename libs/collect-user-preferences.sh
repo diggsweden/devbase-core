@@ -37,9 +37,11 @@ setup_non_interactive_mode() {
     chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  # shellcheck disable=SC2153 # GIT_NAME and GIT_EMAIL are set in setup.sh
+  validate_var_set "GIT_NAME" || return 1
+  validate_var_set "GIT_EMAIL" || return 1
+  # shellcheck disable=SC2153 # GIT_NAME/GIT_EMAIL validated above, set in setup.sh
   export DEVBASE_GIT_AUTHOR="${GIT_NAME}"
-  # shellcheck disable=SC2153
+  # shellcheck disable=SC2153 # GIT_EMAIL validated above, set in setup.sh
   export DEVBASE_GIT_EMAIL="${GIT_EMAIL}"
   export DEVBASE_THEME="${DEVBASE_THEME}"
   export DEVBASE_INSTALL_DEVTOOLS="$DEVBASE_INSTALL_DEVTOOLS"

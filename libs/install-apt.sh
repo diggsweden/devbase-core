@@ -132,14 +132,12 @@ configure_locale() {
   return 0
 }
 
-# Brief: Install Microsoft core fonts with EULA auto-acceptance
+# Brief: Install Liberation and DejaVu fonts (metric-compatible replacements for common fonts)
 # Params: None
 # Returns: 0 on success, 1 on failure
 # Side-effects: Installs fonts, rebuilds font cache
-install_ms_core_fonts() {
-  echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections 2>/dev/null
-
-  if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q ttf-mscorefonts-installer 2>&1 | sed 's/^/    /'; then
+install_liberation_fonts() {
+  if sudo apt-get install -y -q fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra 2>&1 | sed 's/^/    /'; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
     return "${PIPESTATUS[0]}"
   fi
@@ -205,13 +203,13 @@ install_apt_packages() {
   fi
 
   local fonts_installed=false
-  if install_ms_core_fonts; then
+  if install_liberation_fonts; then
     fonts_installed=true
   fi
 
   local msg="System packages installed (${total_packages} packages"
   [[ -n "$locale_configured" ]] && msg="${msg}, locale: ${locale_configured}"
-  [[ "$fonts_installed" == true ]] && msg="${msg}, MS fonts"
+  [[ "$fonts_installed" == true ]] && msg="${msg}, Liberation+DejaVu fonts"
   msg="${msg})"
 
   echo

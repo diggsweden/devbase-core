@@ -7,27 +7,21 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1 2>/dev/null || exit 1
 fi
 
-# Configure curl for proxy environments to avoid connection reuse issues
-# Some corporate proxies have problems with persistent connections
-# NOTE: This function is called from setup.sh AFTER proxy env vars are exported
+# Brief: Configure curl/wget for proxy environments to avoid connection reuse issues
+# Params: None
+# Uses: HTTP_PROXY, HTTPS_PROXY (globals)
+# Returns: 0 always
+# Side-effects: Exports CURLOPT_* and WGET_OPTIONS environment variables
+# Note: Some corporate proxies have problems with persistent connections
 configure_curl_for_proxy() {
   if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
-    # Disable connection reuse - curl checks these env vars
+    # For libcurl-based tools (Python, Go, Node libraries)
+    # These env vars are not standard but some libcurl implementations may respect them
     export CURLOPT_FORBID_REUSE=1
     export CURLOPT_FRESH_CONNECT=1
 
     # For wget compatibility
     export WGET_OPTIONS="--no-http-keep-alive"
-
-    # Create a custom curl alias with required options
-    # This way all curl calls in subshells will use these options
-    curl() {
-      command curl --no-keepalive --no-sessionid -H "Connection: close" "$@"
-    }
-    export -f curl
-
-    # Mark as configured
-    export DEVBASE_PROXY_CONFIGURED=1
   fi
 }
 
@@ -255,14 +249,15 @@ download_file() {
 # Params: $1 - connection timeout in seconds (optional, default: 3)
 # Uses: show_progress (from ui-helpers)
 # Returns: 0 if any site reachable, 1 if no connectivity
-# Side-effects: Tests network connectivity to github.com, google.com, cloudflare.com
+# Side-effects: Tests network connectivity to github.com, google.com, codeberg.org
+# Note: Skips SSL verification since custom certs may not be installed yet
 check_network_connectivity() {
   local timeout="${1:-3}"
-  local test_sites=("https://github.com" "https://google.com" "https://cloudflare.com")
+  local test_sites=("https://github.com" "https://google.com" "https://codeberg.org")
   local site_reached=false
 
   for site in "${test_sites[@]}"; do
-    if curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
+    if curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
       site_reached=true
       break
     fi

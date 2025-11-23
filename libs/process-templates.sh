@@ -14,7 +14,8 @@ fi
 # Side-effects: Creates directory and copies files
 prepare_temp_dotfiles_directory() {
   validate_var_set "_DEVBASE_TEMP" || return 1
-  # shellcheck disable=SC2153 # DEVBASE_DOT is exported in setup.sh
+  validate_var_set "DEVBASE_DOT" || return 1
+  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   validate_dir_exists "${DEVBASE_DOT}" "Dotfiles directory" || return 1
 
   local temp_dotfiles="${_DEVBASE_TEMP}/dotfiles"
@@ -303,7 +304,14 @@ process_all_templates() {
   mkdir -p "$(dirname "$curl_func_target")"
   cp "${DEVBASE_DOT}/.config/fish/functions/__devbase_configure_proxy_curl.fish" "$curl_func_target"
 
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
+  # Generate curl alias for WSL (proxy-friendly settings)
+  if is_wsl; then
+    local curl_alias_target="${temp_dir}/.config/fish/conf.d/00-curl-proxy.fish"
+    mkdir -p "$(dirname "$curl_alias_target")"
+    generate_fish_curl_alias "$curl_alias_target"
+  fi
+
+  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]] || [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -433,15 +441,6 @@ EOF
 EOF
   fi
 
-  # Add PyPI registry configuration if set
-  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
-    cat >>"$target" <<EOF
-
-# Python pip registry configuration
-set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
-EOF
-  fi
-
   return 0
 }
 
@@ -455,17 +454,41 @@ extract_hostname() {
     sed -E 's|:[0-9]+$||'    # Remove port (:8080)
 }
 
+# Brief: Generate Fish curl alias with proxy-friendly settings (WSL only)
+# Params: $1 - target file path
+# Returns: 0 always
+# Side-effects: Creates Fish config file with curl alias
+generate_fish_curl_alias() {
+  local target="$1"
+  validate_not_empty "$target" "target path" || return 1
+
+  mkdir -p "$(dirname "$target")"
+
+  cat >"$target" <<'EOF'
+# Curl alias for corporate proxy compatibility (WSL only)
+# Some corporate proxies have problems with persistent connections
+# These settings prevent connection reuse issues
+
+alias curl='curl --no-keepalive --no-sessionid -H "Connection: close"'
+EOF
+
+  return 0
+}
+
 generate_fish_registry_config() {
   local target="$1"
   mkdir -p "$(dirname "$target")"
 
+  cat >"$target" <<'EOF'
+# Registry configuration for development tools
+# Generated from DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, and DEVBASE_PYPI_REGISTRY during setup
+
+EOF
+
   if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
     local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
-    cat >"$target" <<EOF
-# Registry configuration for development tools
-# Generated from DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT during setup
-
+    cat >>"$target" <<EOF
 # Export registry URL for runtime tools (npm, cypress, etc.)
 set -gx DEVBASE_REGISTRY_URL "${registry_url}"
 
@@ -473,13 +496,26 @@ set -gx DEVBASE_REGISTRY_URL "${registry_url}"
 set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}/"
 
 EOF
-  else
-    cat >"$target" <<'EOF'
-# Registry configuration disabled
-# Set DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT to enable
-# Example: DEVBASE_REGISTRY_HOST="registry.company.com" DEVBASE_REGISTRY_PORT="5000"
+  fi
+
+  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
+    cat >>"$target" <<EOF
+# Python pip/pipx registry configuration
+set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
+
 EOF
   fi
+
+  if [[ -z "${DEVBASE_REGISTRY_HOST}" && -z "${DEVBASE_PYPI_REGISTRY}" ]]; then
+    cat >>"$target" <<'EOF'
+# Registry configuration disabled
+# Set DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT for container registry
+# Set DEVBASE_PYPI_REGISTRY for Python package registry
+# Example: DEVBASE_REGISTRY_HOST="registry.company.com" DEVBASE_REGISTRY_PORT="5000"
+# Example: DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
+EOF
+  fi
+
   return 0
 }
 

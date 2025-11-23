@@ -1,13 +1,11 @@
 # Disable Fish greeting message
 set -g fish_greeting ''
-# Add mise shims to PATH first (contains starship and other tools)
-fish_add_path $HOME/.local/share/mise/shims
-# Use shims to keep PATH clean (only adds one shims directory to PATH)
-# Check for mise in multiple locations
+# Activate mise without --shims to avoid shim hangs in VSCode extensions
+# This adds all tool directories directly to PATH (including aqua tools)
 if test -x /usr/bin/mise
-    /usr/bin/mise activate fish --shims | source
+    /usr/bin/mise activate fish | source
 else if test -x $HOME/.local/bin/mise
-    $HOME/.local/bin/mise activate fish --shims | source
+    $HOME/.local/bin/mise activate fish | source
 end
 
 # Auto-add SSH key to agent (only in interactive shells)

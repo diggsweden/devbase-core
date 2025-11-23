@@ -1,4 +1,5 @@
 {
-    "vscode-neovim.useWSL": true,
-    "vscode-neovim.neovimExecutablePaths.linux": "~/.local/share/mise/shims/nvim"
+    "vscode-neovim.useWSL": ${USE_WSL},
+    "vscode-neovim.neovimExecutablePaths.linux": "${userHome}/.local/share/mise/installs/aqua-neovim-neovim/vlatest/nvim-linux-x86_64/bin/nvim",
+    "vscode-neovim.neovimInitVimPaths.linux": ""
 }

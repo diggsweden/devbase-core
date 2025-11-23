@@ -414,20 +414,21 @@ check_mise_github_token() {
   fi
 }
 
-# Brief: Check if Secure Boot is enabled on native Linux
+# Brief: Get Secure Boot mode without printing
 # Params: None
-# Uses: is_wsl, show_progress (globals)
-# Returns: 0 if enabled or not applicable, 1 if disabled on native Linux
-# Side-effects: Prints warning if Secure Boot is disabled
-check_secure_boot() {
+# Uses: is_wsl, mokutil
+# Returns: Prints mode to stdout: "disabled", "user", "setup", "audit", "deployed", "unknown", "wsl"
+# Side-effects: None
+get_secure_boot_mode() {
   # Skip check on WSL - not applicable
   if is_wsl; then
+    echo "wsl"
     return 0
   fi
 
   # Check if mokutil is available
   if ! command -v mokutil &>/dev/null; then
-    # mokutil not available - can't check, assume OK
+    echo "unknown"
     return 0
   fi
 
@@ -435,12 +436,56 @@ check_secure_boot() {
   local sb_state
   sb_state=$(mokutil --sb-state 2>/dev/null || echo "unknown")
 
+  # Determine mode
   if echo "$sb_state" | grep -qi "SecureBoot enabled"; then
-    return 0
+    if echo "$sb_state" | grep -qi "Deployed Mode"; then
+      echo "deployed"
+    else
+      echo "user"
+    fi
+  elif echo "$sb_state" | grep -qi "Setup Mode"; then
+    echo "setup"
+  elif echo "$sb_state" | grep -qi "Audit Mode"; then
+    echo "audit"
+  elif echo "$sb_state" | grep -qi "User Mode"; then
+    echo "user"
   else
-    # Secure Boot is disabled or unknown
-    return 1
+    echo "disabled"
   fi
+}
+
+# Brief: Check if Secure Boot is enabled on native Linux
+# Params: None
+# Uses: is_wsl, show_progress (globals)
+# Returns: 0 if enabled (User/Setup/Audit Mode) or not applicable, 1 if disabled
+# Side-effects: Prints warning if Secure Boot is disabled
+check_secure_boot() {
+  local mode
+  mode=$(get_secure_boot_mode)
+
+  case "$mode" in
+    wsl|unknown|user|deployed)
+      return 0
+      ;;
+    setup)
+      show_progress warning "Secure Boot is in Setup Mode (key provisioning state)"
+      show_progress warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
+      show_progress warning "Sign modules or disable Secure Boot before exiting Setup Mode"
+      return 0
+      ;;
+    audit)
+      show_progress warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
+      show_progress warning "Unsigned kernel modules currently allowed but violations are logged"
+      show_progress warning "Sign modules or disable Secure Boot before transitioning to User Mode"
+      return 0
+      ;;
+    disabled)
+      return 1
+      ;;
+    *)
+      return 0
+      ;;
+  esac
 }
 
 # PRE-FLIGHT CHECK
@@ -493,5 +538,6 @@ export -f detect_environment
 export -f check_ubuntu_version
 export -f validate_required_vars
 export -f check_mise_github_token
+export -f get_secure_boot_mode
 export -f check_secure_boot
 export -f run_preflight_checks

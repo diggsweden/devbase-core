@@ -2903,6 +2903,31 @@ export JAVA_TOOL_OPTIONS="-Dhttp.proxyHost=proxy.example.com -Dhttp.proxyPort=80
 
 ---
 
+### WSL Curl Configuration
+
+**DevBase automatically configures curl for WSL environments** to prevent connection reuse issues commonly encountered with corporate proxies.
+
+On WSL systems, DevBase creates a Fish shell alias that forces curl to use proxy-friendly settings:
+
+```fish
+alias curl='curl --no-keepalive --no-sessionid -H "Connection: close"'
+```
+
+**What this does:**
+
+- `--no-keepalive` - Disables HTTP keep-alive (prevents connection reuse)
+- `--no-sessionid` - Prevents SSL/TLS session ID reuse
+- `-H "Connection: close"` - Explicitly requests connection closure after each request
+
+**Why this is needed on WSL:**
+Corporate proxies often have issues with persistent connections, connection pooling, and session reuse. These settings force curl to establish fresh connections for each request, improving reliability when working behind proxies.
+
+**Location:** `~/.config/fish/conf.d/00-curl-proxy.fish` (auto-generated on WSL only)
+
+**Note:** This alias only affects the Fish shell. If using bash, add the alias manually to `~/.bashrc`.
+
+---
+
 ### Learn More
 
 - [Maven Proxy Configuration](https://maven.apache.org/guides/mini/guide-proxies.html) - Official Maven proxy guide

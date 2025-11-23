@@ -325,7 +325,7 @@ load_environment_configuration() {
   fi
 
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
-    export DEVBASE_PYPI_REGISTRY
+    export PIP_INDEX_URL="${DEVBASE_PYPI_REGISTRY}"
   fi
 
   # Export proxy settings immediately after loading environment
@@ -360,7 +360,7 @@ configure_proxy_settings() {
       export no_proxy="localhost,127.0.0.1,::1"
       export NO_PROXY="localhost,127.0.0.1,::1"
     fi
-    
+
     # Configure curl/wget for proxy after exporting proxy vars
     configure_curl_for_proxy
   fi

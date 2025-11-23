@@ -18,9 +18,6 @@ function __devbase_configure_proxy_curl --description "Internal: Configure curl 
         function curl --wraps curl --description "curl with proxy compatibility"
             command curl --no-keepalive --no-sessionid -H "Connection: close" $argv
         end
-        
-        # Mark as configured to avoid re-running
-        set -gx DEVBASE_PROXY_CURL_CONFIGURED 1
     end
 end
 

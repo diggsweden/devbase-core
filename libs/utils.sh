@@ -159,9 +159,9 @@ _extract_uppercase_vars() {
 
 # Brief: Process template with envsubst, only substituting UPPERCASE variables
 # Params: $1 - template_file, $2 - output_file
-# Uses: _extract_uppercase_vars (internal logic function)
+# Uses: _extract_uppercase_vars, validate_template_variables (functions)
 # Returns: 0 on success, 1 on error
-# Side-effects: Creates/overwrites output_file
+# Side-effects: Creates/overwrites output_file, validates variables before processing
 envsubst_preserve_undefined() {
   local template_file="$1"
   local output_file="$2"
@@ -174,9 +174,33 @@ envsubst_preserve_undefined() {
   local vars_to_sub
   vars_to_sub=$(_extract_uppercase_vars "$(cat "$template_file")")
 
+  # Validate that required template variables are set before processing
   if [[ -n "$vars_to_sub" ]]; then
-    # Substitute only the UPPERCASE variables found
-    envsubst "$vars_to_sub" <"$template_file" >"$output_file"
+    validate_template_variables "$template_file" "$vars_to_sub" || return 1
+  fi
+
+  # Filter out runtime variables (should not be replaced by envsubst)
+  # These variables are meant to be evaluated at runtime by the shell
+  local runtime_vars=("XDG_RUNTIME_DIR" "USER_UID")
+  local filtered_vars=""
+  for var in $vars_to_sub; do
+    local var_name="${var#\$}"
+    local is_runtime=false
+    for runtime_var in "${runtime_vars[@]}"; do
+      if [[ "$var_name" == "$runtime_var" ]]; then
+        is_runtime=true
+        break
+      fi
+    done
+    if [[ "$is_runtime" == false ]]; then
+      filtered_vars="$filtered_vars $var"
+    fi
+  done
+
+  # Proceed with substitution (using filtered list)
+  if [[ -n "$filtered_vars" ]]; then
+    # Substitute only the UPPERCASE variables found (excluding runtime vars)
+    envsubst "$filtered_vars" <"$template_file" >"$output_file"
   else
     # No variables to substitute, just copy
     cp "$template_file" "$output_file"

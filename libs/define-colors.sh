@@ -47,6 +47,6 @@ DEVBASE_SYMBOLS=(
   [WARN]='‼'
   [INFO]='ⓘ'
   [PROGRESS]='↻'
-  [SUBITEM]='•'          # Changed from ├─ to • for consistency
-  [VALIDATION_ERROR]='⊗' # For input validation errors
+  [SUBITEM]='•'          
+  [VALIDATION_ERROR]='⊗'
 )

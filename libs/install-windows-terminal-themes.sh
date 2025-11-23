@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -uo pipefail
 
 # Brief: Detect Windows username using multiple methods
 # Params: None
@@ -69,7 +70,8 @@ _find_wt_settings_path() {
 # Returns: 0 on success, 1 on failure
 # Outputs: Path to theme directory to stdout
 _find_wt_theme_directory() {
-  # shellcheck disable=SC2153 # XDG_DATA_HOME is set in environment
+  validate_var_set "XDG_DATA_HOME" || return 1
+  # shellcheck disable=SC2153 # XDG_DATA_HOME validated above, exported in setup.sh
   local xdg_data_home="${XDG_DATA_HOME}"
   local possible_theme_dirs=(
     "$xdg_data_home/devbase/files/windows-terminal"

@@ -1684,8 +1684,16 @@ check_secure_boot_status() {
   local sb_state
   sb_state=$(mokutil --sb-state 2>/dev/null || echo "unknown")
 
+  # Check for any enabled state: User Mode, Setup Mode, or Audit Mode
   if echo "$sb_state" | grep -qi "SecureBoot enabled"; then
-    printf "  %b%s%b Secure Boot is enabled\n" "${GREEN}" "$CHECK" "${NC}"
+    printf "  %b%s%b Secure Boot is enabled (User Mode - enforcing)\n" "${GREEN}" "$CHECK" "${NC}"
+  elif echo "$sb_state" | grep -qi "Setup Mode"; then
+    printf "  %b%s%b Secure Boot is enabled (Setup Mode - key provisioning)\n" "${GREEN}" "$CHECK" "${NC}"
+    printf "  %b   Note: Platform is in Setup Mode. Keys can be enrolled.%b\n" "${BLUE}" "${NC}"
+  elif echo "$sb_state" | grep -qi "Audit Mode"; then
+    printf "  %b%s%b Secure Boot is enabled (Audit Mode - logging only)\n" "${YELLOW}" "$WARN" "${NC}"
+    printf "  %b   Note: Audit Mode logs violations but does not enforce.%b\n" "${YELLOW}" "${NC}"
+    printf "  %b   Action recommended: Transition to User Mode for full enforcement%b\n" "${YELLOW}" "${NC}"
   else
     printf "  %b%s%b WARNING: Secure Boot is DISABLED\n" "${YELLOW}" "$WARN" "${NC}"
     printf "  %b   Action required: Enable Secure Boot in UEFI/BIOS settings%b\n" "${YELLOW}" "${NC}"

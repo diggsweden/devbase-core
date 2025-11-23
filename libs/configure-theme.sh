@@ -102,9 +102,11 @@ apply_theme() {
   export K9S_SKIN="$k9s"
 
   if [[ "$is_light" == "light" ]]; then
+    export THEME_BACKGROUND="light"
     export DELTA_DARK="false"
     export LAZYGIT_LIGHT_THEME="true"
   else
+    export THEME_BACKGROUND="dark"
     export DELTA_DARK="true"
     export LAZYGIT_LIGHT_THEME="false"
   fi

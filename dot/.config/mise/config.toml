@@ -38,6 +38,9 @@ no_proxy = "{{ get_env(name='no_proxy', default='') }}"
 # Pip/pipx configuration
 PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 
+# NPM configuration
+NPM_CONFIG_REGISTRY = "{{ get_env(name='NPM_CONFIG_REGISTRY', default='') }}"
+
 # Configure ruby-build to use system OpenSSL instead of compiling from source
 RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
 
@@ -71,6 +74,7 @@ jq = "jq-1.8.1"
 "aqua:dandavison/delta" = "0.18.2"
 "aqua:orhun/git-cliff" = "v2.10.1"
 "aqua:neovim/neovim" = "v0.11.5"
+"npm:tree-sitter-cli" = "0.25.10"
 
 # Container and Kubernetes tools
 "aqua:docker/compose" = "v2.40.3"
