@@ -486,11 +486,13 @@ generate_fish_registry_config() {
 EOF
 
   if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
-    local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+    local registry_url_with_port="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+    local registry_url_npm="https://${DEVBASE_REGISTRY_HOST}"
 
     cat >>"$target" <<EOF
 # Export registry URL for runtime tools (npm, cypress, etc.)
-set -gx DEVBASE_REGISTRY_URL "${registry_url}"
+set -gx DEVBASE_REGISTRY_URL "${registry_url_with_port}"
+set -gx DEVBASE_REGISTRY_URL_NPM "${registry_url_npm}"
 
 # Testcontainers registry configuration
 set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}/"
