@@ -570,6 +570,10 @@ process_template_file() {
     gradle.properties)
       target_file="${HOME}/.gradle/gradle.properties"
       ;;
+    *.fish)
+      # Fish config files go to ~/.config/fish/conf.d/
+      target_file="${XDG_CONFIG_HOME}/fish/conf.d/${template_name}"
+      ;;
     *)
       target_file="${HOME}/.${template_name}"
       ;;
