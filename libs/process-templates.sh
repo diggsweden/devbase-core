@@ -195,10 +195,6 @@ validate_custom_template() {
     "settings.registry.proxy.xml.template"
     "settings.proxy.xml.template"
     ".testcontainers.properties.template"
-    "01-npm-registry.fish.template"
-    "02-testcontainers-registry.fish.template"
-    "03-pip-registry.fish.template"
-    "07-cypress-registry.fish.template"
   )
 
   # Check if this is a custom-only template
@@ -332,7 +328,9 @@ process_all_templates() {
     generate_fish_curl_alias "$curl_alias_target"
   fi
 
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]] || [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  # Generate registry config if any registry is configured
+  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY}" ]] || \
+     [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -502,24 +500,66 @@ generate_fish_registry_config() {
 
   cat >"$target" <<'EOF'
 # Registry configuration for development tools
-# Generated from DEVBASE_PYPI_REGISTRY during setup
-# Note: Other registry URLs are baked into tool-specific config files during installation
+# Generated during setup from DEVBASE_*_REGISTRY environment variables
 
 EOF
 
+  local has_config=false
+
+  # Testcontainers registry
+  if [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
+    cat >>"$target" <<EOF
+# Testcontainers registry configuration
+set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_TESTCONTAINERS_PREFIX}"
+
+EOF
+    has_config=true
+  fi
+
+  # NPM registry
+  if [[ -n "${DEVBASE_NPM_REGISTRY}" ]]; then
+    cat >>"$target" <<EOF
+# NPM registry configuration
+set -gx NPM_CONFIG_REGISTRY "${DEVBASE_NPM_REGISTRY}"
+
+EOF
+    has_config=true
+  fi
+
+  # Cypress registry
+  if [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]]; then
+    cat >>"$target" <<EOF
+# Cypress binary download mirror
+set -gx CYPRESS_DOWNLOAD_MIRROR "${DEVBASE_CYPRESS_REGISTRY}"
+
+EOF
+    has_config=true
+  fi
+
+  # Python pip/pipx registry
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     cat >>"$target" <<EOF
 # Python pip/pipx registry configuration
 set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
 
 EOF
+    has_config=true
   fi
 
-  if [[ -z "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  # If no config was set, add documentation
+  if [[ "$has_config" == "false" ]]; then
     cat >>"$target" <<'EOF'
 # Registry configuration disabled
-# Set DEVBASE_PYPI_REGISTRY for Python package registry
-# Example: DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
+# Set specific registry URLs in org.env:
+#   DEVBASE_NPM_REGISTRY - NPM package registry URL
+#   DEVBASE_CYPRESS_REGISTRY - Cypress binary download mirror URL
+#   DEVBASE_PYPI_REGISTRY - Python package registry URL
+#   DEVBASE_TESTCONTAINERS_PREFIX - Container image prefix for Testcontainers
+#
+# Examples:
+#   DEVBASE_NPM_REGISTRY="https://nexus.company.com/repository/npm-proxy/"
+#   DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
+#   DEVBASE_TESTCONTAINERS_PREFIX="registry.company.com:5000/"
 EOF
   fi
 
