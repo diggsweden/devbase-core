@@ -550,7 +550,7 @@ check_shell_integrations() {
         print_check "info" "Zellij autostart disabled (DEVBASE_ZELLIJ_AUTOSTART=$zellij_autostart)"
       fi
     else
-      print_check "warn" "Zellij autostart not configured (00-environment.fish not found)"
+      print_check "info" "Zellij autostart not configured (00-environment.fish not found)"
     fi
 
     # Check if fish functions exist

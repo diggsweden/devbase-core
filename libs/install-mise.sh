@@ -262,6 +262,13 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   echo
 
+  # Ensure npm respects custom certificates during mise tool installation
+  # This is required when custom registry certificates have been installed
+  # (e.g., for npm:tree-sitter-cli and other npm-based tools in mise config)
+  if [[ -f "/etc/ssl/certs/ca-certificates.crt" ]]; then
+    export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/ca-certificates.crt"
+  fi
+
   local mise_config="${DEVBASE_DOT}/.config/mise/config.toml"
 
   # Check for custom mise config override
