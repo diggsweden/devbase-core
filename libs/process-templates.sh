@@ -195,6 +195,10 @@ validate_custom_template() {
     "settings.registry.proxy.xml.template"
     "settings.proxy.xml.template"
     ".testcontainers.properties.template"
+    "01-npm-registry.fish.template"
+    "02-testcontainers-registry.fish.template"
+    "03-pip-registry.fish.template"
+    "07-cypress-registry.fish.template"
   )
 
   # Check if this is a custom-only template
@@ -498,24 +502,10 @@ generate_fish_registry_config() {
 
   cat >"$target" <<'EOF'
 # Registry configuration for development tools
-# Generated from DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, and DEVBASE_PYPI_REGISTRY during setup
+# Generated from DEVBASE_PYPI_REGISTRY during setup
+# Note: Other registry URLs are baked into tool-specific config files during installation
 
 EOF
-
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
-    local registry_url_with_port="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
-    local registry_url_npm="https://${DEVBASE_REGISTRY_HOST}"
-
-    cat >>"$target" <<EOF
-# Export registry URL for runtime tools (npm, cypress, etc.)
-set -gx DEVBASE_REGISTRY_URL "${registry_url_with_port}"
-set -gx DEVBASE_REGISTRY_URL_NPM "${registry_url_npm}"
-
-# Testcontainers registry base (custom overlays should add repository-specific paths)
-set -gx DEVBASE_REGISTRY_CONTAINER "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
-
-EOF
-  fi
 
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     cat >>"$target" <<EOF
@@ -525,12 +515,10 @@ set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
 EOF
   fi
 
-  if [[ -z "${DEVBASE_REGISTRY_HOST}" && -z "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  if [[ -z "${DEVBASE_PYPI_REGISTRY}" ]]; then
     cat >>"$target" <<'EOF'
 # Registry configuration disabled
-# Set DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT for container registry
 # Set DEVBASE_PYPI_REGISTRY for Python package registry
-# Example: DEVBASE_REGISTRY_HOST="registry.company.com" DEVBASE_REGISTRY_PORT="5000"
 # Example: DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
 EOF
   fi
