@@ -1,8 +1,7 @@
 # NPM registry configuration
-# This file will be placed in ~/.config/fish/conf.d/
-# NPM_CONFIG_REGISTRY should be set by custom config if needed
+# Uses DEVBASE_REGISTRY_URL_NPM set by 00-registry.fish
+# Custom config can override this file to set organization-specific paths
 
-# Pass through NPM_CONFIG_REGISTRY if already set
-if test -n "$NPM_CONFIG_REGISTRY"
-    set -gx NPM_CONFIG_REGISTRY "$NPM_CONFIG_REGISTRY"
+if test -n "$DEVBASE_REGISTRY_URL_NPM"
+    set -gx NPM_CONFIG_REGISTRY "$DEVBASE_REGISTRY_URL_NPM/"
 end

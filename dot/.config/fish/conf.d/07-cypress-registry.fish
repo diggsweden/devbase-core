@@ -1,8 +1,7 @@
 # Cypress binary download configuration
-# This file will be placed in ~/.config/fish/conf.d/
-# CYPRESS_DOWNLOAD_MIRROR should be set by custom config if needed
+# Uses DEVBASE_REGISTRY_URL set by 00-registry.fish
+# Custom config can override this file to set organization-specific paths
 
-# Pass through CYPRESS_DOWNLOAD_MIRROR if already set
-if test -n "$CYPRESS_DOWNLOAD_MIRROR"
-    set -gx CYPRESS_DOWNLOAD_MIRROR "$CYPRESS_DOWNLOAD_MIRROR"
+if test -n "$DEVBASE_REGISTRY_URL"
+    set -gx CYPRESS_DOWNLOAD_MIRROR "$DEVBASE_REGISTRY_URL/"
 end
