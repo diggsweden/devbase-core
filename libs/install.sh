@@ -903,6 +903,12 @@ perform_installation() {
   printf "\n%bInstalling certificates...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   install_certificates || die "Failed to install certificates"
 
+  # Export NODE_EXTRA_CA_CERTS immediately after certificate installation
+  # This ensures npm/mise respect custom certificates during tool installation
+  if [[ -f "/etc/ssl/certs/ca-certificates.crt" ]]; then
+    export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/ca-certificates.crt"
+  fi
+
   printf "\n%bInstalling development tools...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   download_and_install_tools
 

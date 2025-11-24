@@ -169,8 +169,8 @@ process_and_copy_dotfiles() {
   msg="${msg}, theme: ${DEVBASE_THEME})"
   show_progress success "$msg"
 
-  apply_custom_configs
   install_dotfiles_to_target "$temp_dotfiles"
+  apply_custom_configs
 
   local backup_dir="${XDG_DATA_HOME}/devbase/backup/dot_backup"
   local backed_up=0
@@ -247,6 +247,23 @@ copy_custom_templates_to_temp() {
       cp "$template" "$target_location"
     fi
   done
+
+  # Also handle non-template overlay files (e.g., .fish files that override vanilla versions)
+  for custom_file in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.fish; do
+    [[ -f "$custom_file" ]] || continue
+
+    local filename
+    filename=$(basename "$custom_file")
+
+    # Find matching vanilla file and replace it
+    local target_location
+    target_location=$(find "${temp_dir}" -name "$filename" -type f 2>/dev/null | head -1)
+
+    if [[ -n "$target_location" ]]; then
+      cp "$custom_file" "$target_location"
+    fi
+  done
+
   return 0
 }
 
@@ -311,7 +328,9 @@ process_all_templates() {
     generate_fish_curl_alias "$curl_alias_target"
   fi
 
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]] || [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  # Generate registry config if any registry is configured
+  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY}" ]] || \
+     [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -481,38 +500,66 @@ generate_fish_registry_config() {
 
   cat >"$target" <<'EOF'
 # Registry configuration for development tools
-# Generated from DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT, and DEVBASE_PYPI_REGISTRY during setup
+# Generated during setup from DEVBASE_*_REGISTRY environment variables
 
 EOF
 
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then
-    local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+  local has_config=false
 
+  # Testcontainers registry
+  if [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
     cat >>"$target" <<EOF
-# Export registry URL for runtime tools (npm, cypress, etc.)
-set -gx DEVBASE_REGISTRY_URL "${registry_url}"
-
 # Testcontainers registry configuration
-set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}/"
+set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_TESTCONTAINERS_PREFIX}"
 
 EOF
+    has_config=true
   fi
 
+  # NPM registry
+  if [[ -n "${DEVBASE_NPM_REGISTRY}" ]]; then
+    cat >>"$target" <<EOF
+# NPM registry configuration
+set -gx NPM_CONFIG_REGISTRY "${DEVBASE_NPM_REGISTRY}"
+
+EOF
+    has_config=true
+  fi
+
+  # Cypress registry
+  if [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]]; then
+    cat >>"$target" <<EOF
+# Cypress binary download mirror
+set -gx CYPRESS_DOWNLOAD_MIRROR "${DEVBASE_CYPRESS_REGISTRY}"
+
+EOF
+    has_config=true
+  fi
+
+  # Python pip/pipx registry
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     cat >>"$target" <<EOF
 # Python pip/pipx registry configuration
 set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
 
 EOF
+    has_config=true
   fi
 
-  if [[ -z "${DEVBASE_REGISTRY_HOST}" && -z "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  # If no config was set, add documentation
+  if [[ "$has_config" == "false" ]]; then
     cat >>"$target" <<'EOF'
 # Registry configuration disabled
-# Set DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT for container registry
-# Set DEVBASE_PYPI_REGISTRY for Python package registry
-# Example: DEVBASE_REGISTRY_HOST="registry.company.com" DEVBASE_REGISTRY_PORT="5000"
-# Example: DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
+# Set specific registry URLs in org.env:
+#   DEVBASE_NPM_REGISTRY - NPM package registry URL
+#   DEVBASE_CYPRESS_REGISTRY - Cypress binary download mirror URL
+#   DEVBASE_PYPI_REGISTRY - Python package registry URL
+#   DEVBASE_TESTCONTAINERS_PREFIX - Container image prefix for Testcontainers
+#
+# Examples:
+#   DEVBASE_NPM_REGISTRY="https://nexus.company.com/repository/npm-proxy/"
+#   DEVBASE_PYPI_REGISTRY="https://nexus.company.com/repository/pypi-proxy/simple"
+#   DEVBASE_TESTCONTAINERS_PREFIX="registry.company.com:5000/"
 EOF
   fi
 
@@ -550,6 +597,10 @@ process_template_file() {
       ;;
     gradle.properties)
       target_file="${HOME}/.gradle/gradle.properties"
+      ;;
+    *.fish)
+      # Fish config files go to ~/.config/fish/conf.d/
+      target_file="${XDG_CONFIG_HOME}/fish/conf.d/${template_name}"
       ;;
     *)
       target_file="${HOME}/.${template_name}"

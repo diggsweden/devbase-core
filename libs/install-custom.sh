@@ -241,7 +241,8 @@ install_oc_kubectl() {
     expected_checksum=""
   fi
 
-  if retry_command download_file "$oc_url" "$oc_tar" "" "$expected_checksum"; then
+  # OpenShift mirror can be slow, use 60s timeout (default is 30s)
+  if retry_command download_file "$oc_url" "$oc_tar" "" "$expected_checksum" "" "60"; then
     tar -C "${_DEVBASE_TEMP}" -xzf "$oc_tar"
 
     if [[ -f "${_DEVBASE_TEMP}/oc" ]]; then

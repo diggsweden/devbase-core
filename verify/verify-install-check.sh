@@ -550,7 +550,7 @@ check_shell_integrations() {
         print_check "info" "Zellij autostart disabled (DEVBASE_ZELLIJ_AUTOSTART=$zellij_autostart)"
       fi
     else
-      print_check "warn" "Zellij autostart not configured (00-environment.fish not found)"
+      print_check "info" "Zellij autostart not configured (00-environment.fish not found)"
     fi
 
     # Check if fish functions exist
@@ -717,12 +717,9 @@ check_config_files() {
     "$HOME/.config/fish/conf.d/00-aliases.fish"
     "$HOME/.config/fish/conf.d/00-environment.fish"
     "$HOME/.config/fish/conf.d/01-keybindings.fish"
-    "$HOME/.config/fish/conf.d/01-npm-registry.fish"
     "$HOME/.config/fish/conf.d/02-aliases.fish"
-    "$HOME/.config/fish/conf.d/02-testcontainers-registry.fish"
     "$HOME/.config/fish/conf.d/04-ls-colors.fish"
     "$HOME/.config/fish/conf.d/06-go-config.fish"
-    "$HOME/.config/fish/conf.d/07-cypress-registry.fish"
     "$HOME/.config/fish/conf.d/08-fzf-integration.fish"
     "$HOME/.config/fish/conf.d/09-terminal-title.fish"
     "$HOME/.config/fish/conf.d/10-ulimits.fish"

@@ -255,6 +255,11 @@ install_mise() {
     die "Mise installation failed - not found in PATH after activation"
   fi
 
+  # Trust devbase-core .mise.toml (used during installation)
+  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
+    mise trust "${DEVBASE_ROOT}/.mise.toml" 2>/dev/null || true
+  fi
+
   show_progress success "Mise ready at $mise_path"
 }
 
