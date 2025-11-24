@@ -169,8 +169,8 @@ process_and_copy_dotfiles() {
   msg="${msg}, theme: ${DEVBASE_THEME})"
   show_progress success "$msg"
 
-  apply_custom_configs
   install_dotfiles_to_target "$temp_dotfiles"
+  apply_custom_configs
 
   local backup_dir="${XDG_DATA_HOME}/devbase/backup/dot_backup"
   local backed_up=0
@@ -247,6 +247,23 @@ copy_custom_templates_to_temp() {
       cp "$template" "$target_location"
     fi
   done
+
+  # Also handle non-template overlay files (e.g., .fish files that override vanilla versions)
+  for custom_file in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.fish; do
+    [[ -f "$custom_file" ]] || continue
+
+    local filename
+    filename=$(basename "$custom_file")
+
+    # Find matching vanilla file and replace it
+    local target_location
+    target_location=$(find "${temp_dir}" -name "$filename" -type f 2>/dev/null | head -1)
+
+    if [[ -n "$target_location" ]]; then
+      cp "$custom_file" "$target_location"
+    fi
+  done
+
   return 0
 }
 
@@ -494,8 +511,8 @@ EOF
 set -gx DEVBASE_REGISTRY_URL "${registry_url_with_port}"
 set -gx DEVBASE_REGISTRY_URL_NPM "${registry_url_npm}"
 
-# Testcontainers registry configuration
-set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}/"
+# Testcontainers registry base (custom overlays should add repository-specific paths)
+set -gx DEVBASE_REGISTRY_CONTAINER "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
 EOF
   fi
