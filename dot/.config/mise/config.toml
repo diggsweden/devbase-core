@@ -94,7 +94,7 @@ jq = "jq-1.8.1"
 "aqua:mvdan/sh" = "v3.12.0"  # shfmt - Shell formatter
 
 # Security scanning
-"aqua:zricethezav/gitleaks" = "v8.29.0"
+"aqua:zricethezav/gitleaks" = "v8.29.1"
 "aqua:anchore/syft" = "v1.37.0"
 "aqua:ossf/scorecard" = "v5.4.0"
 
