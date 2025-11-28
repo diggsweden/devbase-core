@@ -161,7 +161,7 @@ configure_git_user() {
 # Returns: 0 if configured, 1 if no proxy set
 # Side-effects: Sets global git config for proxy
 configure_git_proxy() {
-  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 1
+  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 1
 
   local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
 

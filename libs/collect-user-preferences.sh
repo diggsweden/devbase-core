@@ -30,7 +30,7 @@ setup_non_interactive_mode() {
   export DEVBASE_SSH_PASSPHRASE
 
   # If passphrase was auto-generated (user didn't provide SSH_KEY_PASSPHRASE)
-  if [[ -z "${SSH_KEY_PASSPHRASE}" ]]; then
+  if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
     export GENERATED_SSH_PASSPHRASE="true"
     mkdir -p "${DEVBASE_CONFIG_DIR}"
     echo "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"

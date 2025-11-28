@@ -454,7 +454,7 @@ show_completion_message() {
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  if [[ -z "${DEVBASE_CUSTOM_DIR}" ]]; then
+  if [[ -z "${DEVBASE_CUSTOM_DIR:-}" ]]; then
     print_box_line "" "$box_width"
     print_box_line "Note: Using default configuration" "$box_width"
     print_box_line "For custom overlay (proxy, certs, hooks):" "$box_width"

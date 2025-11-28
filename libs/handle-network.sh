@@ -279,7 +279,7 @@ check_network_connectivity() {
 # Side-effects: Tests proxy connection
 check_proxy_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 0
 
   # Test with a site that should go through proxy (github.com is not in NO_PROXY)
   if curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) https://github.com &>/dev/null; then
@@ -298,7 +298,7 @@ check_proxy_connectivity() {
 # Side-effects: Tests registry connection
 check_registry_connectivity() {
   local timeout="${1:-5}"
-  [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]] && return 0
 
   # Build registry URL - try HTTPS first (common for registries)
   local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"

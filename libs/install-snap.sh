@@ -93,7 +93,7 @@ load_snap_packages() {
 # Returns: 0 always
 # Side-effects: Sets snap system proxy configuration
 configure_snap_proxy() {
-  [[ -z "${DEVBASE_PROXY_HOST}" || -z "${DEVBASE_PROXY_PORT}" ]] && return 0
+  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 0
   command -v snap &>/dev/null || return 0
 
   local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"

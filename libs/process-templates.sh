@@ -581,7 +581,7 @@ process_template_file() {
     ;;
   .testcontainers.properties)
     # Skip if no container registry configured
-    if [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]]; then
+    if [[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]]; then
       rm "$file" 2>/dev/null || true
       return 0
     fi
@@ -868,7 +868,7 @@ process_maven_templates_yaml() {
 
 process_gradle_templates() {
   # Skip if no registry configured
-  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
+  [[ -z "${DEVBASE_REGISTRY_URL:-}" ]] && return 0
 
   local gradle_templates_dir="${DEVBASE_FILES}/gradle-templates"
   local target_file="${HOME}/.gradle/init.gradle"
@@ -900,7 +900,7 @@ process_container_templates() {
   mkdir -p "$(dirname "$target_file")"
 
   # Skip registries.conf generation if no registry configured
-  if [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]]; then
+  if [[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]]; then
     return 0
   fi
 

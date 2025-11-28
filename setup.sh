@@ -34,8 +34,8 @@ DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}"      # Custom config directory path
 DEVBASE_DEBUG="${DEVBASE_DEBUG:-}"                # Debug mode (set DEVBASE_DEBUG=1 for verbose output)
 DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}" # Theme choice (default: everforest-dark)
 DEVBASE_FONT="${DEVBASE_FONT:-monaspace}"         # Font choice (default: monaspace)
-EDITOR="${EDITOR:-nvim}"                          # Default editor: nvim or nano
-VISUAL="${VISUAL:-$EDITOR}"                       # Visual editor (defaults to EDITOR)
+export EDITOR="${EDITOR:-nvim}"                   # Default editor: nvim or nano
+export VISUAL="${VISUAL:-$EDITOR}"                # Visual editor (defaults to EDITOR)
 GIT_EMAIL="${GIT_EMAIL:-@$(hostname)}"            # Git email for non-interactive (default: user@hostname)
 GIT_NAME="${GIT_NAME:-DevBase User}"              # Git name for non-interactive (default: DevBase User)
 MISE_GITHUB_TOKEN="${MISE_GITHUB_TOKEN:-}"        # GitHub token for mise downloads
