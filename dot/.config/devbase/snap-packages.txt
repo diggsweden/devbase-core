@@ -1,10 +1,11 @@
 # DevBase Snap Packages
-# Format: package_name [options]
+# Format: package_name [options] # comment
 # Options: --classic, --edge, --beta, --channel=<channel>
+# Tags (in comment): @skip-wsl - Skip on WSL environments
 # Comments start with #
 
 # Terminal emulator with GPU acceleration
-ghostty --classic
+ghostty --classic # @skip-wsl
 
 # Web browsers
 firefox

@@ -49,13 +49,25 @@ load_snap_packages() {
     # Skip empty lines
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
 
-    # Extract package name and options
-    # Format: package_name [options]
+    # Extract tags from inline comment (everything after #)
+    local tags=""
+    if [[ "$line" =~ \#[[:space:]]*(.*) ]]; then
+      tags="${BASH_REMATCH[1]}"
+    fi
+
+    # Check for @skip-wsl tag
+    if [[ "$tags" =~ @skip-wsl ]] && is_wsl; then
+      continue
+    fi
+
+    # Extract package name and options (before any comment)
+    # Format: package_name [options] # comment
+    local pkg_line="${line%%#*}"
     local pkg_name
     local pkg_options=""
 
     # Read first word as package name, rest as options
-    read -r pkg_name pkg_options <<<"$line"
+    read -r pkg_name pkg_options <<<"$pkg_line"
 
     [[ -z "$pkg_name" ]] && continue
 
