@@ -760,10 +760,7 @@ _process_maven_yaml_add_registry() {
   local -n fragments=$3
   local -n desc=$4
 
-  if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
-    # Build registry URL for Maven template
-    export DEVBASE_REGISTRY_URL="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
-
+  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
     local registry_processed="${temp_dir}/registry.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
     fragments+=("$registry_processed")
@@ -871,10 +868,7 @@ process_maven_templates_yaml() {
 
 process_gradle_templates() {
   # Skip if no registry configured
-  [[ -z "${DEVBASE_REGISTRY_HOST}" || -z "${DEVBASE_REGISTRY_PORT}" ]] && return 0
-
-  # Build registry URL for Gradle template
-  export DEVBASE_REGISTRY_URL="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+  [[ -z "${DEVBASE_REGISTRY_URL}" ]] && return 0
 
   local gradle_templates_dir="${DEVBASE_FILES}/gradle-templates"
   local target_file="${HOME}/.gradle/init.gradle"
