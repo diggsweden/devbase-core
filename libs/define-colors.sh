@@ -47,6 +47,6 @@ DEVBASE_SYMBOLS=(
   [WARN]='‼'
   [INFO]='ⓘ'
   [PROGRESS]='↻'
-  [SUBITEM]='•'          
+  [SUBITEM]='•'
   [VALIDATION_ERROR]='⊗'
 )

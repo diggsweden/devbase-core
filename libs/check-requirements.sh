@@ -464,27 +464,27 @@ check_secure_boot() {
   mode=$(get_secure_boot_mode)
 
   case "$mode" in
-    wsl|unknown|user|deployed)
-      return 0
-      ;;
-    setup)
-      show_progress warning "Secure Boot is in Setup Mode (key provisioning state)"
-      show_progress warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
-      show_progress warning "Sign modules or disable Secure Boot before exiting Setup Mode"
-      return 0
-      ;;
-    audit)
-      show_progress warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
-      show_progress warning "Unsigned kernel modules currently allowed but violations are logged"
-      show_progress warning "Sign modules or disable Secure Boot before transitioning to User Mode"
-      return 0
-      ;;
-    disabled)
-      return 1
-      ;;
-    *)
-      return 0
-      ;;
+  wsl | unknown | user | deployed)
+    return 0
+    ;;
+  setup)
+    show_progress warning "Secure Boot is in Setup Mode (key provisioning state)"
+    show_progress warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
+    show_progress warning "Sign modules or disable Secure Boot before exiting Setup Mode"
+    return 0
+    ;;
+  audit)
+    show_progress warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
+    show_progress warning "Unsigned kernel modules currently allowed but violations are logged"
+    show_progress warning "Sign modules or disable Secure Boot before transitioning to User Mode"
+    return 0
+    ;;
+  disabled)
+    return 1
+    ;;
+  *)
+    return 0
+    ;;
   esac
 }
 

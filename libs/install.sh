@@ -470,26 +470,26 @@ show_completion_message() {
 
   # Display Secure Boot warnings outside the box
   case "$sb_mode" in
-    disabled)
-      printf "\n"
-      show_progress warning "Secure Boot is currently disabled"
-      show_progress warning "For better security, consider enabling it in your UEFI/EFI/BIOS settings"
-      show_progress warning "If you're unsure what this means, please consult your system administrator"
-      ;;
-    setup)
-      printf "\n"
-      show_progress warning "Secure Boot is in Setup Mode (temporary state during key enrollment)"
-      show_progress warning "Unsigned kernel modules work now but will be blocked after completing setup"
-      show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
-      show_progress warning "If you're unsure what this means, please consult your system administrator"
-      ;;
-    audit)
-      printf "\n"
-      show_progress warning "Secure Boot is in Audit Mode (logging violations but not blocking)"
-      show_progress warning "Unsigned kernel modules currently work but violations are being logged"
-      show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
-      show_progress warning "If you're unsure what this means, please consult your system administrator"
-      ;;
+  disabled)
+    printf "\n"
+    show_progress warning "Secure Boot is currently disabled"
+    show_progress warning "For better security, consider enabling it in your UEFI/EFI/BIOS settings"
+    show_progress warning "If you're unsure what this means, please consult your system administrator"
+    ;;
+  setup)
+    printf "\n"
+    show_progress warning "Secure Boot is in Setup Mode (temporary state during key enrollment)"
+    show_progress warning "Unsigned kernel modules work now but will be blocked after completing setup"
+    show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
+    show_progress warning "If you're unsure what this means, please consult your system administrator"
+    ;;
+  audit)
+    printf "\n"
+    show_progress warning "Secure Boot is in Audit Mode (logging violations but not blocking)"
+    show_progress warning "Unsigned kernel modules currently work but violations are being logged"
+    show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
+    show_progress warning "If you're unsure what this means, please consult your system administrator"
+    ;;
   esac
 
   return 0

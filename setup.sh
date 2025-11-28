@@ -271,9 +271,9 @@ find_custom_directory() {
     export _DEVBASE_CUSTOM_TEMPLATES="$fullpath/templates"
     export _DEVBASE_CUSTOM_SSH="$fullpath/ssh"
     export _DEVBASE_CUSTOM_PACKAGES="$fullpath/packages"
-    
+
     # Export flag for templates if custom cert directory has at least one .crt file
-    if [[ -d "$fullpath/certificates" ]] && compgen -G "$fullpath/certificates/*.crt" > /dev/null 2>&1; then
+    if [[ -d "$fullpath/certificates" ]] && compgen -G "$fullpath/certificates/*.crt" >/dev/null 2>&1; then
       export DEVBASE_CUSTOM_CERTS="true"
     fi
 

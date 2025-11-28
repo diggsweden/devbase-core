@@ -329,8 +329,8 @@ process_all_templates() {
   fi
 
   # Generate registry config if any registry is configured
-  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY}" ]] || \
-     [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
+  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY}" ]] ||
+    [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
