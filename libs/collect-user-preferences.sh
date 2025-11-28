@@ -414,34 +414,50 @@ collect_ssh_configuration() {
 # Returns: 0 always
 _prompt_vscode_preferences() {
   printf "\n"
-  printf "  %bVS Code: Popular extensible code editor with rich ecosystem.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  if ask_yes_no "Install VS Code? (Y/n)" "Y"; then
-    export DEVBASE_VSCODE_INSTALL="true"
-    printf "  %b✓%b VS Code will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
 
-    printf "  %bInstall recommended VS Code extensions (includes language support, linters, formatters)?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-    if ask_yes_no "Install VS Code extensions? (Y/n)" "Y"; then
-      export DEVBASE_VSCODE_EXTENSIONS="true"
-      printf "  %b✓%b VS Code extensions will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-
-      printf "  %bThe Neovim extension enables Vim keybindings and commands in VS Code.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-      if ask_yes_no "Include VS Code Neovim extension? (Y/n)" "Y"; then
-        export DEVBASE_VSCODE_NEOVIM="true"
-        printf "  %b✓%b Neovim extension will be included\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-      else
-        export DEVBASE_VSCODE_NEOVIM="false"
-        printf "  %b✓%b Neovim extension will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-      fi
+  if is_wsl; then
+    printf "  %bVS Code: On WSL, VS Code runs from Windows and connects via Remote-WSL extension.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    if ask_yes_no "Configure VS Code Remote-WSL and extensions? (Y/n)" "Y"; then
+      export DEVBASE_VSCODE_INSTALL="true"
+      printf "  %b✓%b VS Code Remote-WSL will be configured\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     else
+      export DEVBASE_VSCODE_INSTALL="false"
       export DEVBASE_VSCODE_EXTENSIONS="false"
       export DEVBASE_VSCODE_NEOVIM="false"
-      printf "  %b✓%b VS Code extensions will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+      printf "  %b✓%b VS Code configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+      return 0
     fi
   else
-    export DEVBASE_VSCODE_INSTALL="false"
+    printf "  %bVS Code: Popular extensible code editor with rich ecosystem.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    if ask_yes_no "Install VS Code? (Y/n)" "Y"; then
+      export DEVBASE_VSCODE_INSTALL="true"
+      printf "  %b✓%b VS Code will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    else
+      export DEVBASE_VSCODE_INSTALL="false"
+      export DEVBASE_VSCODE_EXTENSIONS="false"
+      export DEVBASE_VSCODE_NEOVIM="false"
+      printf "  %b✓%b VS Code installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+      return 0
+    fi
+  fi
+
+  printf "  %bInstall recommended VS Code extensions (includes language support, linters, formatters)?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  if ask_yes_no "Install VS Code extensions? (Y/n)" "Y"; then
+    export DEVBASE_VSCODE_EXTENSIONS="true"
+    printf "  %b✓%b VS Code extensions will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+
+    printf "  %bThe Neovim extension enables Vim keybindings and commands in VS Code.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    if ask_yes_no "Include VS Code Neovim extension? (Y/n)" "Y"; then
+      export DEVBASE_VSCODE_NEOVIM="true"
+      printf "  %b✓%b Neovim extension will be included\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    else
+      export DEVBASE_VSCODE_NEOVIM="false"
+      printf "  %b✓%b Neovim extension will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    fi
+  else
     export DEVBASE_VSCODE_EXTENSIONS="false"
     export DEVBASE_VSCODE_NEOVIM="false"
-    printf "  %b✓%b VS Code installation skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    printf "  %b✓%b VS Code extensions will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
   fi
 }
 

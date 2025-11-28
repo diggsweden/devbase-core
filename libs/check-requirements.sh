@@ -190,7 +190,7 @@ check_required_tools() {
 _check_wsl_nerd_font_prereq() {
   printf "\n"
   show_progress warning "WSL: Nerd Font needed (install on Windows side)"
-  printf "  %bIf you see strange chars (boxes/�), install a Nerd Font on Windows%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  printf "  %bIf you see strange chars (boxes/?), install a Nerd Font on Windows%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
   printf "\n"
 
   return 0
