@@ -72,7 +72,8 @@ show_progress() {
 repeat_char() {
   local char="$1"
   local count="$2"
-  printf "%${count}s" | tr ' ' "$char"
+  local i
+  for ((i = 0; i < count; i++)); do printf '%s' "$char"; done
 }
 
 # Brief: Print section header with horizontal line decoration
