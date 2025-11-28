@@ -92,10 +92,10 @@ fi
 # Side-effects: Removes old backups, renames current backup to .old
 rotate_backup_directories() {
   # Rotate old backup if it exists (keep only one previous backup)
-  if [[ -d "${DEVBASE_BACKUP_DIR}" ]]; then
+  if [[ -d "${DEVBASE_BACKUP_DIR:-}" ]]; then
     if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
       # Safety check: ensure path is within user home
-      if [[ -n "${DEVBASE_BACKUP_DIR}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
+      if [[ -n "${DEVBASE_BACKUP_DIR:-}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
         rm -rf "${DEVBASE_BACKUP_DIR}.old"
       else
         show_progress warning "Refusing to remove unsafe backup path: ${DEVBASE_BACKUP_DIR}.old"
@@ -138,7 +138,7 @@ validate_environment() {
 setup_sudo_and_system() {
   validate_var_set "DEVBASE_FILES" || return 1
 
-  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]] && [[ -f "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]] && [[ -f "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" ]]; then
     show_progress info "Configuring sudo proxy preservation..."
     sudo cp "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" /etc/sudoers.d/
     sudo chmod 0440 /etc/sudoers.d/sudokeepenv
@@ -371,8 +371,8 @@ _summary_network_config() {
 
 NETWORK CONFIGURATION
 =====================
-  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then echo "${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
-  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_HOST}" && -n "${DEVBASE_REGISTRY_PORT}" ]]; then echo "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"; else echo "not configured"; fi)
+  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then echo "${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
+  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_HOST:-}" && -n "${DEVBASE_REGISTRY_PORT:-}" ]]; then echo "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"; else echo "not configured"; fi)
 EOF
 }
 
@@ -392,7 +392,7 @@ _summary_custom_config() {
 
 CUSTOM CONFIGURATION
 ====================
-  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
+  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
   • Custom Env: $(if [[ -n "${DEVBASE_CUSTOM_ENV:-}" ]]; then echo "loaded"; else echo "not loaded"; fi)
 EOF
 }
@@ -516,7 +516,7 @@ configure_fonts_post_install() {
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     local profile_id
     profile_id=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'")
-    if [[ -n "$profile_id" ]] && [[ -n "${DEVBASE_THEME}" ]]; then
+    if [[ -n "$profile_id" ]] && [[ -n "${DEVBASE_THEME:-}" ]]; then
       if apply_gnome_terminal_theme "${DEVBASE_THEME}" "$profile_id" 2>/dev/null; then
         show_progress success "GNOME Terminal: Theme applied (${DEVBASE_THEME})"
       fi
@@ -729,7 +729,7 @@ _display_theme_config() {
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 
   # Only display font on native Linux (WSL manages fonts via Windows Terminal)
-  if [[ "${_DEVBASE_ENV}" != "wsl-ubuntu" ]] && [[ -n "${DEVBASE_FONT}" ]]; then
+  if [[ "${_DEVBASE_ENV}" != "wsl-ubuntu" ]] && [[ -n "${DEVBASE_FONT:-}" ]]; then
     validate_var_set "DEVBASE_FONT" || return 1
     font_display=$(_get_font_display_name "${DEVBASE_FONT}")
     print_box_line "Font:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
@@ -743,7 +743,7 @@ _display_ssh_config() {
   if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
     print_box_line "  • Action: Generate new key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     print_box_line "  • Location: ${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    if [[ -n "${DEVBASE_SSH_PASSPHRASE}" ]]; then
+    if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
       print_box_line "  • Protection: With passphrase" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
     else
       print_box_line "  • Protection: No passphrase" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"

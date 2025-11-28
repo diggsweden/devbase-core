@@ -517,7 +517,7 @@ _install_vscode_ext_install_one() {
   local installed_list="$5"
 
   # Skip neovim extension if user opted out
-  if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM}" != "true" ]]; then
+  if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM:-}" != "true" ]]; then
     show_progress info "$display_name (skipped by user preference)"
     return 2
   fi

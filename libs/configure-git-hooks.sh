@@ -54,7 +54,7 @@ configure_git_hooks() {
   fi
 
   # Overlay custom organization hooks if they exist
-  if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ -d "$custom_hooks_dir" ]]; then
+  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && [[ -d "$custom_hooks_dir" ]]; then
     show_progress info "Applying organization-specific git hooks..."
     cp -r "$custom_hooks_dir"/* "$hooks_dir/" || show_progress warning "Failed to copy custom git hooks"
   fi

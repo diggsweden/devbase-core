@@ -305,7 +305,7 @@ process_all_templates() {
     [[ "$template" == *.template ]] && rm "$template"
   done < <(find "${temp_dir}" -name "*.template" -type f -print0)
 
-  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
     local proxy_target="${temp_dir}/.config/fish/conf.d/00-proxy.fish"
     mkdir -p "$(dirname "$proxy_target")"
     generate_fish_proxy_config "$proxy_target"
@@ -329,8 +329,8 @@ process_all_templates() {
   fi
 
   # Generate registry config if any registry is configured
-  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY}" ]] ||
-    [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
+  if [[ -n "${DEVBASE_PYPI_REGISTRY:-}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY:-}" ]] ||
+    [[ -n "${DEVBASE_CYPRESS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX:-}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -408,8 +408,8 @@ generate_fish_proxy_config() {
 
   mkdir -p "$(dirname "$target")"
 
-  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
-    local no_proxy_hosts="${DEVBASE_NO_PROXY_DOMAINS}"
+  if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
+    local no_proxy_hosts="${DEVBASE_NO_PROXY_DOMAINS:-}"
     local proxy_host="${DEVBASE_PROXY_HOST}"
     local proxy_port="${DEVBASE_PROXY_PORT}"
     local proxy_url="http://${proxy_host}:${proxy_port}"
@@ -507,7 +507,7 @@ EOF
   local has_config=false
 
   # Testcontainers registry
-  if [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX}" ]]; then
+  if [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX:-}" ]]; then
     cat >>"$target" <<EOF
 # Testcontainers registry configuration
 set -gx TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX "${DEVBASE_TESTCONTAINERS_PREFIX}"
@@ -517,7 +517,7 @@ EOF
   fi
 
   # NPM registry
-  if [[ -n "${DEVBASE_NPM_REGISTRY}" ]]; then
+  if [[ -n "${DEVBASE_NPM_REGISTRY:-}" ]]; then
     cat >>"$target" <<EOF
 # NPM registry configuration
 set -gx NPM_CONFIG_REGISTRY "${DEVBASE_NPM_REGISTRY}"
@@ -527,7 +527,7 @@ EOF
   fi
 
   # Cypress registry
-  if [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]]; then
+  if [[ -n "${DEVBASE_CYPRESS_REGISTRY:-}" ]]; then
     cat >>"$target" <<EOF
 # Cypress binary download mirror
 set -gx CYPRESS_DOWNLOAD_MIRROR "${DEVBASE_CYPRESS_REGISTRY}"
@@ -537,7 +537,7 @@ EOF
   fi
 
   # Python pip/pipx registry
-  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
+  if [[ -n "${DEVBASE_PYPI_REGISTRY:-}" ]]; then
     cat >>"$target" <<EOF
 # Python pip/pipx registry configuration
 set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
@@ -741,7 +741,7 @@ _process_maven_yaml_add_proxy() {
   local -n fragments=$3
   local -n desc=$4
 
-  if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
+  if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
     local proxy_processed="${temp_dir}/proxy.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed"
     fragments+=("$proxy_processed")
@@ -760,7 +760,7 @@ _process_maven_yaml_add_registry() {
   local -n fragments=$3
   local -n desc=$4
 
-  if [[ -n "${DEVBASE_REGISTRY_URL}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
+  if [[ -n "${DEVBASE_REGISTRY_URL:-}" ]] && [[ -f "${maven_yaml_dir}/registry.yaml" ]]; then
     local registry_processed="${temp_dir}/registry.yaml"
     envsubst_preserve_undefined "${maven_yaml_dir}/registry.yaml" "$registry_processed"
     fragments+=("$registry_processed")

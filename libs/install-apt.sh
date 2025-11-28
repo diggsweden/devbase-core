@@ -48,10 +48,9 @@ load_apt_packages() {
     # Skip empty lines
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
 
-    # Extract package name (everything before #)
-    local pkg="${line%%#*}"
-    pkg="${pkg#"${pkg%%[![:space:]]*}"}" # trim leading whitespace
-    pkg="${pkg%"${pkg##*[![:space:]]}"}" # trim trailing whitespace
+    # Extract package name (everything before #) and trim whitespace
+    local pkg
+    pkg=$(printf '%s' "${line%%#*}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
     [[ -z "$pkg" ]] && continue
 
@@ -199,7 +198,7 @@ install_apt_packages() {
 
   local locale_configured=""
   if configure_locale; then
-    [[ -n "${DEVBASE_LOCALE}" ]] && locale_configured="${DEVBASE_LOCALE}"
+    [[ -n "${DEVBASE_LOCALE:-}" ]] && locale_configured="${DEVBASE_LOCALE}"
   fi
 
   local fonts_installed=false

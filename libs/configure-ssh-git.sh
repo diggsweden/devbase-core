@@ -73,7 +73,7 @@ configure_ssh() {
     case "${DEVBASE_SSH_KEY_TYPE}" in
     ecdsa)
       # Generate ECDSA key with P-521 curve
-      if [[ -n "${DEVBASE_SSH_PASSPHRASE}" ]]; then
+      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
         ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
         passphrase_protected=true
       else
@@ -83,7 +83,7 @@ configure_ssh() {
 
     ed25519 | ed25519-sk | ecdsa-sk)
       # Generate key without bit size parameter
-      if [[ -n "${DEVBASE_SSH_PASSPHRASE}" ]]; then
+      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
         ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
         passphrase_protected=true
       else
@@ -171,7 +171,7 @@ configure_git_proxy() {
   git config --global http.proxy "${proxy_url}"
   git config --global https.proxy "${proxy_url}"
 
-  if [[ -n "${DEVBASE_NO_PROXY_DOMAINS}" ]]; then
+  if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
     IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"
     for domain in "${NO_PROXY_ARRAY[@]}"; do
       # Trim whitespace
