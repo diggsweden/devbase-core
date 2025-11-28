@@ -83,6 +83,14 @@ die() {
 
 # Levels: step (main action), info (details), success (completion), warning, error (fatal)
 
+# Brief: Refresh sudo credentials to prevent timeout during long operations
+# Params: None
+# Returns: 0 on success, 1 on failure
+# Side-effects: Extends sudo timeout
+sudo_refresh() {
+  sudo -v
+}
+
 # Brief: Validate path for security (traversal, system dirs, whitelisting)
 # Params: $1 - path to validate, $2 - strict_mode (true/false, default: true)
 # Returns: 0 if valid, calls die() on invalid paths

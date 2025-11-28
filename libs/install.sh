@@ -596,17 +596,22 @@ handle_wsl_restart() {
 # Side-effects: Installs all configured development tools
 download_and_install_tools() {
   install_apt_packages || die "Failed to install APT packages"
+  sudo_refresh
   install_snap_packages || die "Failed to install snap packages"
+  sudo_refresh
   install_mise_and_tools || die "Failed to install mise and development tools"
+  sudo_refresh
   install_fisher || show_progress warning "Fisher/fzf.fish setup failed (continuing)"
   install_nerd_fonts || show_progress warning "Nerd Font installation failed (continuing)"
   install_lazyvim || show_progress warning "LazyVim setup failed (continuing)"
   install_jmc || show_progress warning "JMC setup failed (continuing)"
   install_oc_kubectl || show_progress warning "oc/kubectl setup failed (continuing)"
+  sudo_refresh
   install_vscode || show_progress warning "VS Code setup failed (continuing)"
   install_dbeaver || show_progress warning "DBeaver setup failed (continuing)"
   install_keystore_explorer || show_progress warning "KeyStore Explorer setup failed (continuing)"
   install_intellij_idea || show_progress warning "IntelliJ IDEA setup failed (continuing)"
+  sudo_refresh
   install_k3s || show_progress warning "k3s setup failed (continuing)"
 
   return 0
@@ -912,9 +917,11 @@ perform_installation() {
   printf "\n%bInstalling development tools...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   download_and_install_tools
 
+  sudo_refresh
   printf "\n%bApplying configurations...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   apply_configurations
 
+  sudo_refresh
   printf "\n%bConfiguring system services...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   configure_system_and_shell
 
@@ -922,6 +929,7 @@ perform_installation() {
     run_custom_hook "post-configuration" || show_progress warning "Post-configuration hook failed"
   fi
 
+  sudo_refresh
   printf "\n%bFinalizing installation...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
   finalize_installation
 

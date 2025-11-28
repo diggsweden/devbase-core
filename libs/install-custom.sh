@@ -368,7 +368,7 @@ install_k3s() {
 
   if retry_command download_file "$install_url" "$install_script"; then
     chmod +x "$install_script"
-    if INSTALL_K3S_VERSION="$k3s_version" sh "$install_script" &>/dev/null; then
+    if INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
     else
       show_progress warning "k3s installation failed - skipping"
