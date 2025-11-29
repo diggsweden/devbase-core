@@ -5,7 +5,7 @@
 
 image:https://img.shields.io/github/v/tag/diggsweden/devbase-core?style=for-the-badge&color=green[Tag,link=https://github.com/diggsweden/devbase-core/tags]
 
-image:https://img.shields.io/badge/License-CC0--1.0-blue?style=for-the-badge[License: CC0-1.0,link=LICENSE]
+image:https://img.shields.io/badge/License-MIT%20%2F%20CC0--1.0-blue?style=for-the-badge[License: MIT / CC0-1.0,link=LICENSE]
 image:https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.reuse.software%2Fstatus%2Fgithub.com%2Fdiggsweden%2Fdevbase-core&query=status&style=for-the-badge&label=REUSE&color=lightblue[REUSE,link=https://api.reuse.software/info/github.com/diggsweden/devbase-core]
 
 image:https://api.scorecard.dev/projects/github.com/diggsweden/devbase-core/badge?style=for-the-badge[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com/diggsweden/devbase-core]
@@ -86,4 +86,5 @@ Contributions welcome! See link:CONTRIBUTING.adoc[Contributing Guidelines].
 
 == License
 
-link:LICENSE[CC0-1.0 Universal]
+* Shell scripts (`.sh`): link:LICENSES/MIT.txt[MIT]
+* Configuration and other files: link:LICENSES/CC0-1.0.txt[CC0-1.0 Universal]
