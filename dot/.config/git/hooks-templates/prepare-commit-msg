@@ -29,7 +29,7 @@ unset IFS
 for script in "${scripts[@]}"; do
   if [[ -x "$script" ]]; then
     "$script" "$@" || {
-      echo "✗ Hook failed: $(basename "$script")" >&2
+      printf "✗ Hook failed: %s\n" "$(basename "$script")" >&2
       exit 1
     }
   fi

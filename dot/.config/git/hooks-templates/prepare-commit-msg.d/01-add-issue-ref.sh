@@ -27,9 +27,9 @@ if [[ "$branch_name" =~ ([A-Z]{2,10})-([0-9]+) ]]; then
     # Otherwise append footer
     printf "\n%s\n" "$footer" >>"$commit_msg_file"
   fi
-  
+
   # Show notification that issue reference was added
-  echo -e "${CYAN}ⓘ${NC} Added issue reference from branch name: Refs: ${issue}" >&2
+  printf "%bⓘ%b Added issue reference from branch name: Refs: %s\n" "${CYAN}" "${NC}" "${issue}" >&2
 fi
 
 # Silent when no issue number is found

@@ -1,3 +1,0 @@
-# Local development certificates (mkcert)
-# cd to this directory, then run: mkcert localhost 127.0.0.1
-# See docs/usage-guide.md for details

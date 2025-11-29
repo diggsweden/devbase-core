@@ -1,90 +1,170 @@
 # Quality checks and automation for devbase-core
 # Run 'just' to see available commands
 
-# Terminal colors
-red := '\033[0;31m'
-green := '\033[0;32m'
-yellow := '\033[0;33m'
-blue := '\033[0;34m'
-nc := '\033[0m'
+devtools_repo := "https://github.com/diggsweden/devbase-justkit"
+devtools_dir := env("XDG_DATA_HOME", env("HOME") + "/.local/share") + "/devbase-justkit"
+lint := devtools_dir + "/linters"
+colors := devtools_dir + "/utils/colors.sh"
 
-# Unicode symbols (works across platforms)
-checkmark := '✓'
-missing := '✗'
-arrow := '→'
+# ==================================================================================== #
+# DEFAULT - Show available recipes
+# ==================================================================================== #
 
-# Default recipe - show help
+# Display available recipes
 default:
-    @printf "Available commands:\n"
-    @just --list --unsorted | grep -v "default"
+    @printf "\033[1;36m DevBase Core\033[0m\n"
+    @printf "\n"
+    @printf "Quick start: \033[1;32mjust setup-devtools\033[0m | \033[1;34mjust verify\033[0m | \033[1;35mjust lint-all\033[0m\n"
+    @printf "\n"
+    @just --list --unsorted
 
-# Run all quality verifications with summary
-verify: dev-tools-deps-verify
-    @mise exec -- bash development/just/run-all-checks.sh
+# ==================================================================================== #
+# SETUP - Development environment setup
+# ==================================================================================== #
 
-# Lint markdown files with rumdl
-lint-markdown:
-    @mise exec -- bash development/just/linters/markdown.sh check
+# ▪ Setup devtools (clone or update from XDG_DATA_HOME)
+[group('setup')]
+setup-devtools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -d "{{devtools_dir}}" ]]; then
+        "{{devtools_dir}}/scripts/setup.sh" "{{devtools_repo}}" "{{devtools_dir}}"
+    else
+        printf "Cloning devbase-justkit to %s...\n" "{{devtools_dir}}"
+        mkdir -p "$(dirname "{{devtools_dir}}")"
+        git clone --depth 1 "{{devtools_repo}}" "{{devtools_dir}}"
+        git -C "{{devtools_dir}}" fetch --tags --quiet
+        latest=$(git -C "{{devtools_dir}}" describe --tags --abbrev=0 origin/main 2>/dev/null || echo "")
+        if [[ -n "$latest" ]]; then
+            git -C "{{devtools_dir}}" fetch --depth 1 origin tag "$latest" --quiet
+            git -C "{{devtools_dir}}" checkout "$latest" --quiet
+        fi
+        printf "Installed devbase-justkit %s\n" "${latest:-main}"
+    fi
 
-# Lint YAML files with yamlfmt
-lint-yaml:
-    @mise exec -- bash development/just/linters/yaml.sh check
+# Check required tools are installed
+[group('setup')]
+check-tools: _ensure-devtools
+    @{{devtools_dir}}/scripts/check-tools.sh --check-devtools mise git just rumdl yamlfmt actionlint gitleaks shellcheck shfmt conform reuse
 
-# Lint shell scripts with shellcheck
-lint-shell:
-    @mise exec -- bash development/just/linters/shell.sh
+# Install tools via mise
+[group('setup')]
+tools-install: _ensure-devtools
+    #!/usr/bin/env bash
+    source "{{colors}}"
+    just_header "Install development tools" "mise install"
+    just_run "Tools installation" mise install
 
-# Check shell script formatting with shfmt
-lint-shell-fmt:
-    @mise exec -- bash development/just/linters/shell-fmt.sh check
+# Update tools via mise
+[group('setup')]
+tools-update: _ensure-devtools
+    #!/usr/bin/env bash
+    source "{{colors}}"
+    just_header "Update development tools" "mise upgrade && mise install"
+    just_run "Tools update" mise upgrade
+    just_run "Tools update" mise install
 
-# Fix shell script formatting with shfmt
-lint-shell-fmt-fix:
-    @mise exec -- bash development/just/linters/shell-fmt.sh fix
+# ==================================================================================== #
+# VERIFY - Quality assurance
+# ==================================================================================== #
 
-# Lint GitHub Actions workflows with actionlint
-lint-actions:
-    @mise exec -- bash development/just/linters/github-actions.sh
+# ▪ Run all linters with summary
+[group('verify')]
+verify: _ensure-devtools
+    @{{devtools_dir}}/scripts/verify.sh
 
-# Check for secrets and sensitive data with gitleaks
+# Verify devbase installation
+[group('verify')]
+devbase-install-verify: _ensure-devtools
+    #!/usr/bin/env bash
+    source "{{colors}}"
+    just_header "Verify devbase installation" "verify/verify-install-check.sh"
+    ./verify/verify-install-check.sh
+
+# ==================================================================================== #
+# LINT - Code quality checks
+# ==================================================================================== #
+
+# ▪ Run all linters (override in project justfile to customize)
+[group('lint')]
+lint-all: _ensure-devtools lint-commits lint-secrets lint-yaml lint-markdown lint-shell lint-shell-fmt lint-actions lint-license
+    #!/usr/bin/env bash
+    source "{{colors}}"
+    just_success "All linting checks completed"
+
+# Validate commit messages (conform)
+[group('lint')]
+lint-commits:
+    @{{lint}}/commits.sh
+
+# Scan for secrets (gitleaks)
+[group('lint')]
 lint-secrets:
-    @mise exec -- bash development/just/linters/secrets.sh
+    @{{lint}}/secrets.sh
 
-# Validate commit messages with conform
-lint-commit:
-    @mise exec -- bash development/just/linters/commits.sh
+# Lint YAML files (yamlfmt)
+[group('lint')]
+lint-yaml:
+    @{{lint}}/yaml.sh check
 
-# Fix all auto-fixable issues
-lint-fix: lint-markdown-fix lint-yaml-fix lint-shell-fmt-fix
-    @printf '{{green}}{{checkmark}} All auto-fixable issues resolved{{nc}}\n'
-    @printf 'Note: Some issues may require manual fixes\n'
+# Lint markdown files (rumdl)
+[group('lint')]
+lint-markdown:
+    @{{lint}}/markdown.sh check
 
-# Fix markdown issues with rumdl
-lint-markdown-fix:
-    @bash development/just/linters/markdown.sh fix
+# Lint shell scripts (shellcheck)
+[group('lint')]
+lint-shell:
+    @{{lint}}/shell.sh
 
-# Fix YAML formatting with yamlfmt
+# Check shell formatting (shfmt)
+[group('lint')]
+lint-shell-fmt:
+    @{{lint}}/shell-fmt.sh check
+
+# Lint GitHub Actions (actionlint)
+[group('lint')]
+lint-actions:
+    @{{lint}}/github-actions.sh
+
+# Check license compliance (reuse)
+[group('lint')]
+lint-license:
+    @{{lint}}/license.sh
+
+# ==================================================================================== #
+# LINT-FIX - Auto-fix linting violations
+# ==================================================================================== #
+
+# ▪ Fix all auto-fixable issues
+[group('lint-fix')]
+lint-fix: _ensure-devtools lint-yaml-fix lint-markdown-fix lint-shell-fmt-fix
+    #!/usr/bin/env bash
+    source "{{colors}}"
+    just_success "All auto-fixes completed"
+
+# Fix YAML formatting
+[group('lint-fix')]
 lint-yaml-fix:
-    @bash development/just/linters/yaml.sh fix
+    @{{lint}}/yaml.sh fix
 
-# Verify required development tools are installed
-dev-tools-deps-verify:
-    @bash development/just/check-tools.sh
+# Fix markdown formatting
+[group('lint-fix')]
+lint-markdown-fix:
+    @{{lint}}/markdown.sh fix
 
-# Install project development tools (from .mise.toml)
-dev-tools-install:
-    @printf '%b{{arrow}} Installing project development tools...%b\n' "{{blue}}" "{{nc}}"
-    @mise install
-    @printf '%b{{checkmark}} Project development tools installed%b\n' "{{green}}" "{{nc}}"
+# Fix shell formatting
+[group('lint-fix')]
+lint-shell-fmt-fix:
+    @{{lint}}/shell-fmt.sh fix
 
-# Update devbase tools
-dev-tools-update:
-    @printf '%b{{arrow}} Updating mise tools...%b\n' "{{blue}}" "{{nc}}"
-    @mise upgrade
-    @mise install
-    @printf '%b{{checkmark}} Tools updated%b\n' "{{green}}" "{{nc}}"
+# ==================================================================================== #
+# INTERNAL
+# ==================================================================================== #
 
-# Verify installation is complete and working
-devbase-install-verify:
-    @printf '%b{{arrow}} Verifying dev-base installation...%b\n' "{{blue}}" "{{nc}}"
-    @bash verify/verify-install-check.sh
+[private]
+_ensure-devtools:
+    #!/usr/bin/env bash
+    if [[ ! -d "{{devtools_dir}}" ]]; then
+        just setup-devtools
+    fi

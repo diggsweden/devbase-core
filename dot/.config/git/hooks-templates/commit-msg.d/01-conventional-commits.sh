@@ -10,16 +10,16 @@ NC='\033[0m'
 commit_msg_file="$1"
 
 if ! command -v conform >/dev/null 2>&1; then
-  echo -e "${CYAN}•${NC} conform not found, skipping commit message validation" >&2
+  printf "%b•%b conform not found, skipping commit message validation\n" "${CYAN}" "${NC}" >&2
   exit 0
 fi
 
-echo "→ Validating commit message..."
+printf "→ Validating commit message...\n"
 
 # Find repository root
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
 if [[ -z "$repo_root" ]]; then
-  echo -e "${CYAN}•${NC} Not in a git repository" >&2
+  printf "%b•%b Not in a git repository\n" "${CYAN}" "${NC}" >&2
   exit 0
 fi
 
@@ -27,7 +27,7 @@ cd "$repo_root" || exit 1
 
 # Check for conform config in repo root
 if [[ ! -f ".conform.yaml" ]]; then
-  echo -e "${CYAN}•${NC} No .conform.yaml found in repo, skipping validation" >&2
+  printf "%b•%b No .conform.yaml found in repo, skipping validation\n" "${CYAN}" "${NC}" >&2
   exit 0
 fi
 
@@ -37,12 +37,12 @@ status=$?
 
 if [[ $status -eq 0 ]]; then
   # Success - only show simple message
-  echo -e "${GREEN}✓${NC} Commit message valid"
+  printf "%b✓%b Commit message valid\n" "${GREEN}" "${NC}"
   exit 0
 else
   # Failure - show detailed output
-  echo -e "${RED}✗${NC} Commit message validation failed" >&2
-  echo "$output" >&2
-  echo "   Check .conform.yaml for requirements" >&2
+  printf "%b✗%b Commit message validation failed\n" "${RED}" "${NC}" >&2
+  printf "%s\n" "$output" >&2
+  printf "   Check .conform.yaml for requirements\n" >&2
   exit 1
 fi

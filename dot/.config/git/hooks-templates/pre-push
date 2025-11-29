@@ -29,17 +29,17 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo "Running pre-push checks..."
+printf "Running pre-push checks...\n"
 
 # Run all executable scripts in pre-push.d/ (in sorted order)
 for script in "${scripts[@]}"; do
   if [[ -x "$script" ]]; then
     "$script" "$@" || {
-      echo -e "${RED}✗${NC} Hook failed: $(basename "$script")" >&2
+      printf "%b✗%b Hook failed: %s\n" "${RED}" "${NC}" "$(basename "$script")" >&2
       exit 1
     }
   fi
 done
 
-echo -e "${GREEN}✓${NC} All pre-push checks passed"
+printf "%b✓%b All pre-push checks passed\n" "${GREEN}" "${NC}"
 exit 0

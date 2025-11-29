@@ -11,11 +11,11 @@ remote="$1"
 url="$2"
 
 if ! command -v git >/dev/null 2>&1; then
-  echo -e "${RED}•${NC} git not found" >&2
+  printf "%b•%b git not found\n" "${RED}" "${NC}" >&2
   exit 1
 fi
 
-echo "→ Verifying commit signatures (GPG/SSH)..."
+printf "→ Verifying commit signatures (GPG/SSH)...\n"
 
 # Read stdin to get the list of commits being pushed
 while read -r local_ref local_sha remote_ref remote_sha; do
@@ -28,7 +28,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     # New branch - find merge base with default branch to avoid checking all history
     default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
     merge_base=$(git merge-base "origin/$default_branch" "$local_sha" 2>/dev/null || echo "")
-    
+
     if [[ -n "$merge_base" ]]; then
       # Check only commits since divergence from default branch
       range="$merge_base..$local_sha"
@@ -43,7 +43,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   # Get list of commits in range
   commits=$(git rev-list "$range" 2>/dev/null || echo "")
-  
+
   if [[ -z "$commits" ]]; then
     continue
   fi
@@ -53,23 +53,23 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   failed=0
   while IFS= read -r commit; do
     sig_status=$(git log -1 --format="%G?" "$commit" 2>/dev/null)
-    
+
     # Accept only "G" (good signature - works for both GPG and SSH)
     if [[ "$sig_status" != "G" ]]; then
-      echo -e "${RED}✗${NC} Commit $commit is not signed or has invalid signature (status: $sig_status)" >&2
+      printf "%b✗%b Commit %s is not signed or has invalid signature (status: %s)\n" "${RED}" "${NC}" "$commit" "$sig_status" >&2
       failed=1
     fi
-  done <<< "$commits"
+  done <<<"$commits"
 
   if [[ $failed -eq 1 ]]; then
-    echo -e "${RED}✗${NC} Some commits lack valid signatures" >&2
-    echo "   Ensure commits are signed:" >&2
-    echo "     GPG: git commit -S" >&2
-    echo "     SSH: git config gpg.format ssh && git commit -S" >&2
-    echo "   Or configure automatic signing: git config commit.gpgsign true" >&2
+    printf "%b✗%b Some commits lack valid signatures\n" "${RED}" "${NC}" >&2
+    printf "   Ensure commits are signed:\n" >&2
+    printf "     GPG: git commit -S\n" >&2
+    printf "     SSH: git config gpg.format ssh && git commit -S\n" >&2
+    printf "   Or configure automatic signing: git config commit.gpgsign true\n" >&2
     exit 1
   fi
 done
 
-echo -e "${GREEN}✓${NC} All commits have valid signatures"
+printf "%b✓%b All commits have valid signatures\n" "${GREEN}" "${NC}"
 exit 0

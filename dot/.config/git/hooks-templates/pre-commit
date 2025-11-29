@@ -30,17 +30,17 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo "Running pre-commit checks..."
+printf "Running pre-commit checks...\n"
 
 # Run all executable scripts in pre-commit.d/ (in sorted order)
 for script in "${scripts[@]}"; do
   if [[ -x "$script" ]]; then
     "$script" || {
-      echo -e "${RED}✗${NC} Hook failed: $(basename "$script")" >&2
+      printf "%b✗%b Hook failed: %s\n" "${RED}" "${NC}" "$(basename "$script")" >&2
       exit 1
     }
   fi
 done
 
-echo -e "${GREEN}✓${NC} All pre-commit checks passed"
+printf "%b✓%b All pre-commit checks passed\n" "${GREEN}" "${NC}"
 exit 0

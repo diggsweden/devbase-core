@@ -28,7 +28,7 @@ unset IFS
 # Run all executable scripts in post-commit.d/ (in sorted order)
 for script in "${scripts[@]}"; do
   if [[ -x "$script" ]]; then
-    "$script" || echo "⚠ Post-commit hook failed (non-blocking): $(basename "$script")" >&2
+    "$script" || printf "⚠ Post-commit hook failed (non-blocking): %s\n" "$(basename "$script")" >&2
   fi
 done
 
