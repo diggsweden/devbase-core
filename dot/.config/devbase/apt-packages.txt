@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # APT System Packages for DevBase
 # This file contains system packages installed via APT (not managed by mise)
 # One package per line, comments with # are ignored

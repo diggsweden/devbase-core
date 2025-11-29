@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __install_wt_validate_prerequisites --description "Validate WSL and jq are available"
     if not uname -r | grep -qi microsoft
         return 1

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # Disable Fish greeting message
 set -g fish_greeting ''
 # Activate mise without --shims to avoid shim hangs in VSCode extensions

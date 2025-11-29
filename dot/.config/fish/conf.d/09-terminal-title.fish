@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # ~/.config/fish/conf.d/09-terminal-title.fish
 # Dynamic terminal title using Fish's built-in function
 

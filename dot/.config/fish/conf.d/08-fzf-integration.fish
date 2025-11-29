@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # ~/.config/fish/conf.d/08-fzf-integration.fish
 # FZF integration configuration for PatrickF1/fzf.fish plugin
 # These settings enhance the plugin with custom preview and fd options

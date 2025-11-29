@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # Container Registry Configuration for Podman/Buildah/Skopeo
 # Generated from DEVBASE_REGISTRY_HOST and DEVBASE_REGISTRY_PORT during devbase installation
 # See containers-registries.conf(5) for detailed syntax documentation

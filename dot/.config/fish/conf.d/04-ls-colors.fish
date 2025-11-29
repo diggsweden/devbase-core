@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # LS_COLORS theme configuration for Digg
 # This file will be placed in ~/.config/fish/conf.d/
 # Generates themed LS_COLORS using vivid based on DEVBASE_THEME

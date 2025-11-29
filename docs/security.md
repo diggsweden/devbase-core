@@ -1,5 +1,11 @@
 # DevBase Security
 
+<!--
+SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+
+SPDX-License-Identifier: CC0-1.0
+-->
+
 ## Security Overview Matrix
 
 | Category | Feature | Status | Implementation | Details |

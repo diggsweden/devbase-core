@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __devbase_font_show_usage
     printf "Usage: devbase-font <name>\n"
     printf "\nAvailable fonts:\n"

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __devbase_verify_with_retry --description "Verify a condition with exponential backoff retry"
     set -l verification_cmd $argv[1]
     set -l expected_value $argv[2]

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __update_ghostty_theme --description "Update Ghostty theme on native Ubuntu"
     # Only run on native Linux (not WSL)
     if uname -r | grep -qi microsoft

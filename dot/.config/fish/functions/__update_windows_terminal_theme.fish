@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __update_wt_detect_username --description "Detect Windows username"
     # Method 1: Try PowerShell (works in most cases)
     if test -x /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe

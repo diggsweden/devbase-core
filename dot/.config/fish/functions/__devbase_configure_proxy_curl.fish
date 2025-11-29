@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 #!/usr/bin/env fish
 # Configure curl for better proxy compatibility when proxy is detected
 # This internal function is called automatically from config.fish

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+//
+// SPDX-License-Identifier: CC0-1.0
+
 = Custom Configuration
 
 Custom configurations can be seen as overlaying the DevBase core configuration with customizations. For example:

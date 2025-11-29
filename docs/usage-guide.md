@@ -1,5 +1,11 @@
 # Devbase Core Tools Usage Guide
 
+<!--
+SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+
+SPDX-License-Identifier: CC0-1.0
+-->
+
 This guide documents all tools in the devbase environment, including devbase-specific configurations and customizations.
 
 **For personalizing your installation**, see [Personalization Guide](personalization.adoc) - includes theme switching, custom aliases, configuration file locations, and how to preserve your customizations across reinstalls.

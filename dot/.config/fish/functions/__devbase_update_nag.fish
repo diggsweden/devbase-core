@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __devbase_update_nag_already_checked_today --description "Check if update check already ran today"
     set -l check_file $argv[1]
     set -l current_date $argv[2]

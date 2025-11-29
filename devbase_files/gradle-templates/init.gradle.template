@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 // Gradle initialization script for internal repositories
 // This file is processed during devbase setup and installed to ~/.gradle/init.gradle
 // Applies repository configuration globally to all Gradle projects

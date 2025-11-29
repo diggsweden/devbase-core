@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __update_gnome_get_theme_colors --description "Get theme colors for GNOME Terminal"
     set -l theme_name $argv[1]
     

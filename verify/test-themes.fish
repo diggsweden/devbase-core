@@ -1,4 +1,9 @@
 #!/usr/bin/env fish
+
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # Test all themes with all programs - improved version
 
 # === Configuration ===

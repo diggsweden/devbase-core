@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __update_zellij_clipboard --description "Auto-update Zellij clipboard config for current environment"
     set -l config_file "$HOME/.config/zellij/config.kdl"
     test -f "$config_file" || return 0

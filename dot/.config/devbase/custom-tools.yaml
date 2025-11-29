@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
 # Custom Tool Versions for Development Environment
 # This file contains ONLY custom tools with specialized installers NOT managed by mise
 # For mise-managed tools (node, python, aqua packages, etc.), see: ~/.config/mise/config.toml

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: MIT
+
 # Post-commit hook dispatcher
 # Runs all executable scripts in post-commit.d/
 # This runs AFTER the commit is completed (cannot block commit)

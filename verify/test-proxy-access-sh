@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
+# SPDX-License-Identifier: MIT
+
 # verify-proxy-access.sh - Test connectivity to DevBase external dependencies
 #
 # Usage: ./verify-proxy-access.sh [options]

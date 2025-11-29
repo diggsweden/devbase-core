@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # ~/.config/fish/conf.d/10-ulimits.fish
 # Set development-friendly resource limits
 

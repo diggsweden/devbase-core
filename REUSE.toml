@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+version = 1
+
+[[annotations]]
+path = [
+  "assets/**",
+  "devbase_files/windows-terminal/*.json",
+  "dot/.config/vscode/settings.json",
+  "dot/.local/bin/empty.txt",
+  "dot/.config/devbase/version",
+  "renovate.json",
+  "LICENSES/**",
+  ".rumdl-cache/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2025 Digg - Agency for Digital Government"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = [
+  "dot/.config/btop/themes/*.theme",
+  "dot/.config/k9s/skins/*.yaml",
+  "dot/.config/eza/*.yml",
+  "dot/.config/vifm/colors/*.vifm",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Theme authors (various)"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "dot/.config/devtools/formatting/java/eclipse-java-google-style.xml"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "google/styleguide"
+SPDX-License-Identifier = "CC-BY-3.0"
+
+[[annotations]]
+path = "dot/.config/devtools/linting/java/google_checks.xml"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "checkstyle/checkstyle"
+SPDX-License-Identifier = "LGPL-2.1-or-later"
+
+[[annotations]]
+path = [
+  "dot/.ssh/config",
+  "dot/.config/ssh/user.config",
+  "dot/.config/ssh/allowed_signers",
+  "dot/.ssh/known_hosts",
+  "LICENSE",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2025 Digg - Agency for Digital Government"
+SPDX-License-Identifier = "CC0-1.0"

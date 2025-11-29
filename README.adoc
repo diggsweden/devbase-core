@@ -1,5 +1,15 @@
 = DevBase Core
 
+// SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+// SPDX-License-Identifier: CC0-1.0
+
+image:https://img.shields.io/github/v/tag/diggsweden/devbase-core?style=for-the-badge&color=green[Tag,link=https://github.com/diggsweden/devbase-core/tags]
+
+image:https://img.shields.io/badge/License-CC0--1.0-blue?style=for-the-badge[License: CC0-1.0,link=LICENSE]
+image:https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.reuse.software%2Fstatus%2Fgithub.com%2Fdiggsweden%2Fdevbase-core&query=status&style=for-the-badge&label=REUSE&color=lightblue[REUSE,link=https://api.reuse.software/info/github.com/diggsweden/devbase-core]
+
+image:https://api.scorecard.dev/projects/github.com/diggsweden/devbase-core/badge?style=for-the-badge[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com/diggsweden/devbase-core]
+
 image::assets/floppy.png[DevBase Core,200,align="center"]
 
 **Opinionated devops workstation setup**

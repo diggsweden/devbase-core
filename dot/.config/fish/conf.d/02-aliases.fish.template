@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # Editor aliases based on EDITOR preference
 
 if string match -q "*vim*" "$EDITOR"; or test "$EDITOR" = "vi"

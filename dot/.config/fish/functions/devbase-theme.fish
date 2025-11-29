@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
 function __devbase_theme_show_usage --description "Display theme usage information"
     printf "Usage: devbase-theme <name>\n"
     printf "\n"
