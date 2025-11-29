@@ -1,7 +1,7 @@
 # Quality checks and automation for devbase-core
 # Run 'just' to see available commands
 
-devtools_repo := "https://github.com/diggsweden/devbase-justkit"
+devtools_repo := env("DEVBASE_JUSTKIT_REPO", "https://github.com/diggsweden/devbase-justkit")
 devtools_dir := env("XDG_DATA_HOME", env("HOME") + "/.local/share") + "/devbase-justkit"
 lint := devtools_dir + "/linters"
 colors := devtools_dir + "/utils/colors.sh"
