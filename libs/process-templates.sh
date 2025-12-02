@@ -97,6 +97,7 @@ process_templates_and_tools() {
   process_maven_templates
   process_gradle_templates
   process_container_templates
+  process_testcontainers_properties
 }
 
 # Brief: Apply custom non-template configuration files
@@ -657,28 +658,6 @@ process_config_file() {
   cp "$file" "$XDG_CONFIG_HOME/${filename}"
 }
 
-process_generic_file() {
-  local file="$1"
-  local filename="$2"
-
-  # Handle Fish configuration files specially
-  if [[ "$filename" == *.fish ]]; then
-    # Fish config files go to ~/.config/fish/conf.d/
-    local fish_conf_dir="${XDG_CONFIG_HOME}/fish/conf.d"
-    mkdir -p "$fish_conf_dir"
-    cp "$file" "${fish_conf_dir}/${filename}"
-  # Handle Maven settings.xml specially
-  elif [[ "$filename" == "maven-settings.xml" ]]; then
-    mkdir -p "${HOME}/.m2"
-    cp "$file" "${HOME}/.m2/settings.xml"
-  elif [[ "$filename" == *.* ]]; then
-    cp "$file" "${HOME}/.${filename}"
-  else
-    cp "$file" "${XDG_BIN_HOME}/"
-    chmod +x "${XDG_BIN_HOME}/${filename}"
-  fi
-}
-
 process_single_custom_file() {
   local file="$1"
   local filename
@@ -697,8 +676,14 @@ process_single_custom_file() {
   *.conf | *.config)
     process_config_file "$file" "$filename"
     ;;
+  maven-repos.yaml)
+    # Handled by process_maven_templates()
+    return 0
+    ;;
   *)
-    process_generic_file "$file" "$filename"
+    show_progress warning "Unknown custom file type: $filename (skipped)"
+    show_progress info "Custom files must have recognized extensions: .template, .append, .service, .conf, .config"
+    return 0
     ;;
   esac
 }
@@ -924,6 +909,27 @@ process_container_templates() {
   if [[ -n "$template_to_use" ]] && [[ -f "$template_to_use" ]]; then
     envsubst_preserve_undefined "$template_to_use" "$target_file"
     show_progress success "Container registry configured"
+  fi
+}
+
+process_testcontainers_properties() {
+  local core_file="${DEVBASE_FILES}/.testcontainers.properties"
+  local custom_file="${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties"
+  local target_file="${HOME}/.testcontainers.properties"
+  local source_file=""
+
+  # Check custom first, then core
+  if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" ".testcontainers.properties" "Custom Testcontainers properties"; then
+    source_file="$custom_file"
+    show_progress info "Configuring Testcontainers with custom settings"
+  elif [[ -f "$core_file" ]]; then
+    source_file="$core_file"
+    show_progress info "Configuring Testcontainers"
+  fi
+
+  if [[ -n "$source_file" ]] && [[ -f "$source_file" ]]; then
+    cp "$source_file" "$target_file"
+    show_progress success "Testcontainers properties configured"
   fi
 }
 

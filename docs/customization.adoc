@@ -358,6 +358,7 @@ You can override built-in templates or add your own:
 - `maven-repos.yaml` → Merged into `~/.m2/settings.xml` (organization-specific Maven repositories)
 - `init.gradle.template` → `~/.gradle/init.gradle` (override built-in)
 - `registries.conf.template` → `~/.config/containers/registries.conf` (override built-in)
+- `.testcontainers.properties` → `~/.testcontainers.properties` (Testcontainers configuration, overrides built-in)
 - `npmrc.template` → `~/.npmrc` (NPM registry configuration)
 - `gradle.properties.template` → `~/.gradle/gradle.properties` (Gradle properties)
 
