@@ -71,6 +71,7 @@ readonly MAVEN_HOME="$HOME/.m2"
 readonly MAVEN_SETTINGS="$MAVEN_HOME/settings.xml"
 readonly GRADLE_HOME="$HOME/.gradle"
 readonly GRADLE_PROPERTIES="$GRADLE_HOME/gradle.properties"
+readonly TESTCONTAINERS_PROPERTIES="$HOME/.testcontainers.properties"
 
 # Message templates
 readonly MSG_NOT_FOUND="%s not found"
@@ -574,7 +575,7 @@ check_shell_integrations() {
         print_check "info" "Zellij autostart disabled (DEVBASE_ZELLIJ_AUTOSTART=$zellij_autostart)"
       fi
     else
-      print_check "info" "Zellij autostart not configured (00-environment.fish not found)"
+      print_check "info" "Zellij autostart not configured (00-0-environment.fish not found)"
     fi
 
     # Check if fish functions exist
@@ -738,8 +739,8 @@ check_config_files() {
     "$HOME/.config/fish/functions/__update_gnome_terminal_theme.fish"
     "$HOME/.config/fish/functions/__update_windows_terminal_theme.fish"
     "$HOME/.config/fish/functions/__update_zellij_clipboard.fish"
+    "$HOME/.config/fish/conf.d/00-0-environment.fish"
     "$HOME/.config/fish/conf.d/00-aliases.fish"
-    "$HOME/.config/fish/conf.d/00-environment.fish"
     "$HOME/.config/fish/conf.d/01-keybindings.fish"
     "$HOME/.config/fish/conf.d/02-aliases.fish"
     "$HOME/.config/fish/conf.d/04-ls-colors.fish"
@@ -768,6 +769,7 @@ check_config_files() {
     "$GIT_CONFIG"
     "$CONFIG_HOME/git/.gitignore"
     "$MISE_CONFIG"
+    "$TESTCONTAINERS_PROPERTIES"
     "$CONFIG_HOME/nvim/lua/plugins/colorscheme.lua"
     "$CONFIG_HOME/lazygit/config.yml"
     "$CONFIG_HOME/delta/themes.config"
@@ -781,6 +783,13 @@ check_config_files() {
   fi
 
   print_item_list dev_files "file"
+
+  # Check testcontainers reuse configuration
+  if [[ -f "$TESTCONTAINERS_PROPERTIES" ]]; then
+    if grep -q "testcontainers.reuse.enable=true" "$TESTCONTAINERS_PROPERTIES" 2>/dev/null; then
+      printf "  %b└─%b Container reuse enabled (testcontainers.reuse.enable=true)\n" "${CYAN}" "${NC}"
+    fi
+  fi
 
   # SSH configuration
   print_subheader "SSH Configuration"
@@ -951,7 +960,7 @@ check_mise_tools() {
   if file_exists "$mise_config" && command -v mise &>/dev/null; then
     # Trust the config file to avoid interactive prompts
     mise trust "$mise_config" 2>/dev/null || true
-    
+
     # Get installed mise tools formatted as "tool@version"
     local installed_tools=$(mise list 2>/dev/null |
       awk '{print $1 "@" $2}')
@@ -968,7 +977,7 @@ check_mise_tools() {
       [[ "$line" =~ ^\[env\] ]] && in_env_section=true
       [[ "$line" =~ ^\[tools\] ]] && in_env_section=false
       [[ "$line" =~ ^\[settings\] ]] && in_env_section=false
-      
+
       # Skip env section, comments, empty lines, and config settings
       [[ "$in_env_section" == true ]] && continue
       [[ "$line" =~ ^#.*$ ]] && continue
@@ -1008,7 +1017,7 @@ check_mise_tools() {
         tool_info["$tool"]="$expected_version"
         tool_names+=("$tool")
       fi
-    done < <(grep -E "^[a-z\"]+.*=" "$mise_config" | grep -v "^#")
+    done < <(awk '/^\[tools\]/{flag=1;next}/^\[/{flag=0}flag' "$mise_config" | grep -E "^[a-z\"]+.*=" | grep -v "^#")
 
     # Sort tool names
     local sorted_tools

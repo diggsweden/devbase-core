@@ -245,6 +245,11 @@ install_mise() {
   mise_bin_dir="$(dirname "$mise_path")"
   export PATH="${mise_bin_dir}:${PATH}"
 
+  # Trust devbase-core .mise.toml BEFORE activation (prevents trust warning)
+  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
+    "$mise_path" trust "${DEVBASE_ROOT}/.mise.toml" 2>/dev/null || true
+  fi
+
   # Activate mise for current shell session
   # This sets up PATH and environment properly
   if [[ -x "$mise_path" ]]; then
@@ -258,11 +263,6 @@ install_mise() {
   # Verify mise is now in PATH
   if ! command -v mise &>/dev/null; then
     die "Mise installation failed - not found in PATH after activation"
-  fi
-
-  # Trust devbase-core .mise.toml (used during installation)
-  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
-    mise trust "${DEVBASE_ROOT}/.mise.toml" 2>/dev/null || true
   fi
 
   show_progress success "Mise ready at $mise_path"

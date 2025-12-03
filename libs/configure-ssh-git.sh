@@ -26,33 +26,33 @@ setup_ssh_config_includes() {
   if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
     for file in "${_DEVBASE_CUSTOM_SSH}"/*; do
       [[ -f "$file" ]] || continue
-      
+
       local filename
       filename=$(basename "$file")
-      
+
       case "$filename" in
-        README.md|README*)
-          continue
-          ;;
-        *.config)
-          cp "$file" ~/.config/ssh/"$filename"
-          chmod 600 ~/.config/ssh/"$filename"
-          ;;
-        *.append)
-          local target_name="${filename%.append}"
-          local target_file="${HOME}/.ssh/${target_name}"
-          touch "$target_file"
-          
-          while IFS= read -r line; do
-            if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
-              echo "$line" >> "$target_file"
-            fi
-          done < "$file"
-          ;;
-        *)
-          cp "$file" ~/.ssh/"$filename"
-          chmod 600 ~/.ssh/"$filename"
-          ;;
+      README.md | README*)
+        continue
+        ;;
+      *.config)
+        cp "$file" ~/.config/ssh/"$filename"
+        chmod 600 ~/.config/ssh/"$filename"
+        ;;
+      *.append)
+        local target_name="${filename%.append}"
+        local target_file="${HOME}/.ssh/${target_name}"
+        touch "$target_file"
+
+        while IFS= read -r line; do
+          if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
+            echo "$line" >>"$target_file"
+          fi
+        done <"$file"
+        ;;
+      *)
+        cp "$file" ~/.ssh/"$filename"
+        chmod 600 ~/.ssh/"$filename"
+        ;;
       esac
     done
   fi

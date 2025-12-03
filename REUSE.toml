@@ -8,6 +8,7 @@ version = 1
 path = [
   "assets/**",
   "devbase_files/windows-terminal/*.json",
+  "devbase_files/.testcontainers.properties",
   "dot/.config/vscode/settings.json",
   "dot/.local/bin/empty.txt",
   "dot/.config/devbase/version",
