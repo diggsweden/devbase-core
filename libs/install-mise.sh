@@ -286,8 +286,9 @@ install_mise_tools() {
     die "Mise config not found at $mise_config"
   fi
 
-  # Trust the config file we just copied
-  run_mise_from_home_dir trust --all || true
+  # Trust the config files (both user config and devbase-core root)
+  run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
+  run_mise_from_home_dir trust --all 2>/dev/null || true
 
   local tools_before
   tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
@@ -299,6 +300,15 @@ install_mise_tools() {
   tools_before=${tools_before:-0}
   tools_to_install=${tools_to_install:-0}
 
+  # Install core runtimes first (required by npm/cargo/gem backends)
+  # This ensures node, python, go, java are available before npm:, cargo:, gem: tools
+  show_progress info "Installing core language runtimes..."
+  if ! run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1; then
+    show_progress warning "Some core runtimes may have failed (will retry with full install)"
+  fi
+
+  # Install all tools (including any that failed in first pass)
+  show_progress info "Installing all development tools..."
   # Run mise install with progress bar visible (no stderr redirection)
   # mise handles checksum verification internally and will fail if checksums don't match
   if ! run_mise_from_home_dir install --yes; then

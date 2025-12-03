@@ -4,10 +4,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-# DevBase Verification Library
-# Shared functions for base and custom verification scripts
+# Prevent double-sourcing (avoid readonly variable errors)
+# MUST be before set -u to avoid unbound variable error
+[[ -n "${VERIFY_BASE_LIB_LOADED:-}" ]] && return 0
+readonly VERIFY_BASE_LIB_LOADED=1
 
-# Color Constants
+set -uo pipefail
+
+# Color codes
 readonly NC='\033[0m'
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'

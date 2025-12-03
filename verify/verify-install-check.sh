@@ -328,20 +328,34 @@ check_git_config() {
 check_ssh_keys() {
   # Determine which key to check based on DEVBASE_SSH_KEY_NAME or detect dynamically
   local key_name="${DEVBASE_SSH_KEY_NAME:-}"
+  local key_detected=false
 
   # If not set, try to detect devbase keys
   if [[ -z "$key_name" ]]; then
     for pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase; do
       if [[ -f "$HOME/.ssh/$pattern" ]]; then
         key_name="$pattern"
+        key_detected=true
         break
       fi
     done
   fi
 
-  # Default fallback
+  # Check if any SSH keys exist at all
+  local has_any_ssh_key=false
+  if ls "$HOME/.ssh/"id_* &>/dev/null; then
+    has_any_ssh_key=true
+  fi
+
+  # Default fallback - only if no keys detected
   if [[ -z "$key_name" ]]; then
-    key_name="id_ed25519_devbase"
+    if [[ "$has_any_ssh_key" == true ]]; then
+      print_check "info" "DevBase SSH key not configured (using non-devbase keys)"
+      print_check "info" "Set DEVBASE_SSH_KEY_NAME in org.env to specify key name"
+      return 0
+    else
+      key_name="id_ed25519_devbase"
+    fi
   fi
 
   local ssh_keys=(
@@ -364,7 +378,12 @@ check_ssh_keys() {
         print_check "warn" "$key has incorrect permissions: $perms - should be $expected_perms ($display_path)"
       fi
     else
-      print_check "warn" "$key missing ($display_path)"
+      # Only warn if key was explicitly configured or detected, otherwise info
+      if [[ -n "${DEVBASE_SSH_KEY_NAME:-}" ]] || [[ "$key_detected" == true ]]; then
+        print_check "warn" "$key missing ($display_path)"
+      else
+        print_check "info" "$key not found (default name, configure with DEVBASE_SSH_KEY_NAME)"
+      fi
     fi
   done
 }
@@ -542,8 +561,8 @@ check_shell_integrations() {
       "Starship integrated with fish (~/.config/fish/config.fish)" \
       "Starship not integrated with fish" "warn"
 
-    # Check Zellij autostart configuration (set in 00-environment.fish)
-    local env_fish="$CONFIG_HOME/fish/conf.d/00-environment.fish"
+    # Check Zellij autostart configuration (set in 00-0-environment.fish)
+    local env_fish="$CONFIG_HOME/fish/conf.d/00-0-environment.fish"
     if [[ -f "$env_fish" ]]; then
       # Read the actual value from the generated config
       local zellij_autostart
@@ -930,6 +949,9 @@ check_mise_tools() {
   local mise_total=0
 
   if file_exists "$mise_config" && command -v mise &>/dev/null; then
+    # Trust the config file to avoid interactive prompts
+    mise trust "$mise_config" 2>/dev/null || true
+    
     # Get installed mise tools formatted as "tool@version"
     local installed_tools=$(mise list 2>/dev/null |
       awk '{print $1 "@" $2}')
@@ -940,8 +962,15 @@ check_mise_tools() {
 
     # Parse config.toml for expected tools
     # Format: tool = "version" OR "prefix:org/tool" = "version"
+    local in_env_section=false
     while IFS= read -r line; do
-      # Skip comments, empty lines, and config settings
+      # Track if we're in [env] section
+      [[ "$line" =~ ^\[env\] ]] && in_env_section=true
+      [[ "$line" =~ ^\[tools\] ]] && in_env_section=false
+      [[ "$line" =~ ^\[settings\] ]] && in_env_section=false
+      
+      # Skip env section, comments, empty lines, and config settings
+      [[ "$in_env_section" == true ]] && continue
       [[ "$line" =~ ^#.*$ ]] && continue
       [[ -z "$line" ]] && continue
       [[ "$line" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
