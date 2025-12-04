@@ -65,6 +65,7 @@ xdg-desktop-portal-gtk
 dnsutils
 e2fsprogs
 jq
+libxml2-utils
 meld
 pandoc
 parallel
