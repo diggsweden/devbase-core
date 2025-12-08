@@ -9,11 +9,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIBS_DIR="${SCRIPT_DIR}/libs"
 
-declare -A BATS_LIBS=(
-  ["bats-support"]="https://github.com/bats-core/bats-support.git:v0.3.0"
-  ["bats-assert"]="https://github.com/bats-core/bats-assert.git:v2.1.0"
-  ["bats-file"]="https://github.com/bats-core/bats-file.git:v0.4.0"
-  ["bats-mock"]="https://github.com/jasonkarns/bats-mock.git:"
+declare -A BATS_LIBS_URL=(
+  ["bats-support"]="https://github.com/bats-core/bats-support.git"
+  ["bats-assert"]="https://github.com/bats-core/bats-assert.git"
+  ["bats-file"]="https://github.com/bats-core/bats-file.git"
+  ["bats-mock"]="https://github.com/jasonkarns/bats-mock.git"
+)
+
+declare -A BATS_LIBS_VERSION=(
+  ["bats-support"]="v0.3.0"
+  ["bats-assert"]="v2.1.0"
+  ["bats-file"]="v0.4.0"
+  ["bats-mock"]=""
 )
 
 ensure_libs_dir() {
@@ -22,8 +29,8 @@ ensure_libs_dir() {
 
 install_lib() {
   local name="$1"
-  local url="${2%%:*}"
-  local version="${2#*:}"
+  local url="${BATS_LIBS_URL[$name]}"
+  local version="${BATS_LIBS_VERSION[$name]}"
   local target_dir="${LIBS_DIR}/${name}"
 
   if [[ -d "$target_dir" ]]; then
@@ -40,8 +47,8 @@ install_lib() {
 }
 
 install_all_libs() {
-  for name in "${!BATS_LIBS[@]}"; do
-    install_lib "$name" "${BATS_LIBS[$name]}"
+  for name in "${!BATS_LIBS_URL[@]}"; do
+    install_lib "$name"
   done
 }
 

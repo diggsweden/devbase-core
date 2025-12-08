@@ -33,6 +33,11 @@ default:
 # SETUP - Development environment setup
 # ==================================================================================== #
 
+# ▪ Install devtools and tools (for CI)
+[group('setup')]
+install: setup-devtools
+    @mise install
+
 # ▪ Setup devtools (clone or update from XDG_DATA_HOME)
 [group('setup')]
 setup-devtools:

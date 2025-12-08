@@ -26,6 +26,32 @@
       "matchStrings": [
         "^(?<depName>[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_.-]+):\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/tests/setup-bats-libs\\.sh$/"
+      ],
+      "description": "Update BATS helper library versions (bats-core)",
+      "matchStrings": [
+        "\\[\"(?<depName>bats-support|bats-assert|bats-file)\"\\]=\"(?<currentValue>v[0-9.]+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "packageNameTemplate": "bats-core/{{{depName}}}",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/tests/setup-bats-libs\\.sh$/"
+      ],
+      "description": "Update bats-mock version",
+      "matchStrings": [
+        "\\[\"(?<depName>bats-mock)\"\\]=\"(?<currentValue>v[0-9.]+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "packageNameTemplate": "jasonkarns/{{{depName}}}",
+      "versioningTemplate": "semver"
     }
   ]
 }
