@@ -27,4 +27,4 @@ jdk_mission_control: 9.1.1 # renovate: datasource=github-releases depName=adopti
 dbeaver: 25.2.1 # renovate: datasource=github-releases depName=dbeaver/dbeaver extractVersion=^v?(?<version>\d+\.\d+\.\d+)$
 intellij_idea: 2025.2.4 # renovate: datasource=jetbrains-releases depName=idea packageName=IIU
 # VS Code (custom installer with WSL-specific logic)
-vscode: 1.105.1 # renovate: datasource=github-releases depName=microsoft/vscode
+vscode: 1.106.3 # renovate: datasource=github-releases depName=microsoft/vscode
