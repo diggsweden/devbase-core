@@ -1,1 +1,19 @@
-background=${THEME_BACKGROUND}
+-- SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+-- SPDX-License-Identifier: CC0-1.0
+
+return {
+  {
+    "sainnhe/everforest",
+    config = function()
+      vim.g.everforest_background = 'medium'
+      vim.opt.background = '${THEME_BACKGROUND}'
+      vim.g.everforest_better_performance = 1
+    end
+  },
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "everforest",
+    },
+  },
+}
