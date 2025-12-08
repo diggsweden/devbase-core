@@ -137,7 +137,7 @@ _generate_default_email_from_name() {
     local email_prefix
     email_prefix=$(echo "$author_name" |
       iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null |
-      sed 's/ /./' |
+      sed 's/ /./g' |
       tr '[:upper:]' '[:lower:]' |
       tr -cd 'a-z.')
     echo "${email_prefix}${email_domain}"

@@ -28,7 +28,7 @@ load_snap_packages() {
   local pkg_file="${DEVBASE_DOT}/.config/devbase/snap-packages.txt"
 
   # Check for custom package list override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt" ]]; then
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt" ]]; then
     pkg_file="${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt"
     show_progress info "Using custom snap package list: $pkg_file"
   fi
