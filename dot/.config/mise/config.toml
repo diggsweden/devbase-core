@@ -99,7 +99,7 @@ jq = "jq-1.8.1"
 
 # Security scanning
 "aqua:zricethezav/gitleaks" = "v8.29.1"
-"aqua:anchore/syft" = "v1.37.0"
+"aqua:anchore/syft" = "v1.38.0"
 "aqua:ossf/scorecard" = "v5.4.0"
 
 
