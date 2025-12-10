@@ -119,7 +119,7 @@ jq = "jq-1.8.1"
 "aqua:tldr-pages/tlrc" = "v1.12.0"
 "aqua:jesseduffield/lazygit" = "v0.56.0"
 "aqua:aristocratos/btop" = "v1.4.5"
-"aqua:cli/cli" = "v2.83.0"           # GitHub CLI (gh)
+"aqua:cli/cli" = "v2.83.1"           # GitHub CLI (gh)
 "ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"    # GitLab CLI (glab)
 
 # File managers
