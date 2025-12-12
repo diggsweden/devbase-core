@@ -63,7 +63,7 @@ gradle = "8.12"
 "aqua:casey/just" = "1.43.1"
 "ubi:rvben/rumdl" = "v0.0.188"
 jq = "jq-1.8.1"
-"aqua:mikefarah/yq" = "v4.48.2"
+"aqua:mikefarah/yq" = "v4.49.2"
 "aqua:mike-engel/jwt-cli" = "6.2.0"
 
 # Shell and terminal enhancements
