@@ -295,3 +295,37 @@ EOF
   assert_success
   assert_output --partial "example.com ssh-ed25519"
 }
+
+@test "setup_ssh_config_includes handles append file without trailing newline" {
+  local test_home="${TEST_DIR}/home"
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  mkdir -p "${custom_ssh}"
+  
+  # Create known_hosts.append WITHOUT trailing newline
+  # This simulates files that don't end with a newline character
+  printf "example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest" > "${custom_ssh}/known_hosts.append"
+  
+  run bash -c "
+    export PATH='/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export _DEVBASE_CUSTOM_SSH='${custom_ssh}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    setup_ssh_config_includes
+    
+    cat '${test_home}/.ssh/known_hosts'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  # Should contain the host key even though file has no trailing newline
+  assert_output --partial "example.com ssh-ed25519"
+}

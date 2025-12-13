@@ -43,7 +43,9 @@ setup_ssh_config_includes() {
         local target_file="${HOME}/.ssh/${target_name}"
         touch "$target_file"
 
-        while IFS= read -r line; do
+        # Note: 'read' returns non-zero at EOF even if it read data, so we check
+        # for content with '|| [[ -n "$line" ]]' to handle files without trailing newline
+        while IFS= read -r line || [[ -n "$line" ]]; do
           if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
             echo "$line" >>"$target_file"
           fi
