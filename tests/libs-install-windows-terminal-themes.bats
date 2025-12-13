@@ -11,16 +11,14 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'libs/bats-mock/stub'
+load 'test_helper'
 
 setup() {
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup_isolated
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  TEMP_DIR=$(temp_make)
+  # Alias for backward compatibility with tests using TEMP_DIR
+  TEMP_DIR="$TEST_DIR"
   export TEMP_DIR
-  export HOME="${TEMP_DIR}/home"
-  export XDG_DATA_HOME="${TEMP_DIR}/data"
-  mkdir -p "$HOME" "$XDG_DATA_HOME"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -28,11 +26,10 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
-  
   if declare -f unstub >/dev/null 2>&1; then
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/jq" ]] && unstub jq || true
   fi
+  common_teardown
 }
 
 @test "_detect_windows_username uses PowerShell when available" {

@@ -10,16 +10,17 @@ bats_require_minimum_version 1.5.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  TEMP_DIR=$(temp_make)
+  common_setup_isolated
+  # Alias for backward compatibility with tests using TEMP_DIR
+  TEMP_DIR="$TEST_DIR"
   export TEMP_DIR
-  export HOME="${TEMP_DIR}/home"
-  mkdir -p "$HOME"
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
+  common_teardown
 }
 
 @test "cleanup_temp_directory validates path pattern before removal" {

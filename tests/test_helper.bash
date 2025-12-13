@@ -12,6 +12,31 @@
 #   SC2268 - x-prefix in comparisons is a common bats pattern for empty checks
 
 # =============================================================================
+# Common Setup/Teardown Helpers
+# =============================================================================
+
+# Standard test setup - creates temp dir and sets DEVBASE_ROOT
+# Usage: common_setup
+common_setup() {
+  TEST_DIR="$(temp_make)"
+  export TEST_DIR
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+}
+
+# Standard test teardown - cleans up temp dir safely
+# Usage: common_teardown
+common_teardown() {
+  safe_temp_del "$TEST_DIR"
+}
+
+# Setup with isolated HOME environment
+# Usage: common_setup_isolated
+common_setup_isolated() {
+  common_setup
+  setup_isolated_home
+}
+
+# =============================================================================
 # Safe Temp Directory Cleanup
 # =============================================================================
 
@@ -74,6 +99,9 @@ create_mock_git_repo() {
   local tag="${2:-v1.0.0}"
   local remote="${3:-https://github.com/test/repo.git}"
 
+  # Prevent reading system git config
+  export GIT_CONFIG_NOSYSTEM=1
+
   mkdir -p "$repo_dir"
   git -C "$repo_dir" init --quiet
   # Local config only - doesn't affect host
@@ -81,6 +109,8 @@ create_mock_git_repo() {
   git -C "$repo_dir" config user.name "Test"
   git -C "$repo_dir" config commit.gpgsign false
   git -C "$repo_dir" config tag.gpgsign false
+  # Make git objects writable so safe_temp_del can clean up
+  git -C "$repo_dir" config core.sharedRepository 0644
   touch "$repo_dir/README.md"
   git -C "$repo_dir" add .
   git -C "$repo_dir" commit -m "Initial" --quiet

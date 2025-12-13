@@ -10,18 +10,16 @@ bats_require_minimum_version 1.13.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export XDG_CONFIG_HOME="${TEST_DIR}/.config"
+  common_setup_isolated
   mkdir -p "${XDG_CONFIG_HOME}/fish/completions"
   mkdir -p "${TEST_DIR}/bin"
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "configure_single_fish_completion creates kubectl completion" {

@@ -12,6 +12,7 @@ bats_require_minimum_version 1.5.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."

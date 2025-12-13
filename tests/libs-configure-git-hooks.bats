@@ -11,24 +11,21 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'libs/bats-mock/stub'
+load 'test_helper'
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export HOME="${TEST_DIR}/home"
-  export XDG_CONFIG_HOME="${HOME}/.config"
+  common_setup_isolated
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
   export DEVBASE_BACKUP_DIR="${HOME}/.devbase_backup"
   export DEVBASE_CUSTOM_DIR=""
   export DEVBASE_ENABLE_GIT_HOOKS="true"
   
-  mkdir -p "${HOME}/.config/git"
+  mkdir -p "${XDG_CONFIG_HOME}/git"
   mkdir -p "${DEVBASE_BACKUP_DIR}"
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "configure_git_hooks creates hooks directory" {

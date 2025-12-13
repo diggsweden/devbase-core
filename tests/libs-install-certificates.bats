@@ -10,17 +10,18 @@ bats_require_minimum_version 1.5.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   export DEVBASE_DEBUG="${DEVBASE_DEBUG:-false}"
   export _DEVBASE_CUSTOM_CERTS=""
-  
-  TEMP_DIR=$(temp_make)
+  # Alias for backward compatibility with tests using TEMP_DIR
+  TEMP_DIR="$TEST_DIR"
   export TEMP_DIR
   
-  mkdir -p "${TEMP_DIR}/bin"
+  mkdir -p "${TEST_DIR}/bin"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -28,7 +29,7 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
+  common_teardown
 }
 
 @test "configure_git_certificate sets Git config for domain" {

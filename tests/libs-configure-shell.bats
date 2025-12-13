@@ -10,13 +10,13 @@ bats_require_minimum_version 1.13.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export TEST_HOME="${TEST_DIR}/home"
-  mkdir -p "${TEST_HOME}"
+  common_setup_isolated
+  # Alias for backward compatibility with tests using TEST_HOME
+  TEST_HOME="$HOME"
+  export TEST_HOME
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/fish" << 'SCRIPT'
@@ -33,7 +33,7 @@ SCRIPT
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "configure_fish_interactive adds fish to /etc/shells when available" {

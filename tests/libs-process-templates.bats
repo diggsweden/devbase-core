@@ -10,15 +10,14 @@ bats_require_minimum_version 1.13.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "parse_url extracts protocol from HTTP URL" {

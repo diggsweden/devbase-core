@@ -10,11 +10,10 @@ bats_require_minimum_version 1.13.0
 load "${BATS_TEST_DIRNAME}/libs/bats-support/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-assert/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
+load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
@@ -23,7 +22,7 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "validate_not_empty succeeds for non-empty string" {

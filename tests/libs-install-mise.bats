@@ -10,17 +10,16 @@ bats_require_minimum_version 1.13.0
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
+load 'test_helper'
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export XDG_BIN_HOME="${TEST_DIR}/.local/bin"
+  common_setup_isolated
+  export XDG_BIN_HOME="${HOME}/.local/bin"
   mkdir -p "${XDG_BIN_HOME}"
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "load_all_versions parses YAML version file" {

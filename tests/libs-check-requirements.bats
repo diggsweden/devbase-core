@@ -10,15 +10,14 @@ bats_require_minimum_version 1.13.0
 load "${BATS_TEST_DIRNAME}/libs/bats-support/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-assert/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
+load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "get_os_type returns OS identifier" {

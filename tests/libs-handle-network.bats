@@ -11,12 +11,10 @@ load "${BATS_TEST_DIRNAME}/libs/bats-support/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-assert/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-mock/stub.bash"
+load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  
+  common_setup
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
   source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
@@ -24,7 +22,7 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "verify_checksum_value succeeds with correct checksum" {

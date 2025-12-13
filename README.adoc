@@ -14,8 +14,7 @@ image::assets/floppy.png[DevBase Core,200,align="center"]
 
 **Opinionated devops workstation setup**
 
-Transforms a fresh Ubuntu installation into a opinionated configured development environment.
-DevBase provides sensible defaults while customizable for organizational or personal needs.
+Transforms a fresh Ubuntu installation into a opinionated configured development environment. It provides sensible defaults while customizable for organizational or personal needs.
 
 == What Do You Get?
 
