@@ -11,14 +11,16 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'libs/bats-mock/stub'
+load 'test_helper'
 
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
-  TEMP_DIR=$(temp_make)
-  export TEMP_DIR
+  TEST_DIR=$(temp_make)
+  export TEST_DIR
+  setup_isolated_home
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -27,26 +29,27 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
-  
+  # Unstub before deleting temp dir
   if declare -f unstub >/dev/null 2>&1; then
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/snap" ]] && unstub snap || true
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/sudo" ]] && unstub sudo || true
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/uname" ]] && unstub uname || true
   fi
+  
+  safe_temp_del "$TEST_DIR"
 }
 
 @test "load_snap_packages reads package list from default file" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  mkdir -p "${TEMP_DIR}/.config/devbase"
-  cat > "${TEMP_DIR}/.config/devbase/snap-packages.txt" <<EOF
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
 kubectl
 helm --classic
 terraform
 EOF
   
-  export DEVBASE_DOT="${TEMP_DIR}"
+  export DEVBASE_DOT="${TEST_DIR}"
   
   load_snap_packages
   
@@ -59,15 +62,15 @@ EOF
 @test "load_snap_packages skips comment lines" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  mkdir -p "${TEMP_DIR}/.config/devbase"
-  cat > "${TEMP_DIR}/.config/devbase/snap-packages.txt" <<EOF
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
 # This is a comment
 kubectl
 # Another comment
 helm
 EOF
   
-  export DEVBASE_DOT="${TEMP_DIR}"
+  export DEVBASE_DOT="${TEST_DIR}"
   
   load_snap_packages
   
@@ -79,15 +82,15 @@ EOF
 @test "load_snap_packages skips empty lines" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  mkdir -p "${TEMP_DIR}/.config/devbase"
-  cat > "${TEMP_DIR}/.config/devbase/snap-packages.txt" <<EOF
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
 kubectl
 
 helm
 
 EOF
   
-  export DEVBASE_DOT="${TEMP_DIR}"
+  export DEVBASE_DOT="${TEST_DIR}"
   
   load_snap_packages
   
@@ -97,14 +100,14 @@ EOF
 @test "load_snap_packages handles @skip-wsl tag in WSL environment" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  mkdir -p "${TEMP_DIR}/.config/devbase"
-  cat > "${TEMP_DIR}/.config/devbase/snap-packages.txt" <<EOF
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
 kubectl
 snap-store # @skip-wsl
 helm
 EOF
   
-  export DEVBASE_DOT="${TEMP_DIR}"
+  export DEVBASE_DOT="${TEST_DIR}"
   export WSL_DISTRO_NAME="Ubuntu"
   
   load_snap_packages
@@ -117,13 +120,13 @@ EOF
 @test "load_snap_packages uses custom package list when available" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  mkdir -p "${TEMP_DIR}/custom-packages"
-  cat > "${TEMP_DIR}/custom-packages/snap-packages.txt" <<EOF
+  mkdir -p "${TEST_DIR}/custom-packages"
+  cat > "${TEST_DIR}/custom-packages/snap-packages.txt" <<EOF
 custom-tool
 EOF
   
-  export _DEVBASE_CUSTOM_PACKAGES="${TEMP_DIR}/custom-packages"
-  export DEVBASE_DOT="${TEMP_DIR}"
+  export _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom-packages"
+  export DEVBASE_DOT="${TEST_DIR}"
   
   load_snap_packages
   
@@ -137,14 +140,12 @@ EOF
   export DEVBASE_PROXY_HOST="proxy.example.com"
   export DEVBASE_PROXY_PORT="8080"
   
-  stub_repeated snap 'true'
-  stub_repeated sudo 'snap * : true'
+  # Use test_helper's stub_repeated for commands that get called multiple times
+  stub_repeated snap 'exit 0'
+  stub_repeated sudo 'exit 0'
   
   run configure_snap_proxy
   assert_success
-  
-  unstub sudo
-  unstub snap || true
 }
 
 @test "configure_snap_proxy does nothing when no proxy configured" {
@@ -203,9 +204,21 @@ EOF
 @test "snap_install fails gracefully when snapd not installed" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
-  PATH=""
+  # Create a subshell where snap command doesn't exist
+  run bash -c "
+    # Remove snap from PATH by creating empty PATH with only essential commands
+    export PATH='${TEST_DIR}/bin'
+    mkdir -p '${TEST_DIR}/bin'
+    
+    # Source required libs
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/install-snap.sh'
+    
+    snap_install 'kubectl'
+  "
   
-  run snap_install "kubectl"
   assert_success
   assert_output --partial "snapd not installed"
 }

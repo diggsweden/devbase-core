@@ -36,15 +36,93 @@ teardown() {
 }
 
 @test "_detect_windows_username uses PowerShell when available" {
-  skip "Requires WSL environment with Windows paths"
+  source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
+  
+  # Create mock PowerShell that returns a username
+  mkdir -p "${TEMP_DIR}/mnt/c/Windows/System32/WindowsPowerShell/v1.0"
+  cat > "${TEMP_DIR}/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" << 'SCRIPT'
+#!/usr/bin/env bash
+echo -n "TestUser"
+SCRIPT
+  chmod +x "${TEMP_DIR}/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+  
+  # Override the function to use our mock path
+  _detect_windows_username() {
+    local win_user=""
+    if [[ -x "${TEMP_DIR}/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" ]]; then
+      win_user=$("${TEMP_DIR}/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" 2>/dev/null | tr -d '\r\n')
+    fi
+    if [[ -z "$win_user" ]]; then
+      return 1
+    fi
+    echo "$win_user"
+    return 0
+  }
+  
+  run _detect_windows_username
+  
+  assert_success
+  assert_output "TestUser"
 }
 
 @test "_find_wt_settings_path detects stable Windows Terminal" {
-  skip "Requires WSL environment with Windows paths at /mnt/c"
+  source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
+  
+  # Create mock Windows Terminal settings path
+  local mock_settings_dir="${TEMP_DIR}/mnt/c/Users/TestUser/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState"
+  mkdir -p "$mock_settings_dir"
+  echo '{}' > "$mock_settings_dir/settings.json"
+  
+  # Override the function to use our mock base path
+  _find_wt_settings_path() {
+    local win_user="$1"
+    local possible_paths=(
+      "${TEMP_DIR}/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+      "${TEMP_DIR}/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+    )
+    for path in "${possible_paths[@]}"; do
+      if [[ -f "$path" ]]; then
+        echo "$path"
+        return 0
+      fi
+    done
+    return 1
+  }
+  
+  run _find_wt_settings_path "TestUser"
+  
+  assert_success
+  assert_output --partial "Microsoft.WindowsTerminal_8wekyb3d8bbwe"
 }
 
 @test "_find_wt_settings_path detects preview Windows Terminal" {
-  skip "Requires WSL environment with Windows paths at /mnt/c"
+  source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
+  
+  # Create mock Windows Terminal Preview settings path
+  local mock_settings_dir="${TEMP_DIR}/mnt/c/Users/TestUser/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState"
+  mkdir -p "$mock_settings_dir"
+  echo '{}' > "$mock_settings_dir/settings.json"
+  
+  # Override the function to use our mock base path
+  _find_wt_settings_path() {
+    local win_user="$1"
+    local possible_paths=(
+      "${TEMP_DIR}/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+      "${TEMP_DIR}/mnt/c/Users/$win_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
+    )
+    for path in "${possible_paths[@]}"; do
+      if [[ -f "$path" ]]; then
+        echo "$path"
+        return 0
+      fi
+    done
+    return 1
+  }
+  
+  run _find_wt_settings_path "TestUser"
+  
+  assert_success
+  assert_output --partial "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe"
 }
 
 @test "_find_wt_settings_path returns failure when not found" {

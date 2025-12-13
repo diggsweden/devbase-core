@@ -1,0 +1,301 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# devbase-update - Smart update for devbase-core and custom config
+# Checks for updates and re-runs setup.sh to apply changes
+# Version info is read directly from the persisted git repos
+
+set -g __devbase_core_dir "$HOME/.local/share/devbase/core"
+set -g __devbase_custom_dir "$HOME/.local/share/devbase/custom"
+
+function __devbase_update_print_info
+    printf "%sℹ%s %s\n" (set_color blue) (set_color normal) "$argv[1]"
+end
+
+function __devbase_update_print_success
+    printf "%s✓%s %s\n" (set_color green) (set_color normal) "$argv[1]"
+end
+
+function __devbase_update_print_warning
+    printf "%s⚠%s %s\n" (set_color yellow) (set_color normal) "$argv[1]"
+end
+
+function __devbase_update_print_error
+    printf "%s✗%s %s\n" (set_color red) (set_color normal) "$argv[1]" >&2
+end
+
+function __devbase_update_get_core_info --description "Get core version info from git repo"
+    if not test -d "$__devbase_core_dir/.git"
+        return 1
+    end
+    set -g CORE_TAG (git -C "$__devbase_core_dir" describe --tags --abbrev=0 2>/dev/null; or echo "unknown")
+    set -g CORE_SHA (git -C "$__devbase_core_dir" rev-parse --short HEAD 2>/dev/null; or echo "unknown")
+    set -g CORE_REMOTE (git -C "$__devbase_core_dir" remote get-url origin 2>/dev/null; or echo "")
+    return 0
+end
+
+function __devbase_update_get_custom_info --description "Get custom config info from git repo"
+    set -g CUSTOM_SHA ""
+    set -g CUSTOM_REMOTE ""
+    if test -d "$__devbase_custom_dir/.git"
+        set -g CUSTOM_SHA (git -C "$__devbase_custom_dir" rev-parse --short HEAD 2>/dev/null; or echo "unknown")
+        set -g CUSTOM_REMOTE (git -C "$__devbase_custom_dir" remote get-url origin 2>/dev/null; or echo "")
+    end
+end
+
+function __devbase_update_check_core --description "Check if core update is available"
+    if not test -d "$__devbase_core_dir/.git"
+        __devbase_update_print_warning "Core repo not found at $__devbase_core_dir"
+        return 1
+    end
+
+    __devbase_update_get_core_info; or return 1
+
+    if test -z "$CORE_REMOTE"
+        __devbase_update_print_warning "Could not determine core remote URL"
+        return 1
+    end
+
+    # Fetch tags (shallow)
+    if not git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet 2>/dev/null
+        __devbase_update_print_warning "Could not fetch core updates (network issue?)"
+        return 1
+    end
+
+    # Get latest tag from remote
+    set -l latest (git ls-remote --tags "$CORE_REMOTE" 2>/dev/null | \
+        string match -rg 'refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$' | \
+        sort -V | tail -1)
+
+    if test -z "$latest"
+        return 1
+    end
+
+    set latest "v$latest"
+
+    if test "$latest" != "$CORE_TAG"
+        echo "Core update: $CORE_TAG → $latest"
+        return 0
+    end
+
+    return 1
+end
+
+function __devbase_update_check_custom --description "Check if custom config update is available"
+    test -d "$__devbase_custom_dir/.git"; or return 1
+
+    __devbase_update_get_custom_info
+    test -n "$CUSTOM_REMOTE"; or return 1
+
+    # Fetch latest (shallow)
+    if not git -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>/dev/null
+        __devbase_update_print_warning "Could not fetch custom config updates (network issue?)"
+        return 1
+    end
+
+    # Get latest SHA from remote
+    set -l latest (git -C "$__devbase_custom_dir" rev-parse --short origin/HEAD 2>/dev/null; \
+        or git -C "$__devbase_custom_dir" rev-parse --short origin/main 2>/dev/null; \
+        or echo "")
+
+    if test -z "$latest"
+        return 1
+    end
+
+    if test "$latest" != "$CUSTOM_SHA"
+        echo "Custom config update: $CUSTOM_SHA → $latest"
+        return 0
+    end
+
+    return 1
+end
+
+function __devbase_update_core --description "Update core to latest version"
+    set -l latest (git ls-remote --tags "$CORE_REMOTE" 2>/dev/null | \
+        string match -rg 'refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$' | \
+        sort -V | tail -1)
+    set latest "v$latest"
+
+    __devbase_update_print_info "Updating core to $latest..."
+
+    # Fetch the specific tag (shallow)
+    git -C "$__devbase_core_dir" fetch --depth 1 origin tag "$latest" --quiet 2>/dev/null; \
+        or git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet
+
+    # Stash any local changes
+    git -C "$__devbase_core_dir" stash --quiet 2>/dev/null; or true
+
+    # Checkout the new version
+    git -C "$__devbase_core_dir" checkout "$latest" --quiet
+
+    __devbase_update_print_success "Core updated to $latest"
+end
+
+function __devbase_update_custom --description "Update custom config to latest"
+    __devbase_update_print_info "Updating custom config..."
+
+    # Fetch latest (shallow)
+    git -C "$__devbase_custom_dir" fetch --depth 1 --quiet
+
+    # Stash any local changes
+    git -C "$__devbase_custom_dir" stash --quiet 2>/dev/null; or true
+
+    # Reset to remote HEAD
+    git -C "$__devbase_custom_dir" reset --hard origin/HEAD --quiet 2>/dev/null; \
+        or git -C "$__devbase_custom_dir" reset --hard origin/main --quiet
+
+    set -l new_sha (git -C "$__devbase_custom_dir" rev-parse --short HEAD)
+    __devbase_update_print_success "Custom config updated to $new_sha"
+end
+
+function __devbase_update_check_only --description "Run the update check only (no prompt, no update)"
+    if not test -d "$__devbase_core_dir/.git"
+        # Not installed yet or not via new system
+        return 1
+    end
+
+    set -l core_update ""
+    set -l custom_update ""
+
+    set core_update (__devbase_update_check_core 2>/dev/null); or true
+    set custom_update (__devbase_update_check_custom 2>/dev/null); or true
+
+    if test -n "$core_update"
+        echo "$core_update"
+    end
+
+    if test -n "$custom_update"
+        echo "$custom_update"
+    end
+
+    # Return 0 if any update available
+    test -n "$core_update" -o -n "$custom_update"
+end
+
+function __devbase_update_show_version --description "Show current version info"
+    if not __devbase_update_get_core_info
+        __devbase_update_print_error "Core repo not found at $__devbase_core_dir"
+        __devbase_update_print_info "Run devbase setup.sh first to install"
+        return 1
+    end
+
+    __devbase_update_get_custom_info
+
+    echo "DevBase Version Info"
+    echo "===================="
+    echo "Core:"
+    echo "  Tag:    $CORE_TAG"
+    echo "  SHA:    $CORE_SHA"
+    echo "  Remote: $CORE_REMOTE"
+    echo "  Path:   $__devbase_core_dir"
+
+    if test -n "$CUSTOM_REMOTE"
+        echo ""
+        echo "Custom Config:"
+        echo "  SHA:    $CUSTOM_SHA"
+        echo "  Remote: $CUSTOM_REMOTE"
+        echo "  Path:   $__devbase_custom_dir"
+    end
+end
+
+function __devbase_update_do_update --description "Perform the update"
+    if not __devbase_update_get_core_info
+        __devbase_update_print_error "Core repo not found at $__devbase_core_dir"
+        __devbase_update_print_info "Run devbase setup.sh first to install"
+        return 1
+    end
+
+    __devbase_update_get_custom_info
+
+    set -l update_core false
+    set -l update_custom false
+    set -l core_msg ""
+    set -l custom_msg ""
+
+    if set core_msg (__devbase_update_check_core 2>/dev/null)
+        set update_core true
+    end
+    if set custom_msg (__devbase_update_check_custom 2>/dev/null)
+        set update_custom true
+    end
+
+    if test "$update_core" = false -a "$update_custom" = false
+        __devbase_update_print_success "Already up to date (core: $CORE_TAG)"
+        return 0
+    end
+
+    # Show what's available
+    echo ""
+    echo "Updates available:"
+    test -n "$core_msg"; and echo "  • $core_msg"
+    test -n "$custom_msg"; and echo "  • $custom_msg"
+    echo ""
+
+    # Prompt user (unless non-interactive)
+    if isatty stdin
+        read -P "Proceed with update? [y/N] " -n 1 response
+        echo
+        if not string match -qi 'y' -- $response
+            __devbase_update_print_info "Update cancelled"
+            return 0
+        end
+    else
+        __devbase_update_print_info "Non-interactive mode - proceeding with update"
+    end
+
+    # Perform updates
+    if test "$update_core" = true
+        __devbase_update_core
+    end
+
+    if test "$update_custom" = true
+        __devbase_update_custom
+    end
+
+    # Re-run installation to apply changes
+    echo ""
+    __devbase_update_print_info "Re-running setup to apply changes..."
+    echo ""
+
+    if test -f "$__devbase_core_dir/setup.sh"
+        bash "$__devbase_core_dir/setup.sh"
+    else
+        __devbase_update_print_error "setup.sh not found in $__devbase_core_dir"
+        return 1
+    end
+end
+
+function __devbase_update_usage --description "Show usage information"
+    echo "Usage: devbase-update [OPTION]"
+    echo ""
+    echo "Check for and apply DevBase updates."
+    echo ""
+    echo "Options:"
+    echo "  --check     Check for updates without prompting (for shell integration)"
+    echo "  --version   Show current version information"
+    echo "  --help      Show this help message"
+    echo ""
+    echo "Without options, checks for updates and prompts to apply them."
+    echo ""
+    echo "Version info is read directly from the git repos at:"
+    echo "  Core:   $__devbase_core_dir"
+    echo "  Custom: $__devbase_custom_dir"
+end
+
+function devbase-update --description "Check for and apply DevBase updates"
+    switch "$argv[1]"
+        case --check
+            __devbase_update_check_only
+        case --version -v
+            __devbase_update_show_version
+        case --help -h
+            __devbase_update_usage
+        case ''
+            __devbase_update_do_update
+        case '*'
+            __devbase_update_print_error "Unknown option: $argv[1]"
+            __devbase_update_usage
+            return 1
+    end
+end

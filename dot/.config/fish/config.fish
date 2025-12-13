@@ -30,9 +30,9 @@ starship init fish | source
 # Optional: GOPATH for Go development
 type -q go; and set -gx GOPATH $HOME/go; and fish_add_path $GOPATH/bin
 
-# Update check
-if status is-interactive; and functions -q __devbase_update_nag
-    __devbase_update_nag
+# Update check (prompts if update available on every shell start)
+if status is-interactive; and functions -q __devbase_update_check
+    __devbase_update_check
 end
 
 # Update Zellij clipboard config based on environment

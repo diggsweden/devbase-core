@@ -12,15 +12,17 @@ bats_require_minimum_version 1.13.0
 load "${BATS_TEST_DIRNAME}/libs/bats-support/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-assert/load.bash"
 load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
+load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
   TEST_DIR="$(temp_make)"
   export TEST_DIR
+  setup_isolated_home
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 }
 
 teardown() {
-  temp_del "$TEST_DIR"
+  safe_temp_del "$TEST_DIR"
 }
 
 @test "setup.sh requires bash not sh" {
@@ -192,4 +194,92 @@ teardown() {
   
   assert_success
   assert_output "http_proxy=unset"
+}
+
+@test "persist_devbase_repos creates core directory" {
+  # Create a mock source repo with file:// URL to avoid network operations
+  local source_repo="${TEST_DIR}/source-repo"
+  create_mock_git_repo "$source_repo" "v1.0.0" "file://${source_repo}"
+  
+  run bash -c "
+    export HOME='${HOME}'
+    export XDG_DATA_HOME='${XDG_DATA_HOME}'
+    export DEVBASE_ROOT='${source_repo}'
+    export _DEVBASE_FROM_GIT='true'
+    export DEVBASE_CUSTOM_DIR=''
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    
+    # Extract and run persist_devbase_repos
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    persist_devbase_repos
+    
+    # Check if core dir was created
+    if [[ -d '${XDG_DATA_HOME}/devbase/core/.git' ]]; then
+      echo 'core_created=yes'
+    else
+      echo 'core_created=no'
+    fi
+  "
+  
+  assert_success
+  assert_output --partial "core_created=yes"
+}
+
+@test "persist_devbase_repos skips when not from git" {
+  run bash -c "
+    export HOME='${HOME}'
+    export XDG_DATA_HOME='${XDG_DATA_HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export _DEVBASE_FROM_GIT='false'
+    export DEVBASE_CUSTOM_DIR=''
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    persist_devbase_repos
+    
+    # Core dir should not be created as a git repo
+    if [[ -d '${XDG_DATA_HOME}/devbase/core/.git' ]]; then
+      echo 'has_git=yes'
+    else
+      echo 'has_git=no'
+    fi
+  "
+  
+  assert_success
+  assert_output --partial "has_git=no"
+}
+
+@test "persist_devbase_repos clones custom config when present" {
+  # Create mock source repos with file:// URLs to avoid network operations
+  local source_repo="${TEST_DIR}/source-repo"
+  local custom_repo="${TEST_DIR}/custom-repo"
+  create_mock_git_repo "$source_repo" "v1.0.0" "file://${source_repo}"
+  create_mock_git_repo "$custom_repo" "v0.1.0" "file://${custom_repo}"
+  
+  run bash -c "
+    export HOME='${HOME}'
+    export XDG_DATA_HOME='${XDG_DATA_HOME}'
+    export DEVBASE_ROOT='${source_repo}'
+    export _DEVBASE_FROM_GIT='true'
+    export DEVBASE_CUSTOM_DIR='${custom_repo}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    persist_devbase_repos
+    
+    if [[ -d '${XDG_DATA_HOME}/devbase/custom/.git' ]]; then
+      echo 'custom_created=yes'
+    else
+      echo 'custom_created=no'
+    fi
+  "
+  
+  assert_success
+  assert_output --partial "custom_created=yes"
 }

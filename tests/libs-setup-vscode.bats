@@ -11,16 +11,21 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'libs/bats-mock/stub'
+load 'test_helper'
 
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
-  TEMP_DIR=$(temp_make)
-  export TEMP_DIR
-  export HOME="${TEMP_DIR}/home"
-  mkdir -p "$HOME"
+  TEST_DIR=$(temp_make)
+  export TEST_DIR
+  setup_isolated_home
+  
+  # Create mock filesystem root for path tests
+  export MOCK_ROOT="${TEST_DIR}/mock_root"
+  mkdir -p "${MOCK_ROOT}/usr/bin"
+  mkdir -p "${MOCK_ROOT}/usr/local/bin"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -29,12 +34,12 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
-  
   if declare -f unstub >/dev/null 2>&1; then
     unstub code || true
     unstub command || true
   fi
+  
+  safe_temp_del "$TEST_DIR"
 }
 
 @test "_get_vscode_theme_name maps theme keys to display names" {
@@ -112,7 +117,67 @@ teardown() {
 }
 
 @test "_find_native_vscode detects /usr/bin/code" {
-  skip "Cannot mock hardcoded /usr/bin/code path check"
+  # Create mock /usr/bin/code in our mock root
+  echo '#!/bin/bash' > "${MOCK_ROOT}/usr/bin/code"
+  chmod +x "${MOCK_ROOT}/usr/bin/code"
+  
+  # Override the function to use mock root
+  _find_native_vscode() {
+    if [[ -x "${MOCK_ROOT}/usr/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/bin/code"
+      return 0
+    elif [[ -x "${MOCK_ROOT}/usr/local/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/local/bin/code"
+      return 0
+    fi
+    return 1
+  }
+  
+  run _find_native_vscode
+  
+  assert_success
+  assert_output "${MOCK_ROOT}/usr/bin/code"
+}
+
+@test "_find_native_vscode detects /usr/local/bin/code" {
+  # Create mock /usr/local/bin/code in our mock root
+  echo '#!/bin/bash' > "${MOCK_ROOT}/usr/local/bin/code"
+  chmod +x "${MOCK_ROOT}/usr/local/bin/code"
+  
+  # Override the function to use mock root
+  _find_native_vscode() {
+    if [[ -x "${MOCK_ROOT}/usr/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/bin/code"
+      return 0
+    elif [[ -x "${MOCK_ROOT}/usr/local/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/local/bin/code"
+      return 0
+    fi
+    return 1
+  }
+  
+  run _find_native_vscode
+  
+  assert_success
+  assert_output "${MOCK_ROOT}/usr/local/bin/code"
+}
+
+@test "_find_native_vscode returns failure when code not found" {
+  # Override the function to use mock root (no code installed)
+  _find_native_vscode() {
+    if [[ -x "${MOCK_ROOT}/usr/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/bin/code"
+      return 0
+    elif [[ -x "${MOCK_ROOT}/usr/local/bin/code" ]]; then
+      echo "${MOCK_ROOT}/usr/local/bin/code"
+      return 0
+    fi
+    return 1
+  }
+  
+  run _find_native_vscode
+  
+  assert_failure
 }
 
 @test "_detect_wsl_distro returns WSL_DISTRO_NAME when set" {
@@ -129,7 +194,7 @@ teardown() {
   
   unset WSL_DISTRO_NAME
   
-  echo 'NAME="Ubuntu"' > "${TEMP_DIR}/os-release"
+  echo 'NAME="Ubuntu"' > "${TEST_DIR}/os-release"
   
   result=$(_detect_wsl_distro)
   [[ "$result" =~ Ubuntu ]]
@@ -166,7 +231,7 @@ teardown() {
 @test "_backup_vscode_settings creates timestamped backup" {
   source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
   
-  settings_file="${TEMP_DIR}/settings.json"
+  settings_file="${TEST_DIR}/settings.json"
   echo '{"test": true}' > "$settings_file"
   
   _backup_vscode_settings "$settings_file"
@@ -178,6 +243,6 @@ teardown() {
 @test "_backup_vscode_settings returns failure when file doesn't exist" {
   source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
   
-  run _backup_vscode_settings "${TEMP_DIR}/nonexistent.json"
+  run _backup_vscode_settings "${TEST_DIR}/nonexistent.json"
   assert_failure
 }

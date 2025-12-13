@@ -11,15 +11,15 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'libs/bats-mock/stub'
+load 'test_helper'
 
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
-  TEMP_DIR=$(temp_make)
-  export TEMP_DIR
-  export HOME="${TEMP_DIR}/home"
-  mkdir -p "$HOME"
+  TEST_DIR=$(temp_make)
+  export TEST_DIR
+  setup_isolated_home
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -28,24 +28,26 @@ setup() {
 }
 
 teardown() {
-  temp_del "$TEMP_DIR"
-  
+  # Unstub before deleting temp dir
   if declare -f unstub >/dev/null 2>&1; then
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/curl" ]] && unstub curl || true
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/jq" ]] && unstub jq || true
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/git" ]] && unstub git || true
   fi
+  
+  safe_temp_del "$TEST_DIR"
 }
 
 @test "get_vscode_checksum fetches checksum from API" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
-  stub jq 'echo "abc123"'
-  stub curl 'echo "[]"'
+  stub curl '-fsSL * : echo "{\"products\":[{\"productVersion\":\"1.85.1\",\"platform\":{\"os\":\"linux-deb-x64\"},\"build\":\"stable\",\"sha256hash\":\"abc123\"}]}"'
+  stub jq '-r * : echo "abc123"'
   
   run --separate-stderr get_vscode_checksum "1.85.1"
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
+  assert_output "abc123"
   
   unstub jq
   unstub curl
@@ -54,7 +56,10 @@ teardown() {
 @test "get_vscode_checksum fails when jq not available" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
-  PATH=""
+  # Override command_exists to return false for jq
+  command_exists() {
+    [[ "$1" != "jq" ]]
+  }
   
   run get_vscode_checksum "1.85.1"
   assert_failure
@@ -89,7 +94,6 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   export DEVBASE_INSTALL_LAZYVIM="false"
-  export XDG_CONFIG_HOME="${TEMP_DIR}/config"
   export DEVBASE_THEME="everforest-dark"
   export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   
@@ -102,7 +106,6 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   export DEVBASE_INSTALL_LAZYVIM="true"
-  export XDG_CONFIG_HOME="${TEMP_DIR}/config"
   export DEVBASE_THEME="everforest-dark"
   export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")
@@ -125,7 +128,6 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   export DEVBASE_INSTALL_LAZYVIM="true"
-  export XDG_CONFIG_HOME="${TEMP_DIR}/config"
   export DEVBASE_THEME="everforest-light"
   export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")

@@ -362,6 +362,8 @@ ensure_user_dirs() {
     "$XDG_DATA_HOME"
     "$XDG_DATA_HOME/ca-certificates"
     "$XDG_DATA_HOME/devbase/libs"
+    "$XDG_DATA_HOME/devbase/core"
+    "$XDG_DATA_HOME/devbase/custom"
     "$XDG_CACHE_HOME"
   )
 
