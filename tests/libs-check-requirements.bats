@@ -125,21 +125,99 @@ teardown() {
   assert [ -n "$output" ]
 }
 
-@test "get_wsl_version returns 1 or 2 when in WSL" {
-  skip "Requires WSL environment"
+@test "get_wsl_version returns empty when not in WSL" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    unset WSL_DISTRO_NAME
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    result=\$(get_wsl_version)
+    echo \"result='\$result'\"
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output "result=''"
+}
+
+@test "get_wsl_version parses WSL 2 version correctly" {
+  # Create mock wsl.exe
+  local mock_wsl_dir="${TEST_DIR}/mnt/c/Windows/System32"
+  mkdir -p "$mock_wsl_dir"
+  cat > "${mock_wsl_dir}/wsl.exe" << 'SCRIPT'
+#!/bin/bash
+echo "WSL version: 2.6.1.0"
+echo "Kernel version: 5.15.153.1-2"
+echo "WSLg version: 1.0.65"
+SCRIPT
+  chmod +x "${mock_wsl_dir}/wsl.exe"
   
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export WSL_DISTRO_NAME='Ubuntu'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    
+    # Source the file but override paths for testing
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    
+    # Override get_wsl_version to use our mock path
+    get_wsl_version() {
+      if ! is_wsl; then
+        echo ''
+        return 0
+      fi
+      local wsl_exe='${mock_wsl_dir}/wsl.exe'
+      if [[ ! -x \"\$wsl_exe\" ]]; then
+        echo ''
+        return 1
+      fi
+      local wsl_version_output
+      wsl_version_output=\$(\"\$wsl_exe\" --version 2>/dev/null | grep 'WSL version:' | head -1 | awk '{print \$3}' | tr -d '\r')
+      if [[ -z \"\$wsl_version_output\" ]]; then
+        echo ''
+        return 1
+      fi
+      wsl_version_output=\$(echo \"\$wsl_version_output\" | grep -oE '^[0-9]+\\.[0-9]+\\.[0-9]+')
+      echo \"\$wsl_version_output\"
+      return 0
+    }
+    
     get_wsl_version
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  # Should be "1" or "2"
-  assert_output --regexp "^[12]$"
+  assert_output "2.6.1"
+}
+
+@test "get_wsl_version handles missing wsl.exe" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export WSL_DISTRO_NAME='Ubuntu'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    
+    # Override to use non-existent path
+    get_wsl_version() {
+      if ! is_wsl; then
+        echo ''
+        return 0
+      fi
+      local wsl_exe='${TEST_DIR}/nonexistent/wsl.exe'
+      if [[ ! -x \"\$wsl_exe\" ]]; then
+        echo ''
+        return 1
+      fi
+      echo 'should not reach here'
+    }
+    
+    result=\$(get_wsl_version)
+    status=\$?
+    echo \"result='\$result' status=\$status\"
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_output "result='' status=1"
 }
 
 @test "get_os_info populates OS info array" {

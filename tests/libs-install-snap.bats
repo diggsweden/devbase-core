@@ -15,11 +15,11 @@ load 'test_helper'
 
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   TEST_DIR=$(temp_make)
   export TEST_DIR
+  export DEVBASE_DOT="${TEST_DIR}/dot"
   setup_isolated_home
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"

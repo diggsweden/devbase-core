@@ -95,7 +95,7 @@ teardown() {
   
   export DEVBASE_INSTALL_LAZYVIM="false"
   export DEVBASE_THEME="everforest-dark"
-  export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
+  export DEVBASE_DOT="${TEST_DIR}/dot"
   
   run install_lazyvim
   assert_success
@@ -107,8 +107,12 @@ teardown() {
   
   export DEVBASE_INSTALL_LAZYVIM="true"
   export DEVBASE_THEME="everforest-dark"
-  export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
+  export DEVBASE_DOT="${TEST_DIR}/dot"
   declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")
+  
+  # Create test template
+  mkdir -p "${DEVBASE_DOT}/.config/nvim/lua/plugins"
+  echo 'background=${THEME_BACKGROUND}' > "${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
   
   mkdir -p "${XDG_CONFIG_HOME}/nvim"
   echo "existing config" > "${XDG_CONFIG_HOME}/nvim/init.lua"
@@ -129,7 +133,7 @@ teardown() {
   
   export DEVBASE_INSTALL_LAZYVIM="true"
   export DEVBASE_THEME="everforest-light"
-  export DEVBASE_DOT="${BATS_TEST_DIRNAME}/../dot"
+  export DEVBASE_DOT="${TEST_DIR}/dot"
   declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")
   
   stub git \
