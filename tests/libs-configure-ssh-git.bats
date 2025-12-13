@@ -184,3 +184,114 @@ SCRIPT
   assert_success
   assert_output "700"
 }
+
+@test "setup_ssh_config_includes appends known_hosts.append to known_hosts" {
+  local test_home="${TEST_DIR}/home"
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  mkdir -p "${custom_ssh}"
+  
+  # Create a known_hosts.append file with test content
+  cat > "${custom_ssh}/known_hosts.append" << 'EOF'
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+EOF
+  
+  run bash -c "
+    export PATH='/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export _DEVBASE_CUSTOM_SSH='${custom_ssh}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    setup_ssh_config_includes
+    
+    cat '${test_home}/.ssh/known_hosts'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "github.com ssh-ed25519"
+  assert_output --partial "gitlab.com ssh-ed25519"
+}
+
+@test "setup_ssh_config_includes does not duplicate known_hosts entries" {
+  local test_home="${TEST_DIR}/home"
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  mkdir -p "${custom_ssh}"
+  
+  # Pre-populate known_hosts with one entry
+  echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "${test_home}/.ssh/known_hosts"
+  
+  # Create known_hosts.append with same entry plus a new one
+  cat > "${custom_ssh}/known_hosts.append" << 'EOF'
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+EOF
+  
+  bash -c "
+    export PATH='/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export _DEVBASE_CUSTOM_SSH='${custom_ssh}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    setup_ssh_config_includes
+  " >/dev/null 2>&1
+  
+  # Count occurrences of github.com - should be exactly 1
+  run grep -c "github.com" "${test_home}/.ssh/known_hosts"
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output "1"
+}
+
+@test "configure_ssh processes known_hosts.append even when key action is skip" {
+  local test_home="${TEST_DIR}/home"
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  mkdir -p "${custom_ssh}"
+  
+  # Create known_hosts.append
+  echo "example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest" > "${custom_ssh}/known_hosts.append"
+  
+  run bash -c "
+    export PATH='/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export _DEVBASE_CUSTOM_SSH='${custom_ssh}'
+    export DEVBASE_SSH_KEY_ACTION='skip'
+    export DEVBASE_SSH_KEY_TYPE='ed25519'
+    export DEVBASE_SSH_KEY_NAME='id_ed25519'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    configure_ssh
+    
+    cat '${test_home}/.ssh/known_hosts'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "example.com ssh-ed25519"
+}

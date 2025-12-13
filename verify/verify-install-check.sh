@@ -925,13 +925,17 @@ check_apt_packages() {
   local apt_installed=0
   local apt_total=0
 
+  # Get all installed packages once (much faster than per-package dpkg calls)
+  local installed_packages
+  installed_packages=$(dpkg-query -W -f='${Package}\n' 2>/dev/null)
+
   # Sort package names for consistent output
   local sorted_packages
   mapfile -t sorted_packages < <(for pkg in "${!APT_PACKAGES[@]}"; do echo "$pkg"; done | sort)
 
   for pkg in "${sorted_packages[@]}"; do
     apt_total=$((apt_total + 1))
-    if dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+    if echo "$installed_packages" | grep -qx "$pkg"; then
       apt_installed=$((apt_installed + 1))
       print_check "pass" "$pkg"
     else
@@ -1069,15 +1073,20 @@ check_snap_packages() {
   local snap_installed=0
   local snap_total=0
 
+  # Get all installed snaps once (much faster than per-snap calls)
+  local installed_snaps
+  installed_snaps=$(snap list 2>/dev/null)
+
   # Snap packages are managed by install-snap.sh, not custom-tools.yaml
   local snap_tools=(ghostty firefox chromium microk8s)
 
   for snap in "${snap_tools[@]}"; do
     snap_total=$((snap_total + 1))
-    if snap list "$snap" &>/dev/null; then
+    local snap_info
+    snap_info=$(echo "$installed_snaps" | awk -v name="$snap" '$1 == name {print $2}')
+    if [[ -n "$snap_info" ]]; then
       snap_installed=$((snap_installed + 1))
-      local snap_version=$(snap list "$snap" 2>/dev/null | awk 'NR==2 {print $2}')
-      printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$snap" "${DIM}" "$snap_version" "${NC}"
+      printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$snap" "${DIM}" "$snap_info" "${NC}"
     else
       print_check "fail" "$snap"
     fi

@@ -92,6 +92,17 @@ configure_ssh() {
   local agent_enabled=false
   local passphrase_protected=false
 
+  # Always set up SSH config includes (known_hosts, custom configs, etc.)
+  # This must happen regardless of key generation action
+  setup_ssh_config_includes
+
+  if [[ -f "${HOME}/.ssh/config" ]]; then
+    chmod 600 "${HOME}/.ssh/config"
+  else
+    show_progress warning "SSH config not found - template may not have been copied from dot/.ssh/config"
+  fi
+
+  # Handle key generation based on action
   if [[ "$DEVBASE_SSH_KEY_ACTION" == "new" ]]; then
     validate_var_set "DEVBASE_GIT_EMAIL" || return 1
     show_progress info "Configuring SSH..."
@@ -134,18 +145,9 @@ configure_ssh() {
 
     key_generated=true
     export DEVBASE_NEW_SSH_KEY="${ssh_key_path}.pub"
-  elif [[ "${DEVBASE_SSH_KEY_ACTION}" == "skip" ]]; then
-    return 0
   fi
 
-  setup_ssh_config_includes
-
-  if [[ -f "${HOME}/.ssh/config" ]]; then
-    chmod 600 "${HOME}/.ssh/config"
-  else
-    show_progress warning "SSH config not found - template may not have been copied from dot/.ssh/config"
-  fi
-
+  # Enable ssh-agent service if available
   if [[ -f "${XDG_CONFIG_HOME}/systemd/user/ssh-agent.service" ]]; then
     if enable_user_service "ssh-agent.service" &>/dev/null; then
       agent_enabled=true

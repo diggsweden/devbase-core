@@ -290,25 +290,27 @@ install_mise_tools() {
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
   run_mise_from_home_dir trust --all 2>/dev/null || true
 
+  # Count already installed tools
   local tools_before
   tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
-  local tools_to_install
-  tools_to_install=$(run_mise_from_home_dir list --not-installed 2>/dev/null | wc -l)
-
   tools_before=${tools_before#0}
-  tools_to_install=${tools_to_install#0}
   tools_before=${tools_before:-0}
-  tools_to_install=${tools_to_install:-0}
 
   # Install core runtimes first (required by npm/cargo/gem backends)
-  # This ensures node, python, go, java are available before npm:, cargo:, gem: tools
+  # This ensures node, python, go, java are available before mise resolves npm:, cargo:, gem: tools
   show_progress info "Installing core language runtimes..."
   if ! run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1; then
     show_progress warning "Some core runtimes may have failed (will retry with full install)"
   fi
 
-  # Install all tools (including any that failed in first pass)
-  show_progress info "Installing all development tools..."
+  # Now count remaining tools to install (npm/cargo/gem tools can be resolved now)
+  local tools_to_install
+  tools_to_install=$(run_mise_from_home_dir list --not-installed 2>/dev/null | wc -l)
+  tools_to_install=${tools_to_install#0}
+  tools_to_install=${tools_to_install:-0}
+
+  # Install all remaining tools
+  show_progress info "Installing development tools..."
   # Run mise install with progress bar visible (no stderr redirection)
   # mise handles checksum verification internally and will fail if checksums don't match
   if ! run_mise_from_home_dir install --yes; then

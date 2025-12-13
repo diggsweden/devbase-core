@@ -44,10 +44,8 @@ setup-devtools:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -d "{{devtools_dir}}" ]]; then
-        # Try to check for updates, warn if no network connection
-        if ! git -C "{{devtools_dir}}" fetch --tags --depth 1 --quiet 2>/dev/null; then
-            printf "\033[0;33m! Could not check for updates (no network connection)\033[0m\n"
-        elif [[ -f "{{devtools_dir}}/scripts/setup.sh" ]]; then
+        # setup.sh handles update checks with 1-hour cache
+        if [[ -f "{{devtools_dir}}/scripts/setup.sh" ]]; then
             "{{devtools_dir}}/scripts/setup.sh" "{{devtools_repo}}" "{{devtools_dir}}"
         fi
     else
