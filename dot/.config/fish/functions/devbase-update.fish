@@ -59,7 +59,6 @@ function __devbase_update_check_core --description "Check if core update is avai
 
     # Fetch tags (shallow)
     if not git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet 2>/dev/null
-        __devbase_update_print_warning "Could not fetch core updates (network issue?)"
         return 1
     end
 
@@ -90,7 +89,6 @@ function __devbase_update_check_custom --description "Check if custom config upd
 
     # Fetch latest (shallow)
     if not git -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>/dev/null
-        __devbase_update_print_warning "Could not fetch custom config updates (network issue?)"
         return 1
     end
 
@@ -213,14 +211,30 @@ function __devbase_update_do_update --description "Perform the update"
     set -l core_msg ""
     set -l custom_msg ""
 
-    if set core_msg (__devbase_update_check_core 2>/dev/null)
+    set -l core_check_failed false
+    set -l custom_check_failed false
+
+    # Check for core updates (shows warnings to stderr if network fails)
+    if set core_msg (__devbase_update_check_core)
         set update_core true
+    else
+        set core_check_failed true
     end
-    if set custom_msg (__devbase_update_check_custom 2>/dev/null)
-        set update_custom true
+
+    # Check for custom updates (shows warnings to stderr if network fails)
+    if test -d "$__devbase_custom_dir/.git"
+        if set custom_msg (__devbase_update_check_custom)
+            set update_custom true
+        else
+            set custom_check_failed true
+        end
     end
 
     if test "$update_core" = false -a "$update_custom" = false
+        if test "$core_check_failed" = true -o "$custom_check_failed" = true
+            printf "%sOffline: Could not check for updates%s\n" (set_color yellow) (set_color normal)
+            return 0
+        end
         __devbase_update_print_success "Already up to date (core: $CORE_TAG)"
         return 0
     end
