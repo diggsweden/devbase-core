@@ -33,7 +33,7 @@ function __devbase_update_check --description "Check for devbase updates on shel
         if string match -qi 'y' -- $response
             devbase-update
         else
-            printf "%sRun 'devbase-update' later to update.%s\n" (set_color dim) (set_color normal)
+            printf "%sRun 'devbase-update' later to update.%s\n" (set_color --dim) (set_color normal)
         end
     end
 end

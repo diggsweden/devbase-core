@@ -102,7 +102,7 @@ function __devbase_update_check_custom --description "Check if custom config upd
     end
 
     if test "$latest" != "$CUSTOM_SHA"
-        echo "Custom config update: $CUSTOM_SHA → $latest"
+        echo "devbase-custom-config: $CUSTOM_SHA → $latest"
         return 0
     end
 
