@@ -786,21 +786,19 @@ DevBase configures SSH signing, Delta pager, and security-focused git hooks.
 
 **Git Hooks:**
 
-DevBase provides pre-configured git hooks for code quality and security.
+DevBase provides minimal git hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project.
 
 - **pre-commit** - Runs before creating commits:
   - `01-secrets-scan.sh` - Scans staged files for secrets using gitleaks
-  - `02-shellcheck.sh` - Lints shell scripts (excludes SC2034, SC2155)
-  - `03-hadolint.sh` - Lints Dockerfiles/Containerfiles
 
 - **commit-msg** - Validates commit message format:
-  - `01-conventional-commits.sh` - Enforces conventional commits, DCO, 90 char header limit
+  - `01-conventional-commits.sh` - Enforces conventional commits via conform (only if `.conform.yaml` exists in repo)
 
 - **prepare-commit-msg** - Prepares commit message:
   - `01-add-issue-ref.sh` - Auto-adds `Refs:` trailer from branch name (e.g., `JIRA-123`)
 
 - **pre-push** - Runs before pushing:
-  - `01-verify-signatures.sh` - Verifies all commits have valid GPG signatures, blocks unsigned commits
+  - `01-verify-signatures.sh` - Blocks pushes with unsigned commits (GPG/SSH)
 
 **Learn more**:
 
@@ -1870,7 +1868,7 @@ Essential for diagnosing connectivity issues related to DNS configuration or pro
 Scans git repositories for accidentally committed secrets like API keys, passwords, and tokens.
 Detects hardcoded credentials in code and commit history using pattern matching.
 Prevents sensitive data from being pushed to repositories where it could be exposed.
-DevBase includes gitleaks in pre-commit hooks for automatic secret scanning.
+DevBase includes gitleaks in pre-commit hooks for automatic secret scanning of staged files.
 
 #### Gitleaks Key Commands
 
@@ -1892,7 +1890,6 @@ DevBase includes gitleaks in pre-commit hooks for automatic secret scanning.
 Analyzes Dockerfiles for best practices, security issues, and common mistakes.
 Checks for problems like missing version pins, inefficient layer construction, or deprecated commands.
 Improves container image quality by catching Dockerfile issues before building.
-DevBase includes hadolint in git hooks for automatic Dockerfile validation.
 
 #### Hadolint Key Commands
 

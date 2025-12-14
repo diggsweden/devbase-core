@@ -616,43 +616,42 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 ~/.config/git/git-hooks/
 ├── pre-commit                     # Dispatcher
 ├── pre-commit.d/
-│   ├── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
-│   ├── 02-shellcheck.sh          # Active: Shell script linting
-│   └── 03-hadolint.sh            # Active: Dockerfile linting
+│   └── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
 ├── commit-msg                     # Dispatcher
 ├── commit-msg.d/
-│   └── 01-conventional-commits.sh # Active: Conventional commits validation
+│   └── 01-conventional-commits.sh # Active: Conventional commits (if .conform.yaml exists)
 ├── prepare-commit-msg             # Dispatcher
 ├── prepare-commit-msg.d/
 │   └── 01-add-issue-ref.sh       # Active: Auto-add Refs: from branch
-├── post-commit                    # Dispatcher (no active hooks)
-├── post-commit.d/
 ├── pre-push                       # Dispatcher
 └── pre-push.d/
-    └── 01-verify-signatures.sh   # Active: GPG signature verification
+    └── 01-verify-signatures.sh   # Active: GPG/SSH signature verification
 ----
+
+DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project using justkit or similar tooling.
 
 === Active Hooks
 
-See link:usage-guide.md#git[Git Usage Guide] for descriptions of what each hook does.
+* **01-secrets-scan.sh** - Scans staged files for secrets using gitleaks before commit. Prevents accidentally committing API keys, passwords, and tokens.
+* **01-conventional-commits.sh** - Validates commit message format using conform. Only active if the repository has a `.conform.yaml` config file.
+* **01-add-issue-ref.sh** - Automatically adds `Refs: ISSUE-123` footer to commit messages when the branch name contains an issue reference (e.g., `feature/PROJ-456-add-feature`).
+* **01-verify-signatures.sh** - Verifies all commits being pushed have valid GPG/SSH signatures. Blocks pushes with unsigned commits.
 
 === How It Works
 
 When you run `git commit`:
 
-1. **pre-commit** dispatcher runs all executable `.sh` files in `pre-commit.d/` (sorted order)
-2. If any check fails → commit is blocked
-3. **prepare-commit-msg** prepares the commit message template
+1. **pre-commit** dispatcher runs secret scanning on staged files
+2. If secrets detected → commit is blocked
+3. **prepare-commit-msg** dispatcher runs, auto-adding issue references from branch name
 4. User edits commit message
-5. **commit-msg** validates the message format
-6. Git creates and signs the commit
-7. **post-commit** runs (if any hooks present)
+5. **commit-msg** dispatcher validates the message format (if `.conform.yaml` exists)
+6. Git creates the commit
 
 When you run `git push`:
 
-1. **pre-push** dispatcher runs all checks in `pre-push.d/`
-2. If any check fails → push is blocked
-3. Otherwise push proceeds
+1. **pre-push** dispatcher verifies all commits have valid signatures
+2. If unsigned commits found → push is blocked
 
 === Adding Custom Hooks
 

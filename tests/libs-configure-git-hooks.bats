@@ -69,9 +69,8 @@ teardown() {
     
     configure_git_hooks
     
-    # Check that dispatcher hooks were copied
-    test -f '${XDG_CONFIG_HOME}/git/git-hooks/commit-msg' && \
-    test -f '${XDG_CONFIG_HOME}/git/git-hooks/pre-commit' && \
+    # Check that prepare-commit-msg dispatcher was copied
+    test -f '${XDG_CONFIG_HOME}/git/git-hooks/prepare-commit-msg' && \
     echo 'DISPATCHERS_COPIED'
   "
   
@@ -98,7 +97,7 @@ teardown() {
     configure_git_hooks
     
     # Check dispatcher is executable
-    test -x '${XDG_CONFIG_HOME}/git/git-hooks/commit-msg' && echo 'EXECUTABLE'
+    test -x '${XDG_CONFIG_HOME}/git/git-hooks/prepare-commit-msg' && echo 'EXECUTABLE'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
