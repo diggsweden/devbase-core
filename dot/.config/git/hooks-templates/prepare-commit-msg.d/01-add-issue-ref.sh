@@ -11,7 +11,8 @@ NC='\033[0m'
 
 commit_msg_file="$1"
 
-branch_name="$(git rev-parse --abbrev-ref HEAD)"
+# Get branch name, exit silently if no HEAD exists (fresh repo)
+branch_name="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" || exit 0
 
 # Auto-detect issue pattern from branch: PREFIX-123
 # Supports: JIRA-123, PROJ-456, ABC-789, GH-123, etc.
