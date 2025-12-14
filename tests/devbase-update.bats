@@ -229,3 +229,395 @@ SCRIPT
   assert_success
   assert_output --partial "REMOTE=https://github.com/myorg/custom.git"
 }
+
+# =============================================================================
+# __devbase_update_check.fish (shell startup check)
+# =============================================================================
+
+@test "__devbase_update_check skips when core repo does not exist" {
+  export DEVBASE_UPDATE_CHECK_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_update_check.fish"
+  
+  # No core repo created - should silently return
+  run fish -c "
+    set -gx HOME '$HOME'
+    source '$DEVBASE_UPDATE_FISH'
+    source '$DEVBASE_UPDATE_CHECK_FISH'
+    __devbase_update_check
+  "
+  
+  assert_success
+  assert_output ""
+}
+
+@test "__devbase_update_check shows update banner when update available" {
+  export DEVBASE_UPDATE_CHECK_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_update_check.fish"
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Mock git to return newer version
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+if [[ "$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123	refs/tags/v1.0.0"
+  echo "def456	refs/tags/v2.0.0"
+  exit 0
+fi
+exec /usr/bin/git "$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  # Test with piped input (non-interactive, answers 'n')
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    source '$DEVBASE_UPDATE_CHECK_FISH'
+    echo 'n' | __devbase_update_check
+  "
+  
+  assert_success
+  assert_output --partial "DevBase Update Available"
+  # In non-interactive mode, it shows the "run later" message instead of prompt
+  assert_output --partial "devbase-update"
+}
+
+# =============================================================================
+# Custom config update detection
+# =============================================================================
+
+@test "__devbase_update_check_custom detects when custom config has updates" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  local custom_dir="${XDG_DATA_HOME}/devbase/custom"
+  
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
+  
+  # Get current SHA
+  local current_sha
+  current_sha=$(git -C "$custom_dir" rev-parse --short HEAD)
+  
+  # Mock git to return a different SHA for origin/main
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"rev-parse --short origin/HEAD"* ]] || [[ "\$*" == *"rev-parse --short origin/main"* ]]; then
+  echo "newsha1"
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_custom
+  "
+  
+  assert_success
+  assert_output --partial "devbase-custom-config:"
+  assert_output --partial "newsha1"
+}
+
+@test "__devbase_update_check_custom returns success with no output when no updates available" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  local custom_dir="${XDG_DATA_HOME}/devbase/custom"
+  
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
+  
+  # Get current SHA
+  local current_sha
+  current_sha=$(git -C "$custom_dir" rev-parse --short HEAD)
+  
+  # Mock git to return the same SHA (no update)
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"rev-parse --short origin/HEAD"* ]] || [[ "\$*" == *"rev-parse --short origin/main"* ]]; then
+  echo "${current_sha}"
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_custom
+  "
+  
+  # Returns 0 (success) but with no output = no update available
+  assert_success
+  assert_output ""
+}
+
+@test "__devbase_update_check_custom skips when no custom repo exists" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  # No custom repo created
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_custom
+  "
+  
+  assert_failure
+  assert_output ""
+}
+
+# =============================================================================
+# Network failure / offline handling
+# =============================================================================
+
+@test "__devbase_update_check_core returns failure when fetch fails (offline)" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Use helper to create git mock that fails on fetch (offline mode)
+  create_git_update_mock --fetch-fails
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$PATH'
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_core
+  "
+  
+  assert_failure
+}
+
+@test "__devbase_update_check_custom returns failure when fetch fails (offline)" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  local custom_dir="${XDG_DATA_HOME}/devbase/custom"
+  
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
+  
+  # Use helper to create git mock that fails on fetch (offline mode)
+  create_git_update_mock --fetch-fails
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$PATH'
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_custom
+  "
+  
+  assert_failure
+}
+
+@test "devbase-update shows offline message when both checks fail" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Use helper to create git mock that fails on fetch (offline mode)
+  create_git_update_mock --fetch-fails
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$PATH'
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+  
+  assert_success
+  assert_output --partial "Offline"
+}
+
+# =============================================================================
+# Update flow tests
+# =============================================================================
+
+@test "devbase-update performs core update in non-interactive mode" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Create a mock setup.sh that just succeeds
+  cat > "$core_dir/setup.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "Setup completed"
+exit 0
+SCRIPT
+  chmod +x "$core_dir/setup.sh"
+  
+  # Track which git operations were called
+  mkdir -p "${TEST_DIR}/bin"
+  mkdir -p "${TEST_DIR}/logs"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/logs/git_calls.log"
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123	refs/tags/v1.0.0"
+  echo "def456	refs/tags/v2.0.0"
+  exit 0
+fi
+if [[ "\$*" == *"checkout"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"stash"* ]]; then
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  # Non-interactive mode auto-proceeds with update (stdin from /dev/null)
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+  
+  assert_success
+  assert_output --partial "Updates available"
+  assert_output --partial "devbase-core:"
+  assert_output --partial "v2.0.0"
+  assert_output --partial "Non-interactive mode"
+  assert_output --partial "Setup completed"
+  
+  # Verify checkout was called
+  run cat "${TEST_DIR}/logs/git_calls.log"
+  assert_output --partial "checkout"
+}
+
+@test "devbase-update --check returns update info without performing update" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Mock git to return newer version
+  mkdir -p "${TEST_DIR}/bin"
+  mkdir -p "${TEST_DIR}/logs"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/logs/git_calls.log"
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123	refs/tags/v1.0.0"
+  echo "def456	refs/tags/v2.0.0"
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --check
+  "
+  
+  assert_success
+  assert_output --partial "devbase-core:"
+  assert_output --partial "v1.0.0"
+  assert_output --partial "v2.0.0"
+  
+  # Verify no checkout was called (check-only mode)
+  run cat "${TEST_DIR}/logs/git_calls.log"
+  refute_output --partial "checkout"
+}
+
+@test "devbase-update reports already up to date when no updates available" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  
+  # Mock git - return same version as current (no update available)
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'MOCKSCRIPT'
+#!/usr/bin/env bash
+if [[ "$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"ls-remote"* ]]; then
+  printf "abc123\trefs/tags/v1.0.0\n"
+  exit 0
+fi
+exec /usr/bin/git "$@"
+MOCKSCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  local mock_path="${TEST_DIR}/bin:${PATH}"
+  
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$mock_path'
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+  
+  assert_success
+  assert_output --partial "Already up to date"
+}
+
+@test "devbase-update updates both core and custom when both have updates" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  local custom_dir="${XDG_DATA_HOME}/devbase/custom"
+  
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
+  
+  # Create a mock setup.sh
+  cat > "$core_dir/setup.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "Setup completed"
+exit 0
+SCRIPT
+  chmod +x "$core_dir/setup.sh"
+  
+  # Mock git for both core and custom updates
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+if [[ "$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123	refs/tags/v1.0.0"
+  echo "def456	refs/tags/v2.0.0"
+  exit 0
+fi
+if [[ "$*" == *"rev-parse --short origin/HEAD"* ]] || [[ "$*" == *"rev-parse --short origin/main"* ]]; then
+  echo "newsha1"
+  exit 0
+fi
+if [[ "$*" == *"checkout"* ]] || [[ "$*" == *"stash"* ]] || [[ "$*" == *"reset"* ]]; then
+  exit 0
+fi
+exec /usr/bin/git "$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  # Non-interactive mode auto-proceeds (stdin from /dev/null)
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+  
+  assert_success
+  assert_output --partial "devbase-core:"
+  assert_output --partial "devbase-custom-config:"
+  assert_output --partial "Setup completed"
+}

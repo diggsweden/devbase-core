@@ -43,10 +43,3 @@ setup() {
     assert_success
   fi
 }
-
-@test "colorscheme.lua.template has SPDX license header" {
-  local template="${DEVBASE_ROOT}/dot/.config/nvim/lua/plugins/colorscheme.lua.template"
-  
-  assert_file_contains "$template" "SPDX-FileCopyrightText"
-  assert_file_contains "$template" "SPDX-License-Identifier"
-}

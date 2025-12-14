@@ -147,3 +147,91 @@ SCRIPT
   chmod +x "${TEST_DIR}/bin/${cmd}"
   export PATH="${TEST_DIR}/bin:${PATH}"
 }
+
+# Create a git mock for update testing with configurable behavior
+# Usage: create_git_update_mock [options]
+#   --core-tag <tag>        Tag to return for ls-remote (default: v1.0.0)
+#   --new-core-tag <tag>    Additional newer tag to simulate update available
+#   --custom-sha <sha>      SHA to return for origin/HEAD (simulates custom update)
+#   --fetch-fails           Make fetch operations fail (offline mode)
+#   --log                   Log git calls to ${TEST_DIR}/logs/git.log
+# Example: create_git_update_mock --core-tag v1.0.0 --new-core-tag v2.0.0 --log
+create_git_update_mock() {
+  local core_tag="v1.0.0"
+  local new_core_tag=""
+  local custom_sha=""
+  local fetch_fails="false"
+  local log_calls="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --core-tag)
+      core_tag="$2"
+      shift 2
+      ;;
+    --new-core-tag)
+      new_core_tag="$2"
+      shift 2
+      ;;
+    --custom-sha)
+      custom_sha="$2"
+      shift 2
+      ;;
+    --fetch-fails)
+      fetch_fails="true"
+      shift
+      ;;
+    --log)
+      log_calls="true"
+      shift
+      ;;
+    *) shift ;;
+    esac
+  done
+
+  mkdir -p "${TEST_DIR}/bin"
+  [[ "$log_calls" == "true" ]] && mkdir -p "${TEST_DIR}/logs"
+
+  # Build conditional parts of the script
+  local log_line=""
+  local fetch_exit="exit 0"
+  local new_tag_line=""
+  local custom_sha_block=""
+
+  [[ "$log_calls" == "true" ]] && log_line="echo \"\$*\" >> \"${TEST_DIR}/logs/git.log\""
+  [[ "$fetch_fails" == "true" ]] && fetch_exit="exit 1"
+  [[ -n "$new_core_tag" ]] && new_tag_line="echo \"def456	refs/tags/${new_core_tag}\""
+  [[ -n "$custom_sha" ]] && custom_sha_block="echo \"${custom_sha}\"; exit 0"
+
+  cat >"${TEST_DIR}/bin/git" <<SCRIPT
+#!/usr/bin/env bash
+${log_line}
+
+# Handle fetch
+if [[ "\$*" == *"fetch"* ]]; then
+  ${fetch_exit}
+fi
+
+# Handle ls-remote for tags
+if [[ "\$*" == *"ls-remote"* ]]; then
+  echo "abc123	refs/tags/${core_tag}"
+  ${new_tag_line}
+  exit 0
+fi
+
+# Handle origin SHA for custom config
+if [[ "\$*" == *"rev-parse --short origin/HEAD"* ]] || [[ "\$*" == *"rev-parse --short origin/main"* ]]; then
+  ${custom_sha_block:-exec /usr/bin/git "\$@"}
+fi
+
+# Handle checkout/stash/reset (for update operations)
+if [[ "\$*" == *"checkout"* ]] || [[ "\$*" == *"stash"* ]] || [[ "\$*" == *"reset"* ]]; then
+  exit 0
+fi
+
+# Pass through to real git
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  export PATH="${TEST_DIR}/bin:${PATH}"
+}

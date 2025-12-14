@@ -10,7 +10,7 @@ set -g __devbase_core_dir "$HOME/.local/share/devbase/core"
 set -g __devbase_custom_dir "$HOME/.local/share/devbase/custom"
 
 function __devbase_update_print_info
-    printf "%sℹ%s %s\n" (set_color blue) (set_color normal) "$argv[1]"
+    printf "%sⓘ%s %s\n" (set_color cyan) (set_color normal) "$argv[1]"
 end
 
 function __devbase_update_print_success
@@ -18,7 +18,7 @@ function __devbase_update_print_success
 end
 
 function __devbase_update_print_warning
-    printf "%s⚠%s %s\n" (set_color yellow) (set_color normal) "$argv[1]"
+    printf "%s‼%s %s\n" (set_color yellow) (set_color normal) "$argv[1]"
 end
 
 function __devbase_update_print_error
@@ -45,6 +45,11 @@ function __devbase_update_get_custom_info --description "Get custom config info 
 end
 
 function __devbase_update_check_core --description "Check if core update is available"
+    # Returns:
+    #   0 with output = update available
+    #   0 with no output = no update (already current)
+    #   1 = check failed (network error, repo not found, etc.)
+    
     if not test -d "$__devbase_core_dir/.git"
         __devbase_update_print_warning "Core repo not found at $__devbase_core_dir"
         return 1
@@ -74,14 +79,18 @@ function __devbase_update_check_core --description "Check if core update is avai
     set latest "v$latest"
 
     if test "$latest" != "$CORE_TAG"
-        echo "Core update: $CORE_TAG → $latest"
-        return 0
+        echo "devbase-core: $CORE_TAG → $latest"
     end
-
-    return 1
+    # Return 0 whether update available or not - we successfully checked
+    return 0
 end
 
 function __devbase_update_check_custom --description "Check if custom config update is available"
+    # Returns:
+    #   0 with output = update available
+    #   0 with no output = no update (already current)
+    #   1 = check failed (network error, repo not found, etc.)
+    
     test -d "$__devbase_custom_dir/.git"; or return 1
 
     __devbase_update_get_custom_info
@@ -103,10 +112,9 @@ function __devbase_update_check_custom --description "Check if custom config upd
 
     if test "$latest" != "$CUSTOM_SHA"
         echo "devbase-custom-config: $CUSTOM_SHA → $latest"
-        return 0
     end
-
-    return 1
+    # Return 0 whether update available or not - we successfully checked
+    return 0
 end
 
 function __devbase_update_core --description "Update core to latest version"
@@ -214,17 +222,23 @@ function __devbase_update_do_update --description "Perform the update"
     set -l core_check_failed false
     set -l custom_check_failed false
 
-    # Check for core updates (shows warnings to stderr if network fails)
+    # Check for core updates
+    # Return 0 = check succeeded, output = update available
+    # Return 1 = check failed (network error, etc.)
     if set core_msg (__devbase_update_check_core)
-        set update_core true
+        if test -n "$core_msg"
+            set update_core true
+        end
     else
         set core_check_failed true
     end
 
-    # Check for custom updates (shows warnings to stderr if network fails)
+    # Check for custom updates
     if test -d "$__devbase_custom_dir/.git"
         if set custom_msg (__devbase_update_check_custom)
-            set update_custom true
+            if test -n "$custom_msg"
+                set update_custom true
+            end
         else
             set custom_check_failed true
         end
