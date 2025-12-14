@@ -628,7 +628,7 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
     └── 01-verify-signatures.sh   # Active: GPG/SSH signature verification
 ----
 
-DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project using justcheck or similar tooling.
+DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project using devbase-check or similar tooling.
 
 === Active Hooks
 
