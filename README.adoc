@@ -41,7 +41,7 @@ Built on principles from https://web.archive.org/web/20250411215614/https://gabe
 # Create installation directory
 mkdir ~/devbase-install && cd ~/devbase-install
 
-# Clone DevBase
+# Clone DevBase Core
 git clone https://github.com/diggsweden/devbase-core
 
 # Optional: Add a custom configuration  
@@ -76,7 +76,7 @@ Your terminal will open in Zellij (terminal multiplexer) after installation.
 
 DevBase works in two modes:
 
-1. **Standalone** - Just clone and run. Perfect for personal use.
+1. **Standalone** - Clone and run. Perfect for personal use.
 2. **Custom mode** - Add a `devbase-custom-config` repo with your organizational proxy, certificates, and registry settings. See link:docs/customization.adoc[Customization Guide].
 
 == Contributing
