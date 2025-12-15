@@ -32,7 +32,7 @@ Built on principles from https://web.archive.org/web/20250411215614/https://gabe
 * Ubuntu 24.04 LTS or newer (WSL2 or native)
 * 6GB free disk space
 * Installation time: ~10-15 minutes
-* (A simple GitHub-token to avoid RateLimiting - might be provided automatically by custom config)
+* (A basic GitHub-token to avoid RateLimiting - might be provided automatically by custom config)
 
 == Installation
 
