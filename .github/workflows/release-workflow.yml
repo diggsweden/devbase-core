@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Release Workflow
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-alpha*"
+      - "v[0-9]+.[0-9]+.[0-9]+-beta*"
+      - "v[0-9]+.[0-9]+.[0-9]+-rc*"
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  release:
+    uses: diggsweden/reusable-ci/.github/workflows/release-orchestrator.yml@5c73afc1199c46ec6624f88e877498c603966431 # v2.4.3
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      actions: read
+      security-events: write
+      attestations: write
+    secrets: inherit
+    with:
+      artifacts-config: .github/artifacts.yml
+      changelog-creator: git-cliff
+      release-publisher: github-cli
+      release.draft: false
+      # Skip version bump (no version files to update)
+      changelog.skipversionbump: true

@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+# devbase-core is a shell-based installer distributed via git
+# No build artifacts or containers - using 'meta' type for changelog-only releases
+artifacts:
+  - name: devbase-core
+    project-type: meta
+    working-directory: .
+containers: []
