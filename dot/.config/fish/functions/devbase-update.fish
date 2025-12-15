@@ -25,6 +25,46 @@ function __devbase_update_print_error
     printf "%s✗%s %s\n" (set_color red) (set_color normal) "$argv[1]" >&2
 end
 
+function __devbase_update_get_latest_tag --description "Get latest tag from remote, supporting semver and prerelease tags"
+    # Supports: v1.0.0, beta-1, rc-2
+    # Priority: release (vX.Y.Z) > rc > beta
+    # Within same type, sorts by version number
+    set -l remote_url $argv[1]
+
+    # Get all tags from remote
+    set -l all_tags (git ls-remote --tags "$remote_url" 2>/dev/null | \
+        string match -rg 'refs/tags/([^\^]+)$' | \
+        string match -rv '\^{}')
+
+    if test -z "$all_tags"
+        return 1
+    end
+
+    # Check for release tags (vX.Y.Z) first - highest priority
+    set -l release_tags (printf '%s\n' $all_tags | string match -rg '^(v[0-9]+\.[0-9]+\.[0-9]+)$')
+    if test -n "$release_tags"
+        printf '%s\n' $release_tags | sort -V | tail -1
+        return 0
+    end
+
+    # Check for rc tags (rc-N)
+    set -l rc_tags (printf '%s\n' $all_tags | string match -r '^rc-[0-9]+$')
+    if test -n "$rc_tags"
+        printf '%s\n' $rc_tags | sort -t'-' -k2 -n | tail -1
+        return 0
+    end
+
+    # Check for beta tags (beta-N)
+    set -l beta_tags (printf '%s\n' $all_tags | string match -r '^beta-[0-9]+$')
+    if test -n "$beta_tags"
+        printf '%s\n' $beta_tags | sort -t'-' -k2 -n | tail -1
+        return 0
+    end
+
+    # No recognized tags found
+    return 1
+end
+
 function __devbase_update_get_core_info --description "Get core version info from git repo"
     if not test -d "$__devbase_core_dir/.git"
         return 1
@@ -67,16 +107,12 @@ function __devbase_update_check_core --description "Check if core update is avai
         return 1
     end
 
-    # Get latest tag from remote
-    set -l latest (git ls-remote --tags "$CORE_REMOTE" 2>/dev/null | \
-        string match -rg 'refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$' | \
-        sort -V | tail -1)
+    # Get latest tag from remote (supports vX.Y.Z, alpha-N, beta-N, rc-N)
+    set -l latest (__devbase_update_get_latest_tag "$CORE_REMOTE")
 
     if test -z "$latest"
         return 1
     end
-
-    set latest "v$latest"
 
     if test "$latest" != "$CORE_TAG"
         echo "devbase-core: $CORE_TAG → $latest"
@@ -118,10 +154,8 @@ function __devbase_update_check_custom --description "Check if custom config upd
 end
 
 function __devbase_update_core --description "Update core to latest version"
-    set -l latest (git ls-remote --tags "$CORE_REMOTE" 2>/dev/null | \
-        string match -rg 'refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$' | \
-        sort -V | tail -1)
-    set latest "v$latest"
+    # Get latest tag (supports vX.Y.Z, alpha-N, beta-N, rc-N)
+    set -l latest (__devbase_update_get_latest_tag "$CORE_REMOTE")
 
     __devbase_update_print_info "Updating core to $latest..."
 
