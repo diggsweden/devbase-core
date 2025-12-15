@@ -5,13 +5,8 @@
 # ShellCheck configuration for DevBase
 # https://github.com/koalaman/shellcheck/wiki/Directive
 
-# Enable external source checking
+# Enable external source checking (required here - cannot be set in individual files)
 external-sources=true
 
 # Set source path to allow shellcheck to find sourced files
 source-path=SCRIPTDIR
-
-# Disable SC2317: Unreachable command (false positive with return/exit pattern)
-# Pattern: return 1 2>/dev/null || exit 1
-# This is used throughout the codebase to handle both sourced and executed contexts
-disable=SC2317

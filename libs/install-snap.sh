@@ -8,14 +8,12 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
-  return 1 2>/dev/null || exit 1
+  return 1
 fi
 
 if [[ -z "${DEVBASE_DOT:-}" ]]; then
   echo "ERROR: DEVBASE_DOT not set. This script must be sourced from setup.sh" >&2
-  # shellcheck disable=SC2317 # Handles both sourced and executed contexts
-  return 1 2>/dev/null || exit 1
+  return 1
 fi
 
 # Brief: Read snap package list from configuration file

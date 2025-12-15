@@ -8,8 +8,7 @@ set -uo pipefail
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-  # shellcheck disable=SC2317 # This handles both sourced and executed contexts
-  return 1 2>/dev/null || exit 1
+  return 1
 fi
 
 source "${DEVBASE_LIBS}/utils.sh"
