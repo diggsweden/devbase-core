@@ -256,6 +256,7 @@ find_custom_directory() {
     "${DEVBASE_CUSTOM_DIR}" # Imported at top - empty if user didn't set it
     "$DEVBASE_ROOT/../devbase-custom-config"
     "$DEVBASE_ROOT/devbase-custom-config"
+    "$HOME/.local/share/devbase/custom" # Persisted custom config from previous install
   )
 
   for path in "${candidates[@]}"; do
@@ -303,6 +304,7 @@ find_custom_directory() {
   [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && show_progress info "  • \$DEVBASE_CUSTOM_DIR: ${DEVBASE_CUSTOM_DIR}"
   show_progress info "  • $DEVBASE_ROOT/../devbase-custom-config"
   show_progress info "  • $DEVBASE_ROOT/devbase-custom-config"
+  show_progress info "  • $HOME/.local/share/devbase/custom"
 }
 
 load_environment_configuration() {
