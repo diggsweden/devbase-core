@@ -76,7 +76,7 @@ Your terminal will open in Zellij (terminal multiplexer) after installation.
 
 DevBase works in two modes:
 
-1. **Standalone** - Clone and run. Perfect for personal use.
+1. **Standalone** - Clone and run. The opinionated base.
 2. **Custom mode** - Add a `devbase-custom-config` repo with your organizational proxy, certificates, and registry settings. See link:docs/customization.adoc[Customization Guide].
 
 == Contributing
