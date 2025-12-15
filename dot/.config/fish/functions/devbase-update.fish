@@ -25,10 +25,10 @@ function __devbase_update_print_error
     printf "%s✗%s %s\n" (set_color red) (set_color normal) "$argv[1]" >&2
 end
 
-function __devbase_update_get_latest_tag --description "Get latest tag from remote, supporting semver and prerelease tags"
-    # Supports: v1.0.0, beta-1, rc-2
+function __devbase_update_get_latest_tag --description "Get latest tag from remote, supporting semver tags"
+    # Supports SemVer tags: v1.0.0, v1.0.0-beta.N, v1.0.0-rc.N
     # Priority: release (vX.Y.Z) > rc > beta
-    # Within same type, sorts by version number
+    # Uses version sort (sort -V) for proper ordering
     set -l remote_url $argv[1]
 
     # Get all tags from remote
@@ -40,24 +40,24 @@ function __devbase_update_get_latest_tag --description "Get latest tag from remo
         return 1
     end
 
-    # Check for release tags (vX.Y.Z) first - highest priority
+    # Check for release tags (vX.Y.Z without prerelease suffix) - highest priority
     set -l release_tags (printf '%s\n' $all_tags | string match -rg '^(v[0-9]+\.[0-9]+\.[0-9]+)$')
     if test -n "$release_tags"
         printf '%s\n' $release_tags | sort -V | tail -1
         return 0
     end
 
-    # Check for rc tags (rc-N)
-    set -l rc_tags (printf '%s\n' $all_tags | string match -r '^rc-[0-9]+$')
+    # Check for rc tags (vX.Y.Z-rc.N)
+    set -l rc_tags (printf '%s\n' $all_tags | string match -r '^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$')
     if test -n "$rc_tags"
-        printf '%s\n' $rc_tags | sort -t'-' -k2 -n | tail -1
+        printf '%s\n' $rc_tags | sort -V | tail -1
         return 0
     end
 
-    # Check for beta tags (beta-N)
-    set -l beta_tags (printf '%s\n' $all_tags | string match -r '^beta-[0-9]+$')
+    # Check for beta tags (vX.Y.Z-beta.N)
+    set -l beta_tags (printf '%s\n' $all_tags | string match -r '^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$')
     if test -n "$beta_tags"
-        printf '%s\n' $beta_tags | sort -t'-' -k2 -n | tail -1
+        printf '%s\n' $beta_tags | sort -V | tail -1
         return 0
     end
 
@@ -107,7 +107,7 @@ function __devbase_update_check_core --description "Check if core update is avai
         return 1
     end
 
-    # Get latest tag from remote (supports vX.Y.Z, alpha-N, beta-N, rc-N)
+    # Get latest tag from remote (supports vX.Y.Z, vX.Y.Z-beta.N, vX.Y.Z-rc.N)
     set -l latest (__devbase_update_get_latest_tag "$CORE_REMOTE")
 
     if test -z "$latest"

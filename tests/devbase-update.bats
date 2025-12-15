@@ -623,20 +623,20 @@ SCRIPT
 }
 
 # =============================================================================
-# Pre-release tag support (beta, rc)
+# SemVer pre-release tag support (vX.Y.Z-beta.N, vX.Y.Z-rc.N)
 # =============================================================================
 
 @test "__devbase_update_get_latest_tag returns latest beta tag when no release tags" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "beta-1" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-beta.0" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
 #!/usr/bin/env bash
 if [[ "$*" == *"ls-remote --tags"* ]]; then
-  echo "abc123	refs/tags/beta-1"
-  echo "def456	refs/tags/beta-2"
-  echo "ghi789	refs/tags/beta-10"
+  echo "abc123	refs/tags/v1.0.0-beta.0"
+  echo "def456	refs/tags/v1.0.0-beta.1"
+  echo "ghi789	refs/tags/v1.0.0-beta.10"
   exit 0
 fi
 exec /usr/bin/git "$@"
@@ -651,21 +651,21 @@ SCRIPT
   "
   
   assert_success
-  assert_output "beta-10"
+  assert_output "v1.0.0-beta.10"
 }
 
 @test "__devbase_update_get_latest_tag returns latest rc tag over beta tags" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "beta-5" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-beta.5" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
 #!/usr/bin/env bash
 if [[ "$*" == *"ls-remote --tags"* ]]; then
-  echo "abc123	refs/tags/beta-1"
-  echo "def456	refs/tags/beta-5"
-  echo "ghi789	refs/tags/rc-1"
-  echo "jkl012	refs/tags/rc-2"
+  echo "abc123	refs/tags/v1.0.0-beta.1"
+  echo "def456	refs/tags/v1.0.0-beta.5"
+  echo "ghi789	refs/tags/v1.0.0-rc.1"
+  echo "jkl012	refs/tags/v1.0.0-rc.2"
   exit 0
 fi
 exec /usr/bin/git "$@"
@@ -680,19 +680,19 @@ SCRIPT
   "
   
   assert_success
-  assert_output "rc-2"
+  assert_output "v1.0.0-rc.2"
 }
 
 @test "__devbase_update_get_latest_tag returns release tag over rc and beta tags" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "rc-3" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-rc.3" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
 #!/usr/bin/env bash
 if [[ "$*" == *"ls-remote --tags"* ]]; then
-  echo "abc123	refs/tags/beta-10"
-  echo "def456	refs/tags/rc-3"
+  echo "abc123	refs/tags/v1.0.0-beta.10"
+  echo "def456	refs/tags/v1.0.0-rc.3"
   echo "ghi789	refs/tags/v1.0.0"
   echo "jkl012	refs/tags/v0.9.0"
   exit 0
@@ -714,7 +714,7 @@ SCRIPT
 
 @test "devbase-update --check detects beta tag update" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "beta-1" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-beta.0" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
@@ -723,8 +723,8 @@ if [[ "$*" == *"fetch"* ]]; then
   exit 0
 fi
 if [[ "$*" == *"ls-remote --tags"* ]]; then
-  echo "abc123	refs/tags/beta-1"
-  echo "def456	refs/tags/beta-2"
+  echo "abc123	refs/tags/v1.0.0-beta.0"
+  echo "def456	refs/tags/v1.0.0-beta.1"
   exit 0
 fi
 exec /usr/bin/git "$@"
@@ -739,13 +739,13 @@ SCRIPT
   "
   
   assert_success
-  assert_output --partial "beta-1"
-  assert_output --partial "beta-2"
+  assert_output --partial "v1.0.0-beta.0"
+  assert_output --partial "v1.0.0-beta.1"
 }
 
 @test "devbase-update --check detects rc tag update" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "rc-1" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-rc.1" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
@@ -754,8 +754,8 @@ if [[ "$*" == *"fetch"* ]]; then
   exit 0
 fi
 if [[ "$*" == *"ls-remote --tags"* ]]; then
-  echo "abc123	refs/tags/rc-1"
-  echo "def456	refs/tags/rc-2"
+  echo "abc123	refs/tags/v1.0.0-rc.1"
+  echo "def456	refs/tags/v1.0.0-rc.2"
   exit 0
 fi
 exec /usr/bin/git "$@"
@@ -770,13 +770,13 @@ SCRIPT
   "
   
   assert_success
-  assert_output --partial "rc-1"
-  assert_output --partial "rc-2"
+  assert_output --partial "v1.0.0-rc.1"
+  assert_output --partial "v1.0.0-rc.2"
 }
 
-@test "devbase-update --check ignores alpha tags" {
+@test "__devbase_update_get_latest_tag ignores alpha tags" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
-  create_mock_git_repo "$core_dir" "alpha-6" "https://github.com/diggsweden/devbase-core.git"
+  create_mock_git_repo "$core_dir" "v1.0.0-alpha.6" "https://github.com/diggsweden/devbase-core.git"
   
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
@@ -786,8 +786,8 @@ if [[ "$*" == *"fetch"* ]]; then
 fi
 if [[ "$*" == *"ls-remote --tags"* ]]; then
   # Only alpha tags available - should not trigger update
-  echo "abc123	refs/tags/alpha-6"
-  echo "def456	refs/tags/alpha-7"
+  echo "abc123	refs/tags/v1.0.0-alpha.6"
+  echo "def456	refs/tags/v1.0.0-alpha.7"
   exit 0
 fi
 exec /usr/bin/git "$@"
@@ -801,6 +801,6 @@ SCRIPT
     __devbase_update_get_latest_tag 'https://github.com/diggsweden/devbase-core.git'
   "
   
-  # Should fail because no recognized tags found
+  # Should fail because no recognized tags found (alpha not supported)
   assert_failure
 }
