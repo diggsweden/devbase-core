@@ -38,6 +38,7 @@ create_mock_ssh_key() {
   
   # Create a minimal valid ED25519 private key structure for testing
   # This is NOT a real key - just enough for ssh-keygen -lf to work
+  # gitleaks:allow - This is a dummy test key, not a real secret
   cat > "${key_path}" << 'EOF'
 -----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
