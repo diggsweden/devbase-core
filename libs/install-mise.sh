@@ -289,20 +289,21 @@ install_mise_tools() {
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
   run_mise_from_home_dir trust --all 2>/dev/null || true
 
-  # Count already installed tools
-  local tools_before
-  tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
-  tools_before=${tools_before#0}
-  tools_before=${tools_before:-0}
-
-  # Install core runtimes first (required by npm/cargo/gem backends)
-  # This ensures node, python, go, java are available before mise resolves npm:, cargo:, gem: tools
+  # Install core runtimes FIRST (required by npm/cargo/gem backends)
+  # This MUST happen before any `mise list` commands, because mise tries to resolve
+  # all tools in config.toml (including npm:tree-sitter-cli) which requires node
   show_progress info "Installing core language runtimes..."
   if ! run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1; then
     show_progress warning "Some core runtimes may have failed (will retry with full install)"
   fi
 
-  # Now count remaining tools to install (npm/cargo/gem tools can be resolved now)
+  # Now that core runtimes are installed, we can safely query tool counts
+  # (npm:, cargo:, gem: tools can now be resolved)
+  local tools_before
+  tools_before=$(run_mise_from_home_dir list 2>/dev/null | wc -l)
+  tools_before=${tools_before#0}
+  tools_before=${tools_before:-0}
+
   local tools_to_install
   tools_to_install=$(run_mise_from_home_dir list --not-installed 2>/dev/null | wc -l)
   tools_to_install=${tools_to_install#0}
