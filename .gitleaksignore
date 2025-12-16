@@ -1,0 +1,2 @@
+# Dummy test SSH key used in unit tests - not a real secret
+39f0c62015f1ca325726860c1b4dbaf20eac81b8:tests/fish-ssh-agent-init.bats:private-key:42
