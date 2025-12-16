@@ -3,12 +3,26 @@
 # SPDX-License-Identifier: CC0-1.0
 
 function __ssh_agent_init --description "Auto-add devbase SSH key to agent if not already loaded"
-    # Find devbase SSH key (try common patterns)
+    # Find devbase SSH key
+    # First, try to read key name from preferences.yaml (supports custom configs)
     set -l devbase_key ""
-    for key_pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase
-        if test -f $HOME/.ssh/$key_pattern
-            set devbase_key $HOME/.ssh/$key_pattern
-            break
+    set -l prefs_file "$HOME/.config/devbase/preferences.yaml"
+    
+    if test -f $prefs_file
+        # Extract key_name from preferences.yaml (format: "  key_name: <value>")
+        set -l key_name (grep '^\s*key_name:' $prefs_file 2>/dev/null | sed 's/.*key_name:\s*//' | string trim)
+        if test -n "$key_name"; and test -f "$HOME/.ssh/$key_name"
+            set devbase_key "$HOME/.ssh/$key_name"
+        end
+    end
+    
+    # Fallback: try common devbase key patterns (for fresh installs before preferences are written)
+    if test -z "$devbase_key"
+        for key_pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase
+            if test -f $HOME/.ssh/$key_pattern
+                set devbase_key $HOME/.ssh/$key_pattern
+                break
+            end
         end
     end
     
