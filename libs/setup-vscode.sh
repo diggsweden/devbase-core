@@ -109,7 +109,8 @@ _setup_wsl_code_command() {
     fi
   else
     if [[ -n "$win_code_cmd" ]]; then
-      show_progress info "[WSL-specific] VS Code Server not found - extensions will be installed after first connection" >&2
+      show_progress info "[WSL-specific] VS Code Server not found" >&2
+      show_progress info "[WSL-specific] Connect VS Code to WSL first, then re-run ./setup.sh to install extensions" >&2
     fi
   fi
 
@@ -175,11 +176,20 @@ setup_vscode() {
       # VS Code Server exists but CLI not available (e.g., su -l without active VS Code connection)
       if is_wsl && [[ -d "$HOME/.vscode-server/bin" ]]; then
         show_progress info "VS Code Server detected but not currently connected"
-        show_progress info "Extensions will be installed automatically when you open VS Code and connect to WSL"
+        show_progress info "To install extensions later:"
+        show_progress info "  1. Open VS Code and connect to WSL"
+        show_progress info "  2. Run: ./setup.sh  (re-run devbase installation)"
       else
         show_progress info "VS Code not detected - skipping extension installation"
         if is_wsl; then
-          show_progress info "Extensions will be installed after connecting VS Code to WSL"
+          show_progress info "To install extensions later:"
+          show_progress info "  1. Install VS Code on Windows with Remote-WSL extension"
+          show_progress info "  2. Connect VS Code to this WSL distro"
+          show_progress info "  3. Run: ./setup.sh  (re-run devbase installation)"
+        else
+          show_progress info "To install extensions later:"
+          show_progress info "  1. Install VS Code (snap install code --classic)"
+          show_progress info "  2. Run: ./setup.sh  (re-run devbase installation)"
         fi
       fi
     fi
