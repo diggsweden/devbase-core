@@ -880,9 +880,9 @@ display_configuration_summary() {
 
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
-# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system (globals/functions)
+# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, install_certificates, persist_devbase_repos (globals/functions)
 # Returns: 0 always (dies on failure)
-# Side-effects: Prompts for sudo password, creates user directories, configures sudo for proxy
+# Side-effects: Prompts for sudo password, installs certs, clones repos, creates user directories, configures sudo for proxy
 prepare_system() {
   # PHASE 1: System Preparation (first actual changes)
   # Check/obtain sudo access right before we need it (after user answers questions)
@@ -896,6 +896,15 @@ prepare_system() {
     show_progress success "Sudo access granted"
   fi
 
+  # Install certificates FIRST - required for git clone to custom registries
+  # Must happen before persist_devbase_repos which may clone from internal git servers
+  printf "\n%bInstalling certificates...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  install_certificates || die "Failed to install certificates"
+
+  # Persist devbase repos to ~/.local/share/devbase/ for update support
+  # Done after certs so git can trust custom registry SSL certificates
+  persist_devbase_repos || show_progress warning "Could not persist devbase repos (continuing)"
+
   ensure_user_dirs
 
   setup_sudo_and_system
@@ -907,12 +916,8 @@ prepare_system() {
 # Returns: 0 always
 # Side-effects: Installs tools, applies configs, runs custom hooks
 perform_installation() {
-  # Install certificates FIRST - required for mise/pip/uv downloads
-  printf "\n%bInstalling certificates...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
-  install_certificates || die "Failed to install certificates"
-
-  # Export NODE_EXTRA_CA_CERTS immediately after certificate installation
-  # This ensures npm/mise respect custom certificates during tool installation
+  # Note: Certificates are installed in prepare_system() before this function
+  # Export NODE_EXTRA_CA_CERTS to ensure npm/mise respect custom certificates
   if [[ -f "/etc/ssl/certs/ca-certificates.crt" ]]; then
     export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/ca-certificates.crt"
   fi

@@ -665,7 +665,6 @@ main() {
   validate_custom_config
   run_pre_install_hook
   set_default_values
-  persist_devbase_repos
 
   run_installation
 }
