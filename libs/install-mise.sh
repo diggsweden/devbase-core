@@ -292,9 +292,16 @@ install_mise_tools() {
   # Install core runtimes FIRST (required by npm/cargo/gem backends)
   # This MUST happen before any `mise list` commands, because mise tries to resolve
   # all tools in config.toml (including npm:tree-sitter-cli) which requires node
+  # We filter the npm:tree-sitter-cli warning since node isn't installed yet
   show_progress info "Installing core language runtimes..."
-  if ! run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1; then
+  local core_install_output
+  if ! core_install_output=$(run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1); then
+    # Filter out expected warning about npm:tree-sitter-cli not being resolvable yet
+    echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
     show_progress warning "Some core runtimes may have failed (will retry with full install)"
+  else
+    # Show output but filter the npm:tree-sitter-cli warning
+    echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
   fi
 
   # Now that core runtimes are installed, we can safely query tool counts
