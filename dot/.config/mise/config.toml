@@ -104,7 +104,7 @@ jq = "jq-1.8.1"
 
 
 # Verification tools (for verifying other tools)
-"aqua:sigstore/cosign" = "3.0.2"
+"aqua:sigstore/cosign" = "3.0.3"
 "github:slsa-framework/slsa-verifier" = "v2.7.1"
 
 # Git commit standards
