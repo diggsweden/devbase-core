@@ -653,6 +653,12 @@ configure_system_and_shell() {
   configure_ufw || die "Failed to configure UFW firewall"
   configure_wayland_service || die "Failed to configure wayland service"
   disable_kubernetes_services || die "Failed to disable kubernetes services"
+
+  # Disable pcscd (smart card daemon) by default - enable manually when needed
+  if ! is_wsl && command -v pcscd &>/dev/null; then
+    sudo systemctl disable pcscd &>/dev/null || true
+  fi
+
   set_system_limits || die "Failed to set system limits"
 
   configure_fish_interactive || die "Failed to setup fish for interactive use"
