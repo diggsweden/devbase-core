@@ -104,6 +104,7 @@ This guide documents all tools in the devbase environment, including devbase-spe
   - [Dislocker (BitLocker Support)](#dislocker-bitlocker-support---non-wsl-only)
   - [TLP (Power Management)](#tlp-power-management---non-wsl-only)
   - [BleachBit](#bleachbit)
+  - [Citrix Workspace App](#citrix-workspace-app-optional---non-wsl-only)
 - [Proxy Configuration Reference](#proxy-configuration-reference)
 
 ---
@@ -230,6 +231,16 @@ devbase-font monaspace       # Monaspace - Superfamily (default)
 
 Affects: GNOME Terminal, Ghostty, VSCode  
 ⚠️ Requires restart: Close and reopen terminals/editors for changes to take effect
+
+**devbase-citrix** - Download and install Citrix Workspace App (non-WSL only):
+
+```bash
+devbase-citrix --check  # Show available version
+devbase-citrix          # Download and install
+devbase-citrix --help   # Show help
+```
+
+Installs `icaclient` and `ctxusb` packages. For smart card support, enable pcscd: `sudo systemctl enable --now pcscd`
 
 **Automatic Environment Setup:**
 
@@ -2664,6 +2675,49 @@ Helps maintain privacy by securely wiping traces of computer usage across applic
 
 - Documentation: [BleachBit Documentation](https://www.bleachbit.org/documentation)
 - Homepage: [BleachBit](https://www.bleachbit.org/)
+
+---
+
+### Citrix Workspace App (Optional - Non-WSL Only)
+
+Citrix Workspace App provides access to virtual desktops and applications hosted on Citrix infrastructure.
+Not installed by default - use the `devbase-citrix` command to download and install when needed.
+Supports smart card authentication when pcscd service is enabled.
+
+#### Installing Citrix Workspace App
+
+```fish
+# Check available version
+devbase-citrix --check
+
+# Download and install
+devbase-citrix
+```
+
+This will download and install:
+
+- `icaclient` - Main Citrix Workspace App
+- `ctxusb` - USB device redirection support
+
+#### Smart Card Support
+
+For smart card authentication with Citrix:
+
+```bash
+# Enable PC/SC smart card daemon
+sudo systemctl enable --now pcscd
+```
+
+#### Citrix Key Commands
+
+- **Check version**: `devbase-citrix --check`
+- **Install**: `devbase-citrix`
+- **Show help**: `devbase-citrix --help`
+
+**Learn more**:
+
+- Documentation: [Citrix Workspace App for Linux](https://docs.citrix.com/en-us/citrix-workspace-app-for-linux)
+- Downloads: [Citrix Downloads](https://www.citrix.com/downloads/workspace-app/linux/)
 
 ---
 

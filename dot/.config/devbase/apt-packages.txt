@@ -102,8 +102,9 @@ zlib1g-dev
 libsqlite3-dev
 pkg-config
 
-# Non-WSL specific packages (power management, encryption)
+# Non-WSL specific packages (power management, encryption, smartcard)
 dislocker  # @skip-wsl BitLocker drive support (NTFS encrypted volumes)
+pcscd      # @skip-wsl PC/SC smart card daemon for hardware tokens
 tlp        # @skip-wsl Power management for laptops
 tlp-rdw    # @skip-wsl Power management daemon
 
