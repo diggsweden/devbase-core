@@ -31,6 +31,7 @@ DevBase works in two modes:
 
 * link:usage-guide.md[*Usage Guide*] - Usage guide for all devbase tools with commands and examples
 * link:editor-setup.adoc[*Editor Setup*] - Configure VS Code, Neovim, and other editors
+* link:smart-card-setup.md[*Smart Card Setup*] - Configure smart card authentication for Citrix and Firefox
 * link:development.adoc[*Development Guide*] - Contributing to devbase-core
 * link:faq.adoc[*FAQ*] - Frequently asked questions
 

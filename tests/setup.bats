@@ -175,9 +175,7 @@ teardown() {
 }
 
 @test "configure_proxy_settings does nothing without proxy config" {
-  run bash -c "
-    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+  run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'

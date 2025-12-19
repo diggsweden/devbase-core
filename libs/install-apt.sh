@@ -168,6 +168,119 @@ add_fish_ppa() {
   return 0
 }
 
+# Brief: Install Firefox from Mozilla's official APT repository (not snap)
+# Params: None
+# Uses: show_progress (function)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Adds Mozilla APT repo, sets package priority, installs Firefox .deb
+# Note: Firefox .deb is required for smart card/PKCS#11 support (snap has AppArmor restrictions)
+install_firefox_deb() {
+  show_progress info "Installing Firefox from Mozilla APT repository..."
+
+  # Skip if already installed from Mozilla repo
+  if command -v firefox &>/dev/null; then
+    local firefox_source
+    firefox_source=$(apt-cache policy firefox 2>/dev/null | grep -A1 '^\*\*\*' | tail -1 || echo "")
+    if [[ "$firefox_source" == *"packages.mozilla.org"* ]]; then
+      show_progress info "Firefox already installed from Mozilla repository"
+      return 0
+    fi
+  fi
+
+  # Remove snap version if present
+  if snap list firefox &>/dev/null 2>&1; then
+    show_progress info "Removing Firefox snap..."
+    sudo snap remove firefox 2>&1 | sed 's/^/    /' || true
+  fi
+
+  # Remove Ubuntu's transitional firefox package if present
+  # This package redirects to snap and blocks installation from Mozilla repo
+  if dpkg -l firefox 2>/dev/null | grep -q "^ii.*1:1snap"; then
+    show_progress info "Removing Ubuntu transitional firefox package..."
+    sudo dpkg -r firefox 2>&1 | sed 's/^/    /' || true
+  fi
+
+  # Create keyrings directory
+  sudo install -d -m 0755 /etc/apt/keyrings
+
+  # Download and install Mozilla's GPG key
+  if ! wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc >/dev/null; then
+    show_progress error "Failed to download Mozilla GPG key"
+    return 1
+  fi
+
+  # Add Mozilla APT repository
+  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
+
+  # Set package priority to prefer Mozilla's Firefox and block Ubuntu's snap transitional package
+  cat <<'EOF' | sudo tee /etc/apt/preferences.d/mozilla >/dev/null
+Package: firefox*
+Pin: origin packages.mozilla.org
+Pin-Priority: 1001
+
+Package: firefox*
+Pin: release o=Ubuntu
+Pin-Priority: -1
+EOF
+
+  # Update and install
+  if ! sudo apt-get -q update 2>&1 | sed 's/^/    /'; then
+    show_progress error "Failed to update package cache after adding Mozilla repo"
+    return 1
+  fi
+
+  if ! sudo apt-get -y -q install firefox 2>&1 | sed 's/^/    /'; then
+    show_progress error "Failed to install Firefox from Mozilla repository"
+    return 1
+  fi
+
+  show_progress success "Firefox installed from Mozilla APT repository"
+
+  # Configure OpenSC for smart card support
+  configure_firefox_opensc
+
+  return 0
+}
+
+# Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
+# Params: None
+# Uses: HOME, show_progress (globals/functions)
+# Returns: 0 on success, 1 if no Firefox profile found
+# Side-effects: Adds OpenSC module to Firefox pkcs11.txt
+# Note: Requires opensc-pkcs11 package to be installed (included in apt-packages.txt)
+configure_firefox_opensc() {
+  local opensc_lib="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
+
+  # Skip if OpenSC library not installed
+  if [[ ! -f "$opensc_lib" ]]; then
+    show_progress info "OpenSC PKCS#11 library not found, skipping Firefox smart card configuration"
+    return 0
+  fi
+
+  # Find Firefox profile directory
+  local profile_dir
+  profile_dir=$(find "${HOME}/.mozilla/firefox" -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
+
+  if [[ -z "$profile_dir" ]]; then
+    show_progress info "No Firefox profile found, skipping OpenSC configuration (will be configured on first Firefox launch)"
+    return 0
+  fi
+
+  local pkcs11_file="${profile_dir}/pkcs11.txt"
+
+  # Skip if OpenSC already configured
+  if [[ -f "$pkcs11_file" ]] && grep -q "opensc-pkcs11.so" "$pkcs11_file" 2>/dev/null; then
+    show_progress info "OpenSC already configured in Firefox"
+    return 0
+  fi
+
+  # Add OpenSC module to pkcs11.txt
+  printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
+
+  show_progress success "Firefox configured for smart card support (OpenSC)"
+  return 0
+}
+
 # Brief: Install all APT packages, configure locale, and install fonts
 # Params: None
 # Uses: load_apt_packages, APT_PACKAGES_ALL (functions/global array)

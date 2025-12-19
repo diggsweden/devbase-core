@@ -71,13 +71,74 @@ function __citrix_download_file --description "Download a file"
     curl -sL -o "$dest" "$url"
 end
 
+function __citrix_prompt_yn --description "Prompt user for yes/no with default"
+    set -l prompt $argv[1]
+    set -l default $argv[2]
+    set -l prompt_text
+    
+    if test "$default" = "y"
+        set prompt_text "$prompt [Y/n]: "
+    else
+        set prompt_text "$prompt [y/N]: "
+    end
+    
+    read -l -P "$prompt_text" response
+    
+    if test -z "$response"
+        set response "$default"
+    end
+    
+    string match -qi 'y*' "$response"
+end
+
+function __citrix_configure_install_options --description "Prompt user for Citrix install options"
+    echo ""
+    __citrix_print_info "Citrix installation options:"
+    echo ""
+    
+    # App Protection (default: No)
+    if __citrix_prompt_yn "  Enable App Protection (anti-keylogging/screenshot protection)?" "n"
+        set -g __citrix_app_protection "yes"
+    else
+        set -g __citrix_app_protection "no"
+    end
+    
+    # Device Trust (no default - user must choose)
+    printf "  Enable Device Trust (endpoint compliance checking)? [y/n]: "
+    read -l dt_response
+    while not string match -qri '^[yn]' "$dt_response"
+        printf "  Please enter y or n: "
+        read -l dt_response
+    end
+    
+    if string match -qi 'y*' "$dt_response"
+        set -g __citrix_device_trust "yes"
+    else
+        set -g __citrix_device_trust "no"
+    end
+    
+    echo ""
+end
+
 function __citrix_install_deb --description "Install .deb package with apt"
     set -l deb_file $argv[1]
     set -l filename (basename "$deb_file")
     
     __citrix_print_info "Installing $filename..."
     
-    if sudo apt install -y "$deb_file" 2>&1 | tail -5
+    # Pre-configure Citrix options for non-interactive install
+    if string match -q '*icaclient*' "$filename"
+        # EULA acceptance (always accept) - required
+        echo "icaclient icaclient/accepteula select accept" | sudo debconf-set-selections
+        # App Protection (yes/no)
+        echo "icaclient app_protection/install_app_protection select $__citrix_app_protection" | sudo debconf-set-selections
+        # Device Trust (yes/no) - added in version 2503/25.03
+        # Try both possible key formats
+        echo "icaclient app_protection/install_device_trust select $__citrix_device_trust" | sudo debconf-set-selections 2>/dev/null
+        echo "icaclient icaclient/install_device_trust select $__citrix_device_trust" | sudo debconf-set-selections 2>/dev/null
+    end
+    
+    if sudo DEBIAN_FRONTEND=noninteractive apt install -y "$deb_file" 2>&1 | tail -5
         __citrix_print_success "Installed $filename"
         return 0
     else
@@ -146,7 +207,9 @@ function devbase-citrix --description "Download and install Citrix Workspace App
     echo ""
     echo "Citrix Workspace App Installer"
     echo "==============================="
-    echo ""
+    
+    # Prompt user for installation options
+    __citrix_configure_install_options
     
     # Create temp directory
     mkdir -p "$__citrix_download_dir"

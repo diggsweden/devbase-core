@@ -1038,8 +1038,8 @@ toc::[]
 |
 
 |link:https://www.mozilla.org/firefox/[firefox]
-|Firefox web browser
-|snap
+|Firefox web browser (Mozilla APT repo, not snap, for smart card support)
+|apt (Mozilla)
 |MPL-2.0
 |✓
 |

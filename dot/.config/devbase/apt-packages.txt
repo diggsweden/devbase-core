@@ -105,6 +105,11 @@ pkg-config
 # Non-WSL specific packages (power management, encryption, smartcard)
 dislocker  # @skip-wsl BitLocker drive support (NTFS encrypted volumes)
 pcscd      # @skip-wsl PC/SC smart card daemon for hardware tokens
+pcsc-tools # @skip-wsl Smart card testing and debugging tools
+opensc     # @skip-wsl Smart card utilities with PKCS#15 support
+opensc-pkcs11 # @skip-wsl Smart card PKCS#11 module
+libccid    # @skip-wsl USB CCID smart card reader driver
+cardpeek   # @skip-wsl Smart card data exploration tool
 tlp        # @skip-wsl Power management for laptops
 tlp-rdw    # @skip-wsl Power management daemon
 

@@ -124,3 +124,6 @@ jq = "jq-1.8.1"
 
 # File managers
 "aqua:gokcehan/lf" = "r38"
+
+# Testing tools
+"aqua:bats-core/bats-core" = "1.13.0"

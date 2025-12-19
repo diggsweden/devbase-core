@@ -242,6 +242,14 @@ devbase-citrix --help   # Show help
 
 Installs `icaclient` and `ctxusb` packages. For smart card support, enable pcscd: `sudo systemctl enable --now pcscd`
 
+**devbase-firefox-opensc** - Configure Firefox for smart card support (non-WSL only):
+
+```bash
+devbase-firefox-opensc  # Add OpenSC PKCS#11 module to Firefox
+```
+
+Enables smart card authentication in Firefox. Run after first Firefox launch if profile didn't exist during installation.
+
 **Automatic Environment Setup:**
 
 - Starship prompt with Git integration
@@ -2569,6 +2577,8 @@ Open-source web browser with strong privacy protections and comprehensive develo
 Independent rendering engine (not Chromium-based) useful for cross-browser testing.
 Provides built-in developer tools for debugging, profiling, and testing web applications.
 
+DevBase installs Firefox from Mozilla's official APT repository (not Ubuntu's snap package) for full smart card/PKCS#11 support.
+
 #### Firefox Key Commands
 
 - **New instance**: `firefox --new-instance`
@@ -2576,6 +2586,30 @@ Provides built-in developer tools for debugging, profiling, and testing web appl
 - **Private window**: `firefox --private-window`
 - **Profile manager**: `firefox -P`
 - **Safe mode**: `firefox --safe-mode`
+
+#### Smart Card Support
+
+Firefox is configured to use OpenSC for smart card authentication (non-WSL only).
+
+**devbase-firefox-opensc** - Configure Firefox for smart card support:
+
+```bash
+devbase-firefox-opensc  # Configure OpenSC PKCS#11 module
+```
+
+This command:
+
+- Adds OpenSC PKCS#11 module to Firefox's security devices
+- Enables smart card authentication for websites requiring client certificates
+- Requires `pcscd` service running: `sudo systemctl enable --now pcscd`
+
+**Note**: If Firefox was just installed, launch it once to create a profile, then run `devbase-firefox-opensc`.
+
+To verify smart card is detected:
+
+1. Insert your smart card
+2. Open Firefox → Settings → Privacy & Security → Security Devices
+3. You should see "OpenSC" with your card reader listed
 
 **Learn more**:
 

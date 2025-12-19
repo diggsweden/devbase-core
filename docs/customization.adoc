@@ -476,7 +476,7 @@ Create `devbase-custom-config/packages/snap-packages.txt`:
 ghostty --classic
 
 # Web browsers
-firefox
+# Note: Firefox installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
 chromium
 
 # Kubernetes (local development)

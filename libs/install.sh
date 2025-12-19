@@ -600,6 +600,8 @@ handle_wsl_restart() {
 download_and_install_tools() {
   install_apt_packages || die "Failed to install APT packages"
   sudo_refresh
+  install_firefox_deb || show_progress warning "Firefox installation failed (continuing)"
+  sudo_refresh
   install_snap_packages || die "Failed to install snap packages"
   sudo_refresh
   install_mise_and_tools || die "Failed to install mise and development tools"

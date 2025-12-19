@@ -248,7 +248,7 @@ collect-user-preferences.sh   # Interactive prompts
 # Installation
 install.sh                    # Main orchestrator
 install-apt.sh                # APT packages (security, containers, etc.)
-install-snap.sh               # Snap packages (ghostty, firefox, chromium)
+install-snap.sh               # Snap packages (ghostty, chromium)
 install-mise.sh               # mise tool manager
 install-custom.sh             # Custom binaries (oc, kubectl, dbeaver, intellij, etc.)
 install-certificates.sh       # CA certificate installation

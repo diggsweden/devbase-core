@@ -1078,7 +1078,8 @@ check_snap_packages() {
   installed_snaps=$(snap list 2>/dev/null)
 
   # Snap packages are managed by install-snap.sh, not custom-tools.yaml
-  local snap_tools=(ghostty firefox chromium microk8s)
+  # Note: Firefox is installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
+  local snap_tools=(ghostty chromium microk8s)
 
   for snap in "${snap_tools[@]}"; do
     snap_total=$((snap_total + 1))
@@ -1147,6 +1148,21 @@ check_custom_tools() {
     custom_installed=$((custom_installed + 1))
   else
     print_check "info" "IntelliJ IDEA Ultimate (optional, not installed)"
+  fi
+
+  # Firefox (Mozilla APT repo, not snap)
+  custom_total=$((custom_total + 1))
+  if has_command "firefox"; then
+    local firefox_source
+    firefox_source=$(apt-cache policy firefox 2>/dev/null | grep -A1 '^\*\*\*' | tail -1 || echo "")
+    if [[ "$firefox_source" == *"packages.mozilla.org"* ]]; then
+      print_check "pass" "Firefox (Mozilla APT repo)"
+    else
+      print_check "warn" "Firefox (not from Mozilla repo - smart cards may not work)"
+    fi
+    custom_installed=$((custom_installed + 1))
+  else
+    print_check "fail" "Firefox (Web browser)"
   fi
 
   # VS Code

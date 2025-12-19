@@ -149,12 +149,14 @@ EOF
 }
 
 @test "configure_snap_proxy does nothing when no proxy configured" {
-  source "${DEVBASE_ROOT}/libs/install-snap.sh"
-  
-  unset DEVBASE_PROXY_HOST
-  unset DEVBASE_PROXY_PORT
-  
-  run configure_snap_proxy
+  run run_isolated "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/install-snap.sh'
+    configure_snap_proxy
+  "
   assert_success
 }
 

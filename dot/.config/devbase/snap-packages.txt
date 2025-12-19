@@ -12,7 +12,7 @@
 ghostty --classic # @skip-wsl
 
 # Web browsers
-firefox
+# Note: Firefox installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
 chromium
 
 # Kubernetes (local development)

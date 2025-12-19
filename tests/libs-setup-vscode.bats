@@ -181,23 +181,24 @@ teardown() {
 }
 
 @test "_detect_wsl_distro returns WSL_DISTRO_NAME when set" {
-  source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
+  run run_as_wsl "
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh'
+    _detect_wsl_distro
+  " "Ubuntu-22.04"
   
-  export WSL_DISTRO_NAME="Ubuntu-22.04"
-  
-  result=$(_detect_wsl_distro)
-  [[ "$result" == "Ubuntu-22.04" ]]
+  [[ "$output" == "Ubuntu-22.04" ]]
 }
 
 @test "_detect_wsl_distro falls back to os-release" {
-  source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
-  
-  unset WSL_DISTRO_NAME
-  
   echo 'NAME="Ubuntu"' > "${TEST_DIR}/os-release"
   
-  result=$(_detect_wsl_distro)
-  [[ "$result" =~ Ubuntu ]]
+  run run_isolated "
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh'
+    result=\$(_detect_wsl_distro)
+    echo \"\$result\"
+  "
+  
+  [[ "$output" =~ Ubuntu ]]
 }
 
 @test "_get_vscode_settings_dir detects vscode-server" {

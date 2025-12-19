@@ -88,6 +88,79 @@ setup_isolated_home() {
 }
 
 # =============================================================================
+# Isolated Command Execution
+# =============================================================================
+
+# Run a bash command in a clean environment, preserving only essential variables
+# Usage: run_isolated <bash_command>
+# Example: run_isolated "source lib.sh && my_function"
+# Clears: proxy vars, curl opts, WSL vars, and other env pollution
+run_isolated() {
+  local cmd="$1"
+  env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TERM="${TERM:-xterm}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${DEVBASE_DOT:-}" \
+    TEST_DIR="${TEST_DIR:-}" \
+    bash -c "$cmd"
+}
+
+# Run a bash command simulating WSL environment
+# Usage: run_as_wsl <bash_command> [wsl_distro_name]
+# Sets WSL_DISTRO_NAME to simulate running in WSL
+run_as_wsl() {
+  local cmd="$1"
+  local distro="${2:-Ubuntu}"
+  env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TERM="${TERM:-xterm}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${DEVBASE_DOT:-}" \
+    TEST_DIR="${TEST_DIR:-}" \
+    WSL_DISTRO_NAME="$distro" \
+    bash -c "$cmd"
+}
+
+# Run a bash command simulating WSL environment via WSL_INTEROP
+# Usage: run_as_wsl_interop <bash_command>
+run_as_wsl_interop() {
+  local cmd="$1"
+  env -i \
+    HOME="$HOME" \
+    PATH="$PATH" \
+    TERM="${TERM:-xterm}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${DEVBASE_DOT:-}" \
+    TEST_DIR="${TEST_DIR:-}" \
+    WSL_INTEROP="/run/WSL/some_value" \
+    bash -c "$cmd"
+}
+
+# Run a bash command with proxy environment configured
+# Usage: run_with_proxy <bash_command> [proxy_host] [proxy_port] [extra_path]
+run_with_proxy() {
+  local cmd="$1"
+  local proxy_host="${2:-proxy.example.com}"
+  local proxy_port="${3:-8080}"
+  local extra_path="${4:-}"
+  local use_path="$PATH"
+  [[ -n "$extra_path" ]] && use_path="${extra_path}:${PATH}"
+  env -i \
+    HOME="$HOME" \
+    PATH="$use_path" \
+    TERM="${TERM:-xterm}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${DEVBASE_DOT:-}" \
+    TEST_DIR="${TEST_DIR:-}" \
+    DEVBASE_PROXY_HOST="$proxy_host" \
+    DEVBASE_PROXY_PORT="$proxy_port" \
+    bash -c "$cmd"
+}
+
+# =============================================================================
 # Git Repository Helpers
 # =============================================================================
 

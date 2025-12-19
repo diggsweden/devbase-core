@@ -63,13 +63,11 @@ teardown() {
 }
 
 @test "is_wsl detects WSL environment via WSL_DISTRO_NAME" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_DISTRO_NAME='Ubuntu-22.04'
+  run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
-  "
+  " "Ubuntu-22.04"
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
@@ -77,9 +75,7 @@ teardown() {
 }
 
 @test "is_wsl detects WSL environment via WSL_INTEROP" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_INTEROP='/run/WSL/some_value'
+  run run_as_wsl_interop "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
@@ -91,10 +87,7 @@ teardown() {
 }
 
 @test "is_wsl returns false when not in WSL" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    unset WSL_DISTRO_NAME
-    unset WSL_INTEROP
+  run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     # Only check env vars, skip /proc checks since we can't mock them
@@ -125,9 +118,7 @@ teardown() {
 }
 
 @test "get_wsl_version returns empty when not in WSL" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    unset WSL_DISTRO_NAME
+  run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     result=\$(get_wsl_version)
@@ -151,12 +142,8 @@ echo "WSLg version: 1.0.65"
 SCRIPT
   chmod +x "${mock_wsl_dir}/wsl.exe"
   
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_DISTRO_NAME='Ubuntu'
+  run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    
-    # Source the file but override paths for testing
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     
     # Override get_wsl_version to use our mock path
@@ -190,9 +177,7 @@ SCRIPT
 }
 
 @test "get_wsl_version handles missing wsl.exe" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_DISTRO_NAME='Ubuntu'
+  run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     
@@ -249,9 +234,7 @@ SCRIPT
 }
 
 @test "detect_environment sets _DEVBASE_ENV to ubuntu on non-WSL" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    unset WSL_DISTRO_NAME WSL_INTEROP
+  run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
@@ -266,9 +249,7 @@ SCRIPT
 }
 
 @test "detect_environment sets _DEVBASE_ENV to wsl-ubuntu on WSL" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_DISTRO_NAME='Ubuntu'
+  run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
@@ -350,9 +331,7 @@ SCRIPT
 }
 
 @test "get_secure_boot_mode returns wsl on WSL" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export WSL_DISTRO_NAME='Ubuntu'
+  run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     get_secure_boot_mode

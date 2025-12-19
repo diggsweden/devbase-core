@@ -111,10 +111,8 @@ teardown() {
 }
 
 @test "configure_curl_for_proxy does nothing when no proxy configured" {
-  unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY 2>/dev/null || true
-  
-  run --separate-stderr bash -c "
-    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+  # Use run_isolated helper for clean environment
+  run --separate-stderr run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
@@ -253,9 +251,13 @@ teardown() {
 }
 
 @test "check_proxy_connectivity skips when no proxy configured" {
-  unset DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT 2>/dev/null || true
-  
-  run --separate-stderr check_proxy_connectivity
+  run --separate-stderr run_isolated "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    check_proxy_connectivity
+  "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
