@@ -925,18 +925,24 @@ check_apt_packages() {
   local apt_total=0
 
   # Get all installed packages once (much faster than per-package dpkg calls)
-  local installed_packages
-  installed_packages=$(dpkg-query -W -f='${Package}\n' 2>/dev/null)
+  # Use newline as delimiter and store in array for reliable matching
+  local -A installed_set
+  while IFS= read -r pkg; do
+    installed_set["$pkg"]=1
+  done < <(dpkg-query -W -f='${Package}\n' 2>/dev/null)
 
   # Sort package names for consistent output
   local sorted_packages
   mapfile -t sorted_packages < <(for pkg in "${!APT_PACKAGES[@]}"; do echo "$pkg"; done | sort)
 
   for pkg in "${sorted_packages[@]}"; do
+    local requirement="${APT_PACKAGES[$pkg]}"
     apt_total=$((apt_total + 1))
-    if echo "$installed_packages" | grep -qx "$pkg"; then
+    if [[ -v installed_set["$pkg"] ]]; then
       apt_installed=$((apt_installed + 1))
       print_check "pass" "$pkg"
+    elif [[ "$requirement" == "optional" ]]; then
+      print_check "info" "$pkg (optional, not installed)"
     else
       print_check "fail" "$pkg"
     fi
@@ -1153,7 +1159,7 @@ check_custom_tools() {
   custom_total=$((custom_total + 1))
   if has_command "firefox"; then
     local firefox_source
-    firefox_source=$(apt-cache policy firefox 2>/dev/null | grep -A1 '^\*\*\*' | tail -1 || echo "")
+    firefox_source=$(apt-cache policy firefox 2>/dev/null | grep -A1 '\*\*\*' | tail -1 || echo "")
     if [[ "$firefox_source" == *"packages.mozilla.org"* ]]; then
       print_check "pass" "Firefox (Mozilla APT repo)"
     else
@@ -1714,14 +1720,12 @@ check_ufw_firewall_status() {
   printf "\n"
   print_header "Extra Security Check: UFW Firewall"
 
-  # Try non-interactive sudo first
-  local ufw_status=$(sudo -n ufw status 2>&1 | head -1)
-  if [[ "$ufw_status" == *"sudo"* ]] || [[ "$ufw_status" == *"lösenord"* ]] || [[ "$ufw_status" == *"password"* ]]; then
-    # Sudo requires password - can't check without interaction
-    printf "  %b%s%b UFW status check requires sudo credentials\n" "${CYAN}" "$INFO" "${NC}"
-    printf "  %b   To check manually: sudo ufw status%b\n" "${DIM}" "${NC}"
-  elif [[ "$ufw_status" == *"active"* ]]; then
-    printf "  %b%s%b UFW firewall is active\n" "${GREEN}" "$CHECK" "${NC}"
+  # Check UFW service status via systemctl (doesn't require sudo)
+  if systemctl is-active --quiet ufw 2>/dev/null; then
+    printf "  %b%s%b UFW firewall service is active\n" "${GREEN}" "$CHECK" "${NC}"
+  elif systemctl is-enabled --quiet ufw 2>/dev/null; then
+    printf "  %b%s%b WARNING: UFW firewall is enabled but not running\n" "${YELLOW}" "$WARN" "${NC}"
+    printf "  %b   Run: sudo systemctl start ufw%b\n" "${DIM}" "${NC}"
   else
     printf "  %b%s%b WARNING: UFW firewall is INACTIVE\n" "${YELLOW}" "$WARN" "${NC}"
     printf "  %b   Action required: Enable UFW firewall%b\n" "${YELLOW}" "${NC}"
