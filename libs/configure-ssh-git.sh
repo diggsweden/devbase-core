@@ -232,7 +232,7 @@ configure_git_proxy() {
 # Params: None
 # Uses: DEVBASE_GIT_EMAIL, HOME (globals)
 # Returns: 0 if configured, 1 if SSH key doesn't exist
-# Side-effects: Sets global git config, creates allowed_signers file
+# Side-effects: Sets global git config, creates/updates allowed_signers file
 configure_git_signing() {
   validate_var_set "HOME" || return 1
   validate_var_set "DEVBASE_GIT_EMAIL" || return 1
@@ -247,9 +247,15 @@ configure_git_signing() {
 
   local allowed_signers="${XDG_CONFIG_HOME:-$HOME/.config}/ssh/allowed_signers"
   mkdir -p "$(dirname "$allowed_signers")"
+
   local git_pub_signingkey
   git_pub_signingkey=$(cat "$git_signing_key")
-  echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >"$allowed_signers"
+
+  # Append key if not already in allowed_signers
+  if [[ ! -f "$allowed_signers" ]] || ! grep -qF "$git_pub_signingkey" "$allowed_signers"; then
+    echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >>"$allowed_signers"
+  fi
+
   git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
 
   return 0
