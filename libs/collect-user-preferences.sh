@@ -87,6 +87,68 @@ setup_non_interactive_mode() {
   fi
 }
 
+# Brief: Load saved preferences from previous installation
+# Params: None
+# Uses: DEVBASE_CONFIG_DIR (global)
+# Modifies: Exports multiple DEVBASE_* environment variables
+# Returns: 0 on success, 1 if preferences file not found
+# Side-effects: Reads preferences.yaml, exports variables, prints summary
+load_saved_preferences() {
+  local prefs_file="${DEVBASE_CONFIG_DIR}/preferences.yaml"
+
+  if [[ ! -f "$prefs_file" ]]; then
+    return 1
+  fi
+
+  # yq is installed via mise, should be available during updates
+  if ! command -v yq &>/dev/null; then
+    show_progress warning "yq not found, cannot load preferences"
+    return 1
+  fi
+
+  printf "\n"
+  printf "%bLoading saved preferences from previous installation...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+
+  # Parse YAML preferences file using yq
+  # Note: yq returns 'null' for missing keys, we convert to empty string
+  _yq_read() {
+    local val
+    val=$(yq "$1" "$2")
+    [[ "$val" == "null" ]] && echo "" || echo "$val"
+  }
+
+  DEVBASE_THEME=$(_yq_read '.theme' "$prefs_file")
+  DEVBASE_FONT=$(_yq_read '.font' "$prefs_file")
+  DEVBASE_GIT_AUTHOR=$(_yq_read '.git.author' "$prefs_file")
+  DEVBASE_GIT_EMAIL=$(_yq_read '.git.email' "$prefs_file")
+  DEVBASE_SSH_KEY_NAME=$(_yq_read '.ssh.key_name' "$prefs_file")
+  EDITOR=$(_yq_read '.editor.default' "$prefs_file")
+  VISUAL="$EDITOR"
+  DEVBASE_VSCODE_INSTALL=$(_yq_read '.vscode.install' "$prefs_file")
+  DEVBASE_VSCODE_EXTENSIONS=$(_yq_read '.vscode.extensions' "$prefs_file")
+  DEVBASE_VSCODE_NEOVIM=$(_yq_read '.vscode.neovim_extension' "$prefs_file")
+  DEVBASE_INSTALL_LAZYVIM=$(_yq_read '.ide.lazyvim' "$prefs_file")
+  DEVBASE_INSTALL_INTELLIJ=$(_yq_read '.ide.intellij' "$prefs_file")
+  DEVBASE_INSTALL_JMC=$(_yq_read '.ide.jmc' "$prefs_file")
+  DEVBASE_ZELLIJ_AUTOSTART=$(_yq_read '.tools.zellij_autostart' "$prefs_file")
+  DEVBASE_ENABLE_GIT_HOOKS=$(_yq_read '.tools.git_hooks' "$prefs_file")
+
+  export DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL DEVBASE_SSH_KEY_NAME
+  export EDITOR VISUAL DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS DEVBASE_VSCODE_NEOVIM
+  export DEVBASE_INSTALL_LAZYVIM DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
+  export DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
+
+  # For updates, skip SSH key generation - keep existing key
+  export DEVBASE_SSH_KEY_ACTION="skip"
+
+  printf "  Theme: %s\n" "$DEVBASE_THEME"
+  printf "  Git: %s <%s>\n" "$DEVBASE_GIT_AUTHOR" "$DEVBASE_GIT_EMAIL"
+  printf "  Editor: %s\n" "$EDITOR"
+
+  show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
+  return 0
+}
+
 # Brief: Prompt user for git author name with validation
 # Params: None
 # Uses: print_prompt, show_progress, DEVBASE_COLORS (functions/globals)
@@ -582,6 +644,11 @@ collect_tool_preferences() {
 collect_user_configuration() {
   if [[ "${NON_INTERACTIVE}" == "true" ]]; then
     setup_non_interactive_mode
+    return 0
+  fi
+
+  # Try to load saved preferences from previous installation (for updates)
+  if load_saved_preferences; then
     return 0
   fi
 

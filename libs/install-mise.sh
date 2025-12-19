@@ -295,7 +295,12 @@ install_mise_tools() {
   # We filter the npm:tree-sitter-cli warning since node isn't installed yet
   show_progress info "Installing core language runtimes..."
   local core_install_output
+  local mise_server_error=false
   if ! core_install_output=$(run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1); then
+    # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
+    if echo "$core_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
+      mise_server_error=true
+    fi
     # Filter out expected warning about npm:tree-sitter-cli not being resolvable yet
     echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
     show_progress warning "Some core runtimes may have failed (will retry with full install)"
@@ -320,8 +325,15 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   # Run mise install with progress bar visible (no stderr redirection)
   # mise handles checksum verification internally and will fail if checksums don't match
-  if ! run_mise_from_home_dir install --yes; then
-    die "Mise tool installation failed"
+  local full_install_output
+  if ! full_install_output=$(run_mise_from_home_dir install --yes 2>&1); then
+    echo "$full_install_output"
+    # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
+    if echo "$full_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
+      mise_server_error=true
+    fi
+  else
+    echo "$full_install_output"
   fi
 
   # Verify critical tools are present
@@ -338,6 +350,12 @@ install_mise_tools() {
   done
 
   if [[ ${#missing[@]} -gt 0 ]]; then
+    if [[ "$mise_server_error" == "true" ]]; then
+      show_progress error "Missing tools (${missing[*]}) due to mise server errors (HTTP 5xx)"
+      show_progress warning "This is a temporary issue with mise infrastructure. Please try again later:"
+      show_progress info "  mise install ${missing[*]}"
+      die "Setup cannot continue without critical development tools"
+    fi
     die "Missing critical development tools: ${missing[*]}"
   fi
 
