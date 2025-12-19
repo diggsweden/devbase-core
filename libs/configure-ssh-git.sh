@@ -245,7 +245,8 @@ configure_git_signing() {
   git config --global gpg.format ssh
   git config --global user.signingkey "$git_signing_key"
 
-  local allowed_signers="${HOME}/.ssh/allowed_signers"
+  local allowed_signers="${XDG_CONFIG_HOME:-$HOME/.config}/ssh/allowed_signers"
+  mkdir -p "$(dirname "$allowed_signers")"
   local git_pub_signingkey
   git_pub_signingkey=$(cat "$git_signing_key")
   echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >"$allowed_signers"

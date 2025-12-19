@@ -796,7 +796,6 @@ check_config_files() {
   local ssh_files=(
     "$SSH_CONFIG"
     "$HOME/.ssh/known_hosts"
-    "$HOME/.ssh/allowed_signers"
     "$CONFIG_HOME/ssh/user.config"
     "$CONFIG_HOME/ssh/allowed_signers"
   )

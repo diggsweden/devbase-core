@@ -454,7 +454,7 @@ DevBase configuration files are located in:
 - Global config: `~/.config/git/config` (DevBase managed)
 - Personal overrides: `~/.gitconfig` (preserved)
 - Global gitignore: `~/.config/git/.gitignore`
-- Allowed signers: `~/.ssh/allowed_signers`
+- Allowed signers: `~/.config/ssh/allowed_signers`
 
 === SSH
 - Main config: `~/.ssh/config` (DevBase managed)

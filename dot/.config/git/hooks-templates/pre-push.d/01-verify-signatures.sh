@@ -60,7 +60,18 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
     # Accept only "G" (good signature - works for both GPG and SSH)
     if [[ "$sig_status" != "G" ]]; then
-      printf "%b✗%b Commit %s is not signed or has invalid signature (status: %s)\n" "${RED}" "${NC}" "$commit" "$sig_status" >&2
+      # Provide status-specific error messages
+      case "$sig_status" in
+      U) status_msg="untrusted signature - add key to ~/.config/ssh/allowed_signers or GPG trustdb" ;;
+      B) status_msg="bad signature - signature verification failed" ;;
+      N) status_msg="not signed" ;;
+      E) status_msg="cannot verify - signing key not found" ;;
+      X) status_msg="good signature but key has expired" ;;
+      Y) status_msg="good signature but expired key was valid at signing time" ;;
+      R) status_msg="good signature but key has been revoked" ;;
+      *) status_msg="unknown signature status: $sig_status" ;;
+      esac
+      printf "%b✗%b Commit %s %s\n" "${RED}" "${NC}" "$commit" "$status_msg" >&2
       failed=1
     fi
   done <<<"$commits"

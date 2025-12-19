@@ -321,3 +321,71 @@ EOF
   # Should contain the host key even though file has no trailing newline
   assert_output --partial "example.com ssh-ed25519"
 }
+
+@test "configure_git_signing creates allowed_signers in XDG config dir" {
+  local test_home="${TEST_DIR}/home"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  
+  # Create a mock signing key
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@example.com" > "${test_home}/.ssh/id_ed25519.pub"
+  
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+# Accept all git config commands
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  run bash -c "
+    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_NAME='id_ed25519'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    configure_git_signing
+    
+    test -f '${test_home}/.config/ssh/allowed_signers' && echo 'FILE_EXISTS'
+    cat '${test_home}/.config/ssh/allowed_signers'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "FILE_EXISTS"
+  assert_output --partial "test@example.com"
+  assert_output --partial "ssh-ed25519"
+}
+
+@test "configure_git_signing fails when signing key does not exist" {
+  local test_home="${TEST_DIR}/home"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  
+  # No signing key created
+  
+  run bash -c "
+    export PATH='/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_NAME='id_ed25519'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    configure_git_signing
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_failure
+}
