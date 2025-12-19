@@ -1,2 +1,0 @@
-# This file contains trusted signers as per defintion when signing with ssh and Git
-# It will also contain the signing users own public key

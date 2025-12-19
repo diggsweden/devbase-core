@@ -251,8 +251,16 @@ configure_git_signing() {
   local git_pub_signingkey
   git_pub_signingkey=$(cat "$git_signing_key")
 
+  # Create file with header if it doesn't exist
+  if [[ ! -f "$allowed_signers" ]]; then
+    cat >"$allowed_signers" <<'EOF'
+# SSH allowed signers for Git commit verification
+# Add trusted signers: email ssh-key-type key-data [comment]
+EOF
+  fi
+
   # Append key if not already in allowed_signers
-  if [[ ! -f "$allowed_signers" ]] || ! grep -qF "$git_pub_signingkey" "$allowed_signers"; then
+  if ! grep -qF "$git_pub_signingkey" "$allowed_signers"; then
     echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >>"$allowed_signers"
   fi
 

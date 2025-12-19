@@ -48,7 +48,6 @@ SPDX-License-Identifier = "LGPL-2.1-or-later"
 path = [
   "dot/.ssh/config",
   "dot/.config/ssh/user.config",
-  "dot/.config/ssh/allowed_signers",
   "dot/.ssh/known_hosts",
   "LICENSE",
 ]

@@ -430,3 +430,51 @@ SCRIPT
   assert_success
   assert_output "1"
 }
+
+@test "configure_git_signing preserves existing signers when adding new key" {
+  local test_home="${TEST_DIR}/home"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+  
+  # Create a mock signing key (different from existing)
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINewKey test@example.com" > "${test_home}/.ssh/id_ed25519.pub"
+  
+  # Pre-populate allowed_signers with a DIFFERENT existing key
+  echo "other@example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOtherKey other@example.com" > "${test_home}/.config/ssh/allowed_signers"
+  
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+  
+  bash -c "
+    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_NAME='id_ed25519'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+    
+    configure_git_signing
+  " >/dev/null 2>&1
+  
+  # Should have 2 lines now (existing + new)
+  run wc -l < "${test_home}/.config/ssh/allowed_signers"
+  assert_success
+  assert_output "2"
+  
+  # Verify both keys are present
+  run grep -c "OtherKey" "${test_home}/.config/ssh/allowed_signers"
+  assert_success
+  assert_output "1"
+  
+  run grep -c "NewKey" "${test_home}/.config/ssh/allowed_signers"
+  assert_success
+  assert_output "1"
+}
