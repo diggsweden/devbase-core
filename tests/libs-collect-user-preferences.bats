@@ -172,3 +172,319 @@ teardown() {
   assert_success
   assert_output "john.doe"
 }
+
+# Helper to create a test preferences file
+_create_test_preferences_yaml() {
+  local prefs_file="$1"
+  cat >"$prefs_file" <<'EOF'
+# DevBase User Preferences
+# Generated during installation: Thu Jan 01 2025
+
+theme: catppuccin-mocha
+font: JetBrainsMono
+
+git:
+  author: Test User
+  email: test.user@example.com
+
+ssh:
+  key_action: new
+  key_name: id_ed25519_devbase
+
+editor:
+  default: nvim
+  shell_bindings: vim
+
+vscode:
+  install: true
+  extensions: true
+  neovim_extension: true
+
+ide:
+  lazyvim: true
+  intellij: false
+  jmc: false
+
+tools:
+  zellij_autostart: true
+  git_hooks: true
+EOF
+}
+
+@test "load_saved_preferences returns 1 when preferences file missing" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${BATS_TEST_TMPDIR}/config'
+    mkdir -p \"\$DEVBASE_CONFIG_DIR\"
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences
+  "
+  
+  assert_failure
+}
+
+@test "load_saved_preferences loads theme from preferences file" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"\$DEVBASE_THEME\"
+  "
+  
+  assert_success
+  assert_output "catppuccin-mocha"
+}
+
+@test "load_saved_preferences loads git author from preferences file" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"\$DEVBASE_GIT_AUTHOR\"
+  "
+  
+  assert_success
+  assert_output "Test User"
+}
+
+@test "load_saved_preferences loads editor and sets VISUAL" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"EDITOR=\$EDITOR VISUAL=\$VISUAL\"
+  "
+  
+  assert_success
+  assert_output "EDITOR=nvim VISUAL=nvim"
+}
+
+@test "load_saved_preferences sets SSH key action to skip" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"\$DEVBASE_SSH_KEY_ACTION\"
+  "
+  
+  assert_success
+  assert_output "skip"
+}
+
+@test "load_saved_preferences loads all IDE preferences" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"lazyvim=\$DEVBASE_INSTALL_LAZYVIM intellij=\$DEVBASE_INSTALL_INTELLIJ jmc=\$DEVBASE_INSTALL_JMC\"
+  "
+  
+  assert_success
+  assert_output "lazyvim=true intellij=false jmc=false"
+}
+
+@test "load_saved_preferences loads all tool preferences" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"zellij=\$DEVBASE_ZELLIJ_AUTOSTART hooks=\$DEVBASE_ENABLE_GIT_HOOKS\"
+  "
+  
+  assert_success
+  assert_output "zellij=true hooks=true"
+}
+
+@test "load_saved_preferences loads all vscode preferences" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  _create_test_preferences_yaml "$prefs_dir/preferences.yaml"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"install=\$DEVBASE_VSCODE_INSTALL ext=\$DEVBASE_VSCODE_EXTENSIONS neovim=\$DEVBASE_VSCODE_NEOVIM\"
+  "
+  
+  assert_success
+  assert_output "install=true ext=true neovim=true"
+}
+
+@test "write_user_preferences creates preferences file" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    export DEVBASE_THEME='gruvbox-dark'
+    export DEVBASE_FONT='FiraCode'
+    export DEVBASE_GIT_AUTHOR='Write Test'
+    export DEVBASE_GIT_EMAIL='write@test.com'
+    export DEVBASE_SSH_KEY_ACTION='new'
+    export DEVBASE_SSH_KEY_NAME='id_test'
+    export EDITOR='nano'
+    export DEVBASE_VSCODE_INSTALL='false'
+    export DEVBASE_VSCODE_EXTENSIONS='false'
+    export DEVBASE_VSCODE_NEOVIM='false'
+    export DEVBASE_INSTALL_LAZYVIM='false'
+    export DEVBASE_INSTALL_INTELLIJ='true'
+    export DEVBASE_INSTALL_JMC='true'
+    export DEVBASE_ZELLIJ_AUTOSTART='false'
+    export DEVBASE_ENABLE_GIT_HOOKS='false'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    write_user_preferences >/dev/null 2>&1
+    cat '${prefs_dir}/preferences.yaml'
+  "
+  
+  assert_success
+  assert_output --partial "theme: gruvbox-dark"
+  assert_output --partial "font: FiraCode"
+  assert_output --partial "author: Write Test"
+  assert_output --partial "email: write@test.com"
+  assert_output --partial "intellij: true"
+}
+
+@test "write then load preserves all preferences" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    
+    # Set preferences to write
+    export DEVBASE_THEME='nord'
+    export DEVBASE_FONT='Hack'
+    export DEVBASE_GIT_AUTHOR='Round Trip'
+    export DEVBASE_GIT_EMAIL='roundtrip@test.com'
+    export DEVBASE_SSH_KEY_ACTION='existing'
+    export DEVBASE_SSH_KEY_NAME='id_roundtrip'
+    export EDITOR='nvim'
+    export DEVBASE_VSCODE_INSTALL='true'
+    export DEVBASE_VSCODE_EXTENSIONS='true'
+    export DEVBASE_VSCODE_NEOVIM='false'
+    export DEVBASE_INSTALL_LAZYVIM='true'
+    export DEVBASE_INSTALL_INTELLIJ='true'
+    export DEVBASE_INSTALL_JMC='false'
+    export DEVBASE_ZELLIJ_AUTOSTART='true'
+    export DEVBASE_ENABLE_GIT_HOOKS='false'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    # Write preferences
+    write_user_preferences >/dev/null 2>&1
+    
+    # Clear variables
+    unset DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL
+    unset EDITOR DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS DEVBASE_VSCODE_NEOVIM
+    unset DEVBASE_INSTALL_LAZYVIM DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
+    unset DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
+    
+    # Load preferences back
+    load_saved_preferences >/dev/null 2>&1
+    
+    # Verify all values (SSH_KEY_ACTION becomes 'skip' on load)
+    echo \"theme=\$DEVBASE_THEME\"
+    echo \"font=\$DEVBASE_FONT\"
+    echo \"author=\$DEVBASE_GIT_AUTHOR\"
+    echo \"email=\$DEVBASE_GIT_EMAIL\"
+    echo \"editor=\$EDITOR\"
+    echo \"visual=\$VISUAL\"
+    echo \"vscode_install=\$DEVBASE_VSCODE_INSTALL\"
+    echo \"vscode_ext=\$DEVBASE_VSCODE_EXTENSIONS\"
+    echo \"vscode_neovim=\$DEVBASE_VSCODE_NEOVIM\"
+    echo \"lazyvim=\$DEVBASE_INSTALL_LAZYVIM\"
+    echo \"intellij=\$DEVBASE_INSTALL_INTELLIJ\"
+    echo \"jmc=\$DEVBASE_INSTALL_JMC\"
+    echo \"zellij=\$DEVBASE_ZELLIJ_AUTOSTART\"
+    echo \"hooks=\$DEVBASE_ENABLE_GIT_HOOKS\"
+    echo \"ssh_action=\$DEVBASE_SSH_KEY_ACTION\"
+  "
+  
+  assert_success
+  assert_output --partial "theme=nord"
+  assert_output --partial "font=Hack"
+  assert_output --partial "author=Round Trip"
+  assert_output --partial "email=roundtrip@test.com"
+  assert_output --partial "editor=nvim"
+  assert_output --partial "visual=nvim"
+  assert_output --partial "vscode_install=true"
+  assert_output --partial "vscode_ext=true"
+  assert_output --partial "vscode_neovim=false"
+  assert_output --partial "lazyvim=true"
+  assert_output --partial "intellij=true"
+  assert_output --partial "jmc=false"
+  assert_output --partial "zellij=true"
+  assert_output --partial "hooks=false"
+  assert_output --partial "ssh_action=skip"
+}

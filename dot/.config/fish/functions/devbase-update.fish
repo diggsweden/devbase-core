@@ -169,6 +169,11 @@ function __devbase_update_core --description "Update core to latest version"
     # Checkout the new version
     git -C "$__devbase_core_dir" checkout "$latest" --quiet
 
+    # Trust mise config to avoid trust prompt during setup
+    if command -q mise; and test -f "$__devbase_core_dir/.mise.toml"
+        mise trust "$__devbase_core_dir/.mise.toml"
+    end
+
     __devbase_update_print_success "Core updated to $latest"
 end
 
