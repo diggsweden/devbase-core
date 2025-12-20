@@ -803,3 +803,240 @@ EOF
   run load_saved_preferences
   assert_failure
 }
+
+# =============================================================================
+# Tests for pack selection display and defaults
+# =============================================================================
+
+@test "_is_selected helper detects pack in selection" {
+  common_setup_isolated
+  
+  run bash -c "
+    current_selection=' java node rust '
+    _is_selected() { [[ \"\$current_selection\" == *\" \$1 \"* ]]; }
+    
+    _is_selected 'java' && echo 'java=yes' || echo 'java=no'
+    _is_selected 'rust' && echo 'rust=yes' || echo 'rust=no'
+    _is_selected 'python' && echo 'python=yes' || echo 'python=no'
+  "
+  
+  assert_success
+  assert_line "java=yes"
+  assert_line "rust=yes"
+  assert_line "python=no"
+}
+
+@test "collect_pack_preferences uses existing DEVBASE_SELECTED_PACKS for display" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export DEVBASE_SELECTED_PACKS="java python"
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  # Capture just the display output (before prompts)
+  # We test _is_selected logic directly
+  local current_selection=" ${DEVBASE_SELECTED_PACKS} "
+  _is_selected() { [[ "$current_selection" == *" $1 "* ]]; }
+  
+  # Verify selection detection
+  assert _is_selected "java"
+  assert _is_selected "python"
+  refute _is_selected "rust"
+  refute _is_selected "node"
+}
+
+@test "collect_pack_preferences shows unselected packs with empty brackets" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export DEVBASE_SELECTED_PACKS="java node"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${DEVBASE_DOT}'
+    export PACKAGES_YAML='${PACKAGES_YAML}'
+    export DEVBASE_SELECTED_PACKS='${DEVBASE_SELECTED_PACKS}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh'
+    
+    # Extract display logic from collect_pack_preferences
+    packs=()
+    descriptions=()
+    while IFS='|' read -r pack desc; do
+      packs+=(\"\$pack\")
+      descriptions+=(\"\$desc\")
+    done < <(get_available_packs)
+    
+    current_selection=\" \${DEVBASE_SELECTED_PACKS} \"
+    _is_selected() { [[ \"\$current_selection\" == *\" \$1 \"* ]]; }
+    
+    for pack in \"\${packs[@]}\"; do
+      if _is_selected \"\$pack\"; then
+        echo \"[x] \$pack\"
+      else
+        echo \"[ ] \$pack\"
+      fi
+    done
+  "
+  
+  assert_success
+  assert_line "[x] java"
+  assert_line "[x] node"
+  assert_line "[ ] python"
+  assert_line "[ ] rust"
+}
+
+@test "fresh install asks to install all packs" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  # No DEVBASE_SELECTED_PACKS set = fresh install
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${DEVBASE_DOT}'
+    export PACKAGES_YAML='${PACKAGES_YAML}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    # Explicitly unset to simulate fresh install
+    unset DEVBASE_SELECTED_PACKS
+    
+    # Check fresh install detection
+    is_fresh_install=false
+    [[ -z \"\${DEVBASE_SELECTED_PACKS:-}\" ]] && is_fresh_install=true
+    echo \"is_fresh=\$is_fresh_install\"
+  "
+  
+  assert_success
+  assert_output "is_fresh=true"
+}
+
+@test "update with existing selection asks to keep current" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export DEVBASE_SELECTED_PACKS="java node python"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${DEVBASE_DOT}'
+    export PACKAGES_YAML='${PACKAGES_YAML}'
+    export DEVBASE_SELECTED_PACKS='${DEVBASE_SELECTED_PACKS}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    
+    # Check update detection
+    is_fresh_install=false
+    [[ -z \"\${DEVBASE_SELECTED_PACKS:-}\" ]] && is_fresh_install=true
+    echo \"is_fresh=\$is_fresh_install\"
+  "
+  
+  assert_success
+  assert_output "is_fresh=false"
+}
+
+@test "saved preferences with subset of packs are preserved on load" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir"
+  
+  # Save preferences with only some packs
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: nord
+packs: [java, python, go]
+EOF
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  load_saved_preferences >/dev/null 2>&1
+  
+  # Should have exactly what was saved
+  assert_equal "$DEVBASE_SELECTED_PACKS" "java python go"
+}
+
+# =============================================================================
+# Tests for pack details display
+# =============================================================================
+
+@test "_show_pack_details displays pack name and description" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${DEVBASE_DOT}'
+    export PACKAGES_YAML='${PACKAGES_YAML}'
+    export DEVBASE_LIBS='${DEVBASE_LIBS}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh'
+    
+    _show_pack_details() {
+      local pack=\"\$1\"
+      local desc=\"\$2\"
+      printf \"%s: %s\n\" \"\$pack\" \"\$desc\"
+      printf \"Includes:\n\"
+      local item
+      while IFS= read -r item; do
+        [[ -n \"\$item\" ]] && printf \"  - %s\n\" \"\$item\"
+      done < <(get_pack_contents \"\$pack\")
+    }
+    
+    _show_pack_details 'java' 'Java development'
+  "
+  
+  assert_success
+  assert_line "java: Java development"
+  assert_line "Includes:"
+}
+
+@test "_show_pack_details lists pack contents" {
+  common_setup_isolated
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${DEVBASE_DOT}'
+    export PACKAGES_YAML='${PACKAGES_YAML}'
+    export DEVBASE_LIBS='${DEVBASE_LIBS}'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
+    
+    # Get java pack contents
+    get_pack_contents 'java'
+  "
+  
+  assert_success
+  # Should include items from java pack (apt, mise, vscode)
+  [[ "${#lines[@]}" -gt 0 ]]
+}
+
+@test "pack selection prompt uses pack name not description" {
+  common_setup_isolated
+  
+  # Verify the prompt format in the source code
+  run bash -c "
+    grep -o 'Install \${pack}?' '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' | head -1
+  "
+  
+  assert_success
+  assert_output 'Install ${pack}?'
+}

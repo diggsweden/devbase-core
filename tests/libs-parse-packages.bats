@@ -432,6 +432,79 @@ EOF
 }
 
 # =============================================================================
+# get_pack_contents tests
+# =============================================================================
+
+@test "get_pack_contents returns list of pack items" {
+  create_test_packages
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_pack_contents "java"
+  
+  assert_success
+  # java pack has apt, mise, custom, and vscode items
+  assert_line "default-jdk"
+  assert_line "java"
+  assert_line "maven"
+  assert_line "intellij"
+  assert_line "redhat.java"
+}
+
+@test "get_pack_contents returns empty for pack with no items" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  empty:
+    description: "Empty pack"
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_pack_contents "empty"
+  
+  assert_success
+  assert_output ""
+}
+
+@test "get_pack_contents lists all item types" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  test:
+    description: "Test pack"
+    apt:
+      pkg1: {}
+      pkg2: {}
+    mise:
+      tool1: {version: "1.0"}
+    vscode:
+      ext1: {version: "1.0"}
+      ext2: {version: "2.0"}
+    custom:
+      myapp: {version: "1.0", installer: "install_myapp"}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_pack_contents "test"
+  
+  assert_success
+  assert_line "pkg1"
+  assert_line "pkg2"
+  assert_line "tool1"
+  assert_line "ext1"
+  assert_line "ext2"
+  assert_line "myapp"
+}
+
+# =============================================================================
 # get_tool_version tests
 # =============================================================================
 
