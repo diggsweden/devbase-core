@@ -80,7 +80,7 @@ apply_customizations() {
   fi
 
   apply_theme "$DEVBASE_THEME"
-  sync_mise_config_versions
+  # Note: mise config is now generated directly from packages.yaml in install-mise.sh
 }
 
 # Brief: Process all templates and tool-specific configurations

@@ -140,7 +140,7 @@ load_saved_preferences() {
 
   # Load selected packs (array to space-separated string)
   DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
-  # Default to all packs if not set
+  # Default to all packs if not set in preferences
   if [[ -z "$DEVBASE_SELECTED_PACKS" ]]; then
     DEVBASE_SELECTED_PACKS="java node python go ruby rust vscode-editor"
   fi
@@ -159,6 +159,7 @@ load_saved_preferences() {
   printf "  Packs: %s\n" "$DEVBASE_SELECTED_PACKS"
 
   show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
+
   return 0
 }
 
@@ -708,15 +709,15 @@ collect_pack_preferences() {
 }
 
 collect_user_configuration() {
+  # Non-interactive mode: load saved prefs or use defaults, never prompt
   if [[ "${NON_INTERACTIVE}" == "true" ]]; then
     setup_non_interactive_mode
     return 0
   fi
 
-  # Try to load saved preferences from previous installation (for updates)
-  if load_saved_preferences; then
-    return 0
-  fi
+  # Interactive mode: load saved preferences as defaults (if they exist)
+  # Then prompt user for all preferences, allowing them to change or keep defaults
+  load_saved_preferences || true
 
   printf "\n"
   printf "%bEntering setup questions phase...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
@@ -778,7 +779,7 @@ tools:
   zellij_autostart: ${DEVBASE_ZELLIJ_AUTOSTART}
   git_hooks: ${DEVBASE_ENABLE_GIT_HOOKS}
 
-packs: [${DEVBASE_SELECTED_PACKS:-}]
+packs: [${DEVBASE_SELECTED_PACKS:+${DEVBASE_SELECTED_PACKS// /, }}]
 EOF
 
   show_progress success "User preferences saved to ${prefs_file/#$HOME/~}"

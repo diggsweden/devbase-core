@@ -207,19 +207,16 @@ install_mise_tools() {
   local mise_server_error=false
   if [[ -n "$core_runtimes" ]]; then
     show_progress info "Installing core language runtimes..."
-    local core_install_output
+    # Use a temp file to capture output while still showing progress to user
+    local core_install_log="${_DEVBASE_TEMP}/mise-core-install.log"
     # shellcheck disable=SC2086 # Word splitting intended for runtime list
-    if ! core_install_output=$(run_mise_from_home_dir install $core_runtimes --yes 2>&1); then
+    # Use tee to show output in real-time AND capture it for error checking
+    if ! run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee "$core_install_log"; then
       # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
-      if echo "$core_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
+      if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
         mise_server_error=true
       fi
-      # Filter out expected warning about npm:tree-sitter-cli not being resolvable yet
-      echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
       show_progress warning "Some core runtimes may have failed (will retry with full install)"
-    else
-      # Show output but filter the npm:tree-sitter-cli warning
-      echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
     fi
   fi
 
@@ -239,15 +236,13 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   # Run mise install with progress bar visible (no stderr redirection)
   # mise handles checksum verification internally and will fail if checksums don't match
-  local full_install_output
-  if ! full_install_output=$(run_mise_from_home_dir install --yes 2>&1); then
-    echo "$full_install_output"
+  # Use tee to show output in real-time AND capture it for error checking
+  local full_install_log="${_DEVBASE_TEMP}/mise-full-install.log"
+  if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
     # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
-    if echo "$full_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
+    if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
       mise_server_error=true
     fi
-  else
-    echo "$full_install_output"
   fi
 
   # Verify critical tools are present (based on selected packs)
