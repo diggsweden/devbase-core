@@ -24,10 +24,7 @@ devbase-custom-config/
 │   └── org.env                # Organization variables
 ├── certificates/              # CA certificates (*.crt)
 ├── packages/                  # Package overrides (optional)
-│   ├── apt-packages.txt       # Override default APT packages
-│   ├── snap-packages.txt      # Override default snap packages
-│   ├── vscode-extensions.yaml # Override default VS Code extensions
-│   └── mise-config.toml       # Override default mise tools
+│   └── packages-custom.yaml   # Override/extend default packages
 ├── templates/                 # Config templates
 ├── ssh/                       # SSH configuration
 │   └── custom.config          # Organization SSH hosts
@@ -401,7 +398,7 @@ Variables from `org.env` are automatically available.
 
 == Package Overrides
 
-Organizations can override the default package lists and VS Code extensions by providing custom lists in their custom configuration directory.
+DevBase uses a unified `packages.yaml` configuration that defines all packages (APT, Snap, mise tools, VS Code extensions, and custom installers) in a single file. Organizations can customize packages using a `packages-custom.yaml` overlay.
 
 === Directory Structure
 
@@ -409,196 +406,199 @@ Organizations can override the default package lists and VS Code extensions by p
 ----
 devbase-custom-config/
 └── packages/
-    ├── apt-packages.txt        # Override default APT packages
-    ├── snap-packages.txt       # Override default snap packages
-    ├── vscode-extensions.yaml  # Override default VS Code extensions
-    └── mise-config.toml        # Override default mise tools
+    └── packages-custom.yaml    # Override/extend default packages
 ----
 
 === How Overrides Work
 
-When custom package lists are present, DevBase uses **full override mode** (not merge):
+DevBase uses **deep merge** via `yq` to combine base and custom configurations:
 
-1. **If custom file exists** → Use custom list exclusively
-2. **If custom file missing** → Use DevBase default list
+1. **Custom file exists** → Merge with DevBase defaults (custom values override)
+2. **Custom file missing** → Use DevBase defaults only
 
-This matches the behavior of other custom configurations (templates, SSH) and gives organizations complete control over installed packages.
+This allows organizations to:
 
-=== APT Packages Override
+- Override specific package versions
+- Add new packages to existing packs
+- Define entirely new language packs
+- Remove packages by setting empty values
 
-Create `devbase-custom-config/packages/apt-packages.txt`:
+=== packages.yaml Structure
 
-[source,text]
-----
-# Organization Package List
-# One package per line, comments allowed
-
-# Core system tools
-build-essential
-git
-curl
-wget
-
-# Development tools
-fish                    # Fish shell 4.x
-neovim
-tmux
-
-# WSL-specific packages
-wslu                    # @skip-wsl
-
-# Organization-specific tools
-your-company-tool
-----
-
-**Tags:**
-
-- `@skip-wsl` - Skip package installation on WSL
-
-**Best practices:**
-
-- Start with DevBase defaults (`dot/.config/devbase/apt-packages.txt`) and customize
-- Document why packages are included/excluded
-- Keep organization-specific packages minimal
-- Test on clean system before deploying
-
-=== Snap Packages Override
-
-Create `devbase-custom-config/packages/snap-packages.txt`:
-
-[source,text]
-----
-# Organization Snap Packages
-# Format: package_name [options]
-# Options: --classic, --edge, --beta, --channel=<channel>
-
-# Terminal emulator with GPU acceleration
-ghostty --classic
-
-# Web browsers
-# Note: Firefox installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
-chromium
-
-# Kubernetes (local development)
-microk8s --classic
-
-# Organization-specific snaps
-# your-company-tool --classic
-----
-
-**Options:**
-
-- `--classic` - Classic confinement (full system access)
-- `--edge` - Edge channel (latest development)
-- `--beta` - Beta channel
-- `--channel=<name>` - Specific channel
-
-**Best practices:**
-
-- Start with DevBase defaults (`dot/.config/devbase/snap-packages.txt`) and customize
-- Remove browsers if organization provides them differently
-- Skip microk8s if using k3s or other Kubernetes
-- Test snap installations on clean system
-- Document why specific channels/options are used
-
-=== VS Code Extensions Override
-
-Create `devbase-custom-config/packages/vscode-extensions.yaml`:
+The unified configuration has two main sections:
 
 [source,yaml]
 ----
-# Organization VS Code Extensions
-# Format: extension-id:version (version optional)
+# core: Always installed (essential tools)
+core:
+  apt:
+    curl: {}
+    git: {}
+  snap:
+    chromium: {}
+  mise:
+    fzf: { backend: "aqua:junegunn/fzf", version: "v0.67.0" }
+  vscode:
+    redhat.vscode-yaml: { version: "1.17.0" }
+  custom:
+    mise: { version: "v2025.9.20", installer: "install_mise" }
 
-# Themes (match DEVBASE_THEME support)
-sainnhe.everforest:
-catppuccin.catppuccin-vsc:
-enkia.tokyo-night:
-jdinhlife.gruvbox:
-arcticicestudio.nord-visual-studio-code:
-dracula-theme.theme-dracula:
-
-# Java development
-redhat.java:
-vscjava.vscode-java-debug:
-vscjava.vscode-java-test:
-vscjava.vscode-maven:
-
-# Code quality
-sonarsource.sonarlint-vscode:
-shengchen.vscode-checkstyle:
-
-# Organization-specific
-your-company.internal-extension:
+# packs: User-selectable language bundles
+packs:
+  java:
+    description: "Java/JVM development"
+    apt:
+      default-jdk: {}
+    mise:
+      java: { version: "temurin-21" }
+      maven: { version: "3.9.6" }
+    vscode:
+      redhat.java: { version: "1.40.0" }
+  node:
+    description: "Node.js development"
+    mise:
+      node: { version: "24.11.1" }
 ----
 
-**Best practices:**
+=== Creating packages-custom.yaml
 
-- Start with DevBase defaults (`dot/.config/devbase/vscode-extensions.yaml`) and customize
-- Pin versions for critical extensions if needed
-- Test extension compatibility before deployment
-- Consider WSL Remote extension (auto-installed by DevBase)
+Create `devbase-custom-config/packages/packages-custom.yaml`:
 
-=== Mise Tools Override
-
-Create `devbase-custom-config/packages/mise-config.toml`:
-
-[source,toml]
+[source,yaml]
 ----
-[settings]
-experimental = true
-legacy_version_file = false
-asdf_compat = false
-jobs = 6
-yes = true
-http_timeout = "90s"
+# Organization Package Customizations
+# This file is merged with DevBase defaults
 
-[tools]
-# Core Languages & Runtimes
-node = "20.18.1"
-go = "1.25.1"
-python = "3.12"
-java = "temurin-21"
+# Override core packages
+core:
+  apt:
+    # Add organization-specific packages
+    your-company-tool: {}
+  mise:
+    # Override a tool version
+    fzf: { backend: "aqua:junegunn/fzf", version: "v0.66.0" }
 
-# Development tools
-"aqua:junegunn/fzf" = "v0.65.2"
-"aqua:eza-community/eza" = "v0.23.4"
-"aqua:starship/starship" = "v1.24.0"
+# Extend or override language packs
+packs:
+  java:
+    mise:
+      # Add Kotlin to Java pack
+      kotlin: { version: "2.0.0" }
+      # Override Maven version
+      maven: { version: "3.9.9" }
+    custom:
+      # Add organization Java tools
+      internal-java-sdk: { version: "1.0.0", installer: "install_internal_sdk" }
 
-# Organization-specific tools
-"aqua:your-org/internal-cli" = "v1.0.0"
+  # Define entirely new pack
+  company-tools:
+    description: "Internal company tools"
+    apt:
+      company-cli: {}
+    mise:
+      internal-tool: { backend: "ubi:company/tool", version: "v1.0.0" }
 ----
 
-**Best practices:**
+=== Package Types
 
-- Start with DevBase defaults (`dot/.config/mise/config.toml`) and customize
-- Keep essential development tools (node, python, java, go)
-- Use version pinning for reproducibility across organization
-- Test tool installations before deployment
-- Document organization-specific tools
+==== APT Packages
+
+[source,yaml]
+----
+apt:
+  package-name: {}                           # Simple package
+  package-with-tag: { tags: ["@skip-wsl"] }  # Skip on WSL
+----
+
+==== Snap Packages
+
+[source,yaml]
+----
+snap:
+  chromium: {}                                        # Default options
+  ghostty: { options: "--classic" }                   # Classic confinement
+  some-app: { options: "--channel=edge" }             # Specific channel
+  desktop-app: { options: "--classic", tags: ["@skip-wsl"] }
+----
+
+==== Mise Tools
+
+[source,yaml]
+----
+mise:
+  # Simple (no backend)
+  java: { version: "temurin-21" }
+  
+  # With backend
+  fzf: { backend: "aqua:junegunn/fzf", version: "v0.67.0" }
+  
+  # UBI with options
+  glab: { backend: "ubi:gitlab-org/cli", version: "v1.68.0", options: { provider: "gitlab", exe: "glab" } }
+----
+
+==== VS Code Extensions
+
+[source,yaml]
+----
+vscode:
+  extension.id: { version: "1.0.0" }                  # Pinned version
+  optional.extension: { version: "2.0.0", tags: ["@optional"] }  # User prompted
+----
+
+==== Custom Installers
+
+[source,yaml]
+----
+custom:
+  tool-name: { version: "1.0.0", installer: "install_tool_name" }
+  optional-tool: { version: "2.0.0", installer: "install_optional", tags: ["@optional"] }
+----
+
+=== Tags
+
+- `@skip-wsl` - Skip installation on WSL environments
+- `@optional` - Prompt user during installation
+
+=== Language Packs
+
+During installation, users select which language packs to install:
+
+[source]
+----
+Which language packs do you want to install?
+
+  [x] java    - Java/JVM development (Spring Boot, Maven, Gradle)
+  [x] node    - Node.js/JavaScript/TypeScript development
+  [x] python  - Python development (Django, Flask, data science)
+  [x] go      - Go/Golang development
+  [x] ruby    - Ruby/Rails development
+  [x] rust    - Rust development
+  [x] vscode-editor - VS Code editor with full configuration
+
+Space=toggle, Enter=confirm
+----
+
+All packs are selected by default. Selection is saved to `preferences.yaml` for future updates.
 
 === Validation During Installation
-
-During installation:
 
 [source,bash]
 ----
 # If custom packages exist
-Using custom APT package list: /path/to/custom/packages/apt-packages.txt
-Found 42 packages to install
+Merging custom package configuration...
+Found packages-custom.yaml overlay
 
-# If custom snap packages exist
-Using custom snap package list: /path/to/custom/packages/snap-packages.txt
-Found 4 snap packages to install
-
-# If custom extensions exist
-Using custom VSCode extensions list: /path/to/custom/packages/vscode-extensions.yaml
-
-# If custom mise config exists
-Using custom mise config: /path/to/custom/packages/mise-config.toml
+# Pack selection
+Selected packs: java, node, python
 ----
 
-If custom files don't exist, DevBase silently uses defaults (no message shown).
+=== Best Practices
+
+- Start by reviewing DevBase defaults in `dot/.config/devbase/packages.yaml`
+- Only override what you need to change
+- Document why packages are added/changed
+- Test on clean system before deploying
+- Use version pinning for reproducibility
 
 == Git Hooks
 

@@ -16,63 +16,42 @@ if [[ -z "${DEVBASE_DOT:-}" ]]; then
   return 1
 fi
 
-# Brief: Read APT package list from configuration file
+# Brief: Read APT package list from packages.yaml
 # Params: None
-# Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES (globals)
-# Returns: 0 on success, 1 if file not found or unreadable
+# Uses: DEVBASE_DOT, DEVBASE_SELECTED_PACKS, get_apt_packages (globals/functions)
+# Returns: 0 on success, 1 if no packages found
 # Outputs: Array of package names to global APT_PACKAGES_ALL
-# Side-effects: Populates APT_PACKAGES_ALL array, filters WSL-specific packages
+# Side-effects: Populates APT_PACKAGES_ALL array, filters by tags
 load_apt_packages() {
-  local pkg_file="${DEVBASE_DOT}/.config/devbase/apt-packages.txt"
+  # Set up for parse-packages.sh
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
 
-  # Check for custom package list override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/apt-packages.txt" ]]; then
-    pkg_file="${_DEVBASE_CUSTOM_PACKAGES}/apt-packages.txt"
-    show_progress info "Using custom APT package list: $pkg_file"
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    show_progress info "Using custom package overrides"
   fi
 
-  if [[ ! -f "$pkg_file" ]]; then
-    show_progress error "APT package list not found: $pkg_file"
+  if [[ ! -f "$PACKAGES_YAML" ]]; then
+    show_progress error "Package configuration not found: $PACKAGES_YAML"
     return 1
   fi
 
-  if [[ ! -r "$pkg_file" ]]; then
-    show_progress error "APT package list not readable: $pkg_file"
-    return 1
+  # Source parser if not already loaded
+  if ! declare -f get_apt_packages &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
   fi
 
-  # Read packages from file, parse inline tags
+  # Get packages from parser
   local packages=()
-
-  while IFS= read -r line; do
-    # Skip pure comment lines (starting with #)
-    [[ "$line" =~ ^[[:space:]]*# ]] && continue
-
-    # Skip empty lines
-    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-
-    # Extract package name (everything before #) and trim whitespace
-    local pkg
-    pkg=$(printf '%s' "${line%%#*}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-    [[ -z "$pkg" ]] && continue
-
-    # Extract tags from inline comment (everything after #)
-    local tags=""
-    if [[ "$line" =~ \#[[:space:]]*(.*) ]]; then
-      tags="${BASH_REMATCH[1]}"
-    fi
-
-    # Check for @skip-wsl tag (uses existing is_wsl function)
-    if [[ "$tags" =~ @skip-wsl ]] && is_wsl; then
-      continue
-    fi
-
-    packages+=("$pkg")
-  done <"$pkg_file"
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] && packages+=("$pkg")
+  done < <(get_apt_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress error "No valid packages found in $pkg_file"
+    show_progress error "No APT packages found in configuration"
     return 1
   fi
 
@@ -247,7 +226,7 @@ EOF
 # Uses: HOME, show_progress (globals/functions)
 # Returns: 0 on success, 1 if no Firefox profile found
 # Side-effects: Adds OpenSC module to Firefox pkcs11.txt
-# Note: Requires opensc-pkcs11 package to be installed (included in apt-packages.txt)
+# Note: Requires opensc-pkcs11 package to be installed (defined in packages.yaml)
 configure_firefox_opensc() {
   local opensc_lib="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
 

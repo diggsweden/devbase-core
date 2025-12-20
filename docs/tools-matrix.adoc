@@ -1201,13 +1201,12 @@ toc::[]
 
 === Source Verification
 Every tool listed has been systematically verified from:
-* `libs/install-apt.sh` - APT package definitions
-* `libs/install-snap.sh` - Snap package definitions
-* `dot/.config/mise/config.toml` - Mise managed tools
-* `libs/install-custom.sh` - Custom installations (LazyVim, JMC)
-* `dot/.config/devbase/custom-tools.yaml` - Custom tool version specifications
-* `dot/.config/devbase/apt-packages.txt` - APT package list
-* `dot/.config/devbase/vscode-extensions.yaml` - VSCode extension specifications
+* `dot/.config/devbase/packages.yaml` - Unified package configuration (APT, Snap, mise, VS Code, custom tools)
+* `libs/install-apt.sh` - APT package installation
+* `libs/install-snap.sh` - Snap package installation
+* `libs/install-mise.sh` - Mise tool installation
+* `libs/install-custom.sh` - Custom installations (LazyVim, JMC, etc.)
+* `libs/setup-vscode.sh` - VS Code extension installation
 
 === Conditional Installations
 Some tools are installed conditionally based on the display server:

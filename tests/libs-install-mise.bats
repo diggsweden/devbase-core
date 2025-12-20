@@ -22,125 +22,156 @@ teardown() {
   common_teardown
 }
 
-@test "load_all_versions parses YAML version file" {
-  local versions_file="${TEST_DIR}/versions.yaml"
+@test "get_mise_packages parses packages.yaml" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
   
-  cat > "$versions_file" << 'EOF'
-# Test versions file
-node: "20.10.0"
-python: "3.11.5"
-go: 1.21.0
-# comment line
-ruby: '3.2.0'
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  mise:
+    just: { backend: "aqua:casey/just", version: "1.44.0" }
+    fzf: { backend: "aqua:junegunn/fzf", version: "v0.67.0" }
+packs: {}
 EOF
   
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export _VERSIONS_FILE='${versions_file}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    export DEVBASE_DOT='${TEST_DIR}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${TEST_DIR}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS=''
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     
-    load_all_versions
-    
-    echo \"node=\${TOOL_VERSIONS[node]}\"
-    echo \"python=\${TOOL_VERSIONS[python]}\"
-    echo \"go=\${TOOL_VERSIONS[go]}\"
-    echo \"ruby=\${TOOL_VERSIONS[ruby]}\"
+    get_mise_packages
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output --partial "node=20.10.0"
-  assert_output --partial "python=3.11.5"
-  assert_output --partial "go=1.21.0"
-  assert_output --partial "ruby=3.2.0"
+  assert_output --partial "aqua:casey/just|1.44.0"
+  assert_output --partial "aqua:junegunn/fzf|v0.67.0"
 }
 
-@test "load_all_versions strips quotes from versions" {
-  local versions_file="${TEST_DIR}/versions.yaml"
+@test "get_mise_packages includes packages from selected packs" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
   
-  cat > "$versions_file" << 'EOF'
-tool1: "1.0.0"
-tool2: '2.0.0'
-tool3: 3.0.0
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  mise:
+    just: { version: "1.44.0" }
+packs:
+  java:
+    description: "Java development"
+    mise:
+      java: { version: "temurin-21" }
+      maven: { version: "3.9.6" }
 EOF
   
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export _VERSIONS_FILE='${versions_file}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    export DEVBASE_DOT='${TEST_DIR}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${TEST_DIR}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS='java'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     
-    load_all_versions >/dev/null 2>&1
-    
-    # All should be without quotes
-    echo \"\${TOOL_VERSIONS[tool1]}\" | grep -q '\"' && echo 'HAS_QUOTES' || echo 'NO_QUOTES'
+    get_mise_packages | wc -l
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output "NO_QUOTES"
+  assert_output "3"
 }
 
-@test "load_all_versions skips comment lines" {
-  local versions_file="${TEST_DIR}/versions.yaml"
+@test "get_tool_version returns version from packages.yaml" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
   
-  cat > "$versions_file" << 'EOF'
-# This is a comment
-node: "20.0.0"
-# Another comment
-python: "3.11.0"
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: { version: "v2025.9.20", installer: "install_mise" }
+packs: {}
 EOF
   
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export _VERSIONS_FILE='${versions_file}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    export DEVBASE_DOT='${TEST_DIR}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${TEST_DIR}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS=''
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     
-    load_all_versions >/dev/null 2>&1
-    
-    # Should only load 2 tools
-    echo \"count=\${#TOOL_VERSIONS[@]}\"
+    get_tool_version 'mise'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output "count=2"
+  assert_output "v2025.9.20"
 }
 
-@test "load_all_versions skips empty lines" {
-  local versions_file="${TEST_DIR}/versions.yaml"
+@test "generate_mise_config creates valid config.toml" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  mkdir -p "${TEST_DIR}/mise"
   
-  cat > "$versions_file" << 'EOF'
-node: "20.0.0"
-
-python: "3.11.0"
-
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  mise:
+    just: { backend: "aqua:casey/just", version: "1.44.0" }
+    fzf: { backend: "aqua:junegunn/fzf", version: "v0.67.0" }
+packs:
+  node:
+    description: "Node.js"
+    mise:
+      node: { version: "24.11.1" }
 EOF
   
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export _VERSIONS_FILE='${versions_file}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    export DEVBASE_DOT='${TEST_DIR}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${TEST_DIR}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS='node'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     
-    load_all_versions >/dev/null 2>&1
-    
-    echo \"count=\${#TOOL_VERSIONS[@]}\"
+    generate_mise_config '${TEST_DIR}/mise/config.toml'
+    cat '${TEST_DIR}/mise/config.toml'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output "count=2"
+  assert_output --partial '[tools]'
+  assert_output --partial 'aqua:casey/just'
+  assert_output --partial 'node = "24.11.1"'
+}
+
+@test "get_core_runtimes returns runtimes based on selected packs" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core: {}
+packs:
+  node:
+    description: "Node.js"
+  java:
+    description: "Java"
+  python:
+    description: "Python"
+EOF
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_DOT='${TEST_DIR}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${TEST_DIR}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS='node java'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
+    
+    get_core_runtimes
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "node"
+  assert_output --partial "java"
+  refute_output --partial "python"
 }
 
 @test "verify_mise_checksum returns 1 if mise binary doesn't exist" {
@@ -158,21 +189,4 @@ EOF
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "NOT_EXISTS"
-}
-
-@test "load_all_versions fails if versions file doesn't exist" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export _VERSIONS_FILE='${TEST_DIR}/nonexistent.yaml'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
-    
-    load_all_versions 2>&1
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_failure
-  assert_output --partial "Versions file not found"
 }

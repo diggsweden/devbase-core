@@ -14,7 +14,6 @@ load 'test_helper'
 
 setup() {
   common_setup
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   export DEVBASE_DEBUG="${DEVBASE_DEBUG:-false}"
   export _DEVBASE_CUSTOM_CERTS=""
   # Alias for backward compatibility with tests using TEMP_DIR
@@ -22,10 +21,7 @@ setup() {
   export TEMP_DIR
   
   mkdir -p "${TEST_DIR}/bin"
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source_core_libs
 }
 
 teardown() {

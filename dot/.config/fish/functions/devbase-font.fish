@@ -62,10 +62,10 @@ function __devbase_font_get_zip_name
 end
 
 function __devbase_font_get_version --description "Get Nerd Fonts version from config"
-    # Try to read version from custom-tools.yaml
-    set -l config_file "$HOME/.config/devbase/custom-tools.yaml"
-    if test -f "$config_file"
-        set -l nf_version (grep "^nerd_fonts:" "$config_file" | awk '{print $2}' | tr -d '#' | xargs)
+    # Try to read version from packages.yaml
+    set -l config_file "$HOME/.config/devbase/packages.yaml"
+    if test -f "$config_file"; and command -q yq
+        set -l nf_version (yq '.core.custom.nerd_fonts.version // .packs.[].custom.nerd_fonts.version // ""' "$config_file" 2>/dev/null | head -1)
         if test -n "$nf_version"
             echo $nf_version
             return 0

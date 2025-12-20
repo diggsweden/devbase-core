@@ -17,11 +17,7 @@ setup() {
   common_setup
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
   export _DEVBASE_CUSTOM_PACKAGES=""
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
-  source "${DEVBASE_ROOT}/libs/check-requirements.sh"
+  source_core_libs_with_requirements
   source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/install-apt.sh"
 }
@@ -30,27 +26,33 @@ teardown() {
   common_teardown
 }
 
-@test "load_apt_packages reads packages from default file" {
+@test "get_apt_packages reads packages from packages.yaml" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
-  cat > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt" <<EOF
-curl
-git
-vim
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+    git: {}
+    vim: {}
+packs: {}
 EOF
   
   run --separate-stderr bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS=''
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${#APT_PACKAGES_ALL[@]}
+    get_apt_packages | wc -l
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -58,28 +60,35 @@ EOF
   assert_output "3"
 }
 
-@test "load_apt_packages skips comment lines" {
+@test "get_apt_packages includes packages from selected packs" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
-  cat > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt" <<EOF
-# This is a comment
-curl
-# Another comment
-git
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+packs:
+  java:
+    description: "Java development"
+    apt:
+      default-jdk: {}
 EOF
   
   run --separate-stderr bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS='java'
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${#APT_PACKAGES_ALL[@]}
+    get_apt_packages | wc -l
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -87,28 +96,40 @@ EOF
   assert_output "2"
 }
 
-@test "load_apt_packages skips empty lines" {
+@test "get_apt_packages excludes unselected packs" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
-  cat > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt" <<EOF
-curl
-
-git
-
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+packs:
+  java:
+    description: "Java development"
+    apt:
+      default-jdk: {}
+  python:
+    description: "Python development"
+    apt:
+      python3: {}
 EOF
   
   run --separate-stderr bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS='java'
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${#APT_PACKAGES_ALL[@]}
+    # Should have curl (core) + default-jdk (java), not python3
+    get_apt_packages | wc -l
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -116,28 +137,34 @@ EOF
   assert_output "2"
 }
 
-@test "load_apt_packages handles @skip-wsl tag" {
+@test "get_apt_packages handles @skip-wsl tag" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
-  cat > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt" <<EOF
-curl
-firefox # @skip-wsl
-git
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+    firefox: { tags: ["@skip-wsl"] }
+    git: {}
+packs: {}
 EOF
 
   # Use run_as_wsl helper to simulate WSL environment
   run --separate-stderr run_as_wsl "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS=''
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${#APT_PACKAGES_ALL[@]}
+    get_apt_packages | wc -l
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -145,27 +172,41 @@ EOF
   assert_output "2"
 }
 
-@test "load_apt_packages uses custom package list when available" {
+@test "get_apt_packages merges custom packages.yaml overlay" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   export _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom"
   
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   mkdir -p "${_DEVBASE_CUSTOM_PACKAGES}"
   
-  echo "curl" > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt"
-  echo "custom-package" > "${_DEVBASE_CUSTOM_PACKAGES}/apt-packages.txt"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+packs: {}
+EOF
+
+  cat > "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" <<EOF
+core:
+  apt:
+    custom-package: {}
+EOF
   
   run --separate-stderr bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export PACKAGES_CUSTOM_YAML='${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml'
+    export SELECTED_PACKS=''
     export _DEVBASE_CUSTOM_PACKAGES='${_DEVBASE_CUSTOM_PACKAGES}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${APT_PACKAGES_ALL[0]}
+    get_apt_packages
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -173,26 +214,32 @@ EOF
   assert_output --partial "custom-package"
 }
 
-@test "load_apt_packages trims whitespace from package names" {
+@test "get_apt_packages returns package names correctly" {
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
-  cat > "${DEVBASE_DOT}/.config/devbase/apt-packages.txt" <<EOF
-  curl  
-   git   
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<EOF
+core:
+  apt:
+    curl: {}
+    git: {}
+packs: {}
 EOF
   
   run --separate-stderr bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_DOT='${DEVBASE_DOT}'
+    export DEVBASE_LIBS='${DEVBASE_ROOT}/libs'
+    export PACKAGES_YAML='${DEVBASE_DOT}/.config/devbase/packages.yaml'
+    export SELECTED_PACKS=''
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
+    source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/install-apt.sh'
-    load_apt_packages
-    echo \${APT_PACKAGES_ALL[0]}
+    get_apt_packages | head -1
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"

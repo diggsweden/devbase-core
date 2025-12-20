@@ -438,20 +438,28 @@ get_extension_description() {
   esac
 }
 
-# Brief: Find extensions file (default or custom)
-# Returns: echoes file path to stdout, returns 1 if not found
-_install_vscode_ext_find_file() {
+# Brief: Set up parser and package configuration for VSCode extensions
+# Returns: 0 on success
+_setup_vscode_parser() {
   validate_var_set "DEVBASE_DOT" || return 1
 
-  local extensions_file="${DEVBASE_DOT}/.config/devbase/vscode-extensions.yaml"
+  # Set up package configuration
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
 
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/vscode-extensions.yaml" ]]; then
-    extensions_file="${_DEVBASE_CUSTOM_PACKAGES}/vscode-extensions.yaml"
-    show_progress info "Using custom VSCode extensions list: $extensions_file"
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    show_progress info "Using custom package overrides"
   fi
 
-  validate_file_exists "$extensions_file" "vscode-extensions.yaml" || return 1
-  echo "$extensions_file"
+  # Source parser if not already loaded
+  if ! declare -f get_vscode_packages &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
+  fi
+
+  return 0
 }
 
 # Brief: Test VS Code command availability
@@ -530,12 +538,6 @@ _install_vscode_ext_install_one() {
   local display_name="$4"
   local installed_list="$5"
 
-  # Skip neovim extension if user opted out
-  if [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM:-}" != "true" ]]; then
-    show_progress info "$display_name (skipped by user preference)"
-    return 2
-  fi
-
   # Check if already installed
   if echo "$installed_list" | grep -qi "^${ext_id}$"; then
     show_progress info "$display_name (already installed)"
@@ -577,19 +579,19 @@ _install_vscode_ext_print_summary() {
   show_progress success "VS Code setup complete"
 }
 
-# Brief: Install VS Code extensions from vscode-extensions.yaml
+# Brief: Install VS Code extensions from packages.yaml
 # Params: $1 - code_cmd (path to code executable), $2 - remote_flag (optional)
 # Uses: DEVBASE_DOT, DEVBASE_VSCODE_NEOVIM, _DEVBASE_CUSTOM_PACKAGES, get_extension_description, show_progress (globals/functions)
-# Returns: 0 on success, 1 if code_cmd fails or vscode-extensions.yaml not found
+# Returns: 0 on success, 1 if code_cmd fails or packages.yaml not found
 # Side-effects: Installs VS Code extensions, prints installation summary
 install_vscode_extensions() {
   local code_cmd="$1"
-  local remote_flag="$2"
+  local remote_flag="${2:-}"
 
   validate_not_empty "$code_cmd" "VS Code command" || return 1
 
-  local extensions_file
-  extensions_file=$(_install_vscode_ext_find_file) || return 1
+  # Set up parser
+  _setup_vscode_parser || return 1
 
   _install_vscode_ext_test_command "$code_cmd" "$remote_flag" || return 1
 
@@ -601,26 +603,36 @@ install_vscode_extensions() {
   local failed_count=0
   local failed_extensions=()
 
-  while IFS=: read -r ext_id version_line; do
-    local parsed_id
-    parsed_id=$(_install_vscode_ext_parse_id "$ext_id") || continue
+  # Get extensions from packages.yaml via parser
+  # Format: "ext_id|version|tags"
+  while IFS='|' read -r ext_id version tags; do
+    [[ -z "$ext_id" ]] && continue
+
+    # Check @optional tag - skip neovim if user opted out
+    if [[ "$tags" == *"@optional"* ]] && [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM:-}" != "true" ]]; then
+      local display_name
+      display_name=$(_install_vscode_ext_display_name "$ext_id")
+      show_progress info "$display_name (skipped by user preference)"
+      skipped_count=$((skipped_count + 1))
+      continue
+    fi
 
     local display_name
-    display_name=$(_install_vscode_ext_display_name "$parsed_id")
+    display_name=$(_install_vscode_ext_display_name "$ext_id")
 
     local result
-    _install_vscode_ext_install_one "$code_cmd" "$remote_flag" "$parsed_id" "$display_name" "$installed_list"
+    _install_vscode_ext_install_one "$code_cmd" "$remote_flag" "$ext_id" "$display_name" "$installed_list"
     result=$?
 
     case $result in
     0) installed_count=$((installed_count + 1)) ;;
     1)
       failed_count=$((failed_count + 1))
-      failed_extensions+=("$parsed_id")
+      failed_extensions+=("$ext_id")
       ;;
     2) skipped_count=$((skipped_count + 1)) ;;
     esac
-  done <"$extensions_file"
+  done < <(get_vscode_packages)
 
   _install_vscode_ext_print_summary $installed_count $skipped_count $failed_count failed_extensions
   return 0

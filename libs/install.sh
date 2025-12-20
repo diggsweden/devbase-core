@@ -72,7 +72,6 @@ source "${DEVBASE_ROOT}/libs/configure-services.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
 
-_VERSIONS_FILE=""
 _DEVBASE_TEMP=$(mktemp -d /tmp/devbase.XXXXXX) || {
   echo "ERROR: Failed to create temp directory" >&2
   exit 1
@@ -174,14 +173,11 @@ validate_source_repository() {
 # Brief: Initialize installation file paths and validate temp directory
 # Params: None
 # Uses: DEVBASE_DOT, _DEVBASE_TEMP, validate_var_set (globals/functions)
-# Modifies: _VERSIONS_FILE (global)
 # Returns: 0 on success, 1 if validation fails
-# Side-effects: Sets _VERSIONS_FILE path
+# Side-effects: Validates required paths
 setup_installation_paths() {
   validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "_DEVBASE_TEMP" || return 1
-
-  _VERSIONS_FILE="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
 
   return 0
 }

@@ -6,6 +6,42 @@
 
 set -uo pipefail
 
+# Global: Cached tool versions from packages.yaml (populated by _setup_custom_parser)
+declare -gA TOOL_VERSIONS 2>/dev/null || true
+
+# Brief: Set up parser and load tool versions into TOOL_VERSIONS array
+# Uses: DEVBASE_DOT, DEVBASE_LIBS, SELECTED_PACKS (globals)
+# Returns: 0 on success
+# Side-effects: Sources parse-packages.sh, populates TOOL_VERSIONS
+_setup_custom_parser() {
+  # Skip if already initialized (check array size safely with set -u)
+  [[ -v TOOL_VERSIONS[@] ]] && [[ ${#TOOL_VERSIONS[@]} -gt 0 ]] && return 0
+
+  # Set up package configuration
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
+
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+  fi
+
+  # Source parser if not already loaded
+  if ! declare -f get_custom_packages &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
+  fi
+
+  # Populate TOOL_VERSIONS array from packages.yaml
+  # Format: "tool|version|installer|tags"
+  while IFS='|' read -r tool version installer tags; do
+    [[ -z "$tool" || -z "$version" ]] && continue
+    TOOL_VERSIONS[$tool]="$version"
+  done < <(get_custom_packages)
+
+  return 0
+}
+
 # Brief: Fetch VS Code package SHA256 checksum from official API
 # Params: $1 - version (e.g. "1.85.1"), $2 - platform (default: "linux-deb-x64")
 # Uses: command_exists, validate_not_empty (functions)
@@ -69,6 +105,9 @@ install_lazyvim() {
   validate_var_set "DEVBASE_THEME" || return 1
   validate_var_set "DEVBASE_DOT" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   if [[ "$DEVBASE_INSTALL_LAZYVIM" != "true" ]]; then
     show_progress info "LazyVim installation skipped by user preference"
     return 0
@@ -79,7 +118,7 @@ install_lazyvim() {
   local nvim_config="${XDG_CONFIG_HOME}/nvim"
   local backup_dir
   backup_dir="${XDG_CONFIG_HOME}/nvim.bak.$(date +%Y%m%d_%H%M%S)"
-  local lazyvim_version="${TOOL_VERSIONS[lazyvim_starter]:-main}"
+  local lazyvim_version="${TOOL_VERSIONS[lazyvim]:-main}"
 
   if [[ -d "$nvim_config" ]] && [[ ! -L "$nvim_config" ]]; then
     show_progress info "Backing up existing nvim config to $backup_dir"
@@ -153,6 +192,9 @@ install_jmc() {
   validate_var_set "XDG_DATA_HOME" || return 1
   validate_var_set "XDG_BIN_HOME" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   if [[ -n "${TOOL_VERSIONS[jdk_mission_control]:-}" ]] && [[ "$DEVBASE_INSTALL_JMC" == "true" ]]; then
     if command_exists jmc; then
       show_progress success "JMC already installed"
@@ -225,6 +267,9 @@ install_oc_kubectl() {
   validate_var_set "_DEVBASE_TEMP" || return 1
   validate_var_set "XDG_BIN_HOME" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   if [[ -z "${TOOL_VERSIONS[oc]:-}" ]]; then
     return 0
   fi
@@ -281,6 +326,9 @@ install_oc_kubectl() {
 install_dbeaver() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   if [[ -z "${TOOL_VERSIONS[dbeaver]:-}" ]]; then
     return 0
   fi
@@ -320,6 +368,9 @@ install_dbeaver() {
 # Side-effects: Downloads and installs KeyStore Explorer .deb package
 install_keystore_explorer() {
   validate_var_set "_DEVBASE_TEMP" || return 1
+
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
 
   if [[ -z "${TOOL_VERSIONS[keystore_explorer]:-}" ]]; then
     return 0
@@ -361,6 +412,9 @@ install_keystore_explorer() {
 install_k3s() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   if command -v k3s &>/dev/null; then
     show_progress info "k3s already installed - skipping"
     return 0
@@ -392,6 +446,9 @@ install_k3s() {
 # Side-effects: Clones Fisher repo, installs Fisher and fzf.fish plugin
 install_fisher() {
   validate_var_set "_DEVBASE_TEMP" || return 1
+
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
 
   show_progress info "Installing Fisher (Fish plugin manager)..."
 
@@ -598,6 +655,9 @@ install_nerd_fonts() {
   validate_var_set "_DEVBASE_TEMP" || return 1
   validate_var_set "HOME" || return 1
   validate_var_set "DEVBASE_CACHE_DIR" || return 1
+
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
 
   if is_wsl; then
     show_progress info "Skipping Nerd Font installation on WSL (manage fonts on Windows)"
@@ -870,6 +930,9 @@ configure_terminal_fonts() {
 install_vscode() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
   # Skip VS Code installation on WSL - it should be installed on Windows
   if is_wsl; then
     show_progress info "[WSL-specific] Skipping VS Code installation on WSL (install from Windows)"
@@ -1081,6 +1144,9 @@ EOF
 install_intellij_idea() {
   validate_var_set "_DEVBASE_TEMP" || return 1
   validate_var_set "HOME" || return 1
+
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
 
   if [[ "$DEVBASE_INSTALL_INTELLIJ" != "true" ]]; then
     show_progress info "IntelliJ IDEA installation skipped by user preference"

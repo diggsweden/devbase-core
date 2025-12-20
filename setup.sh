@@ -187,6 +187,7 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/handle-network.sh"
   source "${DEVBASE_LIBS}/process-templates.sh"
   source "${DEVBASE_LIBS}/check-requirements.sh"
+  source "${DEVBASE_LIBS}/migrations.sh"
   source "${DEVBASE_LIBS}/install-certificates.sh"
   source "${DEVBASE_LIBS}/configure-ssh-git.sh"
   source "${DEVBASE_LIBS}/configure-git-hooks.sh"
@@ -667,6 +668,9 @@ main() {
   set_default_values
 
   run_installation
+
+  # Run migrations after successful installation to clean up legacy files
+  run_migrations
 }
 
 main "$@"

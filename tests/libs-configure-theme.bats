@@ -15,10 +15,7 @@ load 'test_helper'
 setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source_core_libs
 }
 
 @test "_theme_key converts hyphens to underscores" {

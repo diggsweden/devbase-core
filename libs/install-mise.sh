@@ -11,112 +11,13 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
-declare -gA TOOL_VERSIONS
-
-# Brief: Load tool versions from custom-tools.yaml into TOOL_VERSIONS array
-# Params: None
-# Uses: _VERSIONS_FILE (global), modifies TOOL_VERSIONS (global)
-# Returns: 0 on success, calls die() on failure
-# Side-effects: Populates TOOL_VERSIONS associative array
-load_all_versions() {
-  show_progress info "Loading tool versions..."
-
-  validate_file_exists "${_VERSIONS_FILE}" "Versions file" || die "Versions file not found: ${_VERSIONS_FILE}"
-  [[ ! -r "${_VERSIONS_FILE}" ]] && die "Versions file not readable: ${_VERSIONS_FILE} (check permissions)"
-
-  while IFS= read -r line; do
-    [[ -n "$line" && "$line" != \#* ]] || continue
-
-    if [[ "$line" =~ ^([^:]+):[[:space:]]*([^[:space:]#]+) ]]; then
-      local tool="${BASH_REMATCH[1]// /}"
-      local version="${BASH_REMATCH[2]}"
-
-      local version
-      version=$(printf "%s" "$version" | tr -d '"' | tr -d "'")
-      [[ -n "$version" ]] || continue
-
-      TOOL_VERSIONS[$tool]=$version
-    fi
-  done <"${_VERSIONS_FILE}"
-
-  if [[ ${#TOOL_VERSIONS[@]} -eq 0 ]]; then
-    die "No valid tool versions loaded from ${_VERSIONS_FILE}"
-  fi
-
-  validate_critical_versions
-
-  show_progress success "Loaded ${#TOOL_VERSIONS[@]} tool versions"
-  return 0
-}
-
-# Brief: Validate that critical tools have version numbers loaded
-# Params: None
-# Uses: TOOL_VERSIONS (global)
-# Returns: 0 always (warnings only, non-fatal)
-# Side-effects: Displays warnings if versions missing
-# Note: nodejs, python, java, golang are managed directly in mise/config.toml, not custom-tools.yaml
-validate_critical_versions() {
-  # Check for mise itself (the only critical tool in custom-tools.yaml)
-  if [[ -z "${TOOL_VERSIONS[mise]:-}" ]]; then
-    show_progress warning "mise version not found in custom-tools.yaml"
-    return 0
-  fi
-
-  # All other critical tools (node, python, java) are in mise/config.toml
-  return 0
-}
-
-# Brief: Update mise config.toml with versions from TOOL_VERSIONS
-# Params: None
-# Uses: TOOL_VERSIONS, DEVBASE_DOT, _DEVBASE_TEMP (globals)
-# Returns: 0 always
-# Side-effects: Modifies mise config.toml in dotfiles
-sync_mise_config_versions() {
-  validate_var_set "DEVBASE_DOT" || return 1
-  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
-  local mise_config_src="${DEVBASE_DOT}/.config/mise/config.toml"
-  [[ ! -f "$mise_config_src" ]] && return 0
-
-  local node_version="${TOOL_VERSIONS[nodejs]:-}"
-  local golang_version="${TOOL_VERSIONS[golang]:-}"
-  local python_version="${TOOL_VERSIONS[python]:-}"
-  local java_version="${TOOL_VERSIONS[java_jdk]:-}"
-  local maven_version="${TOOL_VERSIONS[maven]:-}"
-  local gradle_version="${TOOL_VERSIONS[gradle]:-}"
-
-  local temp_config="${_DEVBASE_TEMP}/mise_config_temp.toml"
-  cp "$mise_config_src" "$temp_config"
-
-  if [[ -n "$node_version" ]]; then
-    sed -i "s/^node = .*/node = \"${node_version}\"/" "$temp_config"
-  fi
-  if [[ -n "$golang_version" ]]; then
-    sed -i "s/^go = .*/go = \"${golang_version}\"/" "$temp_config"
-  fi
-  if [[ -n "$python_version" ]]; then
-    sed -i "s/^python = .*/python = \"${python_version}\"/" "$temp_config"
-  fi
-  if [[ -n "$java_version" ]]; then
-    sed -i "s/^java = .*/java = \"${java_version}\"/" "$temp_config"
-  fi
-  if [[ -n "$maven_version" ]]; then
-    sed -i "s/^maven = .*/maven = \"${maven_version}\"/" "$temp_config"
-  fi
-  if [[ -n "$gradle_version" ]]; then
-    sed -i "s/^gradle = .*/gradle = \"${gradle_version}\"/" "$temp_config"
-  fi
-
-  cp "$temp_config" "$mise_config_src"
-
-  return 0
-}
-
 # Brief: Verify mise binary checksum against official release checksums
-# Params: None
-# Uses: XDG_BIN_HOME, DEVBASE_DOT, _DEVBASE_TEMP, retry_command (globals/functions)
+# Params: $1 = version (optional, uses get_tool_version if not provided)
+# Uses: XDG_BIN_HOME, _DEVBASE_TEMP, retry_command (globals/functions)
 # Returns: 0 if valid or skipped, 1 if mise not found or checksum mismatch
 # Side-effects: Downloads SHASUMS256.txt, computes sha256sum
 verify_mise_checksum() {
+  local version="${1:-}"
   local mise_bin="${XDG_BIN_HOME}/mise"
 
   if [[ ! -f "$mise_bin" ]]; then
@@ -131,15 +32,15 @@ verify_mise_checksum() {
     return 0
   fi
 
-  local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
-  local version
-
-  if [[ -f "$versions_file" ]]; then
-    version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
+  # Get version from packages.yaml if not provided
+  if [[ -z "$version" ]]; then
+    if declare -f get_tool_version &>/dev/null; then
+      version=$(get_tool_version "mise")
+    fi
   fi
 
   if [[ -z "$version" ]]; then
-    echo "Warning: Could not determine expected mise version from custom-tools.yaml" >&2
+    echo "Warning: Could not determine expected mise version" >&2
     return 0
   fi
 
@@ -205,16 +106,10 @@ install_mise() {
       die "Downloaded file doesn't appear to be Mise installer"
     fi
 
-    # Get mise version from custom-tools.yaml
+    # Get mise version from packages.yaml via parser
     local mise_version=""
-    if [[ -n "${TOOL_VERSIONS[mise]:-}" ]]; then
-      mise_version="${TOOL_VERSIONS[mise]}"
-    else
-      # Fallback: read directly from custom-tools.yaml if TOOL_VERSIONS not populated yet
-      local versions_file="${DEVBASE_DOT}/.config/devbase/custom-tools.yaml"
-      if [[ -f "$versions_file" ]]; then
-        mise_version=$(grep "^mise:" "$versions_file" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ')
-      fi
+    if declare -f get_tool_version &>/dev/null; then
+      mise_version=$(get_tool_version "mise")
     fi
 
     # Set mise version for installer script (if specified)
@@ -271,19 +166,32 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   echo
 
-  local mise_config="${DEVBASE_DOT}/.config/mise/config.toml"
+  # Generate mise config from packages.yaml
+  # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
 
-  # Check for custom mise config override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/mise-config.toml" ]]; then
-    mise_config="${_DEVBASE_CUSTOM_PACKAGES}/mise-config.toml"
-    show_progress info "Using custom mise config: $mise_config"
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    show_progress info "Using custom package overrides"
   fi
 
-  if [[ -f "$mise_config" ]]; then
-    cp "$mise_config" "${XDG_CONFIG_HOME}/mise/config.toml"
-  else
-    die "Mise config not found at $mise_config"
+  if [[ ! -f "$PACKAGES_YAML" ]]; then
+    die "Package configuration not found: $PACKAGES_YAML"
   fi
+
+  # Source parser if not already loaded
+  if ! declare -f generate_mise_config &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
+  fi
+
+  # Generate mise config.toml from packages.yaml
+  local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
+  mkdir -p "$(dirname "$mise_config")"
+  generate_mise_config "$mise_config"
+  show_progress info "Generated mise config from packages.yaml"
 
   # Trust the config files (both user config and devbase-core root)
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
@@ -293,20 +201,26 @@ install_mise_tools() {
   # This MUST happen before any `mise list` commands, because mise tries to resolve
   # all tools in config.toml (including npm:tree-sitter-cli) which requires node
   # We filter the npm:tree-sitter-cli warning since node isn't installed yet
-  show_progress info "Installing core language runtimes..."
-  local core_install_output
+  local core_runtimes
+  core_runtimes=$(get_core_runtimes)
+
   local mise_server_error=false
-  if ! core_install_output=$(run_mise_from_home_dir install node python go java maven gradle ruby --yes 2>&1); then
-    # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
-    if echo "$core_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
-      mise_server_error=true
+  if [[ -n "$core_runtimes" ]]; then
+    show_progress info "Installing core language runtimes..."
+    local core_install_output
+    # shellcheck disable=SC2086 # Word splitting intended for runtime list
+    if ! core_install_output=$(run_mise_from_home_dir install $core_runtimes --yes 2>&1); then
+      # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
+      if echo "$core_install_output" | grep -qE "HTTP status server error \(50[0-9]"; then
+        mise_server_error=true
+      fi
+      # Filter out expected warning about npm:tree-sitter-cli not being resolvable yet
+      echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
+      show_progress warning "Some core runtimes may have failed (will retry with full install)"
+    else
+      # Show output but filter the npm:tree-sitter-cli warning
+      echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
     fi
-    # Filter out expected warning about npm:tree-sitter-cli not being resolvable yet
-    echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
-    show_progress warning "Some core runtimes may have failed (will retry with full install)"
-  else
-    # Show output but filter the npm:tree-sitter-cli warning
-    echo "$core_install_output" | grep -v "Failed to resolve tool version list for npm:tree-sitter-cli" || true
   fi
 
   # Now that core runtimes are installed, we can safely query tool counts
@@ -336,12 +250,24 @@ install_mise_tools() {
     echo "$full_install_output"
   fi
 
-  # Verify critical tools are present
-  local critical_tools=("node" "python" "go" "java")
+  # Verify critical tools are present (based on selected packs)
+  # Only verify the core runtime for each selected pack
   local verified_count=0
   local missing=()
 
-  for tool in "${critical_tools[@]}"; do
+  # Map pack to its primary runtime binary
+  for pack in $SELECTED_PACKS; do
+    local tool=""
+    case "$pack" in
+    node) tool="node" ;;
+    python) tool="python" ;;
+    go) tool="go" ;;
+    java) tool="java" ;;
+    ruby) tool="ruby" ;;
+    rust) tool="rustc" ;;
+    esac
+    [[ -z "$tool" ]] && continue
+
     if run_mise_from_home_dir which "$tool" &>/dev/null; then
       verified_count=$((verified_count + 1))
     else
@@ -377,8 +303,21 @@ install_mise_tools() {
 # Returns: 0 on success, calls die() on failure
 # Side-effects: Full mise installation workflow
 install_mise_and_tools() {
-  load_all_versions || die "Failed to load tool versions"
-  sync_mise_config_versions || die "Failed to sync mise config versions"
+  # Set up package configuration
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
+
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+  fi
+
+  # Source parser for version lookups
+  if ! declare -f get_tool_version &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
+  fi
+
   install_mise || die "Failed to install mise"
   install_mise_tools || die "Failed to install mise tools"
 

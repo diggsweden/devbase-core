@@ -16,71 +16,46 @@ if [[ -z "${DEVBASE_DOT:-}" ]]; then
   return 1
 fi
 
-# Brief: Read snap package list from configuration file
+# Brief: Read snap package list from packages.yaml
 # Params: None
-# Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES (globals)
-# Returns: 0 on success, 1 if file not found or unreadable
+# Uses: DEVBASE_DOT, DEVBASE_SELECTED_PACKS, get_snap_packages (globals/functions)
+# Returns: 0 on success, 1 if no packages found
 # Outputs: Arrays of package names and options to global SNAP_PACKAGES and SNAP_OPTIONS
 # Side-effects: Populates SNAP_PACKAGES and SNAP_OPTIONS arrays
 load_snap_packages() {
-  local pkg_file="${DEVBASE_DOT}/.config/devbase/snap-packages.txt"
+  # Set up for parse-packages.sh
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
 
-  # Check for custom package list override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt" ]]; then
-    pkg_file="${_DEVBASE_CUSTOM_PACKAGES}/snap-packages.txt"
-    show_progress info "Using custom snap package list: $pkg_file"
+  # Check for custom packages override
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
   fi
 
-  if [[ ! -f "$pkg_file" ]]; then
-    show_progress error "Snap package list not found: $pkg_file"
+  if [[ ! -f "$PACKAGES_YAML" ]]; then
+    show_progress error "Package configuration not found: $PACKAGES_YAML"
     return 1
   fi
 
-  if [[ ! -r "$pkg_file" ]]; then
-    show_progress error "Snap package list not readable: $pkg_file"
-    return 1
+  # Source parser if not already loaded
+  if ! declare -f get_snap_packages &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
   fi
 
-  # Read packages from file
+  # Get packages from parser (format: "name|options")
   local packages=()
   local options=()
 
-  while IFS= read -r line; do
-    # Skip pure comment lines (starting with #)
-    [[ "$line" =~ ^[[:space:]]*# ]] && continue
-
-    # Skip empty lines
-    [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-
-    # Extract tags from inline comment (everything after #)
-    local tags=""
-    if [[ "$line" =~ \#[[:space:]]*(.*) ]]; then
-      tags="${BASH_REMATCH[1]}"
-    fi
-
-    # Check for @skip-wsl tag
-    if [[ "$tags" =~ @skip-wsl ]] && is_wsl; then
-      continue
-    fi
-
-    # Extract package name and options (before any comment)
-    # Format: package_name [options] # comment
-    local pkg_line="${line%%#*}"
-    local pkg_name
-    local pkg_options=""
-
-    # Read first word as package name, rest as options
-    read -r pkg_name pkg_options <<<"$pkg_line"
-
-    [[ -z "$pkg_name" ]] && continue
-
-    packages+=("$pkg_name")
-    options+=("$pkg_options")
-  done <"$pkg_file"
+  while IFS='|' read -r pkg opts; do
+    [[ -z "$pkg" ]] && continue
+    packages+=("$pkg")
+    options+=("$opts")
+  done < <(get_snap_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress error "No valid snap packages found in $pkg_file"
-    return 1
+    show_progress warning "No snap packages found in configuration"
+    return 0
   fi
 
   # Export as readonly arrays

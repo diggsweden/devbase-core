@@ -15,14 +15,10 @@ load 'test_helper'
 
 setup() {
   common_setup_isolated
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   # Alias for backward compatibility with tests using TEMP_DIR
   TEMP_DIR="$TEST_DIR"
   export TEMP_DIR
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source_core_libs
 }
 
 teardown() {

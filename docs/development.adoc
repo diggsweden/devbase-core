@@ -268,7 +268,7 @@ setup-vscode.sh               # VSCode/Cursor configuration
 [source]
 ----
 .config/
-├── devbase/            # DevBase metadata (version, custom-tools.yaml, apt-packages.txt, vscode-extensions.yaml)
+├── devbase/            # DevBase metadata (packages.yaml - unified package configuration)
 ├── fish/               # Fish shell configuration
 │   ├── config.fish     # Main configuration
 │   ├── conf.d/         # Configuration directory

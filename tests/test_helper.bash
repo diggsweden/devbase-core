@@ -21,6 +21,7 @@ common_setup() {
   TEST_DIR="$(temp_make)"
   export TEST_DIR
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
 }
 
 # Standard test teardown - cleans up temp dir safely
@@ -85,6 +86,27 @@ setup_isolated_home() {
   mkdir -p "$HOME"
   mkdir -p "$XDG_DATA_HOME"
   mkdir -p "$XDG_CONFIG_HOME"
+}
+
+# =============================================================================
+# Common Library Sourcing
+# =============================================================================
+
+# Source core UI libraries (colors, validation, ui-helpers)
+# Usage: source_core_libs
+# Requires: DEVBASE_ROOT to be set
+source_core_libs() {
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/validation.sh"
+  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+}
+
+# Source core UI libraries plus check-requirements
+# Usage: source_core_libs_with_requirements
+# Requires: DEVBASE_ROOT to be set
+source_core_libs_with_requirements() {
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/check-requirements.sh"
 }
 
 # =============================================================================

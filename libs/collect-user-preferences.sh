@@ -79,9 +79,14 @@ setup_non_interactive_mode() {
   export DEVBASE_INSTALL_INTELLIJ
   export DEVBASE_INSTALL_JMC
 
+  # All packs selected by default in non-interactive mode
+  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="java node python go ruby rust vscode-editor"
+  export DEVBASE_SELECTED_PACKS
+
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
   printf "  Git Email: %s\n" "$DEVBASE_GIT_EMAIL"
   printf "  Theme: %s\n" "$DEVBASE_THEME"
+  printf "  Packs: %s\n" "$DEVBASE_SELECTED_PACKS"
   if [[ "$GENERATED_SSH_PASSPHRASE" == "true" ]]; then
     printf "  SSH Key: Generated with secure passphrase\n"
   fi
@@ -133,10 +138,17 @@ load_saved_preferences() {
   DEVBASE_ZELLIJ_AUTOSTART=$(_yq_read '.tools.zellij_autostart' "$prefs_file")
   DEVBASE_ENABLE_GIT_HOOKS=$(_yq_read '.tools.git_hooks' "$prefs_file")
 
+  # Load selected packs (array to space-separated string)
+  DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
+  # Default to all packs if not set
+  if [[ -z "$DEVBASE_SELECTED_PACKS" ]]; then
+    DEVBASE_SELECTED_PACKS="java node python go ruby rust vscode-editor"
+  fi
+
   export DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL DEVBASE_SSH_KEY_NAME
   export EDITOR VISUAL DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS DEVBASE_VSCODE_NEOVIM
   export DEVBASE_INSTALL_LAZYVIM DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
-  export DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
+  export DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS DEVBASE_SELECTED_PACKS
 
   # For updates, skip SSH key generation - keep existing key
   export DEVBASE_SSH_KEY_ACTION="skip"
@@ -144,6 +156,7 @@ load_saved_preferences() {
   printf "  Theme: %s\n" "$DEVBASE_THEME"
   printf "  Git: %s <%s>\n" "$DEVBASE_GIT_AUTHOR" "$DEVBASE_GIT_EMAIL"
   printf "  Editor: %s\n" "$EDITOR"
+  printf "  Packs: %s\n" "$DEVBASE_SELECTED_PACKS"
 
   show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
   return 0
@@ -641,6 +654,59 @@ collect_tool_preferences() {
   _prompt_git_hooks
 }
 
+# Brief: Prompt user to select language packs
+# Modifies: DEVBASE_SELECTED_PACKS (exported, space-separated list)
+# Returns: 0 always
+collect_pack_preferences() {
+  printf "\n"
+  print_section "Language Packs" "${DEVBASE_COLORS[BOLD_CYAN]}"
+
+  printf "  %bSelect which language packs to install (all selected by default):%b\n\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+
+  # Get available packs
+  local packs=()
+  local descriptions=()
+  while IFS='|' read -r pack desc; do
+    packs+=("$pack")
+    descriptions+=("$desc")
+  done < <(get_available_packs)
+
+  # All selected by default
+  local selected=()
+  for pack in "${packs[@]}"; do
+    selected+=("$pack")
+  done
+
+  # Simple toggle interface
+  local i=0
+  for pack in "${packs[@]}"; do
+    local is_selected="true"
+    printf "  [x] %-15s - %s\n" "$pack" "${descriptions[$i]}"
+    ((i++))
+  done
+
+  printf "\n"
+  if ask_yes_no "Install all language packs? (Y/n)" "Y"; then
+    # Keep all selected
+    DEVBASE_SELECTED_PACKS="${packs[*]}"
+    printf "  %b✓%b All packs selected\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+  else
+    # Let user select individually
+    selected=()
+    for i in "${!packs[@]}"; do
+      local pack="${packs[$i]}"
+      local desc="${descriptions[$i]}"
+      if ask_yes_no "  Install $pack ($desc)? (Y/n)" "Y"; then
+        selected+=("$pack")
+      fi
+    done
+    DEVBASE_SELECTED_PACKS="${selected[*]}"
+    printf "  %b✓%b Selected: %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "$DEVBASE_SELECTED_PACKS"
+  fi
+
+  export DEVBASE_SELECTED_PACKS
+}
+
 collect_user_configuration() {
   if [[ "${NON_INTERACTIVE}" == "true" ]]; then
     setup_non_interactive_mode
@@ -661,6 +727,7 @@ collect_user_configuration() {
   collect_ssh_configuration
   collect_editor_preferences
   collect_tool_preferences
+  collect_pack_preferences
 
   write_user_preferences
 
@@ -710,6 +777,8 @@ ide:
 tools:
   zellij_autostart: ${DEVBASE_ZELLIJ_AUTOSTART}
   git_hooks: ${DEVBASE_ENABLE_GIT_HOOKS}
+
+packs: [${DEVBASE_SELECTED_PACKS:-}]
 EOF
 
   show_progress success "User preferences saved to ${prefs_file/#$HOME/~}"

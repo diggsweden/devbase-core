@@ -14,18 +14,9 @@ load 'libs/bats-mock/stub'
 load 'test_helper'
 
 setup() {
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  TEST_DIR=$(temp_make)
-  export TEST_DIR
+  common_setup_isolated
   export DEVBASE_DOT="${TEST_DIR}/dot"
-  setup_isolated_home
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
-  source "${DEVBASE_ROOT}/libs/check-requirements.sh"
+  source_core_libs_with_requirements
 }
 
 teardown() {
@@ -36,102 +27,151 @@ teardown() {
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/uname" ]] && unstub uname || true
   fi
   
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
-@test "load_snap_packages reads package list from default file" {
+@test "get_snap_packages reads packages from packages.yaml" {
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
   mkdir -p "${TEST_DIR}/.config/devbase"
-  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
-kubectl
-helm --classic
-terraform
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" <<EOF
+core:
+  snap:
+    kubectl: {}
+    helm: { options: "--classic" }
+    terraform: {}
+packs: {}
 EOF
   
   export DEVBASE_DOT="${TEST_DIR}"
+  export PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS=""
   
-  load_snap_packages
+  run get_snap_packages
   
-  [[ ${#SNAP_PACKAGES[@]} -eq 3 ]]
-  [[ "${SNAP_PACKAGES[0]}" == "kubectl" ]]
-  [[ "${SNAP_PACKAGES[1]}" == "helm" ]]
-  [[ "${SNAP_OPTIONS[1]}" == "--classic" ]]
+  assert_success
+  assert_line --partial "kubectl|"
+  assert_line --partial "helm|--classic"
+  assert_line --partial "terraform|"
 }
 
-@test "load_snap_packages skips comment lines" {
+@test "get_snap_packages includes packages from selected packs" {
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
   mkdir -p "${TEST_DIR}/.config/devbase"
-  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
-# This is a comment
-kubectl
-# Another comment
-helm
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" <<EOF
+core:
+  snap:
+    kubectl: {}
+packs:
+  java:
+    description: "Java development"
+    snap:
+      intellij-idea-ultimate: { options: "--classic" }
 EOF
   
   export DEVBASE_DOT="${TEST_DIR}"
+  export PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="java"
   
-  load_snap_packages
+  run get_snap_packages
   
-  [[ ${#SNAP_PACKAGES[@]} -eq 2 ]]
-  [[ "${SNAP_PACKAGES[0]}" == "kubectl" ]]
-  [[ "${SNAP_PACKAGES[1]}" == "helm" ]]
+  assert_success
+  # Should have kubectl (core) + intellij-idea-ultimate (java pack)
+  [[ $(echo "$output" | wc -l) -eq 2 ]]
 }
 
-@test "load_snap_packages skips empty lines" {
+@test "get_snap_packages excludes unselected packs" {
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
   mkdir -p "${TEST_DIR}/.config/devbase"
-  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
-kubectl
-
-helm
-
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" <<EOF
+core:
+  snap:
+    kubectl: {}
+packs:
+  java:
+    description: "Java development"
+    snap:
+      intellij-idea-ultimate: { options: "--classic" }
+  node:
+    description: "Node development"
+    snap:
+      node-editor: {}
 EOF
   
   export DEVBASE_DOT="${TEST_DIR}"
+  export PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="java"
   
-  load_snap_packages
+  run get_snap_packages
   
-  [[ ${#SNAP_PACKAGES[@]} -eq 2 ]]
+  assert_success
+  # Should have kubectl (core) + intellij (java), NOT node-editor
+  [[ $(echo "$output" | wc -l) -eq 2 ]]
+  refute_output --partial "node-editor"
 }
 
-@test "load_snap_packages handles @skip-wsl tag in WSL environment" {
+@test "get_snap_packages handles @skip-wsl tag in WSL environment" {
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
   mkdir -p "${TEST_DIR}/.config/devbase"
-  cat > "${TEST_DIR}/.config/devbase/snap-packages.txt" <<EOF
-kubectl
-snap-store # @skip-wsl
-helm
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" <<EOF
+core:
+  snap:
+    kubectl: {}
+    snap-store: { tags: ["@skip-wsl"] }
+    helm: {}
+packs: {}
 EOF
   
   export DEVBASE_DOT="${TEST_DIR}"
+  export PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS=""
   export WSL_DISTRO_NAME="Ubuntu"
   
-  load_snap_packages
+  run get_snap_packages
   
-  [[ ${#SNAP_PACKAGES[@]} -eq 2 ]]
-  [[ "${SNAP_PACKAGES[0]}" == "kubectl" ]]
-  [[ "${SNAP_PACKAGES[1]}" == "helm" ]]
+  assert_success
+  # Should have kubectl and helm, NOT snap-store
+  [[ $(echo "$output" | wc -l) -eq 2 ]]
+  refute_output --partial "snap-store"
 }
 
-@test "load_snap_packages uses custom package list when available" {
+@test "get_snap_packages merges custom packages.yaml overlay" {
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
+  mkdir -p "${TEST_DIR}/.config/devbase"
   mkdir -p "${TEST_DIR}/custom-packages"
-  cat > "${TEST_DIR}/custom-packages/snap-packages.txt" <<EOF
-custom-tool
+  
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" <<EOF
+core:
+  snap:
+    kubectl: {}
+packs: {}
+EOF
+
+  cat > "${TEST_DIR}/custom-packages/packages-custom.yaml" <<EOF
+core:
+  snap:
+    custom-tool: { options: "--classic" }
 EOF
   
-  export _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom-packages"
   export DEVBASE_DOT="${TEST_DIR}"
+  export PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML="${TEST_DIR}/custom-packages/packages-custom.yaml"
+  export SELECTED_PACKS=""
+  export _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom-packages"
   
-  load_snap_packages
+  run get_snap_packages
   
-  [[ ${#SNAP_PACKAGES[@]} -eq 1 ]]
-  [[ "${SNAP_PACKAGES[0]}" == "custom-tool" ]]
+  assert_success
+  assert_output --partial "custom-tool|--classic"
 }
 
 @test "configure_snap_proxy sets proxy when configured" {

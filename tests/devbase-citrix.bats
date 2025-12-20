@@ -15,16 +15,12 @@ load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
 load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  setup_isolated_home
-  
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup_isolated
   export DEVBASE_CITRIX_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-citrix.fish"
 }
 
 teardown() {
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
 # Helper to run fish commands with the devbase-citrix function loaded
