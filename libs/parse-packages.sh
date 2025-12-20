@@ -200,6 +200,27 @@ get_available_packs() {
   done
 }
 
+# Brief: Get list of items a pack includes
+# Params: $1 = pack name
+# Output: One item per line (apt packages, mise tools, vscode extensions, custom)
+get_pack_contents() {
+  local pack="$1"
+  local yaml
+  yaml=$(_get_merged_packages)
+
+  # Get apt package names
+  echo "$yaml" | yq -r ".packs.${pack}.apt // {} | keys | .[]" 2>/dev/null
+
+  # Get mise tool names
+  echo "$yaml" | yq -r ".packs.${pack}.mise // {} | keys | .[]" 2>/dev/null
+
+  # Get vscode extension names
+  echo "$yaml" | yq -r ".packs.${pack}.vscode // {} | keys | .[]" 2>/dev/null
+
+  # Get custom installer names
+  echo "$yaml" | yq -r ".packs.${pack}.custom // {} | keys | .[]" 2>/dev/null
+}
+
 # Brief: Get version of a specific tool from packages.yaml
 # Params: $1 = tool name (e.g., "mise", "node", "vscode")
 # Output: Version string

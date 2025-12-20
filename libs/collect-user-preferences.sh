@@ -659,6 +659,12 @@ collect_tool_preferences() {
 # Modifies: DEVBASE_SELECTED_PACKS (exported, space-separated list)
 # Returns: 0 always
 collect_pack_preferences() {
+  # Source parser for get_available_packs if not already loaded
+  if ! declare -f get_available_packs &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh"
+  fi
+
   printf "\n"
   print_section "Language Packs" "${DEVBASE_COLORS[BOLD_CYAN]}"
 
@@ -672,37 +678,85 @@ collect_pack_preferences() {
     descriptions+=("$desc")
   done < <(get_available_packs)
 
-  # All selected by default
-  local selected=()
-  for pack in "${packs[@]}"; do
-    selected+=("$pack")
-  done
+  # Use existing selection or default to all
+  local current_selection=" ${DEVBASE_SELECTED_PACKS:-${packs[*]}} "
 
-  # Simple toggle interface
+  # Helper to check if pack is selected
+  _is_selected() {
+    [[ "$current_selection" == *" $1 "* ]]
+  }
+
+  # Display current selection state
   local i=0
+  local all_selected=true
   for pack in "${packs[@]}"; do
-    local is_selected="true"
-    printf "  [x] %-15s - %s\n" "$pack" "${descriptions[$i]}"
+    if _is_selected "$pack"; then
+      printf "  [x] %-15s - %s\n" "$pack" "${descriptions[$i]}"
+    else
+      printf "  [ ] %-15s - %s\n" "$pack" "${descriptions[$i]}"
+      all_selected=false
+    fi
     ((i++))
   done
 
   printf "\n"
-  if ask_yes_no "Install all language packs? (Y/n)" "Y"; then
-    # Keep all selected
-    DEVBASE_SELECTED_PACKS="${packs[*]}"
-    printf "  %b✓%b All packs selected\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+
+  # Determine if this is a fresh install (no existing selection) or update
+  local is_fresh_install=false
+  [[ -z "${DEVBASE_SELECTED_PACKS:-}" ]] && is_fresh_install=true
+
+  # Helper to display pack contents
+  _show_pack_details() {
+    local pack="$1"
+    local desc="$2"
+    printf "\n  %b%s%b: %s\n" "${DEVBASE_COLORS[BOLD]}" "$pack" "${DEVBASE_COLORS[NC]}" "$desc"
+    printf "  %bIncludes:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    local item
+    while IFS= read -r item; do
+      [[ -n "$item" ]] && printf "    %b- %s%b\n" "${DEVBASE_COLORS[DIM]}" "$item" "${DEVBASE_COLORS[NC]}"
+    done < <(get_pack_contents "$pack")
+  }
+
+  if [[ "$is_fresh_install" == "true" ]]; then
+    # Fresh install: ask if user wants all packs or to select individually
+    if ask_yes_no "Install all language packs? (Y/n)" "Y"; then
+      DEVBASE_SELECTED_PACKS="${packs[*]}"
+      printf "  %b✓%b All packs selected\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    else
+      # Let user select individually, showing pack contents
+      local selected=()
+      for i in "${!packs[@]}"; do
+        local pack="${packs[$i]}"
+        local desc="${descriptions[$i]}"
+        _show_pack_details "$pack" "$desc"
+        if ask_yes_no "  Install ${pack}? (Y/n)" "Y"; then
+          selected+=("$pack")
+        fi
+      done
+      DEVBASE_SELECTED_PACKS="${selected[*]}"
+      printf "\n  %b✓%b Selected: %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "$DEVBASE_SELECTED_PACKS"
+    fi
   else
-    # Let user select individually
-    selected=()
-    for i in "${!packs[@]}"; do
-      local pack="${packs[$i]}"
-      local desc="${descriptions[$i]}"
-      if ask_yes_no "  Install $pack ($desc)? (Y/n)" "Y"; then
-        selected+=("$pack")
-      fi
-    done
-    DEVBASE_SELECTED_PACKS="${selected[*]}"
-    printf "  %b✓%b Selected: %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "$DEVBASE_SELECTED_PACKS"
+    # Update: ask if user wants to keep current selection or change
+    if ask_yes_no "Keep current selection? (Y/n)" "Y"; then
+      # Keep current - DEVBASE_SELECTED_PACKS already set
+      printf "  %b✓%b Keeping current selection\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    else
+      # Let user select individually, showing pack contents
+      local selected=()
+      for i in "${!packs[@]}"; do
+        local pack="${packs[$i]}"
+        local desc="${descriptions[$i]}"
+        local pack_default="Y"
+        _is_selected "$pack" || pack_default="N"
+        _show_pack_details "$pack" "$desc"
+        if ask_yes_no "  Install ${pack}?" "$pack_default"; then
+          selected+=("$pack")
+        fi
+      done
+      DEVBASE_SELECTED_PACKS="${selected[*]}"
+      printf "\n  %b✓%b Selected: %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" "$DEVBASE_SELECTED_PACKS"
+    fi
   fi
 
   export DEVBASE_SELECTED_PACKS
