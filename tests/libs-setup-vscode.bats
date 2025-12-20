@@ -14,23 +14,15 @@ load 'libs/bats-mock/stub'
 load 'test_helper'
 
 setup() {
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  TEST_DIR=$(temp_make)
-  export TEST_DIR
+  common_setup_isolated
   export DEVBASE_DOT="${TEST_DIR}/dot"
-  setup_isolated_home
   
   # Create mock filesystem root for path tests
   export MOCK_ROOT="${TEST_DIR}/mock_root"
   mkdir -p "${MOCK_ROOT}/usr/bin"
   mkdir -p "${MOCK_ROOT}/usr/local/bin"
   
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
-  source "${DEVBASE_ROOT}/libs/check-requirements.sh"
+  source_core_libs_with_requirements
 }
 
 teardown() {
@@ -39,7 +31,7 @@ teardown() {
     unstub command || true
   fi
   
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "_get_vscode_theme_name maps theme keys to display names" {

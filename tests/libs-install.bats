@@ -25,7 +25,6 @@ teardown() {
 
 @test "cleanup_temp_directory validates path pattern before removal" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -44,7 +43,6 @@ teardown() {
 
 @test "cleanup_temp_directory rejects unsafe paths" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -63,7 +61,6 @@ teardown() {
 
 @test "cleanup_temp_directory handles missing directory gracefully" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
@@ -127,7 +124,6 @@ teardown() {
 
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   
   cd "${DEVBASE_ROOT}"
   
@@ -140,9 +136,8 @@ teardown() {
   assert_success
 }
 
-@test "setup_installation_paths sets version file path" {
+@test "setup_installation_paths validates required variables" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
   export _DEVBASE_TEMP="/tmp/devbase.test123"
   
@@ -151,10 +146,8 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
   source <(sed -n '/^setup_installation_paths()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
   
-  setup_installation_paths
-  
-  [[ -n "$_VERSIONS_FILE" ]]
-  [[ "$_VERSIONS_FILE" =~ custom-tools.yaml$ ]]
+  run setup_installation_paths
+  assert_success
 }
 
 

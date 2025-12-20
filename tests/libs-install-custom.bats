@@ -14,16 +14,8 @@ load 'libs/bats-mock/stub'
 load 'test_helper'
 
 setup() {
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  TEST_DIR=$(temp_make)
-  export TEST_DIR
-  setup_isolated_home
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  common_setup_isolated
+  source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
 }
 
@@ -35,7 +27,7 @@ teardown() {
     [[ -L "${BATS_MOCK_BINDIR:-/tmp/bin}/git" ]] && unstub git || true
   fi
   
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "get_vscode_checksum fetches checksum from API" {
@@ -91,11 +83,23 @@ teardown() {
 }
 
 @test "install_lazyvim skips when user preference is false" {
-  source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
   export DEVBASE_INSTALL_LAZYVIM="false"
   export DEVBASE_THEME="everforest-dark"
   export DEVBASE_DOT="${TEST_DIR}/dot"
+  export DEVBASE_SELECTED_PACKS=""
+  
+  # Create minimal packages.yaml for parser
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    lazyvim: { version: "main", installer: "install_lazyvim" }
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   run install_lazyvim
   assert_success
@@ -103,12 +107,23 @@ teardown() {
 }
 
 @test "install_lazyvim backs up existing nvim config" {
-  source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
   export DEVBASE_INSTALL_LAZYVIM="true"
   export DEVBASE_THEME="everforest-dark"
   export DEVBASE_DOT="${TEST_DIR}/dot"
-  declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")
+  export DEVBASE_SELECTED_PACKS=""
+  
+  # Create minimal packages.yaml for parser
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    lazyvim: { version: "main", installer: "install_lazyvim" }
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   # Create test template
   mkdir -p "${DEVBASE_DOT}/.config/nvim/lua/plugins"
@@ -129,12 +144,23 @@ teardown() {
 }
 
 @test "install_lazyvim configures light theme background" {
-  source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
   export DEVBASE_INSTALL_LAZYVIM="true"
   export DEVBASE_THEME="everforest-light"
   export DEVBASE_DOT="${TEST_DIR}/dot"
-  declare -gA TOOL_VERSIONS=([lazyvim_starter]="main")
+  export DEVBASE_SELECTED_PACKS=""
+  
+  # Create minimal packages.yaml for parser
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    lazyvim: { version: "main", installer: "install_lazyvim" }
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
   stub git \
     'clone --quiet * : mkdir -p "$4/lua/plugins"'

@@ -834,7 +834,7 @@ check_config_files() {
   printf "\n  %bDevBase Metadata:%b\n" "${BOLD}" "${NC}"
   local devbase_files=(
     "$DEVBASE_CONFIG/version"
-    "$DEVBASE_CONFIG/custom-tools.yaml"
+    "$DEVBASE_CONFIG/packages.yaml"
     "$DEVBASE_CONFIG/install-summary.txt"
   )
 
@@ -957,7 +957,7 @@ check_apt_packages() {
 check_mise_tools() {
   print_subheader "Mise Tools"
 
-  # Read expected tools from mise config.toml (not custom-tools.yaml)
+  # Read expected tools from mise config.toml (generated from packages.yaml)
   local mise_config="$CONFIG_HOME/mise/config.toml"
   if ! file_exists "$mise_config"; then
     mise_config="${DEVBASE_ROOT:-$(pwd)}/dot/.config/mise/config.toml"
@@ -1082,7 +1082,7 @@ check_snap_packages() {
   local installed_snaps
   installed_snaps=$(snap list 2>/dev/null)
 
-  # Snap packages are managed by install-snap.sh, not custom-tools.yaml
+  # Snap packages are defined in packages.yaml and installed by install-snap.sh
   # Note: Firefox is installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
   local snap_tools=(ghostty chromium microk8s)
 
@@ -1276,14 +1276,19 @@ check_vscode_extensions() {
     code_cmd="/mnt/c/Program Files/Microsoft VS Code/bin/code"
   fi
 
-  # Get expected extensions from vscode-extensions.yaml
-  local extensions_file="$DEVBASE_CONFIG/vscode-extensions.yaml"
-  if ! file_exists "$extensions_file"; then
-    extensions_file="${DEVBASE_ROOT:-$(pwd)}/dot/.config/devbase/vscode-extensions.yaml"
+  # Get expected extensions from packages.yaml (unified package config)
+  local packages_file="$DEVBASE_CONFIG/packages.yaml"
+  if ! file_exists "$packages_file"; then
+    packages_file="${DEVBASE_ROOT:-$(pwd)}/dot/.config/devbase/packages.yaml"
   fi
 
-  if ! file_exists "$extensions_file"; then
-    printf "  %b✗%b vscode-extensions.yaml not found\n" "${RED}" "${NC}"
+  if ! file_exists "$packages_file"; then
+    printf "  %b✗%b packages.yaml not found\n" "${RED}" "${NC}"
+    return
+  fi
+
+  if ! command -v yq &>/dev/null; then
+    printf "  %b⊘%b yq not found - skipping VS Code extension verification\n" "${DIM}" "${NC}"
     return
   fi
 
@@ -1335,20 +1340,25 @@ check_vscode_extensions() {
   # Collect all extensions first for sorting
   declare -a extensions_list
 
-  # Parse vscode-extensions.yaml for VS Code extensions
-  while IFS=: read -r ext_id value_line; do
-    # Skip comments and empty lines
-    [[ "$ext_id" =~ ^[[:space:]]*# ]] && continue
+  # Parse packages.yaml for VS Code extensions using yq
+  # Extensions are in core.vscode and packs.*.vscode
+  local yaml_content
+  yaml_content=$(cat "$packages_file")
+
+  # Get core vscode extensions
+  while IFS= read -r ext_id; do
     [[ -z "$ext_id" ]] && continue
-
-    # Trim leading/trailing whitespace from extension ID
-    ext_id=$(echo "$ext_id" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-
-    # Skip if still empty after trimming
-    [[ -z "$ext_id" ]] && continue
-
     extensions_list+=("$ext_id")
-  done <"$extensions_file"
+  done < <(echo "$yaml_content" | yq -r '.core.vscode // {} | keys | .[]' 2>/dev/null)
+
+  # Get vscode extensions from all packs
+  while IFS= read -r pack; do
+    [[ -z "$pack" ]] && continue
+    while IFS= read -r ext_id; do
+      [[ -z "$ext_id" ]] && continue
+      extensions_list+=("$ext_id")
+    done < <(echo "$yaml_content" | yq -r ".packs.$pack.vscode // {} | keys | .[]" 2>/dev/null)
+  done < <(echo "$yaml_content" | yq -r '.packs | keys | .[]' 2>/dev/null)
 
   # Sort extensions alphabetically (case-insensitive)
   local sorted_extensions

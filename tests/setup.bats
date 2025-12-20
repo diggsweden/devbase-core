@@ -15,14 +15,11 @@ load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
 load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  setup_isolated_home
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  common_setup_isolated
 }
 
 teardown() {
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
 @test "setup.sh requires bash not sh" {

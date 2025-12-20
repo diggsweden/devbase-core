@@ -15,17 +15,13 @@ load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
 load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  TEST_DIR="$(temp_make)"
-  export TEST_DIR
-  setup_isolated_home
+  common_setup_isolated
   mkdir -p "$XDG_DATA_HOME/devbase"
-  
-  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_UPDATE_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-update.fish"
 }
 
 teardown() {
-  safe_temp_del "$TEST_DIR"
+  common_teardown
 }
 
 # Helper to run fish commands with the devbase-update function loaded

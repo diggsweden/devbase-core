@@ -488,3 +488,318 @@ EOF
   assert_output --partial "hooks=false"
   assert_output --partial "ssh_action=skip"
 }
+
+@test "load_saved_preferences defaults packs when not in file (non-interactive)" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  
+  # Old preferences file without packs key
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: nord
+git:
+  author: Test User
+  email: test@example.com
+EOF
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    export NON_INTERACTIVE='true'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"packs=\$DEVBASE_SELECTED_PACKS\"
+  "
+  
+  assert_success
+  assert_output --partial "packs=java node python go ruby rust vscode-editor"
+}
+
+@test "load_saved_preferences reads comma-separated packs" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  mkdir -p "$prefs_dir"
+  
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: nord
+packs: [java, node, rust]
+EOF
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"packs=\$DEVBASE_SELECTED_PACKS\"
+  "
+  
+  assert_success
+  assert_output --partial "packs=java node rust"
+}
+
+@test "write_user_preferences saves packs with commas" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    export DEVBASE_THEME='nord'
+    export DEVBASE_FONT='Hack'
+    export DEVBASE_GIT_AUTHOR='Test'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_ACTION='generate'
+    export DEVBASE_SSH_KEY_NAME='id_test'
+    export EDITOR='nvim'
+    export DEVBASE_VSCODE_INSTALL='true'
+    export DEVBASE_VSCODE_EXTENSIONS='true'
+    export DEVBASE_VSCODE_NEOVIM='false'
+    export DEVBASE_INSTALL_LAZYVIM='true'
+    export DEVBASE_INSTALL_INTELLIJ='false'
+    export DEVBASE_INSTALL_JMC='false'
+    export DEVBASE_ZELLIJ_AUTOSTART='true'
+    export DEVBASE_ENABLE_GIT_HOOKS='true'
+    export DEVBASE_SELECTED_PACKS='java python rust'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    write_user_preferences >/dev/null 2>&1
+    grep 'packs:' '${prefs_dir}/preferences.yaml'
+  "
+  
+  assert_success
+  assert_output "packs: [java, python, rust]"
+}
+
+@test "packs round-trip preserves selection" {
+  local prefs_dir="${BATS_TEST_TMPDIR}/config"
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    export DEVBASE_THEME='nord'
+    export DEVBASE_FONT='Hack'
+    export DEVBASE_GIT_AUTHOR='Test'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_ACTION='generate'
+    export DEVBASE_SSH_KEY_NAME='id_test'
+    export EDITOR='nvim'
+    export DEVBASE_VSCODE_INSTALL='true'
+    export DEVBASE_VSCODE_EXTENSIONS='true'
+    export DEVBASE_VSCODE_NEOVIM='false'
+    export DEVBASE_INSTALL_LAZYVIM='true'
+    export DEVBASE_INSTALL_INTELLIJ='false'
+    export DEVBASE_INSTALL_JMC='false'
+    export DEVBASE_ZELLIJ_AUTOSTART='true'
+    export DEVBASE_ENABLE_GIT_HOOKS='true'
+    export DEVBASE_SELECTED_PACKS='go ruby rust'
+    
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    # Write
+    write_user_preferences >/dev/null 2>&1
+    
+    # Clear and reload
+    unset DEVBASE_SELECTED_PACKS
+    load_saved_preferences >/dev/null 2>&1
+    echo \"packs=\$DEVBASE_SELECTED_PACKS\"
+  "
+  
+  assert_success
+  assert_output "packs=go ruby rust"
+}
+
+# =============================================================================
+# Isolated tests for preference flows
+# =============================================================================
+
+@test "load_saved_preferences only loads, never writes" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  
+  # Create preferences file without packs
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: gruvbox-dark
+git:
+  author: Old User
+  email: old@example.com
+EOF
+  
+  local mtime_before
+  mtime_before=$(stat -c %Y "${prefs_dir}/preferences.yaml")
+  
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    sleep 1
+    load_saved_preferences >/dev/null 2>&1
+    
+    # File should not be modified
+    stat -c %Y '${prefs_dir}/preferences.yaml'
+  "
+  
+  assert_success
+  assert_output "$mtime_before"
+}
+
+@test "load_saved_preferences sets default packs when missing" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  
+  # Preferences without packs
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: nord
+EOF
+  
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${prefs_dir}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' >/dev/null 2>&1
+    
+    load_saved_preferences >/dev/null 2>&1
+    echo \"\$DEVBASE_SELECTED_PACKS\"
+  "
+  
+  assert_success
+  assert_output "java node python go ruby rust vscode-editor"
+}
+
+@test "write_user_preferences creates file with all current fields" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  export DEVBASE_CONFIG_DIR="$prefs_dir"
+  
+  # Set all required preferences
+  export DEVBASE_THEME="nord"
+  export DEVBASE_FONT="FiraCode"
+  export DEVBASE_GIT_AUTHOR="Test User"
+  export DEVBASE_GIT_EMAIL="test@example.com"
+  export DEVBASE_SSH_KEY_ACTION="generate"
+  export DEVBASE_SSH_KEY_NAME="id_test"
+  export EDITOR="nvim"
+  export DEVBASE_VSCODE_INSTALL="true"
+  export DEVBASE_VSCODE_EXTENSIONS="true"
+  export DEVBASE_VSCODE_NEOVIM="false"
+  export DEVBASE_INSTALL_LAZYVIM="true"
+  export DEVBASE_INSTALL_INTELLIJ="false"
+  export DEVBASE_INSTALL_JMC="false"
+  export DEVBASE_ZELLIJ_AUTOSTART="true"
+  export DEVBASE_ENABLE_GIT_HOOKS="true"
+  export DEVBASE_SELECTED_PACKS="java python rust"
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  write_user_preferences >/dev/null 2>&1
+  
+  # Verify file exists and has expected content
+  assert_file_exists "${prefs_dir}/preferences.yaml"
+  run cat "${prefs_dir}/preferences.yaml"
+  assert_output --partial "theme: nord"
+  assert_output --partial "font: FiraCode"
+  assert_output --partial "author: Test User"
+  assert_output --partial "packs: [java, python, rust]"
+}
+
+@test "load then write preserves and updates preferences" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir"
+  
+  # Create initial preferences (old format, missing packs)
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: gruvbox-dark
+font: JetBrainsMono
+git:
+  author: Original User
+  email: original@example.com
+EOF
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  # Load preferences (sets defaults for missing fields)
+  load_saved_preferences >/dev/null 2>&1
+  
+  # Verify loaded values
+  assert_equal "$DEVBASE_THEME" "gruvbox-dark"
+  assert_equal "$DEVBASE_GIT_AUTHOR" "Original User"
+  # Packs should default since missing
+  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby rust vscode-editor"
+  
+  # Now write - should include packs
+  write_user_preferences >/dev/null 2>&1
+  
+  run cat "${prefs_dir}/preferences.yaml"
+  assert_output --partial "theme: gruvbox-dark"
+  assert_output --partial "author: Original User"
+  assert_output --partial "packs: [java, node, python, go, ruby, rust, vscode-editor]"
+}
+
+@test "interactive flow loads existing prefs as defaults then saves" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir"
+  
+  # Create existing preferences
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: dracula
+font: Hack
+git:
+  author: Existing User
+  email: existing@example.com
+packs: [java, rust]
+EOF
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  # Simulate what happens: load_saved_preferences is called first
+  load_saved_preferences >/dev/null 2>&1
+  
+  # Values should be loaded from file
+  assert_equal "$DEVBASE_THEME" "dracula"
+  assert_equal "$DEVBASE_FONT" "Hack"
+  assert_equal "$DEVBASE_GIT_AUTHOR" "Existing User"
+  assert_equal "$DEVBASE_SELECTED_PACKS" "java rust"
+}
+
+@test "fresh install load_saved_preferences returns failure" {
+  common_setup_isolated
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir"
+  # No preferences file - fresh install
+  
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+  
+  # load_saved_preferences should fail when no file exists
+  run load_saved_preferences
+  assert_failure
+}

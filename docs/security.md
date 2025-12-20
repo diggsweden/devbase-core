@@ -58,8 +58,9 @@ SPDX-License-Identifier: CC0-1.0
 
 ### Version Management
 
-- Single source: `devbase-core/dot/.config/devbase/custom-tools.yaml`
-- 11 custom tools with specialized installers, all auto-updated by Renovate
+- Single source: `devbase-core/dot/.config/devbase/packages.yaml`
+- Unified configuration for APT, Snap, mise, VS Code extensions, and custom tools
+- All versioned entries auto-updated by Renovate
 - Git tracks all changes, PR approval required
 
 #### Aqua Registry (35 tools)
@@ -383,9 +384,7 @@ DevBase extends a shared base configuration from the organization's GitHub repos
 
 **Managed Files**:
 
-- `dot/.config/devbase/custom-tools.yaml` - 12 custom tools
-- `dot/.config/devbase/vscode-extensions.yaml` - 22 VS Code extensions  
-- `dot/.config/mise/config.toml` - 50+ mise-managed tools
+- `dot/.config/devbase/packages.yaml` - Unified package configuration (APT, Snap, mise, VS Code, custom tools)
 
 To customize the schedule or stability period, override the base configuration in your organization's `.github` repository.
 
@@ -469,11 +468,7 @@ sudo unattended-upgrade --dry-run --debug
 {
   "customManagers": [
     {
-      "managerFilePatterns": ["dot/.config/devbase/custom-tools.yaml"],
-      "matchStrings": ["renovate: datasource=..."]
-    },
-    {
-      "managerFilePatterns": ["dot/.config/devbase/vscode-extensions.yaml"],
+      "managerFilePatterns": ["dot/.config/devbase/packages.yaml"],
       "matchStrings": ["renovate: datasource=..."]
     }
   ]
@@ -785,13 +780,13 @@ grep -L "set -uo pipefail" libs/*.sh
 # 4. SSH permissions
 ls -la ~/.ssh/
 
-# 5. Renovate-managed custom tools
-grep "renovate:" devbase-core/dot/.config/devbase/custom-tools.yaml | wc -l
-# Expected: 11
+# 5. Renovate-managed packages
+grep "renovate:" devbase-core/dot/.config/devbase/packages.yaml | wc -l
+# Expected: 80+
 
-# 6. Aqua tools
-grep "aqua:" devbase-core/dot/.config/mise/config.toml | wc -l
-# Expected: 35
+# 6. Aqua tools in packages.yaml
+grep "aqua:" devbase-core/dot/.config/devbase/packages.yaml | wc -l
+# Expected: 35+
 
 # 7. Temp cleanup issue
 ls -la /tmp/devbase.*

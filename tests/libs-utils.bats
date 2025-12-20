@@ -15,11 +15,7 @@ load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
   common_setup
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  
-  source "${DEVBASE_ROOT}/libs/define-colors.sh"
-  source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
 }
 
