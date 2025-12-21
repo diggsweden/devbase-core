@@ -20,9 +20,9 @@ jobs:
         version: ['24.04']
     steps:
       - name: Checkout repository
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Cache Mise tools
-        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: |
             ~/.local/share/mise/installs
@@ -31,7 +31,7 @@ jobs:
           restore-keys: |
             mise-${{ runner.os }}-
       - name: Cache VS Code extensions
-        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: |
             ~/.vscode/extensions
@@ -40,7 +40,7 @@ jobs:
           restore-keys: |
             vscode-ext-${{ runner.os }}-
       - name: Cache binary downloads
-        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.cache/devbase/debs
           key: binary-downloads-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/custom-tools.yaml') }}
