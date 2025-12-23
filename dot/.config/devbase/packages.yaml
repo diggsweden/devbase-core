@@ -143,12 +143,11 @@ core:
     nerd_fonts: {version: "v3.4.0", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
     oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom depName=openshift/oc
     k3s: {version: "v1.32.4+k3s1", installer: "install_k3s", tags: ["@optional", "@skip-wsl"]} # renovate: datasource=github-releases depName=k3s-io/k3s
+    vscode: {version: "1.107.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
 
   vscode:
     asciidoctor.asciidoctor-vscode: {version: "3.4.2"} # renovate: datasource=npm
     redhat.vscode-yaml: {version: "1.17.0"} # renovate: datasource=npm
-    dbaeumer.vscode-eslint: {version: "3.0.10"} # renovate: datasource=npm
-    esbenp.prettier-vscode: {version: "11.0.0"} # renovate: datasource=npm
     sonarsource.sonarlint-vscode: {version: "4.18.0"} # renovate: datasource=npm
     MS-SarifVSCode.sarif-viewer: {version: "3.4.5"} # renovate: datasource=github-releases packageName=microsoft/sarif-vscode-extension
     lokalise.i18n-ally: {version: "2.13.1"} # renovate: datasource=npm
@@ -197,6 +196,8 @@ packs:
     mise:
       node: {version: "24.11.1"} # renovate: datasource=node-version depName=node
     vscode:
+      dbaeumer.vscode-eslint: {version: "3.0.10"} # renovate: datasource=npm
+      esbenp.prettier-vscode: {version: "11.0.0"} # renovate: datasource=npm
       bradlc.vscode-tailwindcss: {version: "0.14.11"} # renovate: datasource=npm
       vue.volar: {version: "2.2.8"} # renovate: datasource=npm
 
@@ -235,8 +236,3 @@ packs:
       pkg-config: {}
     mise:
       rust: {version: "1.91.0"} # renovate: datasource=rust-version depName=rust
-
-  vscode-editor:
-    description: "VS Code editor with full configuration"
-    custom:
-      vscode: {version: "1.107.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode

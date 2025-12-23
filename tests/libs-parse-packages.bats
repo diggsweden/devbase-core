@@ -445,12 +445,14 @@ EOF
   run get_pack_contents "java"
   
   assert_success
-  # java pack has apt, mise, custom, and vscode items
-  assert_line "default-jdk"
+  # java pack shows mise tools and custom tools
   assert_line "java"
   assert_line "maven"
   assert_line "intellij"
-  assert_line "redhat.java"
+  # vscode extensions shown with label
+  assert_line "redhat.java (VS Code)"
+  # apt packages are summarized, not listed individually
+  assert_line "+ 1 system packages"
 }
 
 @test "get_pack_contents returns empty for pack with no items" {
@@ -471,7 +473,7 @@ EOF
   assert_output ""
 }
 
-@test "get_pack_contents lists all item types" {
+@test "get_pack_contents shows primary tools and labels vscode extensions" {
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core: {}
 packs:
@@ -496,12 +498,44 @@ EOF
   run get_pack_contents "test"
   
   assert_success
-  assert_line "pkg1"
-  assert_line "pkg2"
+  # Primary tools are shown
   assert_line "tool1"
-  assert_line "ext1"
-  assert_line "ext2"
   assert_line "myapp"
+  # VS Code extensions shown with label
+  assert_line "ext1 (VS Code)"
+  assert_line "ext2 (VS Code)"
+  # apt packages are summarized with count
+  assert_line "+ 2 system packages"
+}
+
+@test "get_pack_contents hides vscode extensions when show_vscode is false" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  test:
+    description: "Test pack"
+    apt:
+      pkg1: {}
+    mise:
+      tool1: {version: "1.0"}
+    vscode:
+      ext1: {version: "1.0"}
+      ext2: {version: "2.0"}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  # With show_vscode=false, extensions should not appear
+  run get_pack_contents "test" "false"
+  
+  assert_success
+  assert_line "tool1"
+  assert_line "+ 1 system packages"
+  # VS Code extensions should NOT be shown
+  refute_line "ext1 (VS Code)"
+  refute_line "ext2 (VS Code)"
 }
 
 # =============================================================================

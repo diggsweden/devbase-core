@@ -239,13 +239,11 @@ validate_custom_directory() {
 
   for subdir in "${required_dirs[@]}"; do
     if [[ ! -d "$dir/$subdir" ]]; then
-      show_progress warning "Custom directory missing required folder: $subdir"
       return 1
     fi
   done
 
   if [[ ! -f "$dir/config/org.env" ]]; then
-    show_progress warning "Custom directory missing required file: config/org.env"
     return 1
   fi
 
@@ -267,7 +265,9 @@ find_custom_directory() {
     fullpath=$(cd "$path" && pwd) || continue
 
     if ! validate_custom_directory "$fullpath"; then
-      show_progress error "Invalid custom directory structure: $fullpath"
+      # Invalid structure - notify user and skip this candidate
+      # This handles empty dirs or leftover dirs from previous installs
+      show_progress info "Skipping incomplete custom config: $fullpath"
       continue
     fi
 

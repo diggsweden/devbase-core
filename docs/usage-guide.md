@@ -2468,6 +2468,65 @@ Curated set of Visual Studio Code extensions for common development tasks.
 Adds language support, linting, formatting, and debugging capabilities to VS Code.
 Pre-selected extensions that work well together for DevBase development workflows.
 
+#### Extension Pack Mapping
+
+Extensions are organized by language pack. Core extensions are always installed when VS Code extensions are enabled. Pack-specific extensions are only installed when that language pack is selected.
+
+**Core** (always installed):
+
+- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML language support with schema validation
+- [SonarLint](https://marketplace.visualstudio.com/items?itemName=SonarSource.sonarlint-vscode) - Code quality and security analysis
+- [SARIF Viewer](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer) - View static analysis results
+- [i18n Ally](https://marketplace.visualstudio.com/items?itemName=lokalise.i18n-ally) - Internationalization support
+- [Material Icon Theme](https://marketplace.visualstudio.com/items?itemName=PKief.material-icon-theme) - File and folder icons
+- [AsciiDoctor](https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode) - AsciiDoc preview and editing
+- [Neovim](https://marketplace.visualstudio.com/items?itemName=asvetliakov.vscode-neovim) - Vim keybindings (optional)
+- [Everforest](https://marketplace.visualstudio.com/items?itemName=sainnhe.everforest) - Green-based color theme
+- [Catppuccin](https://marketplace.visualstudio.com/items?itemName=catppuccin.catppuccin-vsc) - Pastel color theme
+- [Tokyo Night](https://marketplace.visualstudio.com/items?itemName=enkia.tokyo-night) - Dark color theme
+- [Gruvbox](https://marketplace.visualstudio.com/items?itemName=jdinhlife.gruvbox) - Retro groove color theme
+- [Nord](https://marketplace.visualstudio.com/items?itemName=arcticicestudio.nord-visual-studio-code) - Arctic color theme
+- [Dracula](https://marketplace.visualstudio.com/items?itemName=dracula-theme.theme-dracula) - Dark color theme
+- [Solarized](https://marketplace.visualstudio.com/items?itemName=ryanolsonx.solarized) - Precision color theme
+
+**Java** pack:
+
+- [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) - Complete Java development environment
+- [Checkstyle](https://marketplace.visualstudio.com/items?itemName=shengchen.vscode-checkstyle) - Java code style checker
+
+**Node** pack:
+
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - JavaScript/TypeScript linting
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter
+- [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) - Tailwind CSS autocomplete
+- [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) - Vue.js language support
+
+**Python**, **Go**, **Ruby**, **Rust** packs: No additional VS Code extensions.
+
+> **Note**: If you don't select the Node pack, ESLint and Prettier extensions won't be installed since they require Node.js runtime.
+
+#### Installing Extensions
+
+Extensions are not installed during DevBase setup. After setup completes, use the convenience function:
+
+```bash
+# Install extensions based on your selected language packs
+devbase-vscode-extensions
+
+# List extensions that would be installed
+devbase-vscode-extensions --list
+
+# Preview installation without installing
+devbase-vscode-extensions --dry-run
+```
+
+The function reads your preferences from `~/.config/devbase/preferences.yaml` and installs:
+
+- Core extensions (always)
+- Pack-specific extensions (based on your selected language packs)
+
+You can run this function anytime to install or update extensions.
+
 #### Language Support
 
 **Extension Pack for Java** ([vscjava.vscode-java-pack](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)
