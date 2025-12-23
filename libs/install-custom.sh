@@ -19,7 +19,7 @@ _setup_custom_parser() {
 
   # Set up package configuration
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
 
   # Check for custom packages override
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then

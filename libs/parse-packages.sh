@@ -14,7 +14,7 @@ PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 
 # Selected packs (set by caller, space-separated)
-SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
+SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby rust}"
 
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
@@ -203,22 +203,35 @@ get_available_packs() {
 # Brief: Get list of items a pack includes
 # Params: $1 = pack name
 # Output: One item per line (apt packages, mise tools, vscode extensions, custom)
+# Brief: Get pack contents for display (primary tools only, with counts for secondary items)
+# Params: $1 = pack name, $2 = show_vscode ("true" to show VS Code extensions, default "true")
+# Output: Human-friendly list of main tools with summary of extras
 get_pack_contents() {
   local pack="$1"
+  local show_vscode="${2:-true}"
   local yaml
   yaml=$(_get_merged_packages)
 
-  # Get apt package names
-  echo "$yaml" | yq -r ".packs.${pack}.apt // {} | keys | .[]" 2>/dev/null
-
-  # Get mise tool names
+  # Get mise tool names (primary tools users care about)
   echo "$yaml" | yq -r ".packs.${pack}.mise // {} | keys | .[]" 2>/dev/null
 
-  # Get vscode extension names
-  echo "$yaml" | yq -r ".packs.${pack}.vscode // {} | keys | .[]" 2>/dev/null
-
-  # Get custom installer names
+  # Get custom installer names (GUI tools like IntelliJ, DBeaver)
   echo "$yaml" | yq -r ".packs.${pack}.custom // {} | keys | .[]" 2>/dev/null
+
+  # Get vscode extension names with label (only if user chose to install extensions)
+  if [[ "$show_vscode" == "true" ]]; then
+    local ext
+    while IFS= read -r ext; do
+      [[ -n "$ext" ]] && echo "$ext (VS Code)"
+    done < <(echo "$yaml" | yq -r ".packs.${pack}.vscode // {} | keys | .[]" 2>/dev/null)
+  fi
+
+  # Count apt packages (build dependencies - less interesting to users)
+  local apt_count
+  apt_count=$(echo "$yaml" | yq -r ".packs.${pack}.apt // {} | keys | length" 2>/dev/null)
+  [[ "$apt_count" -gt 0 ]] && echo "+ ${apt_count} system packages"
+
+  return 0
 }
 
 # Brief: Get version of a specific tool from packages.yaml

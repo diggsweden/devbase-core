@@ -461,6 +461,13 @@ show_completion_message() {
     print_box_line "  2. Re-run setup.sh to apply custom settings" "$box_width"
   fi
 
+  if [[ "${DEVBASE_VSCODE_EXTENSIONS:-}" == "true" ]]; then
+    print_box_line "" "$box_width"
+    print_box_line "VS Code Extensions:" "$box_width"
+    print_box_line "  Run: devbase-vscode-extensions" "$box_width"
+    print_box_line "  List available: devbase-vscode-extensions --list" "$box_width"
+  fi
+
   print_box_bottom "$box_width"
 
   # Check Secure Boot status after box (native Linux only)
@@ -842,6 +849,17 @@ _display_tools_config() {
   print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 }
 
+_display_packs_config() {
+  print_box_line "Language Packs:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+
+  local pack
+  for pack in ${DEVBASE_SELECTED_PACKS:-}; do
+    print_box_line "  • ${pack}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+  done
+
+  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
+}
+
 _display_installation_overview() {
   printf "\n"
   print_box_top "Installation Overview" 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
@@ -870,6 +888,7 @@ display_configuration_summary() {
   _display_clipboard_config
   _display_ide_config
   _display_tools_config
+  _display_packs_config
 
   print_box_bottom 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
 

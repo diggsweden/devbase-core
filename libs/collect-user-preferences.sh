@@ -61,14 +61,10 @@ setup_non_interactive_mode() {
   fi
   export DEVBASE_VSCODE_INSTALL
 
-  # Set VS Code extensions defaults based on whether VS Code is being installed
-  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
-    [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="true"
-    [[ -z "$DEVBASE_VSCODE_NEOVIM" ]] && DEVBASE_VSCODE_NEOVIM="true"
-  else
-    [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="false"
-    [[ -z "$DEVBASE_VSCODE_NEOVIM" ]] && DEVBASE_VSCODE_NEOVIM="false"
-  fi
+  # VS Code extensions are installed separately via devbase-vscode-extensions
+  # Always enable by default so the function works; neovim preference is user choice
+  [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="true"
+  [[ -z "$DEVBASE_VSCODE_NEOVIM" ]] && DEVBASE_VSCODE_NEOVIM="true"
   export DEVBASE_VSCODE_EXTENSIONS
   export DEVBASE_VSCODE_NEOVIM
 
@@ -80,7 +76,7 @@ setup_non_interactive_mode() {
   export DEVBASE_INSTALL_JMC
 
   # All packs selected by default in non-interactive mode
-  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="java node python go ruby rust vscode-editor"
+  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="java node python go ruby rust"
   export DEVBASE_SELECTED_PACKS
 
   printf "  Git Name: %s\n" "$DEVBASE_GIT_AUTHOR"
@@ -142,7 +138,7 @@ load_saved_preferences() {
   DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
   # Default to all packs if not set in preferences
   if [[ -z "$DEVBASE_SELECTED_PACKS" ]]; then
-    DEVBASE_SELECTED_PACKS="java node python go ruby rust vscode-editor"
+    DEVBASE_SELECTED_PACKS="java node python go ruby rust"
   fi
 
   export DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL DEVBASE_SSH_KEY_NAME
@@ -497,7 +493,7 @@ _prompt_vscode_preferences() {
 
   if is_wsl; then
     printf "  %bVS Code: On WSL, VS Code runs from Windows and connects via Remote-WSL extension.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-    if ask_yes_no "Configure VS Code Remote-WSL and extensions? (Y/n)" "Y"; then
+    if ask_yes_no "Configure VS Code Remote-WSL? (Y/n)" "Y"; then
       export DEVBASE_VSCODE_INSTALL="true"
       printf "  %b✓%b VS Code Remote-WSL will be configured\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
     else
@@ -521,24 +517,10 @@ _prompt_vscode_preferences() {
     fi
   fi
 
-  printf "  %bInstall recommended VS Code extensions (includes language support, linters, formatters)?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  if ask_yes_no "Install VS Code extensions? (Y/n)" "Y"; then
-    export DEVBASE_VSCODE_EXTENSIONS="true"
-    printf "  %b✓%b VS Code extensions will be installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-
-    printf "  %bThe Neovim extension enables Vim keybindings and commands in VS Code.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-    if ask_yes_no "Include VS Code Neovim extension? (Y/n)" "Y"; then
-      export DEVBASE_VSCODE_NEOVIM="true"
-      printf "  %b✓%b Neovim extension will be included\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-    else
-      export DEVBASE_VSCODE_NEOVIM="false"
-      printf "  %b✓%b Neovim extension will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-    fi
-  else
-    export DEVBASE_VSCODE_EXTENSIONS="false"
-    export DEVBASE_VSCODE_NEOVIM="false"
-    printf "  %b✓%b VS Code extensions will be skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-  fi
+  # VS Code extensions are installed separately after setup via devbase-vscode-extensions
+  export DEVBASE_VSCODE_EXTENSIONS="true"
+  export DEVBASE_VSCODE_NEOVIM="true"
+  printf "\n  %bⓘ Run 'devbase-vscode-extensions' after setup to install extensions%b\n" "${DEVBASE_COLORS[CYAN]}" "${DEVBASE_COLORS[NC]}"
 }
 
 # Brief: Prompt for LazyVim installation
@@ -709,12 +691,13 @@ collect_pack_preferences() {
   _show_pack_details() {
     local pack="$1"
     local desc="$2"
+    # VS Code extensions are installed separately via devbase-vscode-extensions, don't show here
     printf "\n  %b%s%b: %s\n" "${DEVBASE_COLORS[BOLD]}" "$pack" "${DEVBASE_COLORS[NC]}" "$desc"
     printf "  %bIncludes:%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
     local item
     while IFS= read -r item; do
       [[ -n "$item" ]] && printf "    %b- %s%b\n" "${DEVBASE_COLORS[DIM]}" "$item" "${DEVBASE_COLORS[NC]}"
-    done < <(get_pack_contents "$pack")
+    done < <(get_pack_contents "$pack" "false")
   }
 
   if [[ "$is_fresh_install" == "true" ]]; then

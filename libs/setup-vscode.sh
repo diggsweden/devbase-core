@@ -169,32 +169,12 @@ setup_vscode() {
 
   printf "\n"
   if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
-    if [[ -n "$code_command" ]]; then
-      show_progress info "Installing VS Code extensions..."
-      install_vscode_extensions "$code_command" "$remote_flag"
-    else
-      # VS Code Server exists but CLI not available (e.g., su -l without active VS Code connection)
-      if is_wsl && [[ -d "$HOME/.vscode-server/bin" ]]; then
-        show_progress info "VS Code Server detected but not currently connected"
-        show_progress info "To install extensions later:"
-        show_progress info "  1. Open VS Code and connect to WSL"
-        show_progress info "  2. Run: ./setup.sh  (re-run devbase installation)"
-      else
-        show_progress info "VS Code not detected - skipping extension installation"
-        if is_wsl; then
-          show_progress info "To install extensions later:"
-          show_progress info "  1. Install VS Code on Windows with Remote-WSL extension"
-          show_progress info "  2. Connect VS Code to this WSL distro"
-          show_progress info "  3. Run: ./setup.sh  (re-run devbase installation)"
-        else
-          show_progress info "To install extensions later:"
-          show_progress info "  1. Install VS Code (snap install code --classic)"
-          show_progress info "  2. Run: ./setup.sh  (re-run devbase installation)"
-        fi
-      fi
-    fi
-
+    # Configure VS Code settings (theme, font, etc.)
     configure_vscode_settings
+
+    # Extensions are now installed via convenience function after setup
+    show_progress info "VS Code settings configured"
+    show_progress info "To install extensions, run: devbase-vscode-extensions"
 
     show_progress success "VS Code setup completed"
   else
@@ -445,7 +425,7 @@ _setup_vscode_parser() {
 
   # Set up package configuration
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust vscode-editor}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
 
   # Check for custom packages override
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then

@@ -515,7 +515,7 @@ EOF
   "
   
   assert_success
-  assert_output --partial "packs=java node python go ruby rust vscode-editor"
+  assert_output --partial "packs=java node python go ruby rust"
 }
 
 @test "load_saved_preferences reads comma-separated packs" {
@@ -684,7 +684,7 @@ EOF
   "
   
   assert_success
-  assert_output "java node python go ruby rust vscode-editor"
+  assert_output "java node python go ruby rust"
 }
 
 @test "write_user_preferences creates file with all current fields" {
@@ -749,7 +749,7 @@ EOF
   assert_equal "$DEVBASE_THEME" "gruvbox-dark"
   assert_equal "$DEVBASE_GIT_AUTHOR" "Original User"
   # Packs should default since missing
-  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby rust vscode-editor"
+  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby rust"
   
   # Now write - should include packs
   write_user_preferences >/dev/null 2>&1
@@ -757,7 +757,7 @@ EOF
   run cat "${prefs_dir}/preferences.yaml"
   assert_output --partial "theme: gruvbox-dark"
   assert_output --partial "author: Original User"
-  assert_output --partial "packs: [java, node, python, go, ruby, rust, vscode-editor]"
+  assert_output --partial "packs: [java, node, python, go, ruby, rust]"
 }
 
 @test "interactive flow loads existing prefs as defaults then saves" {
