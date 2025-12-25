@@ -66,8 +66,15 @@ load_apt_packages() {
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 pkg_update() {
-  retry_command sudo apt-get -q update 2>&1 | sed 's/^/    /'
-  return "${PIPESTATUS[0]}"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    gum spin --spinner dot --title "Updating package lists..." -- \
+      sudo apt-get -qq update
+    return $?
+  fi
+  
+  # Whiptail mode (default)
+  run_with_spinner "Updating package lists" sudo apt-get -qq update
+  return $?
 }
 
 # Brief: Install APT packages with retry logic
@@ -83,8 +90,17 @@ pkg_install() {
     validate_not_empty "$pkg" "Package name" || return 1
   done
 
-  retry_command sudo apt-get -y -q install "${packages[@]}" 2>&1 | sed 's/^/    /'
-  return "${PIPESTATUS[0]}"
+  local pkg_count=${#packages[@]}
+  
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    gum spin --spinner dot --title "Installing ${pkg_count} packages..." -- \
+      sudo apt-get -y -qq install "${packages[@]}"
+    return $?
+  fi
+  
+  # Whiptail mode (default)
+  run_with_spinner "Installing ${pkg_count} packages" sudo apt-get -y -qq install "${packages[@]}"
+  return $?
 }
 
 # Brief: Remove unused APT packages
@@ -118,11 +134,21 @@ configure_locale() {
 # Returns: 0 on success, 1 on failure
 # Side-effects: Installs fonts, rebuilds font cache
 install_liberation_fonts() {
-  if sudo apt-get install -y -q fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra 2>&1 | sed 's/^/    /'; then
-    command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
-    return "${PIPESTATUS[0]}"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    if gum spin --spinner dot --title "Installing Liberation & DejaVu fonts..." -- \
+      sudo apt-get install -y -qq fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra; then
+      command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
+      return 0
+    fi
+    return 1
   fi
-
+  
+  # Whiptail mode (default)
+  if run_with_spinner "Installing Liberation & DejaVu fonts" \
+    sudo apt-get install -y -qq fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra; then
+    command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
+    return 0
+  fi
   return 1
 }
 
@@ -203,14 +229,29 @@ Pin-Priority: -1
 EOF
 
   # Update and install
-  if ! sudo apt-get -q update 2>&1 | sed 's/^/    /'; then
-    show_progress error "Failed to update package cache after adding Mozilla repo"
-    return 1
-  fi
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    if ! gum spin --spinner dot --title "Updating Mozilla repository..." -- \
+      sudo apt-get -qq update; then
+      show_progress error "Failed to update package cache after adding Mozilla repo"
+      return 1
+    fi
 
-  if ! sudo apt-get -y -q install firefox 2>&1 | sed 's/^/    /'; then
-    show_progress error "Failed to install Firefox from Mozilla repository"
-    return 1
+    if ! gum spin --spinner dot --title "Installing Firefox..." -- \
+      sudo apt-get -y -qq install firefox; then
+      show_progress error "Failed to install Firefox from Mozilla repository"
+      return 1
+    fi
+  else
+    # Whiptail mode (default)
+    if ! run_with_spinner "Updating Mozilla repository" sudo apt-get -qq update; then
+      show_progress error "Failed to update package cache after adding Mozilla repo"
+      return 1
+    fi
+
+    if ! run_with_spinner "Installing Firefox" sudo apt-get -y -qq install firefox; then
+      show_progress error "Failed to install Firefox from Mozilla repository"
+      return 1
+    fi
   fi
 
   show_progress success "Firefox installed from Mozilla APT repository"

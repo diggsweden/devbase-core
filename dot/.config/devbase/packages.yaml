@@ -137,6 +137,7 @@ core:
 
   custom:
     mise: {version: "v2025.9.20", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
+    gum: {version: "0.17.0", installer: "install_gum"} # renovate: datasource=github-releases depName=charmbracelet/gum
     fisher: {version: "4.4.5", installer: "install_fisher"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
     fzf_fish: {version: "v10.3", installer: "install_fzf_fish"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
     lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
@@ -166,7 +167,7 @@ core:
 # ==============================================================================
 packs:
   java:
-    description: "Java/JVM development (Spring Boot, Maven, Gradle)"
+    description: "(temurin / maven / gradle / pmd / checkstyle)"
     apt:
       default-jdk: {}
       default-jre: {}
@@ -192,7 +193,7 @@ packs:
       vscjava.vscode-java-pack: {version: "0.29.0"} # renovate: datasource=npm
 
   node:
-    description: "Node.js/JavaScript/TypeScript development"
+    description: "(node / eslint / prettier / tailwindcss)"
     mise:
       node: {version: "24.11.1"} # renovate: datasource=node-version depName=node
     vscode:
@@ -202,7 +203,7 @@ packs:
       vue.volar: {version: "2.2.8"} # renovate: datasource=npm
 
   python:
-    description: "Python development (Django, Flask, data science)"
+    description: "(python3 / venv / pipx)"
     apt:
       python3: {}
       python3-dev: {}
@@ -212,12 +213,12 @@ packs:
       python: {version: "3.14.0"} # renovate: datasource=python-version depName=python
 
   go:
-    description: "Go/Golang development"
+    description: "(go)"
     mise:
       go: {version: "1.25.4"} # renovate: datasource=go-version depName=go
 
   ruby:
-    description: "Ruby/Rails development"
+    description: "(ruby / build libs)"
     apt:
       libffi-dev: {}
       libgdbm-dev: {}
@@ -230,7 +231,7 @@ packs:
       ruby: {version: "3.4.7"} # renovate: datasource=ruby-version depName=ruby
 
   rust:
-    description: "Rust development"
+    description: "(rustc / cargo)"
     apt:
       libsqlite3-dev: {}
       pkg-config: {}

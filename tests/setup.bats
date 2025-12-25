@@ -49,6 +49,71 @@ teardown() {
   assert_output "true"
 }
 
+@test "parse_arguments sets DEVBASE_TUI_MODE for --tui=whiptail" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_TUI_MODE=''
+    parse_arguments --tui=whiptail
+    echo \"\$DEVBASE_TUI_MODE\"
+  "
+  
+  assert_success
+  assert_output "whiptail"
+}
+
+@test "parse_arguments sets DEVBASE_TUI_MODE for --tui=gum" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_TUI_MODE=''
+    parse_arguments --tui=gum
+    echo \"\$DEVBASE_TUI_MODE\"
+  "
+  
+  assert_success
+  assert_output "gum"
+}
+
+@test "parse_arguments sets DEVBASE_TUI_MODE for --tui=none" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_TUI_MODE=''
+    parse_arguments --tui=none
+    echo \"\$DEVBASE_TUI_MODE\"
+  "
+  
+  assert_success
+  assert_output "none"
+}
+
+@test "parse_arguments rejects --tui=basic (no longer supported)" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_TUI_MODE=''
+    parse_arguments --tui=basic
+  "
+  
+  assert_failure
+  assert_output --partial "Invalid TUI mode"
+}
+
+@test "parse_arguments rejects invalid --tui value" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_TUI_MODE=''
+    parse_arguments --tui=invalid
+  "
+  
+  assert_failure
+  assert_output --partial "Invalid TUI mode"
+}
+
+@test "setup.sh help shows --tui option" {
+  run bash "${DEVBASE_ROOT}/setup.sh" --help
+  
+  assert_success
+  assert_output --partial "--tui=<mode>"
+}
+
 @test "initialize_devbase_paths sets required paths" {
   run bash -c "
     cd '${DEVBASE_ROOT}'

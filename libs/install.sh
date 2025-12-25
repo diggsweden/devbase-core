@@ -51,8 +51,20 @@ handle_interrupt() {
 trap cleanup_temp_directory EXIT
 trap handle_interrupt INT TERM
 
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/collect-user-preferences.sh"
+# Source user preferences collector based on TUI mode
+# DEVBASE_TUI_MODE is set by select_tui_mode() in setup.sh before sourcing this file
+case "${DEVBASE_TUI_MODE:-whiptail}" in
+  gum)
+    # Modern gum-based TUI (best experience)
+    # shellcheck disable=SC1091 # File exists at runtime
+    source "${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh"
+    ;;
+  *)
+    # Whiptail TUI (default fallback, also used for non-interactive)
+    # shellcheck disable=SC1091 # File exists at runtime
+    source "${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh"
+    ;;
+esac
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/process-templates.sh"
 # shellcheck disable=SC1091 # File exists at runtime
@@ -431,74 +443,132 @@ write_installation_summary() {
   return 0
 }
 
-show_completion_message() {
-  validate_var_set "DEVBASE_CONFIG_DIR" || return 1
+# Brief: Show completion message using gum styling
+_show_completion_message_gum() {
+  echo
+  gum style \
+    --foreground 82 \
+    --border double \
+    --border-foreground 82 \
+    --padding "1 2" \
+    --margin "1 0" \
+    "Installation Complete"
 
-  local box_width=70 # Wider to accommodate the summary path
-  print_box_top "Installation Complete" "$box_width"
-  print_box_line "Environment: ${_DEVBASE_ENV:-unknown}" "$box_width"
-  print_box_line "Summary: ${DEVBASE_CONFIG_DIR}/install-summary.txt" "$box_width"
-  print_box_line "Verify: ./verify/verify-install-check.sh (after new login)" "$box_width"
+  echo
+  gum style --foreground 240 "Summary"
+  echo "  Environment: ${_DEVBASE_ENV:-unknown}"
+  echo "  Summary:     ${DEVBASE_CONFIG_DIR}/install-summary.txt"
+  echo "  Verify:      ./verify/verify-install-check.sh"
+  echo
 
-  if [[ "$GENERATED_SSH_PASSPHRASE" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
+  if [[ "${GENERATED_SSH_PASSPHRASE:-}" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
     local passphrase
     passphrase=$(cat "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" 2>/dev/null)
     if [[ -n "$passphrase" ]]; then
-      print_box_line "" "$box_width"
-      print_box_line "SSH Key Passphrase (save this!):" "$box_width"
-      print_box_line "$passphrase" "$box_width"
-      print_box_line "" "$box_width"
-      print_box_line "To change: ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}" "$box_width"
+      gum style --foreground 214 "SSH Key Passphrase (save this!)"
+      echo "  $passphrase"
+      echo
+      gum style --foreground 240 "To change:"
+      echo "  ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+      echo
     fi
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
 
-  if [[ -z "${DEVBASE_CUSTOM_DIR:-}" ]]; then
-    print_box_line "" "$box_width"
-    print_box_line "Note: Using default configuration" "$box_width"
-    print_box_line "For custom overlay (proxy, certs, hooks):" "$box_width"
-    print_box_line "  1. Clone devbase-custom-config beside devbase-core" "$box_width"
-    print_box_line "  2. Re-run setup.sh to apply custom settings" "$box_width"
-  fi
-
+  gum style --foreground 240 "Useful Commands"
+  echo "  devbase-theme <name>       Change color theme"
+  echo "  devbase-update             Update devbase installation"
   if [[ "${DEVBASE_VSCODE_EXTENSIONS:-}" == "true" ]]; then
-    print_box_line "" "$box_width"
-    print_box_line "VS Code Extensions:" "$box_width"
-    print_box_line "  Run: devbase-vscode-extensions" "$box_width"
-    print_box_line "  List available: devbase-vscode-extensions --list" "$box_width"
+    echo "  devbase-vscode-extensions  Install VS Code extensions"
   fi
+  echo "  devbase-smartcard          Configure smart card support"
+  echo "  devbase-citrix             Configure Citrix Workspace"
+  echo
 
-  print_box_bottom "$box_width"
+  gum style --foreground 240 "Next Steps"
+  echo "  1. Restart your shell or run: exec fish"
+  echo "  2. Run verification: ./verify/verify-install-check.sh"
+  echo
 
-  # Check Secure Boot status after box (native Linux only)
+  # Check Secure Boot status
   local sb_mode
   sb_mode=$(get_secure_boot_mode)
 
-  # Display Secure Boot warnings outside the box
   case "$sb_mode" in
   disabled)
-    printf "\n"
-    show_progress warning "Secure Boot is currently disabled"
-    show_progress warning "For better security, consider enabling it in your UEFI/EFI/BIOS settings"
-    show_progress warning "If you're unsure what this means, please consult your system administrator"
+    echo
+    gum style --foreground 196 "⚠ Secure Boot is disabled - enable it in UEFI/BIOS settings"
     ;;
-  setup)
-    printf "\n"
-    show_progress warning "Secure Boot is in Setup Mode (temporary state during key enrollment)"
-    show_progress warning "Unsigned kernel modules work now but will be blocked after completing setup"
-    show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
-    show_progress warning "If you're unsure what this means, please consult your system administrator"
-    ;;
-  audit)
-    printf "\n"
-    show_progress warning "Secure Boot is in Audit Mode (logging violations but not blocking)"
-    show_progress warning "Unsigned kernel modules currently work but violations are being logged"
-    show_progress warning "You should sign custom modules or change settings in UEFI/EFI/BIOS as soon as you can"
-    show_progress warning "If you're unsure what this means, please consult your system administrator"
+  setup|audit)
+    echo
+    gum style --foreground 196 "⚠ Secure Boot is in $sb_mode mode - complete the setup in UEFI/BIOS"
     ;;
   esac
+}
 
-  return 0
+# Brief: Show completion message using whiptail msgbox
+_show_completion_message_whiptail() {
+  local message=""
+  
+  message+="Environment: ${_DEVBASE_ENV:-unknown}\n"
+  message+="Summary: ${DEVBASE_CONFIG_DIR}/install-summary.txt\n"
+  message+="Verify: ./verify/verify-install-check.sh\n"
+  message+="\n"
+  
+  if [[ "${GENERATED_SSH_PASSPHRASE:-}" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
+    local passphrase
+    passphrase=$(cat "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" 2>/dev/null)
+    if [[ -n "$passphrase" ]]; then
+      message+="SSH Key Passphrase (save this!):\n"
+      message+="  $passphrase\n"
+      message+="\n"
+    fi
+    rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
+  fi
+  
+  message+="Useful Commands:\n"
+  message+="  devbase-theme <name>       Change color theme\n"
+  message+="  devbase-update             Update devbase\n"
+  if [[ "${DEVBASE_VSCODE_EXTENSIONS:-}" == "true" ]]; then
+    message+="  devbase-vscode-extensions  Install VS Code extensions\n"
+  fi
+  message+="  devbase-smartcard          Configure smart card\n"
+  message+="  devbase-citrix             Configure Citrix\n"
+  message+="\n"
+  
+  message+="Next Steps:\n"
+  message+="  1. Restart shell: exec fish\n"
+  message+="  2. Verify: ./verify/verify-install-check.sh\n"
+  
+  # Check Secure Boot status
+  local sb_mode
+  sb_mode=$(get_secure_boot_mode)
+  
+  case "$sb_mode" in
+  disabled)
+    message+="\n⚠ Secure Boot disabled - enable in UEFI/BIOS"
+    ;;
+  setup|audit)
+    message+="\n⚠ Secure Boot in $sb_mode mode - complete setup in UEFI/BIOS"
+    ;;
+  esac
+  
+  # Show completion in whiptail msgbox
+  whiptail --backtitle "DevBase Setup" --title "Installation Complete" \
+    --msgbox "$message" 22 70
+}
+
+show_completion_message() {
+  validate_var_set "DEVBASE_CONFIG_DIR" || return 1
+
+  # Use gum for completion message when available
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    _show_completion_message_gum
+    return 0
+  fi
+
+  # Default to whiptail style
+  _show_completion_message_whiptail
 }
 
 configure_fonts_post_install() {
@@ -514,9 +584,7 @@ configure_fonts_post_install() {
     source "${DEVBASE_LIBS}/install-custom.sh"
   fi
 
-  printf "\n"
-  print_section "Terminal Configuration" "${DEVBASE_COLORS[BOLD_CYAN]}"
-  printf "\n"
+  show_phase "Terminal Configuration"
 
   # ===== Apply terminal theme =====
   if command -v gsettings &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
@@ -727,178 +795,10 @@ _get_font_display_name() {
   esac
 }
 
-_display_git_config() {
-  print_box_line "Git Configuration:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "  • Author: ${DEVBASE_GIT_AUTHOR}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "  • Email: ${DEVBASE_GIT_EMAIL}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_theme_config() {
-  local theme_display
-  local font_display
-  theme_display=$(_get_theme_display_name "${DEVBASE_THEME}")
-  print_box_line "Theme:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "  • ${theme_display}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  # Only display font on native Linux (WSL manages fonts via Windows Terminal)
-  if [[ "${_DEVBASE_ENV}" != "wsl-ubuntu" ]] && [[ -n "${DEVBASE_FONT:-}" ]]; then
-    validate_var_set "DEVBASE_FONT" || return 1
-    font_display=$(_get_font_display_name "${DEVBASE_FONT}")
-    print_box_line "Font:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • ${font_display}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-}
-
-_display_ssh_config() {
-  print_box_line "SSH Key:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
-    print_box_line "  • Action: Generate new key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Location: ${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
-      print_box_line "  • Protection: With passphrase" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    else
-      print_box_line "  • Protection: No passphrase" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    fi
-  elif [[ "${DEVBASE_SSH_KEY_ACTION}" == "skip" ]]; then
-    print_box_line "  • Action: No SSH key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • Action: Keep existing key" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Location: ${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_editor_config() {
-  print_box_line "Editor & Shell:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  if [[ "${EDITOR}" == "nvim" ]]; then
-    print_box_line "  • Default editor: Neovim" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Shell bindings: Vim mode" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • Default editor: Nano" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    print_box_line "  • Shell bindings: Emacs mode" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_clipboard_config() {
-  local clipboard_util
-  clipboard_util=$(detect_clipboard_utility 2>/dev/null || echo "not detected")
-  print_box_line "Clipboard:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "  • ${clipboard_util}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_ide_config() {
-  print_box_line "IDE & Editor Extensions:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  if [[ "${DEVBASE_VSCODE_INSTALL}" == "true" ]]; then
-    print_box_line "  • VS Code: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
-      print_box_line "    - Extensions: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-      if [[ "${DEVBASE_VSCODE_NEOVIM}" == "true" ]]; then
-        print_box_line "    - Neovim extension: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-      else
-        print_box_line "    - Neovim extension: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-      fi
-    else
-      print_box_line "    - Extensions: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-    fi
-  else
-    print_box_line "  • VS Code: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  if [[ "$DEVBASE_INSTALL_LAZYVIM" == "true" ]]; then
-    print_box_line "  • LazyVim: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • LazyVim: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  if [[ "$DEVBASE_INSTALL_INTELLIJ" == "true" ]]; then
-    print_box_line "  • IntelliJ IDEA: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • IntelliJ IDEA: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  if [[ "$DEVBASE_INSTALL_JMC" == "true" ]]; then
-    print_box_line "  • JDK Mission Control: Yes" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • JDK Mission Control: No" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_tools_config() {
-  print_box_line "Tools & Integrations:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  if [[ "$DEVBASE_ZELLIJ_AUTOSTART" == "true" ]]; then
-    print_box_line "  • Zellij auto-start: Enabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • Zellij auto-start: Disabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  if [[ "$DEVBASE_ENABLE_GIT_HOOKS" == "true" ]]; then
-    print_box_line "  • Global git hooks: Enabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  else
-    print_box_line "  • Global git hooks: Disabled" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  fi
-
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_packs_config() {
-  print_box_line "Language Packs:" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  local pack
-  for pack in ${DEVBASE_SELECTED_PACKS:-}; do
-    print_box_line "  • ${pack}" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  done
-
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-}
-
-_display_installation_overview() {
-  printf "\n"
-  print_box_top "Installation Overview" 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
-  print_box_line "• Estimated time: 10-15 minutes" 60
-  print_box_line "• Disk space required: ~6GB" 60
-  print_box_line "• Internet connection required" 60
-  print_box_line "• Sudo password will be requested before install" 60
-  print_box_bottom 60 "${DEVBASE_COLORS[BOLD_CYAN]}"
-}
-
 display_configuration_summary() {
-  validate_var_set "DEVBASE_GIT_AUTHOR" || return 1
-  validate_var_set "DEVBASE_GIT_EMAIL" || return 1
-  validate_var_set "DEVBASE_THEME" || return 1
-  validate_var_set "DEVBASE_SSH_KEY_ACTION" || return 1
-  validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
-
-  printf "\n"
-  print_box_top "Configuration Summary" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-  print_box_line "" 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  _display_git_config
-  _display_theme_config
-  _display_ssh_config
-  _display_editor_config
-  _display_clipboard_config
-  _display_ide_config
-  _display_tools_config
-  _display_packs_config
-
-  print_box_bottom 60 "${DEVBASE_COLORS[BOLD_GREEN]}"
-
-  _display_installation_overview
-
-  printf "\n"
-  if ! ask_yes_no "Ready to install with these settings? (Y/n)" "Y"; then
-    show_progress info "Installation cancelled"
-    exit 0
-  fi
+  # Gum and whiptail handle their own summary and confirmation in collect_user_configuration
+  # This function is now a no-op but kept for API compatibility
+  return 0
 }
 
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
@@ -921,7 +821,7 @@ prepare_system() {
 
   # Install certificates FIRST - required for git clone to custom registries
   # Must happen before persist_devbase_repos which may clone from internal git servers
-  printf "\n%bInstalling certificates...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Installing certificates..."
   install_certificates || die "Failed to install certificates"
 
   # Persist devbase repos to ~/.local/share/devbase/ for update support
@@ -945,15 +845,15 @@ perform_installation() {
     export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/ca-certificates.crt"
   fi
 
-  printf "\n%bInstalling development tools...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Installing development tools..."
   download_and_install_tools
 
   sudo_refresh
-  printf "\n%bApplying configurations...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Applying configurations..."
   apply_configurations
 
   sudo_refresh
-  printf "\n%bConfiguring system services...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Configuring system services..."
   configure_system_and_shell
 
   if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
@@ -961,7 +861,7 @@ perform_installation() {
   fi
 
   sudo_refresh
-  printf "\n%bFinalizing installation...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Finalizing installation..."
   finalize_installation
 
   if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
@@ -988,7 +888,7 @@ main() {
   collect_user_configuration
   display_configuration_summary
 
-  printf "%bPreparing system...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  show_phase "Preparing system..."
   prepare_system
 
   perform_installation

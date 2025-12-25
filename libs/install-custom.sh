@@ -1180,3 +1180,135 @@ install_intellij_idea() {
   show_progress success "IntelliJ IDEA installed ($version)"
   return 0
 }
+
+# Brief: Get SHA256 checksum for gum package from checksums.txt
+# Params: $1 - version (e.g. "0.17.0"), $2 - package name (e.g. "gum_0.17.0_amd64.deb")
+# Returns: 0 with checksum on stdout if found, 1 if not found
+# Side-effects: Makes curl request to GitHub releases
+get_gum_checksum() {
+  local version="$1"
+  local package_name="$2"
+
+  validate_not_empty "$version" "gum version" || return 1
+  validate_not_empty "$package_name" "package name" || return 1
+
+  local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
+  local checksum
+
+  # Download checksums and extract the one for our package
+  if checksum=$(curl -fsSL "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}'); then
+    if [[ -n "$checksum" ]] && [[ ${#checksum} -eq 64 ]]; then
+      echo "$checksum"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+# Brief: Install gum TUI tool from Charm
+# Params: None
+# Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, command_exists, show_progress, get_gum_checksum, download_file (globals/functions)
+# Returns: 0 on success/skip, 1 on failure
+# Side-effects: Downloads and installs gum .deb package with checksum verification
+install_gum() {
+  validate_var_set "_DEVBASE_TEMP" || return 1
+
+  # Ensure parser is set up and TOOL_VERSIONS populated
+  _setup_custom_parser
+
+  if command_exists gum; then
+    local current_version
+    current_version=$(gum --version 2>/dev/null | head -1 | awk '{print $NF}')
+    show_progress success "gum already installed (${current_version})"
+    return 0
+  fi
+
+  # Get version from packages.yaml or use default
+  local version="${TOOL_VERSIONS[gum]:-0.17.0}"
+
+  show_progress info "Installing gum ${version}..."
+
+  # Determine architecture
+  local arch
+  case "$(uname -m)" in
+    x86_64) arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+    armv7l) arch="armhf" ;;
+    i686) arch="i386" ;;
+    *)
+      show_progress warning "Unsupported architecture for gum: $(uname -m)"
+      return 1
+      ;;
+  esac
+
+  local package_name="gum_${version}_${arch}.deb"
+  local gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
+  local gum_deb="${_DEVBASE_TEMP}/${package_name}"
+
+  # Get checksum for verification
+  local gum_checksum
+  if ! gum_checksum=$(get_gum_checksum "$version" "$package_name"); then
+    show_progress warning "Could not fetch gum checksum - continuing without verification"
+    gum_checksum=""
+  fi
+
+  # Check cache first
+  local download_needed=true
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]] && [[ -d "${DEVBASE_DEB_CACHE}" ]]; then
+    local cached_deb="${DEVBASE_DEB_CACHE}/${package_name}"
+    if [[ -f "$cached_deb" ]]; then
+      show_progress info "Using cached gum package"
+      cp "$cached_deb" "$gum_deb"
+      download_needed=false
+    fi
+  fi
+
+  if [[ "$download_needed" == "true" ]]; then
+    if retry_command download_file "$gum_url" "$gum_deb" "" "$gum_checksum"; then
+      # Save to cache
+      if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+        mkdir -p "${DEVBASE_DEB_CACHE}"
+        cp "$gum_deb" "${DEVBASE_DEB_CACHE}/${package_name}"
+      fi
+    else
+      if [[ -n "$gum_checksum" ]] && [[ ! -f "$gum_deb" ]]; then
+        show_progress error "gum download/verification FAILED - SECURITY RISK"
+        show_progress warning "Possible causes: MITM attack, corrupted download, or network issue"
+      else
+        show_progress warning "gum download failed - skipping"
+      fi
+      return 1
+    fi
+  fi
+
+  # Verify checksum if we have it and file exists
+  if [[ -f "$gum_deb" ]] && [[ -n "$gum_checksum" ]]; then
+    if ! verify_checksum_value "$gum_deb" "$gum_checksum"; then
+      show_progress error "gum checksum verification FAILED"
+      rm -f "$gum_deb"
+      return 1
+    fi
+  fi
+
+  # Install the package
+  if [[ -f "$gum_deb" ]]; then
+    if sudo dpkg -i "$gum_deb"; then
+      show_progress success "gum installed (${version})"
+    else
+      show_progress warning "gum installation failed - trying to fix dependencies"
+      sudo apt-get install -f -y -q
+      if command_exists gum; then
+        show_progress success "gum installed (${version}, with dependency fixes)"
+      else
+        show_progress error "gum installation failed"
+        return 1
+      fi
+    fi
+  else
+    show_progress warning "gum package not found - skipping"
+    return 1
+  fi
+
+  return 0
+}
