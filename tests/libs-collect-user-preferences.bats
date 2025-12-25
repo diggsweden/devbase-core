@@ -1029,14 +1029,14 @@ EOF
   [[ "${#lines[@]}" -gt 0 ]]
 }
 
-@test "pack selection prompt uses pack name not description" {
+@test "pack selection uses checklist with pack names" {
   common_setup_isolated
   
-  # Verify the prompt format in the source code
+  # Verify packs are selected via checklist (not individual prompts)
   run bash -c "
-    grep -o 'Install \${pack}?' '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' | head -1
+    grep -o 'Select language packs to install' '${DEVBASE_ROOT}/libs/collect-user-preferences.sh' | head -1
   "
   
   assert_success
-  assert_output 'Install ${pack}?'
+  assert_output 'Select language packs to install'
 }

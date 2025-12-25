@@ -99,6 +99,10 @@ DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}" # Java-specific no-proxy doma
 # Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 
+# TUI mode flag (set by bootstrap_gum based on gum availability)
+# Values: "gum", "whiptail", "basic"
+DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-}"
+
 # ============================================================================
 # EXPORTED ENVIRONMENT VARIABLES (see docs/environment.adoc for details)
 # ============================================================================
@@ -143,11 +147,24 @@ parse_arguments() {
       export NON_INTERACTIVE=true
       export DEBIAN_FRONTEND=noninteractive
       ;;
+    --tui=*)
+      local tui_value="${arg#--tui=}"
+      case "$tui_value" in
+        gum|whiptail|none)
+          DEVBASE_TUI_MODE="$tui_value"
+          ;;
+        *)
+          printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail, none\n" "$tui_value" >&2
+          exit 1
+          ;;
+      esac
+      ;;
     --help | -h)
       printf "Usage: %s [OPTIONS]\n" "$0"
       printf "\n"
       printf "Options:\n"
       printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
+      printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail, none\n"
       printf "  --help, -h         Show this help message\n"
       exit 0
       ;;
@@ -213,23 +230,63 @@ show_welcome_banner() {
     devbase_version="0.0.0-dev"
   fi
 
-  print_box_top "DevBase Core Installation" 45 "${DEVBASE_COLORS[BOLD_CYAN]}"
-  print_box_line "Started: $(date +"%H:%M:%S")" 45 "${DEVBASE_COLORS[BOLD_CYAN]}"
-  print_box_line "Version: $devbase_version" 45 "${DEVBASE_COLORS[BOLD_CYAN]}"
-  print_box_line "Commit:  $git_sha" 45 "${DEVBASE_COLORS[BOLD_CYAN]}"
-  print_box_bottom 45 "${DEVBASE_COLORS[BOLD_CYAN]}"
-
-  printf "\n"
-  print_section "Configuration and Verification" "${DEVBASE_COLORS[BOLD_BLUE]}"
-  printf "\n"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    echo
+    gum style \
+      --foreground 212 \
+      --border double \
+      --border-foreground 212 \
+      --padding "1 4" \
+      --margin "1 0" \
+      --align center \
+      "DevBase Core Installation" \
+      "" \
+      "Version: $devbase_version ($git_sha)" \
+      "Started: $(date +"%H:%M:%S")"
+    echo
+    gum style --foreground 240 --align center \
+      "Development environment setup wizard"
+    gum style --foreground 240 \
+      "j/k navigate  SPACE toggle  ENTER select  Ctrl+C cancel"
+    echo
+  else
+    # Whiptail mode (default) - show welcome infobox
+    clear
+    whiptail --backtitle "DevBase Setup" --title "DevBase Core Installation" \
+      --infobox "Version: $devbase_version ($git_sha)\nStarted: $(date +"%H:%M:%S")\n\nInitializing..." 8 50
+  fi
 }
 
 show_os_info() {
-  display_os_info
+  local os_name env_type install_type
+  os_name=$(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
+  env_type=$([[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]] && echo "WSL" || echo "Native Linux")
+  install_type=$([[ "${_DEVBASE_FROM_GIT:-}" == "true" ]] && echo "Git repository" || echo "Downloaded")
+  
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    gum style --foreground 240 "System Information"
+    echo "  OS:           $os_name"
+    echo "  Environment:  $env_type"
+    echo "  Installation: $install_type"
+    echo "  User:         $USER"
+    echo "  Home:         $HOME"
+    echo
+  else
+    # Whiptail mode - info is shown in collect_user_configuration
+    # Just update infobox with system info
+    whiptail --backtitle "DevBase Setup" --title "System Information" \
+      --infobox "OS: $os_name\nEnvironment: $env_type\nUser: $USER\n\nLoading configuration..." 9 50
+    sleep 1
+  fi
 }
 
 show_repository_info() {
-  printf "  • Running from: %s\n" "$DEVBASE_ROOT"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    echo "  Running from: $DEVBASE_ROOT"
+    echo
+  else
+    printf "  • Running from: %s\n" "$DEVBASE_ROOT"
+  fi
 }
 
 validate_custom_directory() {
@@ -265,9 +322,11 @@ find_custom_directory() {
     fullpath=$(cd "$path" && pwd) || continue
 
     if ! validate_custom_directory "$fullpath"; then
-      # Invalid structure - notify user and skip this candidate
-      # This handles empty dirs or leftover dirs from previous installs
-      show_progress info "Skipping incomplete custom config: $fullpath"
+      # Skip silently if directory is empty (leftover from previous install)
+      # Only warn if directory has some content but incomplete structure
+      if [[ -n "$(ls -A "$fullpath" 2>/dev/null)" ]]; then
+        show_progress info "Skipping incomplete custom config: $fullpath"
+      fi
       continue
     fi
 
@@ -534,6 +593,164 @@ test_generic_network_connectivity() {
   fi
 }
 
+# Brief: Bootstrap gum TUI tool for interactive setup
+# Params: None
+# Uses: NON_INTERACTIVE, _DEVBASE_TEMP, DEVBASE_DEB_CACHE (globals)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Downloads and installs gum if not present
+# Note: This runs early in setup to enable the gum-based TUI for user preferences
+bootstrap_gum() {
+  # Skip in non-interactive mode - gum not needed
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+    return 0
+  fi
+
+  # Already installed - nothing to do
+  if command -v gum &>/dev/null; then
+    local current_version
+    current_version=$(gum --version 2>/dev/null | head -1 | awk '{print $3}')
+    show_progress success "gum available (${current_version})"
+    return 0
+  fi
+
+  show_progress step "Installing gum for interactive setup..."
+
+  # Version and architecture
+  local version="0.17.0" # renovate: datasource=github-releases depName=charmbracelet/gum
+  local arch
+  case "$(uname -m)" in
+    x86_64) arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+    armv7l) arch="armhf" ;;
+    i686) arch="i386" ;;
+    *)
+      show_progress warning "Could not find TUI component gum (unsupported architecture: $(uname -m)), using whiptail as backup"
+      return 1
+      ;;
+  esac
+
+  local package_name="gum_${version}_${arch}.deb"
+  local gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
+  local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
+
+  # Create temp directory if not set
+  local temp_dir="${_DEVBASE_TEMP:-$(mktemp -d)}"
+  local gum_deb="${temp_dir}/${package_name}"
+
+  # Check cache first
+  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]] && [[ -f "${DEVBASE_DEB_CACHE}/${package_name}" ]]; then
+    show_progress info "Using cached gum package"
+    cp "${DEVBASE_DEB_CACHE}/${package_name}" "$gum_deb"
+  else
+    # Download gum
+    if ! curl -fsSL "$gum_url" -o "$gum_deb" 2>/dev/null; then
+      show_progress warning "Could not find TUI component gum (download failed), using whiptail as backup"
+      return 1
+    fi
+
+    # Fetch and verify checksum
+    local expected_checksum
+    expected_checksum=$(curl -fsSL "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}')
+
+    if [[ -n "$expected_checksum" ]] && [[ ${#expected_checksum} -eq 64 ]]; then
+      local actual_checksum
+      actual_checksum=$(sha256sum "$gum_deb" | awk '{print $1}')
+
+      if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+        show_progress error "gum checksum verification FAILED - SECURITY RISK"
+        printf "      Expected: %s\n" "$expected_checksum"
+        printf "      Got:      %s\n" "$actual_checksum"
+        rm -f "$gum_deb"
+        show_progress warning "Could not find TUI component gum (checksum failed), using whiptail as backup"
+        return 1
+      fi
+      show_progress success "gum checksum verified"
+    else
+      show_progress warning "Could not verify gum checksum - continuing anyway"
+    fi
+
+    # Cache for future use
+    if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
+      mkdir -p "${DEVBASE_DEB_CACHE}"
+      cp "$gum_deb" "${DEVBASE_DEB_CACHE}/${package_name}"
+    fi
+  fi
+
+  # Install gum
+  if [[ -f "$gum_deb" ]]; then
+    if sudo dpkg -i "$gum_deb" >/dev/null 2>&1; then
+      show_progress success "gum installed (${version})"
+      return 0
+    else
+      # Try to fix dependencies
+      sudo apt-get install -f -y -q >/dev/null 2>&1 || true
+      if command -v gum &>/dev/null; then
+        show_progress success "gum installed (${version})"
+        return 0
+      fi
+    fi
+  fi
+
+  show_progress warning "Could not find TUI component gum, could not install, using whiptail as backup"
+  return 1
+}
+
+# Brief: Determine which TUI mode to use and bootstrap if needed
+# Sets DEVBASE_TUI_MODE to: "gum", "whiptail", or "none"
+# Respects --tui=<mode> flag if set by parse_arguments()
+select_tui_mode() {
+  # Non-interactive doesn't need TUI
+  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
+    export DEVBASE_TUI_MODE="none"
+    return 0
+  fi
+
+  # If --tui flag was specified, use that mode (validate availability)
+  if [[ -n "${DEVBASE_TUI_MODE:-}" ]]; then
+    case "${DEVBASE_TUI_MODE}" in
+      gum)
+        if command -v gum &>/dev/null || bootstrap_gum; then
+          export DEVBASE_TUI_MODE="gum"
+          return 0
+        else
+          printf "Error: gum requested but not available and could not be installed\n" >&2
+          exit 1
+        fi
+        ;;
+      whiptail)
+        if command -v whiptail &>/dev/null; then
+          export DEVBASE_TUI_MODE="whiptail"
+          return 0
+        else
+          printf "Error: whiptail requested but not installed\n" >&2
+          printf "Install with: sudo apt-get install whiptail\n" >&2
+          exit 1
+        fi
+        ;;
+      none)
+        export DEVBASE_TUI_MODE="none"
+        return 0
+        ;;
+    esac
+  fi
+
+  # Auto-detect: Try gum first (best experience)
+  if bootstrap_gum; then
+    export DEVBASE_TUI_MODE="gum"
+    return 0
+  fi
+
+  # Fall back to whiptail (should always be available on Ubuntu/Debian)
+  if command -v whiptail &>/dev/null; then
+    export DEVBASE_TUI_MODE="whiptail"
+    return 0
+  fi
+
+  # Neither available - error out
+  printf "Error: No TUI available. Install whiptail: sudo apt-get install whiptail\n" >&2
+  exit 1
+}
+
 set_default_values() {
   # Export variables that were initialized in IMPORT section with defaults
   export DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT DEVBASE_NO_PROXY_DOMAINS
@@ -653,15 +870,22 @@ main() {
   initialize_devbase_paths
   load_devbase_libraries
 
+  # Minimal pre-TUI setup: detect environment and configure network
+  detect_environment
+  find_custom_directory
+  load_environment_configuration
+  configure_proxy_settings
+
+  # Bootstrap TUI early (needs network for gum download)
+  # This enables gum/whiptail for all subsequent UI
+  select_tui_mode
+
+  # Now show welcome and run checks using TUI
   show_welcome_banner
   show_os_info
   check_required_tools
   show_repository_info
-  detect_environment
 
-  find_custom_directory
-  load_environment_configuration
-  configure_proxy_settings
   test_generic_network_connectivity
   validate_custom_config
   run_pre_install_hook

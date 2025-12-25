@@ -114,20 +114,34 @@ snap_install() {
     wait_attempts=$((wait_attempts + 1))
   done
 
-  if [[ -n "$snap_options" ]]; then
-    if sudo snap install "$snap_name" "$snap_options"; then
-      show_progress success "Snap installed: $snap_name"
+  # Install with gum spinner or whiptail
+  local install_result
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    if [[ -n "$snap_options" ]]; then
+      gum spin --spinner dot --title "Installing snap: $snap_name..." -- \
+        sudo snap install "$snap_name" "$snap_options"
+      install_result=$?
     else
-      show_progress warning "Failed to install snap: $snap_name"
-      return 1
+      gum spin --spinner dot --title "Installing snap: $snap_name..." -- \
+        sudo snap install "$snap_name"
+      install_result=$?
     fi
   else
-    if sudo snap install "$snap_name"; then
-      show_progress success "Snap installed: $snap_name"
+    # Whiptail mode (default)
+    if [[ -n "$snap_options" ]]; then
+      run_with_spinner "Installing snap: $snap_name" sudo snap install "$snap_name" "$snap_options"
+      install_result=$?
     else
-      show_progress warning "Failed to install snap: $snap_name"
-      return 1
+      run_with_spinner "Installing snap: $snap_name" sudo snap install "$snap_name"
+      install_result=$?
     fi
+  fi
+
+  if [[ $install_result -eq 0 ]]; then
+    show_progress success "Snap installed: $snap_name"
+  else
+    show_progress warning "Failed to install snap: $snap_name"
+    return 1
   fi
 
   return 0

@@ -294,9 +294,9 @@ check_disk_space() {
 
   if [[ "$available_gb" -lt "$required_gb" ]]; then
     show_progress warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
-    printf "  %bDisk space may be insufficient, continue anyway? (y/N): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
-    read -r response
-    [[ "$response" =~ ^[Yy]$ ]] || exit 1
+    if ! ask_yes_no "Disk space may be insufficient, continue anyway?" "N"; then
+      exit 1
+    fi
   else
     show_progress success "Disk space: ${available_gb}GB available"
   fi
@@ -398,18 +398,32 @@ check_mise_github_token() {
     return 0
   fi
 
-  printf "\n"
-  printf "To set the token, you can:\n"
-  printf "  1. Create a GitHub personal access token at:\n"
-  printf "     https://github.com/settings/tokens/new?scopes=public_repo\n"
-  printf "  2. Export it before running setup:\n"
-  printf "     export MISE_GITHUB_TOKEN=ghp_your_token_here\n"
-  printf "  3. Or add it to your shell config permanently\n"
-  printf "\n"
-  printf "  %bContinue without GitHub token? (y/N): %b" "${DEVBASE_COLORS[LIGHTYELLOW]}" "${DEVBASE_COLORS[NC]}"
-  read -r response
+  # Display instructions using TUI-appropriate formatting
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
+    echo
+    gum style --foreground 240 \
+      "To set the token:" \
+      "" \
+      "1. Create a GitHub personal access token at:" \
+      "   https://github.com/settings/tokens/new?scopes=public_repo" \
+      "" \
+      "2. Export it before running setup:" \
+      "   export MISE_GITHUB_TOKEN=ghp_your_token_here" \
+      "" \
+      "3. Or add it to your shell config permanently"
+    echo
+  else
+    printf "\n"
+    printf "To set the token, you can:\n"
+    printf "  1. Create a GitHub personal access token at:\n"
+    printf "     https://github.com/settings/tokens/new?scopes=public_repo\n"
+    printf "  2. Export it before running setup:\n"
+    printf "     export MISE_GITHUB_TOKEN=ghp_your_token_here\n"
+    printf "  3. Or add it to your shell config permanently\n"
+    printf "\n"
+  fi
 
-  if [[ "$response" =~ ^[Yy]$ ]]; then
+  if ask_yes_no "Continue without GitHub token?" "N"; then
     show_progress info "Continuing without GitHub token (may experience rate limiting)"
     return 0
   else

@@ -20,118 +20,169 @@ teardown() {
   common_teardown
 }
 
-@test "repeat_char repeats character specified number of times" {
+@test "show_progress handles step level in gum mode" {
+  # Skip if gum is not available
+  if ! command -v gum &>/dev/null; then
+    skip "gum not available"
+  fi
+  
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    repeat_char '=' 10
+    show_progress step 'Test step message'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output "=========="
+  assert_output --partial "Test step message"
 }
 
-@test "repeat_char works with different characters" {
+@test "show_progress handles success level in gum mode" {
+  # Skip if gum is not available
+  if ! command -v gum &>/dev/null; then
+    skip "gum not available"
+  fi
+  
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    repeat_char '-' 5
+    show_progress success 'Test success message'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output "-----"
+  assert_output --partial "Test success message"
 }
 
-@test "repeat_char handles zero count" {
+@test "show_phase displays phase header in gum mode" {
+  # Skip if gum is not available
+  if ! command -v gum &>/dev/null; then
+    skip "gum not available"
+  fi
+  
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    repeat_char '#' 0
+    show_phase 'Test Phase'
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
-  assert_output ""
+  assert_output --partial "Test Phase"
 }
 
-@test "ask_yes_no returns 0 for default Y when input is empty" {
+@test "error_msg prints error with cross symbol" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    echo '' | ask_yes_no 'Test question?' 'Y'
+    error_msg 'Test error message'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "Test error message"
+  assert_output --partial "✗"
+}
+
+@test "warn_msg prints warning with warn symbol" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    warn_msg 'Test warning message'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "Test warning message"
+  assert_output --partial "‼"
+}
+
+@test "success_msg prints success with check symbol" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    success_msg 'Test success message'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "Test success message"
+  assert_output --partial "✓"
+}
+
+@test "info_msg prints info with info symbol" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    info_msg 'Test info message'
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "Test info message"
+  assert_output --partial "ⓘ"
+}
+
+@test "_wt_log accumulates log entries" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    _wt_log ok 'First message'
+    _wt_log fail 'Second message'
+    _wt_log info 'Third message'
+    printf '%s\n' \"\${_WT_LOG[@]}\"
+  "
+  
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "✓ First message"
+  assert_output --partial "✗ Second message"
+  assert_output --partial "• Third message"
+}
+
+@test "run_with_spinner executes command in gum mode" {
+  # Skip if gum is not available
+  if ! command -v gum &>/dev/null; then
+    skip "gum not available"
+  fi
+  
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='gum'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    run_with_spinner 'Test command' true
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }
 
-@test "ask_yes_no returns 1 for default N when input is empty" {
+@test "run_with_spinner returns failure exit code on command failure" {
+  # Skip if gum is not available
+  if ! command -v gum &>/dev/null; then
+    skip "gum not available"
+  fi
+  
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    echo '' | ask_yes_no 'Test question?' 'N'
+    run_with_spinner 'Failing command' false
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
-}
-
-@test "ask_yes_no returns 0 for explicit 'y' input" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    echo 'y' | ask_yes_no 'Test question?' 'N'
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_success
-}
-
-@test "ask_yes_no returns 1 for explicit 'n' input" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    echo 'n' | ask_yes_no 'Test question?' 'Y'
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_failure
-}
-
-@test "print_box_top creates box top border" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    print_box_top 'Test Title' 40
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_success
-  assert_output --partial "╭"
-  assert_output --partial "╮"
-  assert_output --partial "Test Title"
-}
-
-@test "print_box_bottom creates box bottom border" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    print_box_bottom 40
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_success
-  assert_output --partial "╰"
-  assert_output --partial "╯"
 }
