@@ -76,7 +76,7 @@ jq = "jq-1.8.1"
 
 # Git and development tools
 "aqua:dandavison/delta" = "0.18.2"
-"aqua:orhun/git-cliff" = "v2.10.1"
+"aqua:orhun/git-cliff" = "v2.11.0"
 "aqua:neovim/neovim" = "v0.11.5"
 "npm:tree-sitter-cli" = "0.25.10"
 
