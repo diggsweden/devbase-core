@@ -78,7 +78,7 @@ jq = "jq-1.8.1"
 "aqua:dandavison/delta" = "0.18.2"
 "aqua:orhun/git-cliff" = "v2.11.0"
 "aqua:neovim/neovim" = "v0.11.5"
-"npm:tree-sitter-cli" = "0.25.10"
+"npm:tree-sitter-cli" = "0.26.3"
 
 # Container and Kubernetes tools
 "aqua:docker/compose" = "v2.40.3"
