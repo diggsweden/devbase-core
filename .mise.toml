@@ -25,7 +25,7 @@ PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 
 [tools]
 "aqua:casey/just" = "1.45.0"
-"ubi:rvben/rumdl" = "v0.0.198"
+"ubi:rvben/rumdl" = "v0.0.199"
 "aqua:google/yamlfmt" = "v0.20.0"
 "aqua:rhysd/actionlint" = "v1.7.9"
 "aqua:zricethezav/gitleaks" = "v8.29.1"
