@@ -994,7 +994,7 @@ check_mise_tools() {
       [[ "$line" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
 
       # Split on " = " (the assignment operator, not = inside brackets)
-      # This handles cases like: "ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"
+      # This handles cases like: "gitlab:gitlab-org/cli" = "v1.68.0"
       if [[ "$line" =~ ^([^=]+)\"][[:space:]]*=[[:space:]]*\"(.+)$ ]]; then
         local tool_spec="${BASH_REMATCH[1]}\""
         local version_spec="\"${BASH_REMATCH[2]}"
@@ -1009,10 +1009,9 @@ check_mise_tools() {
       # Clean up version_spec (handle quotes and comments)
       local expected_version=$(echo "$version_spec" | tr -d '"' | awk '{print $1}' | sed 's/^[[:space:]]*//')
 
-      # Extract short name from aqua/ubi/github prefixes
+      # Extract short name from aqua/github prefixes
       # "aqua:org/tool" -> "tool"
-      # "ubi:tool/tool[options]" -> "tool"
-      # "github:org/tool" -> "tool"
+      # "github:org/tool[options]" -> "tool"
       if [[ "$tool" =~ : ]]; then
         tool=$(echo "$tool" | sed 's/.*://' | sed 's/.*\///' | sed 's/\[.*//')
       fi

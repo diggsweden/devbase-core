@@ -303,24 +303,24 @@ EOF
   assert_line "node|20.10.0"
 }
 
-@test "get_mise_packages handles ubi backend with options" {
+@test "get_mise_packages handles gitlab backend" {
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   mise:
-    glab: { backend: "ubi:gitlab-org/cli", version: "v1.0.0", options: { provider: "gitlab", exe: "glab" } }
+    glab: { backend: "gitlab:gitlab-org/cli", version: "v1.0.0" }
 packs: {}
 EOF
-  
+
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export PACKAGES_CUSTOM_YAML=""
   export SELECTED_PACKS=""
   _MERGED_YAML=""
   source "${DEVBASE_LIBS}/parse-packages.sh"
-  
+
   run get_mise_packages
-  
+
   assert_success
-  assert_line "ubi:gitlab-org/cli[provider=gitlab,exe=glab]|v1.0.0"
+  assert_line "gitlab:gitlab-org/cli|v1.0.0"
 }
 
 # =============================================================================

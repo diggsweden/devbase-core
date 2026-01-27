@@ -61,7 +61,7 @@ gradle = "8.12"
 
 # Development and build tools
 "aqua:casey/just" = "1.45.0"
-"ubi:rvben/rumdl" = "v0.0.205"
+"github:rvben/rumdl" = "v0.0.205"
 jq = "jq-1.8.1"
 "aqua:mikefarah/yq" = "v4.50.1"
 "aqua:mike-engel/jwt-cli" = "6.2.0"
@@ -92,7 +92,6 @@ jq = "jq-1.8.1"
 "aqua:google/yamlfmt" = "v0.20.0"
 "aqua:rhysd/actionlint" = "v1.7.9"
 "github:pmd/pmd" = "pmd_releases/7.17.0"
-"ubi:checkstyle/checkstyle" = "checkstyle-11.0.1"
 "aqua:hadolint/hadolint" = "v2.14.0"
 "aqua:koalaman/shellcheck" = "v0.11.0"
 "aqua:mvdan/sh" = "v3.12.0"  # shfmt - Shell formatter
@@ -120,7 +119,7 @@ jq = "jq-1.8.1"
 "aqua:jesseduffield/lazygit" = "v0.57.0"
 "aqua:aristocratos/btop" = "v1.4.5"
 "aqua:cli/cli" = "v2.83.2"           # GitHub CLI (gh)
-"ubi:gitlab-org/cli[provider=gitlab,exe=glab]" = "v1.68.0"    # GitLab CLI (glab)
+"gitlab:gitlab-org/cli" = "v1.68.0"    # GitLab CLI (glab)
 
 # File managers
 "aqua:gokcehan/lf" = "r38"

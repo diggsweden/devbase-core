@@ -120,10 +120,9 @@ _process_mise() {
   local yaml="$1" path="$2"
   echo "$yaml" | yq -r "$path // {} | keys | .[]" 2>/dev/null | while read -r tool; do
     [[ -z "$tool" ]] && continue
-    local backend version options tags tool_key
+    local backend version tags tool_key
     backend=$(echo "$yaml" | yq -r "${path}[\"$tool\"].backend // \"\"")
     version=$(echo "$yaml" | yq -r "${path}[\"$tool\"].version // \"\"")
-    options=$(echo "$yaml" | yq -r "${path}[\"$tool\"].options // \"\"")
     tags=$(echo "$yaml" | yq -r "${path}[\"$tool\"].tags // \"\"")
 
     _should_skip "$tags" && continue
@@ -131,15 +130,6 @@ _process_mise() {
     # Build tool key for mise config
     if [[ -n "$backend" && "$backend" != "null" ]]; then
       tool_key="$backend"
-      # Handle ubi backend options
-      if [[ "$backend" == ubi:* && -n "$options" && "$options" != "null" ]]; then
-        local provider exe opts_str=""
-        provider=$(echo "$yaml" | yq -r "${path}[\"$tool\"].options.provider // \"\"")
-        exe=$(echo "$yaml" | yq -r "${path}[\"$tool\"].options.exe // \"\"")
-        [[ -n "$provider" && "$provider" != "null" ]] && opts_str="provider=$provider"
-        [[ -n "$exe" && "$exe" != "null" ]] && opts_str="${opts_str:+$opts_str,}exe=$exe"
-        [[ -n "$opts_str" ]] && tool_key="${backend}[${opts_str}]"
-      fi
     else
       tool_key="$tool"
     fi
