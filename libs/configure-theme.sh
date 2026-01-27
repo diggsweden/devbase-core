@@ -89,15 +89,10 @@ apply_theme() {
 
   # Check if theme exists in config, use default if not
   if [[ -z "${THEME_CONFIGS[$key]:-}" ]]; then
-    printf "Warning: Unknown theme '%s', using default (everforest-dark)\n" "$theme"
-    printf "  Supported themes:\n"
-    printf "    Everforest: everforest-dark, everforest-light\n"
-    printf "    Catppuccin: catppuccin-mocha, catppuccin-latte\n"
-    printf "    Tokyo Night: tokyonight-night, tokyonight-day\n"
-    printf "    Gruvbox: gruvbox-dark, gruvbox-light\n"
-    printf "    Nord: nord\n"
-    printf "    Dracula: dracula\n"
-    printf "    Solarized: solarized-dark, solarized-light\n"
+    show_progress warning "Unknown theme '$theme', using default (everforest-dark)"
+    show_progress info "Supported themes: everforest-dark, everforest-light, catppuccin-mocha, catppuccin-latte"
+    show_progress info "  tokyonight-night, tokyonight-day, gruvbox-dark, gruvbox-light, nord, dracula"
+    show_progress info "  solarized-dark, solarized-light"
     theme="everforest-dark"
     key="everforest_dark"
   fi

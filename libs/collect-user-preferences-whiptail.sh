@@ -34,8 +34,9 @@ _WT_WIDTH=$((_WT_TERM_WIDTH - 4))
 ((_WT_WIDTH < 50)) && _WT_WIDTH=50
 _WT_LIST_HEIGHT=$((_WT_HEIGHT - 8))
 
-# Consistent backtitle for branding
-_WT_BACKTITLE="DevBase Setup"
+# Navigation hints (kept for backward compatibility, but backtitle is preferred)
+# WT_BACKTITLE is defined in ui-helpers-whiptail.sh (already sourced)
+_WT_NAV_HINTS=""
 
 # =============================================================================
 # WHIPTAIL PRIMITIVES
@@ -49,7 +50,7 @@ _check_whiptail() {
 # Brief: Display a message box
 # Params: $1 - title, $2 - message
 _wt_msgbox() {
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$1" \
     --msgbox "$2" \
     "$_WT_HEIGHT" "$_WT_WIDTH"
@@ -60,7 +61,7 @@ _wt_msgbox() {
 # Returns: 0 for yes, 1 for no
 _wt_yesno() {
   local title="$1" message="$2" default="${3:-yes}"
-  local opts=(--backtitle "$_WT_BACKTITLE" --title "$title")
+  local opts=(--backtitle "$WT_BACKTITLE" --title "$title")
   [[ "$default" == "no" ]] && opts+=(--defaultno)
   opts+=(--yesno "$message" "$_WT_HEIGHT" "$_WT_WIDTH")
   whiptail "${opts[@]}"
@@ -72,7 +73,7 @@ _wt_yesno() {
 # Returns: 0 on OK, 1 on Cancel
 _wt_input() {
   local title="$1" message="$2" default="${3:-}"
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" \
     --inputbox "$message" \
     "$_WT_HEIGHT" "$_WT_WIDTH" "$default" \
@@ -85,7 +86,7 @@ _wt_input() {
 # Returns: 0 on OK, 1 on Cancel
 _wt_password() {
   local title="$1" message="$2"
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" \
     --passwordbox "$message" \
     "$_WT_HEIGHT" "$_WT_WIDTH" \
@@ -97,9 +98,9 @@ _wt_password() {
 # Outputs: Selected tag to stdout
 # Returns: 0 on OK, 1 on Cancel
 _wt_menu() {
-  local title="$1" message="$2" default="$3"
+  local title="$1" message="$2${_WT_NAV_HINTS}" default="$3"
   shift 3
-  local opts=(--backtitle "$_WT_BACKTITLE" --title "$title")
+  local opts=(--backtitle "$WT_BACKTITLE" --title "$title")
   [[ -n "$default" ]] && opts+=(--default-item "$default")
   opts+=(--menu "$message" "$_WT_HEIGHT" "$_WT_WIDTH" "$_WT_LIST_HEIGHT")
   whiptail "${opts[@]}" "$@" 3>&1 1>&2 2>&3
@@ -110,9 +111,9 @@ _wt_menu() {
 # Outputs: Selected tags (one per line) to stdout
 # Returns: 0 on OK, 1 on Cancel
 _wt_checklist() {
-  local title="$1" message="$2"
+  local title="$1" message="$2${_WT_NAV_HINTS}"
   shift 2
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" \
     --separate-output \
     --checklist "$message" \
@@ -125,9 +126,9 @@ _wt_checklist() {
 # Outputs: Selected tag to stdout
 # Returns: 0 on OK, 1 on Cancel
 _wt_radiolist() {
-  local title="$1" message="$2"
+  local title="$1" message="$2${_WT_NAV_HINTS}"
   shift 2
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" \
     --radiolist "$message" \
     "$_WT_HEIGHT" "$_WT_WIDTH" "$_WT_LIST_HEIGHT" \
@@ -141,10 +142,10 @@ _wt_scrollable_yesno() {
   local title="$1" content="$2"
   local tmpfile
   tmpfile=$(mktemp)
-  echo "$content" > "$tmpfile"
-  
+  echo "$content" >"$tmpfile"
+
   # Use --textbox would be read-only, so we use --yesno with --scrolltext
-  whiptail --backtitle "$_WT_BACKTITLE" \
+  whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" \
     --scrolltext \
     --yesno "$(cat "$tmpfile")" \
@@ -158,12 +159,10 @@ _wt_scrollable_yesno() {
 # Shows a confirmation dialog and exits if user confirms
 _handle_cancel() {
   if _wt_yesno "Cancel Setup" "Are you sure you want to cancel the setup?" "no"; then
-    echo "Setup cancelled by user." >&2
+    # Silent exit in whiptail mode - the dialog already confirmed
     exit 1
   fi
 }
-
-
 
 # =============================================================================
 # COLLECTION FUNCTIONS - WHIPTAIL UI
@@ -251,7 +250,7 @@ collect_theme_preference() {
 
   local choice
   if ! choice=$(_wt_radiolist "Theme Selection" \
-"
+    "
   Select a color theme for your terminal,
   editors, and development tools.
 
@@ -294,7 +293,7 @@ collect_font_preference() {
 
   local choice
   if ! choice=$(_wt_radiolist "Font Selection" \
-"
+    "
   Select a Nerd Font for your terminal
   and code editors.
 
@@ -389,13 +388,7 @@ collect_editor_preferences() {
 
   local selected
   if ! selected=$(_wt_checklist "Editors & IDEs" \
-"
-  Select editors and IDEs to install.
-
-  ┌────────────────────────────────────────┐
-  │  SPACE = Toggle    ENTER = Confirm     │
-  └────────────────────────────────────────┘
-" \
+    "Select editors and IDEs to install." \
     "${items[@]}"); then
     _handle_cancel
     collect_editor_preferences
@@ -434,7 +427,7 @@ collect_tool_preferences() {
 
   local editor_choice
   if ! editor_choice=$(_wt_radiolist "Shell Key Bindings" \
-"
+    "
   Choose key bindings for command line editing.
 
   Vim:   Modal editing, hjkl navigation
@@ -479,13 +472,7 @@ collect_tool_preferences() {
 
   local selected
   if ! selected=$(_wt_checklist "Additional Tools" \
-"
-  Configure additional development tools.
-
-  ┌────────────────────────────────────────┐
-  │  SPACE = Toggle    ENTER = Confirm     │
-  └────────────────────────────────────────┘
-" \
+    "Configure additional development tools." \
     "${items[@]}"); then
     _handle_cancel
     collect_tool_preferences
@@ -507,6 +494,9 @@ collect_tool_preferences() {
 }
 
 collect_pack_preferences() {
+  # Show loading indicator while preparing dialog
+  _wt_infobox "Language Packs" "Loading available packs..."
+
   # Source parser if needed
   if ! declare -f get_available_packs &>/dev/null; then
     # shellcheck source=parse-packages.sh
@@ -535,18 +525,12 @@ collect_pack_preferences() {
 
   local selected
   if ! selected=$(_wt_checklist "Language Packs" \
-"
-  Select language packs to install.
+    "Select language packs to install.
 
   Each pack includes:
     • Language runtime (via mise)
     • Build tools & linters
-    • Editor extensions
-
-  ┌────────────────────────────────────────┐
-  │  SPACE = Toggle    ENTER = Confirm     │
-  └────────────────────────────────────────┘
-" \
+    • Editor extensions" \
     "${items[@]}"); then
     _handle_cancel
     collect_pack_preferences
@@ -570,46 +554,43 @@ _show_configuration_summary() {
   jmc="$(_bool_to_symbol "${DEVBASE_INSTALL_JMC}")"
   zj="$(_bool_to_symbol "${DEVBASE_ZELLIJ_AUTOSTART}")"
   gh="$(_bool_to_symbol "${DEVBASE_ENABLE_GIT_HOOKS}")"
-  
+
   local packs_formatted="${DEVBASE_SELECTED_PACKS// /, }"
   local font_display="${DEVBASE_FONT:-N/A (WSL)}"
-  
+
+  # Truncate long values to fit in box (max 40 chars for values)
+  local git_name="${DEVBASE_GIT_AUTHOR:0:40}"
+  local git_email="${DEVBASE_GIT_EMAIL:0:40}"
+  local packs_display="${packs_formatted:0:45}"
+  [[ ${#packs_formatted} -gt 45 ]] && packs_display="${packs_display}..."
+
   local summary
   summary="
-  ┌─────────────────────────────────────────────────────┐
-  │              CONFIGURATION SUMMARY                  │
-  └─────────────────────────────────────────────────────┘
+   ╔═══════════════════════════════════════════════════╗
+   ║           CONFIGURATION SUMMARY                   ║
+   ╚═══════════════════════════════════════════════════╝
+                                        (↑↓ to scroll)
 
-  ┌─ Git ───────────────────────────────────────────────┐
-  │  Name    ${DEVBASE_GIT_AUTHOR}
-  │  Email   ${DEVBASE_GIT_EMAIL}
-  └─────────────────────────────────────────────────────┘
+   Git
+   ├─ Name    ${git_name}
+   └─ Email   ${git_email}
 
-  ┌─ Appearance ────────────────────────────────────────┐
-  │  Theme   ${DEVBASE_THEME}
-  │  Font    ${font_display}
-  └─────────────────────────────────────────────────────┘
+   Appearance
+   ├─ Theme   ${DEVBASE_THEME}
+   └─ Font    ${font_display}
 
-  ┌─ SSH Key ───────────────────────────────────────────┐
-  │  Action  ${DEVBASE_SSH_KEY_ACTION}
-  └─────────────────────────────────────────────────────┘
+   SSH Key
+   └─ Action  ${DEVBASE_SSH_KEY_ACTION}
 
-  ┌─ Editors & IDEs ────────────────────────────────────┐
-  │  ${vs} VS Code     ${lv} LazyVim     ${ij} IntelliJ
-  └─────────────────────────────────────────────────────┘
+   Editors & IDEs
+   └─ ${vs} VS Code   ${lv} LazyVim   ${ij} IntelliJ
 
-  ┌─ Tools ─────────────────────────────────────────────┐
-  │  Editor  ${EDITOR}
-  │  ${jmc} JMC        ${zj} Zellij      ${gh} Git Hooks
-  └─────────────────────────────────────────────────────┘
+   Tools
+   ├─ Editor  ${EDITOR}
+   └─ ${jmc} JMC   ${zj} Zellij   ${gh} Git Hooks
 
-  ┌─ Language Packs ────────────────────────────────────┐
-  │  ${packs_formatted}
-  └─────────────────────────────────────────────────────┘
-
-
-  Press <Yes> to begin installation
-  Press <No> to modify your choices
+   Language Packs
+   └─ ${packs_display}
 "
 
   if ! _wt_scrollable_yesno "Review Configuration" "$summary"; then
@@ -631,10 +612,17 @@ collect_user_configuration() {
 
   # Check whiptail availability
   if ! _check_whiptail; then
-    echo "ERROR: whiptail is required for TUI mode but not found." >&2
-    echo "Install with: sudo apt install whiptail" >&2
+    # Can't use whiptail to show this error since it's not installed
+    printf "ERROR: whiptail is required for TUI mode but not found.\n" >&2
+    printf "Install with: sudo apt install whiptail\n" >&2
     return 1
   fi
+
+  # Clear any accumulated log from pre-flight checks
+  _wt_clear_log
+
+  # Show loading infobox immediately to prevent terminal flicker
+  _wt_infobox "DevBase Core" "Loading configuration..."
 
   # Load saved preferences as defaults
   load_saved_preferences || true
@@ -645,29 +633,32 @@ collect_user_configuration() {
   git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
   devbase_version="${git_tag:-0.0.0-dev}"
 
-  # Welcome message with version
+  # Welcome message with version - pad version to fit box width
+  local version_str="Version: ${devbase_version} (${git_sha})"
+  # Pad to 37 chars to align with box (39 chars inner width - 2 for spacing)
+  local padded_version
+  padded_version=$(printf "%-37s" "$version_str")
+
   _wt_msgbox "Welcome to DevBase" \
-"
+    "
        ╔═══════════════════════════════════════╗
        ║           D E V B A S E               ║
        ║     Development Environment Setup     ║
        ╠═══════════════════════════════════════╣
-       ║  Version: ${devbase_version} (${git_sha})
+       ║ ${padded_version} ║
        ╚═══════════════════════════════════════╝
 
-  This wizard will configure your development
-  environment with:
+   This wizard will configure your development
+   environment with:
 
-    • Git configuration
-    • Theme and font preferences  
-    • SSH key setup
-    • Editors and IDEs
-    • Development tools
-    • Language packs
+     • Git configuration
+     • Theme and font preferences
+     • SSH key setup
+     • Editors and IDEs
+     • Development tools
+     • Language packs
 
-  Press Esc or Ctrl+C to cancel at any time.
-
-  Press OK to begin...
+   Press Esc or Ctrl+C to cancel at any time.
 "
 
   # Collect all preferences
@@ -694,6 +685,9 @@ collect_user_configuration() {
       _handle_cancel
     fi
   done
+
+  # Show transitional infobox to prevent flicker before installation gauge starts
+  _wt_infobox "Starting Installation" "Preparing to install..."
 
   # Write preferences
   write_user_preferences

@@ -646,7 +646,7 @@ check_mise_activation() {
 
   if ! has_command mise; then
     print_check "fail" "Mise is not installed or not in PATH"
-    print_check "info" "Install mise first: curl https://mise.run | sh"
+    print_check "info" "Install mise first: https://mise.jdx.dev/getting-started.html"
     mise_ok=false
     return 1
   fi

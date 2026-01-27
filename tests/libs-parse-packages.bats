@@ -762,3 +762,148 @@ EOF
   run get_mise_packages
   assert_line "kotlin|2.0.0"
 }
+
+# =============================================================================
+# get_system_packages tests (multi-distro support)
+# =============================================================================
+
+@test "get_system_packages reads common packages" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  common:
+    curl: {}
+    git: {}
+  apt:
+    apt-utils: {}
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS=""
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="apt"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_system_packages
+  
+  assert_success
+  assert_line "curl"
+  assert_line "git"
+  assert_line "apt-utils"
+}
+
+@test "get_system_packages includes pack common and distro-specific" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  common:
+    curl: {}
+packs:
+  java:
+    description: "Java development"
+    common:
+      visualvm: {}
+    apt:
+      default-jdk: {}
+    dnf:
+      java-latest-openjdk: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS="java"
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="apt"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_system_packages
+  
+  assert_success
+  assert_line "curl"
+  assert_line "visualvm"
+  assert_line "default-jdk"
+  # Should NOT include dnf packages when pkg_manager is apt
+  refute_line "java-latest-openjdk"
+}
+
+@test "get_system_packages uses dnf section on Fedora" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  common:
+    curl: {}
+  apt:
+    apt-utils: {}
+  dnf:
+    dnf-automatic: {}
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  # Override the _get_pkg_manager function for this test
+  _get_pkg_manager() { echo "dnf"; }
+  
+  run get_system_packages
+  
+  assert_success
+  assert_line "curl"
+  assert_line "dnf-automatic"
+  # Should NOT include apt packages when pkg_manager is dnf
+  refute_line "apt-utils"
+}
+
+# =============================================================================
+# get_flatpak_packages tests
+# =============================================================================
+
+@test "get_flatpak_packages returns app_id|remote format" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  flatpak:
+    org.chromium.Chromium: {remote: "flathub"}
+    org.example.App: {}
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  run get_flatpak_packages
+  
+  assert_success
+  assert_line "org.chromium.Chromium|flathub"
+  assert_line "org.example.App|flathub"
+}
+
+# =============================================================================
+# get_app_store_packages tests
+# =============================================================================
+
+@test "get_app_store_packages returns snap packages on Ubuntu" {
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  snap:
+    chromium: {}
+    microk8s: {options: "--classic"}
+  flatpak:
+    org.chromium.Chromium: {}
+packs: {}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS=""
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  
+  # Mock get_app_store to return snap
+  get_app_store() { echo "snap"; }
+  
+  run get_app_store_packages
+  
+  assert_success
+  assert_line "chromium|"
+  assert_line "microk8s|--classic"
+}

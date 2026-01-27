@@ -4,68 +4,20 @@
 #
 # SPDX-License-Identifier: MIT
 
+# APT package manager implementation for Debian/Ubuntu
+# This file is sourced by pkg-manager.sh - do not source directly
+
 set -uo pipefail
 
-if [[ -z "${DEVBASE_ROOT:-}" ]]; then
-  echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-  return 1
-fi
-
-if [[ -z "${DEVBASE_DOT:-}" ]]; then
-  echo "ERROR: DEVBASE_DOT not set. This script must be sourced from setup.sh" >&2
-  return 1
-fi
-
-# Brief: Read APT package list from packages.yaml
-# Params: None
-# Uses: DEVBASE_DOT, DEVBASE_SELECTED_PACKS, get_apt_packages (globals/functions)
-# Returns: 0 on success, 1 if no packages found
-# Outputs: Array of package names to global APT_PACKAGES_ALL
-# Side-effects: Populates APT_PACKAGES_ALL array, filters by tags
-load_apt_packages() {
-  # Set up for parse-packages.sh
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
-  # Source parser if not already loaded
-  if ! declare -f get_apt_packages &>/dev/null; then
-    # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
-  fi
-
-  # Get packages from parser
-  local packages=()
-  while IFS= read -r pkg; do
-    [[ -n "$pkg" ]] && packages+=("$pkg")
-  done < <(get_apt_packages)
-
-  if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress error "No APT packages found in configuration"
-    return 1
-  fi
-
-  # Export as readonly array
-  readonly APT_PACKAGES_ALL=("${packages[@]}")
-
-  return 0
-}
+# =============================================================================
+# CORE PACKAGE OPERATIONS
+# =============================================================================
 
 # Brief: Update APT package cache
 # Params: None
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
-pkg_update() {
+_pkg_apt_update() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     gum spin --spinner dot --title "Updating package lists..." -- \
       sudo apt-get -qq update
@@ -77,28 +29,89 @@ pkg_update() {
   return $?
 }
 
-# Brief: Install APT packages with retry logic
+# Brief: Install APT packages with real-time progress (whiptail only)
+# Params: $@ - package names
+# Returns: apt exit code
+# Parses "Unpacking" and "Setting up" lines to update gauge with real progress
+_pkg_apt_install_with_progress() {
+  local packages=("$@")
+  local total=${#packages[@]}
+  local unpack_count=0
+  local setup_count=0
+  local current_pkg=""
+  local exit_code=0
+  local last_line=""
+
+  _wt_update_gauge "Preparing to install $total packages..." 0
+
+  # Use process substitution to keep variables in main shell
+  # Remove -qq to get progress output, use -q for less noise
+  while IFS= read -r line; do
+    last_line="$line"
+    # Parse "Unpacking package-name (version) ..."
+    if [[ "$line" =~ ^Unpacking[[:space:]]+([^[:space:]]+) ]]; then
+      current_pkg="${BASH_REMATCH[1]}"
+      # Remove :amd64 or similar arch suffix
+      current_pkg="${current_pkg%%:*}"
+      unpack_count=$((unpack_count + 1))
+      # Unpacking is 0-50% of progress
+      local percent=$(((unpack_count * 50) / total))
+      _wt_update_gauge "Unpacking: $current_pkg ($unpack_count/$total)" "$percent"
+    # Parse "Setting up package-name (version) ..."
+    elif [[ "$line" =~ ^Setting[[:space:]]+up[[:space:]]+([^[:space:]]+) ]]; then
+      current_pkg="${BASH_REMATCH[1]}"
+      current_pkg="${current_pkg%%:*}"
+      setup_count=$((setup_count + 1))
+      # Setting up is 50-100% of progress
+      local percent=$((50 + (setup_count * 50) / total))
+      _wt_update_gauge "Configuring: $current_pkg ($setup_count/$total)" "$percent"
+    fi
+  done < <(
+    sudo apt-get install -y -q "${packages[@]}" 2>&1
+    echo "APT_EXIT_CODE:$?"
+  )
+
+  # Extract exit code from last line
+  if [[ "$last_line" =~ APT_EXIT_CODE:([0-9]+) ]]; then
+    exit_code="${BASH_REMATCH[1]}"
+  fi
+
+  # Check if parsing worked - if not, log warning
+  if [[ $unpack_count -eq 0 ]] && [[ $setup_count -eq 0 ]] && [[ $total -gt 0 ]]; then
+    show_progress warning "Could not parse apt progress output"
+  fi
+
+  if [[ $exit_code -eq 0 ]]; then
+    _wt_update_gauge "Installed $total packages" 100
+  fi
+
+  return "$exit_code"
+}
+
+# Brief: Install APT packages
 # Params: $@ - package names
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Installs packages
-pkg_install() {
+_pkg_apt_install() {
   local packages=("$@")
-
-  [[ ${#packages[@]} -eq 0 ]] && return 0
-
-  for pkg in "${packages[@]}"; do
-    validate_not_empty "$pkg" "Package name" || return 1
-  done
-
   local pkg_count=${#packages[@]}
 
+  [[ $pkg_count -eq 0 ]] && return 0
+
+  # Gum mode - unchanged
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     gum spin --spinner dot --title "Installing ${pkg_count} packages..." -- \
       sudo apt-get -y -qq install "${packages[@]}"
     return $?
   fi
 
-  # Whiptail mode (default)
+  # Whiptail mode with persistent gauge - use real progress tracking
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && _wt_gauge_is_running; then
+    _pkg_apt_install_with_progress "${packages[@]}"
+    return $?
+  fi
+
+  # Fallback - no gauge running or other TUI mode
   run_with_spinner "Installing ${pkg_count} packages" sudo apt-get -y -qq install "${packages[@]}"
   return $?
 }
@@ -107,17 +120,65 @@ pkg_install() {
 # Params: None
 # Returns: 0 always
 # Side-effects: Removes unused packages
-pkg_cleanup() {
+_pkg_apt_cleanup() {
   sudo apt-get -qq autoremove -y
   return 0
 }
 
-# Brief: Configure system locale if DEVBASE_LOCALE is set
+# =============================================================================
+# REPOSITORY MANAGEMENT
+# =============================================================================
+
+# Brief: Add a repository to APT sources
+# Params: $1 - repo type (ppa), $2 - repo identifier
+# Returns: 0 on success, 1 on failure
+_pkg_apt_add_repo() {
+  local repo_type="$1"
+  local repo_id="$2"
+
+  case "$repo_type" in
+  ppa)
+    # Use -n flag to skip automatic apt update
+    if ! sudo add-apt-repository -y -n "ppa:$repo_id" &>/dev/null; then
+      show_progress warning "Failed to add PPA: $repo_id"
+      return 1
+    fi
+    ;;
+  *)
+    show_progress warning "Unknown APT repo type: $repo_type"
+    return 1
+    ;;
+  esac
+
+  return 0
+}
+
+# Brief: Add Fish shell PPA for version 4.x
 # Params: None
-# Uses: DEVBASE_LOCALE (global, optional)
+# Returns: 0 on success, 1 on failure
+# Side-effects: Adds fish-shell/release-4 PPA
+_pkg_apt_add_fish_ppa() {
+  show_progress info "Adding Fish shell 4.x PPA..."
+
+  if ! _pkg_apt_add_repo "ppa" "fish-shell/release-4"; then
+    show_progress warning "Failed to add Fish 4.x PPA (will use default version from Ubuntu repos)"
+    return 1
+  fi
+
+  show_progress success "Fish 4.x PPA added"
+  return 0
+}
+
+# =============================================================================
+# LOCALE CONFIGURATION
+# =============================================================================
+
+# Brief: Configure system locale for Debian/Ubuntu
+# Params: None
+# Uses: DEVBASE_LOCALE (global)
 # Returns: 0 always
 # Side-effects: Generates and sets system locale
-configure_locale() {
+_pkg_apt_configure_locale() {
   [[ -z "${DEVBASE_LOCALE:-}" ]] && return 0
 
   local locale_name="${DEVBASE_LOCALE%.*}"
@@ -129,14 +190,25 @@ configure_locale() {
   return 0
 }
 
-# Brief: Install Liberation and DejaVu fonts (metric-compatible replacements for common fonts)
+# =============================================================================
+# FONT INSTALLATION
+# =============================================================================
+
+# Brief: Install Liberation and DejaVu fonts for APT
 # Params: None
 # Returns: 0 on success, 1 on failure
 # Side-effects: Installs fonts, rebuilds font cache
-install_liberation_fonts() {
+_pkg_apt_install_fonts() {
+  local font_packages=(
+    fonts-liberation
+    fonts-liberation-sans-narrow
+    fonts-dejavu
+    fonts-dejavu-extra
+  )
+
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     if gum spin --spinner dot --title "Installing Liberation & DejaVu fonts..." -- \
-      sudo apt-get install -y -qq fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra; then
+      sudo apt-get install -y -qq "${font_packages[@]}"; then
       command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
       return 0
     fi
@@ -145,33 +217,16 @@ install_liberation_fonts() {
 
   # Whiptail mode (default)
   if run_with_spinner "Installing Liberation & DejaVu fonts" \
-    sudo apt-get install -y -qq fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra; then
+    sudo apt-get install -y -qq "${font_packages[@]}"; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
     return 0
   fi
   return 1
 }
 
-# Brief: Add Fish shell PPA for version 4.x
-# Params: None
-# Returns: 0 on success, 1 on failure
-# Side-effects: Adds fish-shell/release-4 PPA for Fish 4.x with GPG key, skips apt update
-add_fish_ppa() {
-  show_progress info "Adding Fish shell 4.x PPA..."
-
-  # Use -n flag to skip automatic apt update (we'll do it later in pkg_update)
-  # add-apt-repository with -n flag:
-  # 1. Downloads and verifies GPG signing key via HTTPS
-  # 2. Adds repository to /etc/apt/sources.list.d/
-  # 3. Does NOT run apt update (we handle that separately)
-  if ! sudo add-apt-repository -y -n ppa:fish-shell/release-4 &>/dev/null; then
-    show_progress warning "Failed to add Fish 4.x PPA (will use default version from Ubuntu repos)"
-    return 1
-  fi
-
-  show_progress success "Fish 4.x PPA added"
-  return 0
-}
+# =============================================================================
+# FIREFOX INSTALLATION (DEB FROM MOZILLA)
+# =============================================================================
 
 # Brief: Install Firefox from Mozilla's official APT repository (not snap)
 # Params: None
@@ -179,7 +234,7 @@ add_fish_ppa() {
 # Returns: 0 on success, 1 on failure
 # Side-effects: Adds Mozilla APT repo, sets package priority, installs Firefox .deb
 # Note: Firefox .deb is required for smart card/PKCS#11 support (snap has AppArmor restrictions)
-install_firefox_deb() {
+_pkg_apt_install_firefox_deb() {
   show_progress info "Installing Firefox from Mozilla APT repository..."
 
   # Skip if already installed from Mozilla repo
@@ -199,7 +254,6 @@ install_firefox_deb() {
   fi
 
   # Remove Ubuntu's transitional firefox package if present
-  # This package redirects to snap and blocks installation from Mozilla repo
   if dpkg -l firefox 2>/dev/null | grep -q "^ii.*1:1snap"; then
     show_progress info "Removing Ubuntu transitional firefox package..."
     tui_run_cmd "Removing transitional package" sudo dpkg -r firefox
@@ -257,7 +311,7 @@ EOF
   show_progress success "Firefox installed from Mozilla APT repository"
 
   # Configure OpenSC for smart card support
-  configure_firefox_opensc
+  _pkg_apt_configure_firefox_opensc
 
   return 0
 }
@@ -267,8 +321,7 @@ EOF
 # Uses: HOME, show_progress (globals/functions)
 # Returns: 0 on success, 1 if no Firefox profile found
 # Side-effects: Adds OpenSC module to Firefox pkcs11.txt
-# Note: Requires opensc-pkcs11 package to be installed (defined in packages.yaml)
-configure_firefox_opensc() {
+_pkg_apt_configure_firefox_opensc() {
   local opensc_lib="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
 
   # Skip if OpenSC library not installed
@@ -298,57 +351,5 @@ configure_firefox_opensc() {
   printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
 
   show_progress success "Firefox configured for smart card support (OpenSC)"
-  return 0
-}
-
-# Brief: Install all APT packages, configure locale, and install fonts
-# Params: None
-# Uses: load_apt_packages, APT_PACKAGES_ALL (functions/global array)
-# Returns: 0 on success, 1 on failure
-# Side-effects: Loads package list, installs packages, configures locale, cleans up
-install_apt_packages() {
-  show_progress info "Installing system packages..."
-
-  # Add Fish PPA before updating package cache
-  add_fish_ppa
-
-  # Load package list from file
-  if ! load_apt_packages; then
-    show_progress error "Failed to load APT package list"
-    return 1
-  fi
-
-  local total_packages=${#APT_PACKAGES_ALL[@]}
-  show_progress info "Found $total_packages packages to install"
-  tui_blank_line
-
-  if ! pkg_update; then
-    show_progress error "Failed to update package cache - check network/proxy settings"
-    return 1
-  fi
-
-  if ! pkg_install "${APT_PACKAGES_ALL[@]}"; then
-    show_progress warning "Some packages failed to install"
-    return 1
-  fi
-
-  local locale_configured=""
-  if configure_locale; then
-    [[ -n "${DEVBASE_LOCALE:-}" ]] && locale_configured="${DEVBASE_LOCALE}"
-  fi
-
-  local fonts_installed=false
-  if install_liberation_fonts; then
-    fonts_installed=true
-  fi
-
-  local msg="System packages installed (${total_packages} packages"
-  [[ -n "$locale_configured" ]] && msg="${msg}, locale: ${locale_configured}"
-  [[ "$fonts_installed" == true ]] && msg="${msg}, Liberation+DejaVu fonts"
-  msg="${msg})"
-
-  tui_blank_line
-  show_progress success "$msg"
-
   return 0
 }

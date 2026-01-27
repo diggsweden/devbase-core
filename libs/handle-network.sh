@@ -58,8 +58,8 @@ verify_checksum_from_url() {
     return 0
   else
     show_progress error "Checksum mismatch for $(basename "$target")"
-    printf "      Expected: %s\n" "$expected_sum"
-    printf "      Got:      %s\n" "$actual_sum"
+    show_progress info "Expected: $expected_sum"
+    show_progress info "Got: $actual_sum"
     show_progress warning "File kept at: $target (verify manually or delete to retry)"
     return 1
   fi
@@ -81,8 +81,8 @@ verify_checksum_value() {
     return 0
   else
     show_progress error "Checksum mismatch for $(basename "$target")"
-    printf "      Expected: %s\n" "$expected_checksum"
-    printf "      Got:      %s\n" "$actual_checksum"
+    show_progress info "Expected: $expected_checksum"
+    show_progress info "Got: $actual_checksum"
     rm -f -- "$target"
     return 1
   fi
@@ -147,14 +147,23 @@ _download_file_attempt() {
 
   [[ "$skip_download" == "true" ]] && return 0
 
+  # In whiptail mode, use silent downloads (progress shown via gauge)
+  # In gum mode, show progress bar
+  local curl_progress="-#"
+  local wget_progress="--show-progress"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    curl_progress="-s"
+    wget_progress="--quiet"
+  fi
+
   # Try curl first
   if command_exists curl; then
-    curl -#fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
+    curl ${curl_progress} -fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
   fi
 
   # Fallback to wget
   if command_exists wget; then
-    wget --timeout="$timeout" --tries=1 --show-progress -O "$target" "$url" 2>&1 && return 0
+    wget --timeout="$timeout" --tries=1 ${wget_progress} -O "$target" "$url" 2>&1 && return 0
   fi
 
   return 1

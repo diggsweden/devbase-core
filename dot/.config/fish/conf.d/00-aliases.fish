@@ -38,11 +38,6 @@ alias grep="grep --color=auto"
 alias fgrep="fgrep --color=auto"
 alias egrep="egrep --color=auto"
 
-# Better top (if btop is installed)
-if type -q btop
-    alias top="btop"
-end
-
 # TLDR pages (tlrc is the Rust client)
 if type -q tlrc
     alias tldr="tlrc"

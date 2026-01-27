@@ -189,35 +189,35 @@ install_windows_terminal_themes() {
 
   # Check if jq is available
   if ! command -v jq &>/dev/null; then
-    printf "  %b✗%b Windows Terminal: jq not available\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    show_progress error "Windows Terminal: jq not available"
     return 1
   fi
 
   # Detect Windows username
   local win_user
   if ! win_user=$(_detect_windows_username); then
-    printf "  %b✗%b Windows Terminal: Could not detect Windows username\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    show_progress error "Windows Terminal: Could not detect Windows username"
     return 1
   fi
 
   # Find Windows Terminal settings path
   local wt_settings
   if ! wt_settings=$(_find_wt_settings_path "$win_user"); then
-    printf "  %b✗%b Windows Terminal: settings.json not found for user %s\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" "$win_user" >&2
+    show_progress error "Windows Terminal: settings.json not found for user $win_user"
     return 1
   fi
 
   # Check if file is writable
   if [[ ! -w "$wt_settings" ]]; then
-    printf "  %b✗%b Windows Terminal: settings.json not writable\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    show_progress error "Windows Terminal: settings.json not writable"
     return 1
   fi
 
   # Find theme files directory
   local theme_dir
   if ! theme_dir=$(_find_wt_theme_directory); then
-    printf "  %b✗%b Windows Terminal: Theme files not found\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
-    printf "    Expected: %s/devbase/files/windows-terminal/\n" "${XDG_DATA_HOME}" >&2
+    show_progress error "Windows Terminal: Theme files not found"
+    show_progress info "Expected: ${XDG_DATA_HOME}/devbase/files/windows-terminal/"
     return 1
   fi
 
@@ -228,7 +228,7 @@ install_windows_terminal_themes() {
   settings_dir=$(dirname "$wt_settings")
   local backup_file="$settings_dir/settings.$timestamp.json"
   if ! cp "$wt_settings" "$backup_file" 2>/dev/null; then
-    printf "  %b✗%b Windows Terminal: Failed to create backup\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    show_progress error "Windows Terminal: Failed to create backup"
     return 1
   fi
 
@@ -240,24 +240,22 @@ install_windows_terminal_themes() {
 
   # Check if we found any theme files
   if [[ $theme_count -eq 0 ]]; then
-    printf "  %b✗%b Windows Terminal: No theme files found in %s\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" "$theme_dir" >&2
+    show_progress error "Windows Terminal: No theme files found in $theme_dir"
     return 1
   fi
 
   # Validate themes array is valid JSON
   if ! echo "$themes_array" | jq empty 2>/dev/null; then
-    printf "  %b✗%b Windows Terminal: Invalid theme JSON files\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
+    show_progress error "Windows Terminal: Invalid theme JSON files"
     return 1
   fi
 
   # Inject themes into settings.json
   if _inject_themes_to_settings "$wt_settings" "$themes_array" "$backup_file"; then
-    printf "  %b✓%b Windows Terminal: All 12 DevBase themes installed\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}" >&2
-    echo "Themes installed successfully" >&2
+    show_progress success "Windows Terminal: All 12 DevBase themes installed"
     return 0
   else
-    printf "  %b✗%b Windows Terminal: Failed to update settings.json\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_COLORS[NC]}" >&2
-    echo "Failed to inject themes" >&2
+    show_progress error "Windows Terminal: Failed to update settings.json"
     return 1
   fi
 }

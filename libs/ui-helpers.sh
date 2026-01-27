@@ -155,30 +155,128 @@ _fallback_ask_yes_no() {
 }
 
 # =============================================================================
-# TUI-AGNOSTIC MESSAGE FUNCTIONS
-# These work the same regardless of TUI mode
+# TUI-MODE AWARE OUTPUT FUNCTIONS
+# These print in gum mode but are silent (or log) in whiptail mode
 # =============================================================================
 
-# Brief: Print error message with symbol (stderr)
+# Brief: Print text only in gum mode (no-op in whiptail)
+# Params: $@ - text to print
+# Use this for decorative output that shouldn't appear in whiptail
+tui_print() {
+  if _use_whiptail; then
+    return 0 # Silent in whiptail mode
+  fi
+  printf "%s\n" "$*"
+}
+
+# Brief: Print formatted text only in gum mode (no-op in whiptail)
+# Params: $1 - format string, $@ - arguments
+# Use this for printf-style output that shouldn't appear in whiptail
+tui_printf() {
+  if _use_whiptail; then
+    return 0 # Silent in whiptail mode
+  fi
+  # shellcheck disable=SC2059
+  printf "$@"
+}
+
+# Brief: Print blank line only in gum mode (no-op in whiptail)
+# Use this instead of echo or printf "\n" for spacing
+tui_blank_line() {
+  if _use_whiptail; then
+    return 0 # Silent in whiptail mode
+  fi
+  echo
+}
+
+# Brief: Run command silently in whiptail mode, with output in gum mode
+# Params: $@ - command to run
+# Returns: Exit code of command
+# In whiptail: suppresses all output
+# In gum: shows normal output
+tui_run_silent() {
+  if _use_whiptail; then
+    "$@" &>/dev/null
+  else
+    "$@"
+  fi
+}
+
+# Brief: Run command with optional spinner wrapper
+# Params: $1 - description, $@ - command to run
+# In whiptail: uses gauge spinner and suppresses output
+# In gum: uses gum spin
+# Returns: Exit code of command
+tui_run_cmd() {
+  local description="$1"
+  shift
+  run_with_spinner "$description" "$@"
+}
+
+# =============================================================================
+# TUI-AWARE MESSAGE FUNCTIONS
+# These route to whiptail log in whiptail mode, print to terminal otherwise
+# =============================================================================
+
+# Brief: Print error message with symbol (stderr in gum, log in whiptail)
 # Params: $1 - message text
 error_msg() {
-  printf "  %b%s%b %s\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_SYMBOLS[CROSS]}" "${DEVBASE_COLORS[NC]}" "$1" >&2
+  if _use_whiptail; then
+    _wt_log "fail" "$1"
+  else
+    printf "  %b%s%b %s\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_SYMBOLS[CROSS]}" "${DEVBASE_COLORS[NC]}" "$1" >&2
+  fi
 }
 
-# Brief: Print warning message with symbol (stderr)
+# Brief: Print warning message with symbol (stderr in gum, log in whiptail)
 # Params: $1 - message text
 warn_msg() {
-  printf "  %b%s%b %s\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_SYMBOLS[WARN]}" "${DEVBASE_COLORS[NC]}" "$1" >&2
+  if _use_whiptail; then
+    _wt_log "info" "⚠ $1"
+  else
+    printf "  %b%s%b %s\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_SYMBOLS[WARN]}" "${DEVBASE_COLORS[NC]}" "$1" >&2
+  fi
 }
 
-# Brief: Print success message with symbol
+# Brief: Print success message with symbol (stdout in gum, log in whiptail)
 # Params: $1 - message text
 success_msg() {
-  printf "  %b%s%b %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_SYMBOLS[CHECK]}" "${DEVBASE_COLORS[NC]}" "$1"
+  if _use_whiptail; then
+    _wt_log "ok" "$1"
+  else
+    printf "  %b%s%b %s\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_SYMBOLS[CHECK]}" "${DEVBASE_COLORS[NC]}" "$1"
+  fi
 }
 
-# Brief: Print info message with symbol
+# Brief: Print info message with symbol (stdout in gum, log in whiptail)
 # Params: $1 - message text
 info_msg() {
-  printf "  %b%s%b %s\n" "${DEVBASE_COLORS[CYAN]}" "${DEVBASE_SYMBOLS[INFO]}" "${DEVBASE_COLORS[NC]}" "$1"
+  if _use_whiptail; then
+    _wt_log "info" "$1"
+  else
+    printf "  %b%s%b %s\n" "${DEVBASE_COLORS[CYAN]}" "${DEVBASE_SYMBOLS[INFO]}" "${DEVBASE_COLORS[NC]}" "$1"
+  fi
+}
+
+# =============================================================================
+# PERSISTENT PROGRESS DISPLAY (whiptail only)
+# These functions manage a persistent gauge during installation
+# =============================================================================
+
+# Brief: Start persistent progress display for installation phase
+# In whiptail: starts persistent gauge that covers the screen
+# In gum: no-op (gum handles its own display)
+start_installation_progress() {
+  if _use_whiptail; then
+    _wt_start_persistent_gauge "Installing"
+  fi
+}
+
+# Brief: Stop persistent progress display
+# In whiptail: stops and cleans up persistent gauge
+# In gum: no-op
+stop_installation_progress() {
+  if _use_whiptail; then
+    _wt_stop_persistent_gauge
+  fi
 }

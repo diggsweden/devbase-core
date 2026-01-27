@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Test Fedora Installation
+on: # yamllint disable-line rule:truthy
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-fedora-install:
+    runs-on: ubuntu-latest
+    name: Test on Fedora 43
+    container:
+      image: fedora:43
+      options: --user root
+    steps:
+      - name: Install prerequisites
+        run: |
+          dnf install -y git sudo passwd util-linux
+          # Create non-root user for installation (devbase requires non-root)
+          useradd -m -s /bin/bash testuser
+          echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Cache Mise tools
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        with:
+          path: |
+            /home/testuser/.local/share/mise/installs
+            /home/testuser/.local/share/mise/downloads
+          key: mise-fedora-43-${{ hashFiles('dot/.config/mise/config.toml') }}
+          restore-keys: |
+            mise-fedora-43-
+
+      - name: Cache binary downloads
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        with:
+          path: /home/testuser/.cache/devbase/rpms
+          key: binary-downloads-fedora-43-${{ hashFiles('dot/.config/devbase/packages.yaml') }}
+          restore-keys: |
+            binary-downloads-fedora-43-
+
+      - name: Prepare directories
+        run: |
+          mkdir -p /home/testuser/.cache/devbase/rpms
+          chown -R testuser:testuser /home/testuser
+          chown -R testuser:testuser .
+
+      - name: Run installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_NAME: DevBase CI
+          GIT_EMAIL: ci@devbase.test
+          DEVBASE_RPM_CACHE: /home/testuser/.cache/devbase/rpms
+        run: |
+          su - testuser -c "cd $GITHUB_WORKSPACE && CI=true ./setup.sh --non-interactive"
+
+      - name: Verify installation
+        run: |
+          su - testuser -c "cd $GITHUB_WORKSPACE && ./verify/verify-install-check.sh"

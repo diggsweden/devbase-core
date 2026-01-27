@@ -24,7 +24,7 @@ no_proxy = "{{ get_env(name='no_proxy', default='') }}"
 PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 
 [tools]
-"aqua:casey/just" = "1.45.0"
+"aqua:casey/just" = "1.46.0"
 "ubi:rvben/rumdl" = "v0.0.205"
 "aqua:google/yamlfmt" = "v0.20.0"
 "aqua:rhysd/actionlint" = "v1.7.9"

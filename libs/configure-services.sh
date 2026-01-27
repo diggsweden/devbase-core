@@ -37,32 +37,50 @@ enable_user_service() {
   return 0
 }
 
-# Brief: Configure UFW firewall with k3s rules if applicable
+# Brief: Configure firewall with k3s rules if applicable (UFW or firewalld)
 # Params: None
-# Uses: show_progress (from ui-helpers)
+# Uses: show_progress, get_firewall (from ui-helpers, distro.sh)
 # Returns: 0 on success or if skipped, 1 if enable fails
-# Side-effects: Adds firewall rules for k3s if installed, enables UFW, skips on WSL
+# Side-effects: Adds firewall rules for k3s if installed, enables firewall, skips on WSL
 configure_ufw() {
-  if ! command -v ufw &>/dev/null; then
+  # Detect firewall type
+  local firewall_type
+  if declare -f get_firewall &>/dev/null; then
+    firewall_type=$(get_firewall)
+  elif command -v ufw &>/dev/null; then
+    firewall_type="ufw"
+  elif command -v firewall-cmd &>/dev/null; then
+    firewall_type="firewalld"
+  else
+    firewall_type="none"
+  fi
+
+  if [[ "$firewall_type" == "none" ]]; then
     return 0
   fi
 
   if grep -qi microsoft /proc/version 2>/dev/null; then
-    show_progress info "[WSL-specific] WSL detected - skipping UFW (use Windows Firewall)"
+    show_progress info "[WSL-specific] WSL detected - skipping firewall (use Windows Firewall)"
     return 0
   fi
 
+  case "$firewall_type" in
+  ufw)
+    _configure_ufw_firewall
+    ;;
+  firewalld)
+    _configure_firewalld
+    ;;
+  esac
+}
+
+# Brief: Configure UFW firewall (Ubuntu/Debian)
+_configure_ufw_firewall() {
   show_progress info "Configuring UFW firewall..."
 
   # Allow k3s traffic if k3s is installed
-  # k3s requires these ports to function properly:
-  # - 6443/tcp: Kubernetes API server (localhost only for security)
-  # - 10.42.0.0/16: Pod network (default flannel CIDR)
-  # - 10.43.0.0/16: Service network (default ClusterIP CIDR)
   if command -v k3s &>/dev/null; then
-    # Only allow K3s API from localhost (secure for dev machines)
     sudo ufw allow from 127.0.0.1 to any port 6443 proto tcp comment 'k3s apiserver (localhost)' &>/dev/null
-    # Allow pod and service networks (internal K3s networking)
     sudo ufw allow from 10.42.0.0/16 to any comment 'k3s pods' &>/dev/null
     sudo ufw allow from 10.43.0.0/16 to any comment 'k3s services' &>/dev/null
     show_progress info "Added k3s firewall rules (API restricted to localhost)"
@@ -72,6 +90,31 @@ configure_ufw() {
     show_progress success "UFW firewall enabled and activated"
   else
     show_progress warning "Failed to enable UFW firewall"
+    return 1
+  fi
+
+  return 0
+}
+
+# Brief: Configure firewalld (Fedora/RHEL)
+_configure_firewalld() {
+  show_progress info "Configuring firewalld..."
+
+  # Allow k3s traffic if k3s is installed
+  if command -v k3s &>/dev/null; then
+    # Add k3s ports to trusted zone for localhost
+    sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="127.0.0.1" port protocol="tcp" port="6443" accept' &>/dev/null || true
+    # Allow pod and service networks
+    sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.42.0.0/16" accept' &>/dev/null || true
+    sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.43.0.0/16" accept' &>/dev/null || true
+    show_progress info "Added k3s firewall rules (API restricted to localhost)"
+  fi
+
+  # Reload to apply changes
+  if sudo firewall-cmd --reload &>/dev/null; then
+    show_progress success "firewalld configured and reloaded"
+  else
+    show_progress warning "Failed to reload firewalld"
     return 1
   fi
 

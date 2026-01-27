@@ -6,6 +6,11 @@
 
 # Parse packages.yaml and provide package lists for installers
 # Requires: yq
+#
+# Package structure in packages.yaml:
+#   common:  - packages with same name on all distros
+#   apt:     - Ubuntu/Debian specific packages
+#   dnf:     - Fedora/RHEL specific packages (experimental)
 
 set -uo pipefail
 
@@ -18,6 +23,9 @@ SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby rust}"
 
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
+
+# Detected package manager (cached)
+_PARSE_PKG_MANAGER=""
 
 # Brief: Get merged packages.yaml content (base + custom if exists)
 # Returns: Merged YAML to stdout (cached after first call)
@@ -36,6 +44,35 @@ _get_merged_packages() {
   echo "$_MERGED_YAML"
 }
 
+# Brief: Get the package manager for current distro
+# Returns: apt, dnf
+_get_pkg_manager() {
+  if [[ -n "$_PARSE_PKG_MANAGER" ]]; then
+    echo "$_PARSE_PKG_MANAGER"
+    return
+  fi
+
+  # Try to use distro.sh if available
+  if declare -f get_pkg_manager &>/dev/null; then
+    _PARSE_PKG_MANAGER=$(get_pkg_manager)
+  elif [[ -f "${DEVBASE_ROOT:-}/libs/distro.sh" ]]; then
+    # shellcheck source=distro.sh
+    source "${DEVBASE_ROOT}/libs/distro.sh"
+    _PARSE_PKG_MANAGER=$(get_pkg_manager)
+  else
+    # Fallback: detect by available command
+    if command -v apt &>/dev/null; then
+      _PARSE_PKG_MANAGER="apt"
+    elif command -v dnf &>/dev/null; then
+      _PARSE_PKG_MANAGER="dnf"
+    else
+      _PARSE_PKG_MANAGER="apt" # Default fallback
+    fi
+  fi
+
+  echo "$_PARSE_PKG_MANAGER"
+}
+
 # Brief: Check if package should be skipped based on tags
 # Params: $1 = tags string (e.g., '["@skip-wsl"]' or '')
 # Returns: 0 if should skip, 1 if should install
@@ -46,9 +83,9 @@ _should_skip() {
   return 1
 }
 
-# Brief: Process packages from a yq path for apt type
-# Params: $1=yaml content, $2=yq path (e.g., ".core.apt" or ".packs.java.apt")
-_process_apt() {
+# Brief: Process packages from a yq path for system packages (apt/dnf)
+# Params: $1=yaml content, $2=yq path (e.g., ".core.apt" or ".packs.java.common")
+_process_system_packages() {
   local yaml="$1" path="$2"
   echo "$yaml" | yq -r "$path // {} | keys | .[]" 2>/dev/null | while read -r pkg; do
     [[ -z "$pkg" ]] && continue
@@ -56,6 +93,12 @@ _process_apt() {
     tags=$(echo "$yaml" | yq -r "${path}[\"$pkg\"].tags // \"\"")
     _should_skip "$tags" || echo "$pkg"
   done
+}
+
+# Brief: Process packages from a yq path for apt type (backward compat alias)
+# Params: $1=yaml content, $2=yq path (e.g., ".core.apt" or ".packs.java.apt")
+_process_apt() {
+  _process_system_packages "$@"
 }
 
 # Brief: Process packages from a yq path for snap type
@@ -133,14 +176,53 @@ _process_vscode() {
   done
 }
 
-# Brief: Get apt packages from core + selected packs
+# Brief: Get system packages from core + selected packs for current distro
 # Output: Package names, one per line
+# Note: Reads both 'common' section and distro-specific section (apt/dnf)
+get_system_packages() {
+  local yaml pkg_mgr
+  yaml=$(_get_merged_packages)
+  pkg_mgr=$(_get_pkg_manager)
+
+  # Core packages: common + distro-specific
+  _process_system_packages "$yaml" ".core.common"
+  _process_system_packages "$yaml" ".core.${pkg_mgr}"
+
+  # Pack packages: common + distro-specific
+  for pack in $SELECTED_PACKS; do
+    _process_system_packages "$yaml" ".packs.${pack}.common"
+    _process_system_packages "$yaml" ".packs.${pack}.${pkg_mgr}"
+  done
+}
+
+# Brief: Get apt packages from core + selected packs (backward compatibility)
+# Output: Package names, one per line
+# Deprecated: Use get_system_packages() instead
 get_apt_packages() {
   local yaml
   yaml=$(_get_merged_packages)
-  _process_apt "$yaml" ".core.apt"
+
+  # Old structure: .core.apt directly (no common section)
+  # New structure: .core.common + .core.apt
+  # Support both for backward compatibility
+  _process_system_packages "$yaml" ".core.common"
+  _process_system_packages "$yaml" ".core.apt"
   for pack in $SELECTED_PACKS; do
-    _process_apt "$yaml" ".packs.${pack}.apt"
+    _process_system_packages "$yaml" ".packs.${pack}.common"
+    _process_system_packages "$yaml" ".packs.${pack}.apt"
+  done
+}
+
+# Brief: Process packages from a yq path for flatpak type
+# Params: $1=yaml content, $2=yq path
+_process_flatpak() {
+  local yaml="$1" path="$2"
+  echo "$yaml" | yq -r "$path // {} | keys | .[]" 2>/dev/null | while read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+    local tags remote
+    tags=$(echo "$yaml" | yq -r "${path}[\"$pkg\"].tags // \"\"")
+    remote=$(echo "$yaml" | yq -r "${path}[\"$pkg\"].remote // \"flathub\"")
+    _should_skip "$tags" || echo "${pkg}|${remote}"
   done
 }
 
@@ -153,6 +235,46 @@ get_snap_packages() {
   for pack in $SELECTED_PACKS; do
     _process_snap "$yaml" ".packs.${pack}.snap"
   done
+}
+
+# Brief: Get flatpak packages from core + selected packs
+# Output: Lines of "app_id|remote"
+get_flatpak_packages() {
+  local yaml
+  yaml=$(_get_merged_packages)
+  _process_flatpak "$yaml" ".core.flatpak"
+  for pack in $SELECTED_PACKS; do
+    _process_flatpak "$yaml" ".packs.${pack}.flatpak"
+  done
+}
+
+# Brief: Get app store packages for current distro (snap or flatpak)
+# Output: Lines of "package|options" for snap or "app_id|remote" for flatpak
+get_app_store_packages() {
+  local app_store
+  if declare -f get_app_store &>/dev/null; then
+    app_store=$(get_app_store)
+  elif [[ -f "${DEVBASE_ROOT:-}/libs/distro.sh" ]]; then
+    # shellcheck source=distro.sh
+    source "${DEVBASE_ROOT}/libs/distro.sh"
+    app_store=$(get_app_store)
+  else
+    # Default to snap for Ubuntu
+    app_store="snap"
+  fi
+
+  case "$app_store" in
+  snap)
+    get_snap_packages
+    ;;
+  flatpak)
+    get_flatpak_packages
+    ;;
+  *)
+    # No app store available (e.g., WSL)
+    return 0
+    ;;
+  esac
 }
 
 # Brief: Get mise tools from core + selected packs
@@ -200,17 +322,15 @@ get_available_packs() {
   done
 }
 
-# Brief: Get list of items a pack includes
-# Params: $1 = pack name
-# Output: One item per line (apt packages, mise tools, vscode extensions, custom)
 # Brief: Get pack contents for display (primary tools only, with counts for secondary items)
 # Params: $1 = pack name, $2 = show_vscode ("true" to show VS Code extensions, default "true")
 # Output: Human-friendly list of main tools with summary of extras
 get_pack_contents() {
   local pack="$1"
   local show_vscode="${2:-true}"
-  local yaml
+  local yaml pkg_mgr
   yaml=$(_get_merged_packages)
+  pkg_mgr=$(_get_pkg_manager)
 
   # Get mise tool names (primary tools users care about)
   echo "$yaml" | yq -r ".packs.${pack}.mise // {} | keys | .[]" 2>/dev/null
@@ -226,10 +346,12 @@ get_pack_contents() {
     done < <(echo "$yaml" | yq -r ".packs.${pack}.vscode // {} | keys | .[]" 2>/dev/null)
   fi
 
-  # Count apt packages (build dependencies - less interesting to users)
-  local apt_count
-  apt_count=$(echo "$yaml" | yq -r ".packs.${pack}.apt // {} | keys | length" 2>/dev/null)
-  [[ "$apt_count" -gt 0 ]] && echo "+ ${apt_count} system packages"
+  # Count system packages (common + distro-specific - build dependencies, less interesting to users)
+  local common_count distro_count total_count
+  common_count=$(echo "$yaml" | yq -r ".packs.${pack}.common // {} | keys | length" 2>/dev/null)
+  distro_count=$(echo "$yaml" | yq -r ".packs.${pack}.${pkg_mgr} // {} | keys | length" 2>/dev/null)
+  total_count=$((common_count + distro_count))
+  [[ "$total_count" -gt 0 ]] && echo "+ ${total_count} system packages"
 
   return 0
 }

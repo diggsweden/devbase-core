@@ -25,8 +25,6 @@ Transforms a fresh Ubuntu installation into a opinionated configured development
 * **Modern terminal** - Zellij multiplexer, Ghostty and more
 * **Security** - ClamAV, fail2ban, automatic security updates, lynis, secure SSH key generation, checksum verification and more
 
-Built on principles from https://web.archive.org/web/20250411215614/https://gabevenberg.com/posts/cli-renaissance/[The Modern CLI Renaissance] - with a mix of TUI, CLI and GUI's.
-
 == Requirements
 
 * Ubuntu 24.04 LTS or newer (WSL2 or native)
@@ -44,7 +42,7 @@ mkdir ~/devbase-install && cd ~/devbase-install
 # Clone DevBase Core
 git clone https://github.com/diggsweden/devbase-core
 
-# Optional: Add a custom configuration  
+# Optional: Add a custom configuration, see customization docs
 # git clone your-org/devbase-custom-config
 
 # Run setup
