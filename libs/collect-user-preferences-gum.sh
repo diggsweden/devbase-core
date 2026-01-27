@@ -307,36 +307,38 @@ collect_theme_preference() {
   local current="${DEVBASE_THEME:-everforest-dark}"
 
   # Theme data: "bg,fg,keyword,function,string,comment"
+  # shfmt:off
   local -A theme_colors=(
-    [everforest - dark]="236,223,167,108,142,245"
-    [catppuccin - mocha]="236,223,203,139,166,245"
-    [tokyonight - night]="234,223,203,116,158,243"
-    [gruvbox - dark]="235,223,167,108,142,245"
+    [everforest-dark]="236,223,167,108,142,245"
+    [catppuccin-mocha]="236,223,203,139,166,245"
+    [tokyonight-night]="234,223,203,116,158,243"
+    [gruvbox-dark]="235,223,167,108,142,245"
     [nord]="236,223,168,136,150,243"
     [dracula]="236,223,212,117,84,243"
-    [solarized - dark]="235,223,168,37,106,241"
-    [everforest - light]="230,235,124,66,107,245"
-    [catppuccin - latte]="231,235,127,37,71,245"
-    [tokyonight - day]="231,235,128,37,71,245"
-    [gruvbox - light]="230,235,124,66,106,245"
-    [solarized - light]="230,235,168,37,106,245"
+    [solarized-dark]="235,223,168,37,106,241"
+    [everforest-light]="230,235,124,66,107,245"
+    [catppuccin-latte]="231,235,127,37,71,245"
+    [tokyonight-day]="231,235,128,37,71,245"
+    [gruvbox-light]="230,235,124,66,106,245"
+    [solarized-light]="230,235,168,37,106,245"
   )
 
   # Brief descriptions
   local -A theme_desc=(
-    [everforest - dark]="◐ Warm, soft"
-    [catppuccin - mocha]="◐ Soothing pastel"
-    [tokyonight - night]="◐ Clean, dark"
-    [gruvbox - dark]="◐ Retro groove"
+    [everforest-dark]="◐ Warm, soft"
+    [catppuccin-mocha]="◐ Soothing pastel"
+    [tokyonight-night]="◐ Clean, dark"
+    [gruvbox-dark]="◐ Retro groove"
     [nord]="◐ Arctic, bluish"
     [dracula]="◐ Dark, vivid"
-    [solarized - dark]="◐ Precision colors"
-    [everforest - light]="◑ Warm, soft"
-    [catppuccin - latte]="◑ Soothing pastel"
-    [tokyonight - day]="◑ Clean, bright"
-    [gruvbox - light]="◑ Retro groove"
-    [solarized - light]="◑ Precision colors"
+    [solarized-dark]="◐ Precision colors"
+    [everforest-light]="◑ Warm, soft"
+    [catppuccin-latte]="◑ Soothing pastel"
+    [tokyonight-day]="◑ Clean, bright"
+    [gruvbox-light]="◑ Retro groove"
+    [solarized-light]="◑ Precision colors"
   )
+  # shfmt:on
 
   local -a themes=(
     everforest-dark catppuccin-mocha tokyonight-night gruvbox-dark
