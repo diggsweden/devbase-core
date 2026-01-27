@@ -391,12 +391,14 @@ collect_font_preference() {
 
   local current="${DEVBASE_FONT:-monaspace}"
 
+  # shfmt:off
   local -A font_info=(
     [monaspace]="Superfamily, multiple styles"
-    [jetbrains - mono]="Clear, excellent readability"
+    [jetbrains-mono]="Clear, excellent readability"
     [firacode]="Popular, extensive ligatures"
-    [cascadia - code]="Microsoft, Powerline glyphs"
+    [cascadia-code]="Microsoft, Powerline glyphs"
   )
+  # shfmt:on
 
   local -a fonts=(monaspace jetbrains-mono firacode cascadia-code)
 
