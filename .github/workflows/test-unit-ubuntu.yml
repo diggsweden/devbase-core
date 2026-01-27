@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Test Unit Ubuntu
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    paths:
+      - 'libs/**'
+      - 'tests/**'
+      - 'setup.sh'
+      - 'dot/.config/devbase/packages.yaml'
+      - '.github/workflows/test-unit-ubuntu.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'libs/**'
+      - 'tests/**'
+      - 'setup.sh'
+      - 'dot/.config/devbase/packages.yaml'
+      - '.github/workflows/test-unit-ubuntu.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+        with:
+          just-version: 1.43.0
+      - name: Setup test dependencies
+        run: just test-setup
+      - name: Run tests
+        run: just test

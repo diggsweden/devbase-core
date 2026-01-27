@@ -167,7 +167,7 @@ setup_vscode() {
     fi
   fi
 
-  printf "\n"
+  tui_blank_line
   if [[ "${DEVBASE_VSCODE_EXTENSIONS}" == "true" ]]; then
     # Configure VS Code settings (theme, font, etc.)
     configure_vscode_settings

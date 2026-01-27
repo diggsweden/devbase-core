@@ -167,10 +167,26 @@ display_os_info() {
 
 # Brief: Check that required system tools are installed
 # Params: None
-# Uses: die (from utils)
+# Uses: die, _DEVBASE_ENV (from utils)
 # Returns: 0 if all tools present, exits via die if missing
 check_required_tools() {
-  local required_tools=(apt-get git snap sudo curl)
+  # Core tools required on all distros
+  local required_tools=(git sudo curl)
+
+  # Add distro-specific package manager
+  case "${_DEVBASE_ENV:-ubuntu}" in
+  fedora)
+    required_tools+=(dnf)
+    ;;
+  ubuntu | wsl-ubuntu | *)
+    required_tools+=(apt-get)
+    # Snap not required on WSL
+    if [[ "${_DEVBASE_ENV:-}" != "wsl-ubuntu" ]]; then
+      required_tools+=(snap)
+    fi
+    ;;
+  esac
+
   local missing_tools=()
 
   for cmd in "${required_tools[@]}"; do
@@ -192,10 +208,10 @@ check_required_tools() {
 # Returns: 0 always (warning only)
 # Side-effects: Displays Nerd Font warning and installation instructions
 _check_wsl_nerd_font_prereq() {
-  printf "\n"
+  tui_blank_line
   show_progress warning "WSL: Nerd Font needed (install on Windows side)"
-  printf "  %bIf you see strange chars (boxes/?), install a Nerd Font on Windows%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "\n"
+  show_progress info "If you see strange chars (boxes/?), install a Nerd Font on Windows"
+  tui_blank_line
 
   return 0
 }
@@ -205,16 +221,36 @@ _check_wsl_nerd_font_prereq() {
 # Uses: get_os_type, is_wsl, show_progress (globals)
 # Modifies: _DEVBASE_ENV (exported)
 # Returns: 0 always
-# Side-effects: Prints warning if not Ubuntu, prints newline
+# Side-effects: Prints warning if unsupported distro, prints newline
 detect_environment() {
-  local os_type
-  os_type=$(get_os_type)
-
-  if [[ "$os_type" != "ubuntu" ]]; then
-    show_progress warning "This script is designed for Ubuntu. Detected: ${os_type}"
+  # Source distro detection if not already available
+  if ! declare -f get_distro &>/dev/null; then
+    local distro_script="${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}/distro.sh"
+    if [[ -f "$distro_script" ]]; then
+      # shellcheck source=distro.sh
+      source "$distro_script"
+    else
+      # Fallback: define minimal get_distro inline
+      get_distro() {
+        if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
+          echo "ubuntu-wsl"
+        elif [[ -f /etc/os-release ]]; then
+          grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"'
+        else
+          echo "unknown"
+        fi
+      }
+    fi
   fi
 
-  if is_wsl; then
+  local distro
+  distro=$(get_distro)
+
+  case "$distro" in
+  ubuntu)
+    export _DEVBASE_ENV="ubuntu"
+    ;;
+  ubuntu-wsl)
     export _DEVBASE_ENV="wsl-ubuntu"
 
     # Check WSL version and require >= 2.6.0
@@ -232,18 +268,24 @@ detect_environment() {
         show_progress info "  wsl --update"
         show_progress info "Then restart your WSL distribution"
         show_progress info "See: https://learn.microsoft.com/en-us/windows/wsl/install"
-        printf "\n"
+        tui_blank_line
         die "WSL version too old. Please upgrade to WSL 2.6.0 or higher and try again."
       fi
     fi
 
     # Check for Nerd Font prerequisite on WSL
     _check_wsl_nerd_font_prereq
-  else
-    export _DEVBASE_ENV="ubuntu"
-  fi
+    ;;
+  fedora)
+    export _DEVBASE_ENV="fedora"
+    ;;
+  *)
+    show_progress warning "Unsupported distribution: ${distro}. Proceeding with best effort."
+    export _DEVBASE_ENV="$distro"
+    ;;
+  esac
 
-  printf "\n"
+  tui_blank_line
   return 0
 }
 
@@ -323,8 +365,8 @@ validate_required_vars() {
 
   if [[ -n "${_DEVBASE_ENV}" ]]; then
     case "${_DEVBASE_ENV}" in
-    ubuntu | wsl-ubuntu) ;;
-    *) invalid_vars+=("_DEVBASE_ENV=${_DEVBASE_ENV} (must be 'ubuntu' or 'wsl-ubuntu')") ;;
+    ubuntu | wsl-ubuntu | fedora) ;;
+    *) invalid_vars+=("_DEVBASE_ENV=${_DEVBASE_ENV} (must be 'ubuntu', 'wsl-ubuntu', or 'fedora')") ;;
     esac
   fi
 
@@ -389,7 +431,7 @@ check_mise_github_token() {
   fi
 
   show_progress warning "MISE_GITHUB_TOKEN not set"
-  show_progress info "Without this token, mise downloads may be rate limited or stalled"
+  show_progress info "Without this token, mise downloads MAY be rate limited or stalled"
   show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
 
   # In non-interactive mode, just warn and continue
@@ -398,7 +440,7 @@ check_mise_github_token() {
     return 0
   fi
 
-  # Display instructions using TUI-appropriate formatting
+  # Display instructions and prompt using TUI-appropriate formatting
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     echo
     gum style --foreground 240 \
@@ -412,6 +454,37 @@ check_mise_github_token() {
       "" \
       "3. Or add it to your shell config permanently"
     echo
+    if ask_yes_no "Continue without GitHub token?" "N"; then
+      show_progress info "Continuing without GitHub token (may experience rate limiting)"
+      return 0
+    else
+      show_progress info "Installation cancelled - please set MISE_GITHUB_TOKEN and try again"
+      exit 1
+    fi
+  elif [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    local message="MISE_GITHUB_TOKEN is not set.
+
+Without this token, mise downloads MAY be rate limited or stalled.
+
+To set the token:
+
+1. Create a GitHub personal access token at:
+   https://github.com/settings/tokens/new?scopes=public_repo
+
+2. Export it before running setup:
+   export MISE_GITHUB_TOKEN=ghp_your_token_here
+
+3. Or add it to your shell config permanently"
+
+    if whiptail --backtitle "$WT_BACKTITLE" --title "GitHub Token Not Set" \
+      --yes-button "Continue" --no-button "Cancel" \
+      --yesno "$message\n\nDo you want to continue without GitHub token?$WT_NAV_HINTS" "$WT_HEIGHT_XLARGE" "$WT_WIDTH"; then
+      show_progress info "Continuing without GitHub token (may experience rate limiting)"
+      return 0
+    else
+      show_progress info "Installation cancelled - please set MISE_GITHUB_TOKEN and try again"
+      exit 1
+    fi
   else
     printf "\n"
     printf "To set the token, you can:\n"
@@ -421,14 +494,13 @@ check_mise_github_token() {
     printf "     export MISE_GITHUB_TOKEN=ghp_your_token_here\n"
     printf "  3. Or add it to your shell config permanently\n"
     printf "\n"
-  fi
-
-  if ask_yes_no "Continue without GitHub token?" "N"; then
-    show_progress info "Continuing without GitHub token (may experience rate limiting)"
-    return 0
-  else
-    show_progress info "Installation cancelled - please set MISE_GITHUB_TOKEN and try again"
-    exit 1
+    if ask_yes_no "Continue without GitHub token?" "N"; then
+      show_progress info "Continuing without GitHub token (may experience rate limiting)"
+      return 0
+    else
+      show_progress info "Installation cancelled - please set MISE_GITHUB_TOKEN and try again"
+      exit 1
+    fi
   fi
 }
 
@@ -506,16 +578,101 @@ check_secure_boot() {
   esac
 }
 
+# Brief: Check Fedora version meets minimum requirement
+# Params: $1 - minimum version (optional, default: "40")
+# Uses: get_os_version, show_progress (functions)
+# Returns: 0 on success
+check_fedora_version() {
+  local min_version=${1:-"40"}
+  local current_version=""
+
+  current_version=$(get_os_version)
+
+  if [[ "$current_version" != "unknown" ]]; then
+    if [[ "$current_version" -lt "$min_version" ]] 2>/dev/null; then
+      show_progress warning "Fedora $min_version or later recommended (found: $current_version)"
+    else
+      show_progress success "Fedora version $current_version"
+    fi
+  else
+    show_progress warning "Cannot determine Fedora version"
+  fi
+
+  return 0
+}
+
 # PRE-FLIGHT CHECK
 run_preflight_checks() {
   show_progress step "Running pre-flight checks"
 
-  check_ubuntu_version "24.04" || return 1
+  # Collect results for whiptail summary
+  local -a check_results=()
+
+  # Distro-specific version check
+  case "${_DEVBASE_ENV:-ubuntu}" in
+  fedora)
+    check_fedora_version "40" || return 1
+    check_results+=("✓ Fedora version OK")
+    ;;
+  ubuntu | wsl-ubuntu | *)
+    check_ubuntu_version "24.04" || return 1
+    check_results+=("✓ Ubuntu version 24.04+")
+    ;;
+  esac
+
   check_disk_space 5 || return 1
+  check_results+=("✓ Disk space OK")
+
   check_path_writable || return 1
+  check_results+=("✓ Home directory writable")
+
   check_mise_github_token || return 1
+  if [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
+    check_results+=("✓ MISE_GITHUB_TOKEN configured")
+  else
+    check_results+=("⚠ MISE_GITHUB_TOKEN not set (continuing anyway)")
+  fi
+
+  # Check sudo access early - especially important for whiptail mode
+  # to avoid jumping to terminal mid-installation
+  if ! sudo -n true 2>/dev/null; then
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+      whiptail --backtitle "$WT_BACKTITLE" --title "Sudo Access Required" \
+        --msgbox "This installation requires sudo (administrator) access.\n\nAfter pressing OK, you will be prompted to enter your password.$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+      # Clear screen for password prompt - unavoidable terminal visibility
+      clear
+    else
+      show_progress info "Sudo access required for installation"
+    fi
+
+    if ! sudo -v; then
+      show_progress error "Sudo access denied"
+      return 1
+    fi
+
+    # Immediately show infobox after sudo to hide terminal
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+      _wt_infobox "Installing" "Sudo access granted. Continuing..."
+    fi
+    check_results+=("✓ Sudo access granted")
+  else
+    check_results+=("✓ Sudo access available")
+  fi
 
   show_progress success "Pre-flight checks complete"
+
+  # In whiptail mode, show summary before continuing to user configuration
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    local summary="Pre-flight checks completed successfully:\n\n"
+    for result in "${check_results[@]}"; do
+      summary+="  $result\n"
+    done
+    summary+="\nPress OK to continue with configuration..."
+
+    whiptail --backtitle "$WT_BACKTITLE" --title "Pre-flight Checks" \
+      --msgbox "$summary$WT_NAV_HINTS" "$WT_HEIGHT_LARGE" "$WT_WIDTH"
+  fi
+
   return 0
 }
 

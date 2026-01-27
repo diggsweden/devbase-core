@@ -598,7 +598,6 @@ DevBase aliases `bat` to handle Ubuntu/Debian's `batcat` naming.
 System monitor showing CPU, memory, disk, and network usage with graphs and process details.
 Helps identify what's consuming resources when your system is slow or unresponsive.
 More detailed and visually informative than traditional top or htop.
-DevBase aliases `top` to `btop` for muscle memory compatibility.
 
 #### btop Key Commands
 

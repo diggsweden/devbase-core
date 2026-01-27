@@ -150,13 +150,13 @@ parse_arguments() {
     --tui=*)
       local tui_value="${arg#--tui=}"
       case "$tui_value" in
-        gum|whiptail|none)
-          DEVBASE_TUI_MODE="$tui_value"
-          ;;
-        *)
-          printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail, none\n" "$tui_value" >&2
-          exit 1
-          ;;
+      gum | whiptail | none)
+        DEVBASE_TUI_MODE="$tui_value"
+        ;;
+      *)
+        printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail, none\n" "$tui_value" >&2
+        exit 1
+        ;;
       esac
       ;;
     --help | -h)
@@ -252,8 +252,8 @@ show_welcome_banner() {
   else
     # Whiptail mode (default) - show welcome infobox
     clear
-    whiptail --backtitle "DevBase Setup" --title "DevBase Core Installation" \
-      --infobox "Version: $devbase_version ($git_sha)\nStarted: $(date +"%H:%M:%S")\n\nInitializing..." 8 50
+    whiptail --backtitle "$WT_BACKTITLE" --title "DevBase Core Installation" \
+      --infobox "Version: $devbase_version ($git_sha)\nStarted: $(date +"%H:%M:%S")\n\nInitializing..." "$WT_HEIGHT_SMALL" "$WT_WIDTH"
   fi
 }
 
@@ -262,7 +262,7 @@ show_os_info() {
   os_name=$(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
   env_type=$([[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]] && echo "WSL" || echo "Native Linux")
   install_type=$([[ "${_DEVBASE_FROM_GIT:-}" == "true" ]] && echo "Git repository" || echo "Downloaded")
-  
+
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     gum style --foreground 240 "System Information"
     echo "  OS:           $os_name"
@@ -272,21 +272,20 @@ show_os_info() {
     echo "  Home:         $HOME"
     echo
   else
-    # Whiptail mode - info is shown in collect_user_configuration
-    # Just update infobox with system info
-    whiptail --backtitle "DevBase Setup" --title "System Information" \
-      --infobox "OS: $os_name\nEnvironment: $env_type\nUser: $USER\n\nLoading configuration..." 9 50
+    # Whiptail mode - show system info infobox
+    whiptail --backtitle "$WT_BACKTITLE" --title "System Information" \
+      --infobox "OS: $os_name\nEnvironment: $env_type\nUser: $USER\n\nLoading configuration..." "$WT_HEIGHT_SMALL" "$WT_WIDTH"
     sleep 1
   fi
 }
 
 show_repository_info() {
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    echo "  Running from: $DEVBASE_ROOT"
-    echo
-  else
-    printf "  • Running from: %s\n" "$DEVBASE_ROOT"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    # Silent in whiptail mode - info shown in whiptail dialogs
+    return 0
   fi
+  echo "  Running from: $DEVBASE_ROOT"
+  echo
 }
 
 validate_custom_directory() {
@@ -584,7 +583,7 @@ run_pre_install_hook() {
 test_generic_network_connectivity() {
   # Test generic network connectivity AFTER proxy is configured
   # This applies to all installations (with or without custom config)
-  printf "\n"
+  tui_blank_line
   show_progress step "Testing network connectivity"
 
   if ! check_network_connectivity; then
@@ -595,7 +594,7 @@ test_generic_network_connectivity() {
 
 # Brief: Bootstrap gum TUI tool for interactive setup
 # Params: None
-# Uses: NON_INTERACTIVE, _DEVBASE_TEMP, DEVBASE_DEB_CACHE (globals)
+# Uses: NON_INTERACTIVE, _DEVBASE_TEMP, DEVBASE_DEB_CACHE, _DEVBASE_ENV (globals)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Downloads and installs gum if not present
 # Note: This runs early in setup to enable the gum-based TUI for user preferences
@@ -619,31 +618,60 @@ bootstrap_gum() {
   local version="0.17.0" # renovate: datasource=github-releases depName=charmbracelet/gum
   local arch
   case "$(uname -m)" in
-    x86_64) arch="amd64" ;;
-    aarch64) arch="arm64" ;;
-    armv7l) arch="armhf" ;;
-    i686) arch="i386" ;;
-    *)
-      show_progress warning "Could not find TUI component gum (unsupported architecture: $(uname -m)), using whiptail as backup"
-      return 1
-      ;;
+  x86_64) arch="amd64" ;;
+  aarch64) arch="arm64" ;;
+  armv7l) arch="armhf" ;;
+  i686) arch="i386" ;;
+  *)
+    show_progress warning "Could not find TUI component gum (unsupported architecture: $(uname -m)), using whiptail as backup"
+    return 1
+    ;;
   esac
 
-  local package_name="gum_${version}_${arch}.deb"
-  local gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
+  # Detect package format based on environment
+  local pkg_format="deb"
+  case "${_DEVBASE_ENV:-ubuntu}" in
+  fedora)
+    pkg_format="rpm"
+    ;;
+  ubuntu | ubuntu-wsl | wsl-ubuntu)
+    pkg_format="deb"
+    ;;
+  esac
+
+  # For rpm, architecture naming differs
+  local rpm_arch="$arch"
+  if [[ "$pkg_format" == "rpm" ]]; then
+    case "$arch" in
+    amd64) rpm_arch="x86_64" ;;
+    arm64) rpm_arch="aarch64" ;;
+    armhf) rpm_arch="armv7hl" ;;
+    i386) rpm_arch="i686" ;;
+    esac
+  fi
+
+  local package_name
+  local gum_url
+  if [[ "$pkg_format" == "deb" ]]; then
+    package_name="gum_${version}_${arch}.deb"
+  else
+    package_name="gum-${version}.${rpm_arch}.rpm"
+  fi
+  gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
   local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
 
   # Create temp directory if not set
   local temp_dir="${_DEVBASE_TEMP:-$(mktemp -d)}"
-  local gum_deb="${temp_dir}/${package_name}"
+  local gum_pkg="${temp_dir}/${package_name}"
 
-  # Check cache first
-  if [[ -n "${DEVBASE_DEB_CACHE:-}" ]] && [[ -f "${DEVBASE_DEB_CACHE}/${package_name}" ]]; then
+  # Check cache first (support both DEB and RPM cache paths)
+  local cache_dir="${DEVBASE_DEB_CACHE:-}"
+  if [[ -n "$cache_dir" ]] && [[ -f "${cache_dir}/${package_name}" ]]; then
     show_progress info "Using cached gum package"
-    cp "${DEVBASE_DEB_CACHE}/${package_name}" "$gum_deb"
+    cp "${cache_dir}/${package_name}" "$gum_pkg"
   else
     # Download gum
-    if ! curl -fsSL "$gum_url" -o "$gum_deb" 2>/dev/null; then
+    if ! curl -fsSL "$gum_url" -o "$gum_pkg" 2>/dev/null; then
       show_progress warning "Could not find TUI component gum (download failed), using whiptail as backup"
       return 1
     fi
@@ -654,13 +682,13 @@ bootstrap_gum() {
 
     if [[ -n "$expected_checksum" ]] && [[ ${#expected_checksum} -eq 64 ]]; then
       local actual_checksum
-      actual_checksum=$(sha256sum "$gum_deb" | awk '{print $1}')
+      actual_checksum=$(sha256sum "$gum_pkg" | awk '{print $1}')
 
       if [[ "$actual_checksum" != "$expected_checksum" ]]; then
         show_progress error "gum checksum verification FAILED - SECURITY RISK"
         printf "      Expected: %s\n" "$expected_checksum"
         printf "      Got:      %s\n" "$actual_checksum"
-        rm -f "$gum_deb"
+        rm -f "$gum_pkg"
         show_progress warning "Could not find TUI component gum (checksum failed), using whiptail as backup"
         return 1
       fi
@@ -670,21 +698,30 @@ bootstrap_gum() {
     fi
 
     # Cache for future use
-    if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
-      mkdir -p "${DEVBASE_DEB_CACHE}"
-      cp "$gum_deb" "${DEVBASE_DEB_CACHE}/${package_name}"
+    if [[ -n "$cache_dir" ]]; then
+      mkdir -p "$cache_dir"
+      cp "$gum_pkg" "${cache_dir}/${package_name}"
     fi
   fi
 
-  # Install gum
-  if [[ -f "$gum_deb" ]]; then
-    if sudo dpkg -i "$gum_deb" >/dev/null 2>&1; then
-      show_progress success "gum installed (${version})"
-      return 0
+  # Install gum based on package format
+  if [[ -f "$gum_pkg" ]]; then
+    if [[ "$pkg_format" == "deb" ]]; then
+      if sudo dpkg -i "$gum_pkg" >/dev/null 2>&1; then
+        show_progress success "gum installed (${version})"
+        return 0
+      else
+        # Try to fix dependencies
+        sudo apt-get install -f -y -q >/dev/null 2>&1 || true
+        if command -v gum &>/dev/null; then
+          show_progress success "gum installed (${version})"
+          return 0
+        fi
+      fi
     else
-      # Try to fix dependencies
-      sudo apt-get install -f -y -q >/dev/null 2>&1 || true
-      if command -v gum &>/dev/null; then
+      # RPM installation (try dnf, then rpm directly)
+      if sudo dnf install -y "$gum_pkg" >/dev/null 2>&1 ||
+        sudo rpm -i "$gum_pkg" >/dev/null 2>&1; then
         show_progress success "gum installed (${version})"
         return 0
       fi
@@ -708,29 +745,29 @@ select_tui_mode() {
   # If --tui flag was specified, use that mode (validate availability)
   if [[ -n "${DEVBASE_TUI_MODE:-}" ]]; then
     case "${DEVBASE_TUI_MODE}" in
-      gum)
-        if command -v gum &>/dev/null || bootstrap_gum; then
-          export DEVBASE_TUI_MODE="gum"
-          return 0
-        else
-          printf "Error: gum requested but not available and could not be installed\n" >&2
-          exit 1
-        fi
-        ;;
-      whiptail)
-        if command -v whiptail &>/dev/null; then
-          export DEVBASE_TUI_MODE="whiptail"
-          return 0
-        else
-          printf "Error: whiptail requested but not installed\n" >&2
-          printf "Install with: sudo apt-get install whiptail\n" >&2
-          exit 1
-        fi
-        ;;
-      none)
-        export DEVBASE_TUI_MODE="none"
+    gum)
+      if command -v gum &>/dev/null || bootstrap_gum; then
+        export DEVBASE_TUI_MODE="gum"
         return 0
-        ;;
+      else
+        printf "Error: gum requested but not available and could not be installed\n" >&2
+        exit 1
+      fi
+      ;;
+    whiptail)
+      if command -v whiptail &>/dev/null; then
+        export DEVBASE_TUI_MODE="whiptail"
+        return 0
+      else
+        printf "Error: whiptail requested but not installed\n" >&2
+        printf "Install with: sudo apt-get install whiptail\n" >&2
+        exit 1
+      fi
+      ;;
+    none)
+      export DEVBASE_TUI_MODE="none"
+      return 0
+      ;;
     esac
   fi
 
@@ -747,7 +784,14 @@ select_tui_mode() {
   fi
 
   # Neither available - error out
-  printf "Error: No TUI available. Install whiptail: sudo apt-get install whiptail\n" >&2
+  case "${_DEVBASE_ENV:-ubuntu}" in
+  fedora)
+    printf "Error: No TUI available. Install whiptail: sudo dnf install newt\n" >&2
+    ;;
+  *)
+    printf "Error: No TUI available. Install whiptail: sudo apt-get install whiptail\n" >&2
+    ;;
+  esac
   exit 1
 }
 

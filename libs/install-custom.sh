@@ -9,6 +9,71 @@ set -uo pipefail
 # Global: Cached tool versions from packages.yaml (populated by _setup_custom_parser)
 declare -gA TOOL_VERSIONS 2>/dev/null || true
 
+# Global: Package format (deb or rpm) - set by _setup_custom_parser
+_CUSTOM_PKG_FORMAT=""
+
+# Brief: Get the package format for current distro (deb or rpm)
+# Returns: deb or rpm
+_get_custom_pkg_format() {
+  if [[ -n "$_CUSTOM_PKG_FORMAT" ]]; then
+    echo "$_CUSTOM_PKG_FORMAT"
+    return
+  fi
+
+  # Try to use distro.sh if available
+  if declare -f get_pkg_format &>/dev/null; then
+    _CUSTOM_PKG_FORMAT=$(get_pkg_format)
+  elif [[ -f "${DEVBASE_ROOT:-}/libs/distro.sh" ]]; then
+    # shellcheck source=distro.sh
+    source "${DEVBASE_ROOT}/libs/distro.sh"
+    _CUSTOM_PKG_FORMAT=$(get_pkg_format)
+  else
+    # Fallback: detect by available command
+    if command -v dpkg &>/dev/null; then
+      _CUSTOM_PKG_FORMAT="deb"
+    elif command -v rpm &>/dev/null; then
+      _CUSTOM_PKG_FORMAT="rpm"
+    else
+      _CUSTOM_PKG_FORMAT="deb" # Default fallback
+    fi
+  fi
+
+  echo "$_CUSTOM_PKG_FORMAT"
+}
+
+# Brief: Install a package based on format (deb or rpm)
+# Params: $1 - package file path
+# Returns: 0 on success, 1 on failure
+_install_pkg_file() {
+  local pkg_file="$1"
+  local pkg_format
+  pkg_format=$(_get_custom_pkg_format)
+
+  if [[ ! -f "$pkg_file" ]]; then
+    show_progress error "Package file not found: $pkg_file"
+    return 1
+  fi
+
+  if [[ "$pkg_format" == "deb" ]]; then
+    if sudo dpkg -i "$pkg_file"; then
+      return 0
+    else
+      show_progress warning "Package installation failed - trying to fix dependencies"
+      sudo apt-get install -f -y -q
+      return 0
+    fi
+  else
+    # RPM installation (try dnf, then rpm directly)
+    if sudo dnf install -y "$pkg_file" 2>/dev/null ||
+      sudo rpm -i "$pkg_file" 2>/dev/null; then
+      return 0
+    else
+      show_progress warning "RPM installation failed"
+      return 1
+    fi
+  fi
+}
+
 # Brief: Set up parser and load tool versions into TOOL_VERSIONS array
 # Uses: DEVBASE_DOT, DEVBASE_LIBS, SELECTED_PACKS (globals)
 # Returns: 0 on success
@@ -135,6 +200,7 @@ install_lazyvim() {
   if git_output=$(git clone --quiet https://github.com/LazyVim/starter "$nvim_config" 2>&1); then
     cd "$nvim_config" || return 1
 
+    # Checkout specific version (commit SHA or tag) if not main
     if [[ "$lazyvim_version" != "main" ]]; then
       git checkout --quiet "$lazyvim_version" 2>/dev/null || {
         show_progress warning "Failed to checkout $lazyvim_version, using main"
@@ -147,7 +213,7 @@ install_lazyvim() {
   else
     show_progress error "Failed to clone LazyVim starter"
     if [[ -n "$git_output" ]]; then
-      printf "  Error details: %s\n" "$git_output" >&2
+      show_progress info "Error details: $git_output"
     fi
     return 1
   fi
@@ -212,7 +278,7 @@ install_jmc() {
       fi
 
       if [[ -f "$jmc_tar" ]]; then
-        tar -C "${_DEVBASE_TEMP}" -xzf "$jmc_tar" 2>&1 | grep -v "Ignoring unknown extended header keyword" || true
+        tui_run_cmd "Extracting JMC" tar -C "${_DEVBASE_TEMP}" -xzf "$jmc_tar"
         backup_if_exists "${XDG_DATA_HOME}/JDK Mission Control" "jmc-old"
 
         # Adoptium archive extracts directly to "JDK Mission Control" directory
@@ -293,7 +359,7 @@ install_oc_kubectl() {
 
   # OpenShift mirror can be slow, use 60s timeout (default is 30s)
   if retry_command download_file "$oc_url" "$oc_tar" "" "$expected_checksum" "" "60"; then
-    tar -C "${_DEVBASE_TEMP}" -xzf "$oc_tar"
+    tui_run_cmd "Extracting OpenShift CLI" tar -C "${_DEVBASE_TEMP}" -xzf "$oc_tar"
 
     if [[ -f "${_DEVBASE_TEMP}/oc" ]]; then
       mv -f "${_DEVBASE_TEMP}/oc" "${XDG_BIN_HOME}/oc"
@@ -322,7 +388,7 @@ install_oc_kubectl() {
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, command_exists, show_progress, retry_command, download_file (globals/functions)
 # Returns: 0 always (prints warnings on failure)
-# Side-effects: Downloads and installs DBeaver .deb package
+# Side-effects: Downloads and installs DBeaver package (deb or rpm based on distro)
 install_dbeaver() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
@@ -340,24 +406,28 @@ install_dbeaver() {
 
   show_progress info "Installing DBeaver..."
   local dbeaver_version="${TOOL_VERSIONS[dbeaver]}"
-  local dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
-  local dbeaver_deb="${_DEVBASE_TEMP}/dbeaver.deb"
+  local pkg_format
+  pkg_format=$(_get_custom_pkg_format)
 
-  if ! download_with_cache "$dbeaver_url" "$dbeaver_deb" "dbeaver-${dbeaver_version}.deb" "DBeaver package"; then
+  local dbeaver_url dbeaver_pkg cache_name
+  if [[ "$pkg_format" == "deb" ]]; then
+    dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
+    cache_name="dbeaver-${dbeaver_version}.deb"
+  else
+    dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-stable.x86_64.rpm"
+    cache_name="dbeaver-${dbeaver_version}.rpm"
+  fi
+  dbeaver_pkg="${_DEVBASE_TEMP}/${cache_name}"
+
+  if ! download_with_cache "$dbeaver_url" "$dbeaver_pkg" "$cache_name" "DBeaver package"; then
     show_progress warning "DBeaver download failed - skipping"
     return 0
   fi
 
-  if [[ -f "$dbeaver_deb" ]]; then
-    if sudo dpkg -i "$dbeaver_deb"; then
-      show_progress success "DBeaver installed"
-    else
-      show_progress warning "DBeaver installation failed - trying to fix dependencies"
-      sudo apt-get install -f -y -q
-      show_progress success "DBeaver installed (with dependency fixes)"
-    fi
+  if _install_pkg_file "$dbeaver_pkg"; then
+    show_progress success "DBeaver installed"
   else
-    show_progress warning "DBeaver download failed - skipping"
+    show_progress warning "DBeaver installation failed"
   fi
 }
 
@@ -365,7 +435,7 @@ install_dbeaver() {
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, command_exists, show_progress, retry_command, download_file (globals/functions)
 # Returns: 0 always (prints warnings on failure)
-# Side-effects: Downloads and installs KeyStore Explorer .deb package
+# Side-effects: Downloads and installs KeyStore Explorer package (deb or rpm)
 install_keystore_explorer() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
@@ -383,24 +453,48 @@ install_keystore_explorer() {
 
   show_progress info "Installing KeyStore Explorer..."
   local kse_version="${TOOL_VERSIONS[keystore_explorer]}"
-  local kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse_${kse_version#v}_all.deb"
-  local kse_deb="${_DEVBASE_TEMP}/keystore-explorer.deb"
+  local pkg_format
+  pkg_format=$(_get_custom_pkg_format)
 
-  if ! download_with_cache "$kse_url" "$kse_deb" "kse-${kse_version}.deb" "KeyStore Explorer package"; then
-    show_progress warning "KeyStore Explorer download failed - skipping"
-    return 0
-  fi
+  # KeyStore Explorer only provides deb, but it's architecture-independent Java
+  # For RPM systems, we can use alien or download the tarball instead
+  local kse_url kse_pkg cache_name
+  if [[ "$pkg_format" == "deb" ]]; then
+    kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse_${kse_version#v}_all.deb"
+    cache_name="kse-${kse_version}.deb"
+    kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
-  if [[ -f "$kse_deb" ]]; then
-    if sudo dpkg -i "$kse_deb"; then
+    if ! download_with_cache "$kse_url" "$kse_pkg" "$cache_name" "KeyStore Explorer package"; then
+      show_progress warning "KeyStore Explorer download failed - skipping"
+      return 0
+    fi
+
+    if _install_pkg_file "$kse_pkg"; then
       show_progress success "KeyStore Explorer installed"
     else
-      show_progress warning "KeyStore Explorer installation failed - trying to fix dependencies"
-      sudo apt-get install -f -y -q
-      show_progress success "KeyStore Explorer installed (with dependency fixes)"
+      show_progress warning "KeyStore Explorer installation failed"
     fi
   else
-    show_progress warning "KeyStore Explorer download failed - skipping"
+    # For RPM systems, download the zip/tarball and install manually
+    kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse-${kse_version#v}.zip"
+    cache_name="kse-${kse_version}.zip"
+    kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
+
+    if ! download_with_cache "$kse_url" "$kse_pkg" "$cache_name" "KeyStore Explorer package"; then
+      show_progress warning "KeyStore Explorer download failed - skipping"
+      return 0
+    fi
+
+    if [[ -f "$kse_pkg" ]]; then
+      local kse_dir="${XDG_DATA_HOME:-$HOME/.local/share}/keystore-explorer"
+      mkdir -p "$kse_dir"
+      unzip -q -o "$kse_pkg" -d "$kse_dir"
+      ln -sf "$kse_dir/kse-${kse_version#v}/kse.sh" "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
+      chmod +x "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
+      show_progress success "KeyStore Explorer installed"
+    else
+      show_progress warning "KeyStore Explorer installation failed"
+    fi
   fi
 }
 
@@ -427,7 +521,7 @@ install_k3s() {
 
   if retry_command download_file "$install_url" "$install_script"; then
     chmod +x "$install_script"
-    if INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
+    if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
     else
       show_progress warning "k3s installation failed - skipping"
@@ -487,7 +581,7 @@ install_fisher() {
   else
     show_progress error "Failed to clone Fisher repository"
     if [[ -n "$git_output" ]]; then
-      printf "  Error details: %s\n" "$git_output" >&2
+      show_progress info "Error details: $git_output"
     fi
     return 1
   fi
@@ -926,7 +1020,7 @@ configure_terminal_fonts() {
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, is_wsl, command_exists, show_progress, get_vscode_checksum, retry_command, download_file (globals/functions)
 # Returns: 0 on success/skip, 1 on failure
-# Side-effects: Downloads and installs VS Code .deb package with checksum verification
+# Side-effects: Downloads and installs VS Code package (deb or rpm) with checksum verification
 install_vscode() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
@@ -951,11 +1045,22 @@ install_vscode() {
 
   show_progress info "Installing VS Code..."
   local version="${TOOL_VERSIONS[vscode]}"
-  local vscode_url="https://update.code.visualstudio.com/${version}/linux-deb-x64/stable"
-  local vscode_deb="${_DEVBASE_TEMP}/vscode.deb"
+  local pkg_format
+  pkg_format=$(_get_custom_pkg_format)
+
+  local vscode_url vscode_pkg cache_name platform_name
+  if [[ "$pkg_format" == "deb" ]]; then
+    platform_name="linux-deb-x64"
+    cache_name="vscode-${version}.deb"
+  else
+    platform_name="linux-rpm-x64"
+    cache_name="vscode-${version}.rpm"
+  fi
+  vscode_url="https://update.code.visualstudio.com/${version}/${platform_name}/stable"
+  vscode_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
   local vscode_checksum
-  if ! vscode_checksum=$(get_vscode_checksum "$version" "linux-deb-x64"); then
+  if ! vscode_checksum=$(get_vscode_checksum "$version" "$platform_name"); then
     show_progress warning "Could not fetch VS Code checksum (jq not available or API failed)"
     vscode_checksum=""
   fi
@@ -963,24 +1068,24 @@ install_vscode() {
   # Check cache first if DEVBASE_DEB_CACHE is set
   local download_needed=true
   if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-    local cached_deb="${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
-    if [[ -f "$cached_deb" ]]; then
+    local cached_pkg="${DEVBASE_DEB_CACHE}/${cache_name}"
+    if [[ -f "$cached_pkg" ]]; then
       show_progress info "Using cached VS Code package"
-      cp "$cached_deb" "$vscode_deb"
+      cp "$cached_pkg" "$vscode_pkg"
       download_needed=false
     fi
   fi
 
   if [[ "$download_needed" == "true" ]]; then
-    if retry_command download_file "$vscode_url" "$vscode_deb" "" "$vscode_checksum"; then
+    if retry_command download_file "$vscode_url" "$vscode_pkg" "" "$vscode_checksum"; then
       # Save to cache if DEVBASE_DEB_CACHE is set
       if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
         mkdir -p "${DEVBASE_DEB_CACHE}"
-        cp "$vscode_deb" "${DEVBASE_DEB_CACHE}/vscode-${version}.deb"
+        cp "$vscode_pkg" "${DEVBASE_DEB_CACHE}/${cache_name}"
       fi
     else
       # Check if failure was due to checksum mismatch (security issue)
-      if [[ -n "$vscode_checksum" ]] && [[ ! -f "$vscode_deb" ]]; then
+      if [[ -n "$vscode_checksum" ]] && [[ ! -f "$vscode_pkg" ]]; then
         show_progress error "VS Code download/verification FAILED - SECURITY RISK"
         show_progress warning "Possible causes: MITM attack, corrupted mirror, or network issue"
         show_progress warning "Skipping VS Code installation for safety"
@@ -991,16 +1096,10 @@ install_vscode() {
     fi
   fi
 
-  if [[ -f "$vscode_deb" ]]; then
-    if sudo dpkg -i "$vscode_deb"; then
-      show_progress success "VS Code installed ($version)"
-    else
-      show_progress warning "VS Code installation failed - trying to fix dependencies"
-      sudo apt-get install -f -y -q
-      show_progress success "VS Code installed ($version, with dependency fixes)"
-    fi
+  if _install_pkg_file "$vscode_pkg"; then
+    show_progress success "VS Code installed ($version)"
   else
-    show_progress warning "VS Code download failed - skipping"
+    show_progress warning "VS Code installation failed"
     return 1
   fi
 }
@@ -1210,7 +1309,7 @@ get_gum_checksum() {
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, command_exists, show_progress, get_gum_checksum, download_file (globals/functions)
 # Returns: 0 on success/skip, 1 on failure
-# Side-effects: Downloads and installs gum .deb package with checksum verification
+# Side-effects: Downloads and installs gum package (deb or rpm) with checksum verification
 install_gum() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
@@ -1229,22 +1328,39 @@ install_gum() {
 
   show_progress info "Installing gum ${version}..."
 
-  # Determine architecture
-  local arch
+  # Determine architecture and package format
+  local arch pkg_format
+  pkg_format=$(_get_custom_pkg_format)
   case "$(uname -m)" in
-    x86_64) arch="amd64" ;;
-    aarch64) arch="arm64" ;;
-    armv7l) arch="armhf" ;;
-    i686) arch="i386" ;;
-    *)
-      show_progress warning "Unsupported architecture for gum: $(uname -m)"
-      return 1
-      ;;
+  x86_64) arch="amd64" ;;
+  aarch64) arch="arm64" ;;
+  armv7l) arch="armhf" ;;
+  i686) arch="i386" ;;
+  *)
+    show_progress warning "Unsupported architecture for gum: $(uname -m)"
+    return 1
+    ;;
   esac
 
-  local package_name="gum_${version}_${arch}.deb"
-  local gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
-  local gum_deb="${_DEVBASE_TEMP}/${package_name}"
+  # For rpm, architecture naming differs
+  local rpm_arch="$arch"
+  if [[ "$pkg_format" == "rpm" ]]; then
+    case "$arch" in
+    amd64) rpm_arch="x86_64" ;;
+    arm64) rpm_arch="aarch64" ;;
+    armhf) rpm_arch="armv7hl" ;;
+    i386) rpm_arch="i686" ;;
+    esac
+  fi
+
+  local package_name gum_url gum_pkg
+  if [[ "$pkg_format" == "deb" ]]; then
+    package_name="gum_${version}_${arch}.deb"
+  else
+    package_name="gum-${version}.${rpm_arch}.rpm"
+  fi
+  gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
+  gum_pkg="${_DEVBASE_TEMP}/${package_name}"
 
   # Get checksum for verification
   local gum_checksum
@@ -1256,23 +1372,23 @@ install_gum() {
   # Check cache first
   local download_needed=true
   if [[ -n "${DEVBASE_DEB_CACHE:-}" ]] && [[ -d "${DEVBASE_DEB_CACHE}" ]]; then
-    local cached_deb="${DEVBASE_DEB_CACHE}/${package_name}"
-    if [[ -f "$cached_deb" ]]; then
+    local cached_pkg="${DEVBASE_DEB_CACHE}/${package_name}"
+    if [[ -f "$cached_pkg" ]]; then
       show_progress info "Using cached gum package"
-      cp "$cached_deb" "$gum_deb"
+      cp "$cached_pkg" "$gum_pkg"
       download_needed=false
     fi
   fi
 
   if [[ "$download_needed" == "true" ]]; then
-    if retry_command download_file "$gum_url" "$gum_deb" "" "$gum_checksum"; then
+    if retry_command download_file "$gum_url" "$gum_pkg" "" "$gum_checksum"; then
       # Save to cache
       if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
         mkdir -p "${DEVBASE_DEB_CACHE}"
-        cp "$gum_deb" "${DEVBASE_DEB_CACHE}/${package_name}"
+        cp "$gum_pkg" "${DEVBASE_DEB_CACHE}/${package_name}"
       fi
     else
-      if [[ -n "$gum_checksum" ]] && [[ ! -f "$gum_deb" ]]; then
+      if [[ -n "$gum_checksum" ]] && [[ ! -f "$gum_pkg" ]]; then
         show_progress error "gum download/verification FAILED - SECURITY RISK"
         show_progress warning "Possible causes: MITM attack, corrupted download, or network issue"
       else
@@ -1283,30 +1399,19 @@ install_gum() {
   fi
 
   # Verify checksum if we have it and file exists
-  if [[ -f "$gum_deb" ]] && [[ -n "$gum_checksum" ]]; then
-    if ! verify_checksum_value "$gum_deb" "$gum_checksum"; then
+  if [[ -f "$gum_pkg" ]] && [[ -n "$gum_checksum" ]]; then
+    if ! verify_checksum_value "$gum_pkg" "$gum_checksum"; then
       show_progress error "gum checksum verification FAILED"
-      rm -f "$gum_deb"
+      rm -f "$gum_pkg"
       return 1
     fi
   fi
 
   # Install the package
-  if [[ -f "$gum_deb" ]]; then
-    if sudo dpkg -i "$gum_deb"; then
-      show_progress success "gum installed (${version})"
-    else
-      show_progress warning "gum installation failed - trying to fix dependencies"
-      sudo apt-get install -f -y -q
-      if command_exists gum; then
-        show_progress success "gum installed (${version}, with dependency fixes)"
-      else
-        show_progress error "gum installation failed"
-        return 1
-      fi
-    fi
+  if _install_pkg_file "$gum_pkg"; then
+    show_progress success "gum installed (${version})"
   else
-    show_progress warning "gum package not found - skipping"
+    show_progress error "gum installation failed"
     return 1
   fi
 

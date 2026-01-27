@@ -28,7 +28,7 @@ verify_mise_checksum() {
   arch="$(uname -m)"
 
   if [[ "$arch" != "x86_64" ]]; then
-    echo "Warning: Checksum verification only supported on x86_64, skipping" >&2
+    show_progress warning "Checksum verification only supported on x86_64, skipping"
     return 0
   fi
 
@@ -40,7 +40,7 @@ verify_mise_checksum() {
   fi
 
   if [[ -z "$version" ]]; then
-    echo "Warning: Could not determine expected mise version" >&2
+    show_progress warning "Could not determine expected mise version"
     return 0
   fi
 
@@ -51,7 +51,7 @@ verify_mise_checksum() {
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
   if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
-    echo "Warning: Could not download checksums for mise v${version}" >&2
+    show_progress warning "Could not download checksums for mise v${version}"
     return 0
   fi
 
@@ -66,13 +66,13 @@ verify_mise_checksum() {
     if [[ "$actual_checksum" == "$expected_checksum" ]]; then
       return 0
     else
-      echo "Error: Mise binary checksum mismatch!" >&2
-      echo "Expected: $expected_checksum" >&2
-      echo "Actual:   $actual_checksum" >&2
+      show_progress error "Mise binary checksum mismatch!"
+      show_progress info "Expected: $expected_checksum"
+      show_progress info "Actual:   $actual_checksum"
       return 1
     fi
   else
-    echo "Warning: Could not find checksum for $binary_pattern" >&2
+    show_progress warning "Could not find checksum for $binary_pattern"
     return 0
   fi
 }
@@ -117,7 +117,11 @@ install_mise() {
       export MISE_VERSION="$mise_version"
     fi
 
-    bash "$mise_installer" || die "Failed to run Mise installer script"
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+      run_with_spinner "Installing mise" bash "$mise_installer" || die "Failed to run Mise installer script"
+    else
+      bash "$mise_installer" || die "Failed to run Mise installer script"
+    fi
 
     # Add default mise install location to PATH so we can find it
     export PATH="${HOME}/.local/bin:${PATH}"
@@ -130,7 +134,7 @@ install_mise() {
     fi
 
     if ! verify_mise_checksum; then
-      echo "Warning: Could not verify mise checksum, but continuing..." >&2
+      show_progress warning "Could not verify mise checksum, but continuing..."
     fi
   fi
 
@@ -164,7 +168,7 @@ install_mise() {
 
 install_mise_tools() {
   show_progress info "Installing development tools..."
-  echo
+  tui_blank_line
 
   # Generate mise config from packages.yaml
   # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
@@ -206,17 +210,28 @@ install_mise_tools() {
 
   local mise_server_error=false
   if [[ -n "$core_runtimes" ]]; then
-    show_progress info "Installing core language runtimes..."
-    # Use a temp file to capture output while still showing progress to user
     local core_install_log="${_DEVBASE_TEMP}/mise-core-install.log"
-    # shellcheck disable=SC2086 # Word splitting intended for runtime list
-    # Use tee to show output in real-time AND capture it for error checking
-    if ! run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee "$core_install_log"; then
-      # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
-      if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
-        mise_server_error=true
+
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+      # Whiptail mode - use spinner with gauge
+      # shellcheck disable=SC2086 # Word splitting intended for runtime list
+      if ! run_with_spinner "Installing core language runtimes" \
+        bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee '$core_install_log'"; then
+        if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
+          mise_server_error=true
+        fi
+        show_progress warning "Some core runtimes may have failed (will retry with full install)"
       fi
-      show_progress warning "Some core runtimes may have failed (will retry with full install)"
+    else
+      # Gum/other mode - show real-time output
+      show_progress info "Installing core language runtimes..."
+      # shellcheck disable=SC2086 # Word splitting intended for runtime list
+      if ! run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee "$core_install_log"; then
+        if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
+          mise_server_error=true
+        fi
+        show_progress warning "Some core runtimes may have failed (will retry with full install)"
+      fi
     fi
   fi
 
@@ -233,15 +248,74 @@ install_mise_tools() {
   tools_to_install=${tools_to_install:-0}
 
   # Install all remaining tools
-  show_progress info "Installing development tools..."
-  # Run mise install with progress bar visible (no stderr redirection)
+  # Run mise install - use run_with_spinner for whiptail, tee for gum
   # mise handles checksum verification internally and will fail if checksums don't match
-  # Use tee to show output in real-time AND capture it for error checking
   local full_install_log="${_DEVBASE_TEMP}/mise-full-install.log"
-  if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
-    # Check for HTTP 5xx server errors (temporary mise infrastructure issues)
+
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && _wt_gauge_is_running; then
+    # Whiptail mode with persistent gauge - parse output for real progress
+    local count=0
+    local total="$tools_to_install"
+    local last_line=""
+    local install_exit_code=0
+
+    [[ $total -eq 0 ]] && total=1 # Avoid division by zero
+
+    _wt_update_gauge "Installing development tools (0/$total)..." 0
+
+    while IFS= read -r line; do
+      echo "$line" >>"$full_install_log" # Keep logging
+      last_line="$line"
+
+      # Parse mise output: "mise tool@version ✓ installed" or "tool@version ✓ installed"
+      if [[ "$line" =~ installed ]] || [[ "$line" =~ "install "[a-z] ]]; then
+        # Extract tool name (e.g., "node@20.10.0")
+        local tool
+        tool=$(echo "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1)
+        if [[ -n "$tool" ]]; then
+          count=$((count + 1))
+          local percent=$(((count * 100) / total))
+          _wt_update_gauge "Installed: $tool ($count/$total)" "$percent"
+        fi
+      fi
+    done < <(
+      run_mise_from_home_dir install --yes 2>&1
+      echo "MISE_EXIT_CODE:$?"
+    )
+
+    # Extract exit code
+    if [[ "$last_line" =~ MISE_EXIT_CODE:([0-9]+) ]]; then
+      install_exit_code="${BASH_REMATCH[1]}"
+    fi
+
+    # Check if parsing worked
+    if [[ $count -eq 0 ]] && [[ $tools_to_install -gt 0 ]]; then
+      show_progress warning "Could not parse mise progress output"
+    fi
+
+    # Check for server errors in log
     if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
       mise_server_error=true
+    fi
+
+    if [[ $install_exit_code -ne 0 ]]; then
+      show_progress warning "mise install returned non-zero exit code"
+    fi
+  elif [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    # Whiptail mode without persistent gauge - use spinner fallback
+    if ! run_with_spinner "Installing development tools (mise)" \
+      bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install --yes 2>&1 | tee '$full_install_log'"; then
+      if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+        mise_server_error=true
+      fi
+    fi
+  else
+    # Gum/other mode - show real-time output with tee (unchanged)
+    show_progress info "Installing development tools..."
+    if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
+      if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+        mise_server_error=true
+      fi
     fi
   fi
 
@@ -289,7 +363,7 @@ install_mise_tools() {
   [[ $tools_before -gt 0 ]] && msg="${msg}, $tools_before cached"
   [[ $verified_count -gt 0 ]] && msg="${msg}, $verified_count runtimes verified"
   msg="${msg})"
-  printf "\n"
+  tui_blank_line
   show_progress success "$msg"
 }
 

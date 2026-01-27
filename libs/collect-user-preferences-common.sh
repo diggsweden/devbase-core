@@ -77,9 +77,15 @@ setup_non_interactive_mode() {
 load_saved_preferences() {
   local prefs_file="${DEVBASE_CONFIG_DIR}/preferences.yaml"
   [[ ! -f "$prefs_file" ]] && return 1
-  command -v yq &>/dev/null || { show_progress warning "yq not found"; return 1; }
+  command -v yq &>/dev/null || {
+    show_progress warning "yq not found"
+    return 1
+  }
 
-  printf "\n%bLoading saved preferences...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  # Only show message in gum mode (whiptail handles its own display)
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]]; then
+    printf "\n%bLoading saved preferences...%b\n" "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  fi
 
   _yq_read() {
     local val
@@ -111,7 +117,10 @@ load_saved_preferences() {
   export DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS DEVBASE_SELECTED_PACKS
   export DEVBASE_SSH_KEY_ACTION="skip"
 
-  show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
+  # Only show message in gum mode
+  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]]; then
+    show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
+  fi
   return 0
 }
 
@@ -136,13 +145,13 @@ _generate_default_email_from_name() {
 _append_domain_if_needed() {
   local -n _email_ref="$1"
   local domain="$2"
-  
+
   # Skip if domain is empty or just @
   [[ -z "$domain" || "$domain" == "@" ]] && return 0
-  
+
   # Skip if already has @
   [[ "$_email_ref" == *@* ]] && return 0
-  
+
   # Append domain
   _email_ref="${_email_ref}${domain}"
 }

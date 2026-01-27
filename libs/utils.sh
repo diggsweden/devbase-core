@@ -75,13 +75,19 @@ command_exists() {
 
 # Brief: Display fatal error message and exit
 # Params: $@ - error message
-# Uses: DEVBASE_COLORS, DEVBASE_SYMBOLS (globals)
+# Uses: DEVBASE_COLORS, DEVBASE_SYMBOLS, DEVBASE_TUI_MODE (globals)
 # Returns: Never returns (exits with 1)
 # Side-effects: Exits process
 die() {
-  printf "\n"
-  printf "  %b%s%b %b\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_SYMBOLS[CROSS]}" "${DEVBASE_COLORS[NC]}" "$*" >&2
-  printf "\n"
+  # In whiptail mode, show error in a dialog
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    whiptail --backtitle "$WT_BACKTITLE" --title "Fatal Error" \
+      --msgbox "$*" 10 60 2>/dev/null || true
+  else
+    printf "\n"
+    printf "  %b%s%b %b\n" "${DEVBASE_COLORS[RED]}" "${DEVBASE_SYMBOLS[CROSS]}" "${DEVBASE_COLORS[NC]}" "$*" >&2
+    printf "\n"
+  fi
   exit 1
 }
 
@@ -270,8 +276,7 @@ retry_command() {
     # Calculate exponential backoff with jitter (2, 4, 8 seconds + random 0-2)
     current_delay=$((base_delay * (2 ** (attempt - 1)) + RANDOM % 3))
 
-    printf "    %b⚠%b Attempt %d/%d failed, retrying in %ds...\n" \
-      "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}" "$attempt" "$max_attempts" "$current_delay"
+    show_progress warning "Attempt $attempt/$max_attempts failed, retrying in ${current_delay}s..."
 
     sleep "$current_delay"
     attempt=$((attempt + 1))
@@ -514,6 +519,30 @@ download_with_cache() {
   retry_command download_file "$url" "$target"
 }
 
+# Brief: Safely remove temporary directory with path validation
+# Params: None
+# Uses: _DEVBASE_TEMP (global)
+# Returns: 0 always
+# Side-effects: Removes _DEVBASE_TEMP directory if path matches expected pattern
+cleanup_temp_directory() {
+  if [[ -z "${_DEVBASE_TEMP:-}" ]]; then
+    return 0
+  fi
+
+  if [[ ! -d "${_DEVBASE_TEMP}" ]]; then
+    return 0
+  fi
+
+  local real_path
+  real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
+
+  if [[ "$real_path" =~ ^/tmp/devbase\.[A-Za-z0-9]+$ ]]; then
+    rm -rf "$real_path" 2>/dev/null || true
+  fi
+
+  return 0
+}
+
 # Brief: Enable and start systemd service with indented output
 # Params: $1 - service_name, $2 - description (for success message)
 # Returns: 0 on success, 1 on failure
@@ -532,14 +561,14 @@ systemctl_enable_start() {
   if [[ $result -eq 0 ]]; then
     # Success - only show verbose output in debug mode
     if [[ "$DEVBASE_DEBUG" == "1" ]]; then
-      echo "$output" | sed 's/^/    /'
+      printf "    %s\n" "$output"
     fi
     sudo systemctl start "$service" >/dev/null 2>&1 || true
     show_progress success "${description} enabled and started"
     return 0
   else
     # Failure - always show error output
-    echo "$output" | sed 's/^/    /' >&2
+    printf "    %s\n" "$output" >&2
     show_progress warning "Failed to enable ${description}"
     return 1
   fi
@@ -564,11 +593,11 @@ systemctl_disable_stop() {
     if [[ $result -eq 0 ]]; then
       # Success - only show verbose output in debug mode
       if [[ "$DEVBASE_DEBUG" == "1" ]]; then
-        echo "$output" | sed 's/^/    /'
+        printf "    %s\n" "$output"
       fi
     else
       # Failure - always show error output
-      echo "$output" | sed 's/^/    /' >&2
+      printf "    %s\n" "$output" >&2
     fi
     show_progress success "${description} disabled"
   fi

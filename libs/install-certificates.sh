@@ -140,7 +140,7 @@ update_system_certificates() {
     local removed=$(echo "$result" | grep -oP '\d+(?= removed)' || echo "0")
 
     if [[ "$added" != "0" ]] || [[ "$removed" != "0" ]]; then
-      echo "    System trust store: $added added, $removed removed"
+      show_progress info "System trust store: $added added, $removed removed"
     fi
   fi
 

@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: MIT
 
+# shellcheck disable=SC2153 # WT_* variables are defined in ui-helpers-whiptail.sh
+
 # Verify devbase environment is set
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
@@ -11,40 +13,39 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
 fi
 
 set -uo pipefail
-trap 'printf "Error on line %d, command: %s\n" "$LINENO" "$BASH_COMMAND"' ERR
+# Error trap - log to whiptail in that mode, otherwise print to terminal
+trap '_handle_error_trap "$LINENO" "$BASH_COMMAND"' ERR
 
-# Brief: Safely remove temporary directory with path validation
-# Params: None
-# Uses: _DEVBASE_TEMP (global)
-# Returns: 0 always
-# Side-effects: Removes _DEVBASE_TEMP directory if path matches expected pattern
-cleanup_temp_directory() {
-  if [[ -z "${_DEVBASE_TEMP:-}" ]]; then
-    return 0
+_handle_error_trap() {
+  local line="$1"
+  local cmd="$2"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    _wt_log "fail" "Error on line $line: $cmd"
+  else
+    printf "Error on line %d, command: %s\n" "$line" "$cmd"
   fi
-
-  if [[ ! -d "${_DEVBASE_TEMP}" ]]; then
-    return 0
-  fi
-
-  local real_path
-  real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
-
-  if [[ "$real_path" =~ ^/tmp/devbase\.[A-Za-z0-9]+$ ]]; then
-    rm -rf "$real_path" 2>/dev/null || true
-  fi
-
-  return 0
 }
 
 # Brief: Handle SIGINT/SIGTERM by cleaning up and exiting with code 130
 # Params: None
-# Uses: cleanup_temp_directory (function)
+# Uses: cleanup_temp_directory, stop_installation_progress (functions)
 # Returns: exits with 130
-# Side-effects: Cleans temp directory, prints cancellation message, exits
+# Side-effects: Cleans temp directory, stops progress display, prints cancellation message, exits
 handle_interrupt() {
   cleanup_temp_directory
-  printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
+  # Stop persistent gauge first (if running)
+  stop_installation_progress 2>/dev/null || true
+  # In whiptail mode, show progress log then cancellation dialog
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    # Show what was completed before cancellation (if any progress was made)
+    if [[ ${#_WT_LOG[@]} -gt 0 ]]; then
+      _wt_show_log "Progress Before Cancellation"
+    fi
+    whiptail --backtitle "$WT_BACKTITLE" --title "Cancelled" \
+      --msgbox "Installation cancelled by user (Ctrl+C)$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
+  else
+    printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
+  fi
   exit 130
 }
 
@@ -54,21 +55,25 @@ trap handle_interrupt INT TERM
 # Source user preferences collector based on TUI mode
 # DEVBASE_TUI_MODE is set by select_tui_mode() in setup.sh before sourcing this file
 case "${DEVBASE_TUI_MODE:-whiptail}" in
-  gum)
-    # Modern gum-based TUI (best experience)
-    # shellcheck disable=SC1091 # File exists at runtime
-    source "${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh"
-    ;;
-  *)
-    # Whiptail TUI (default fallback, also used for non-interactive)
-    # shellcheck disable=SC1091 # File exists at runtime
-    source "${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh"
-    ;;
+gum)
+  # Modern gum-based TUI (best experience)
+  # shellcheck disable=SC1091 # File exists at runtime
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh"
+  ;;
+*)
+  # Whiptail TUI (default fallback, also used for non-interactive)
+  # shellcheck disable=SC1091 # File exists at runtime
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh"
+  ;;
 esac
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/process-templates.sh"
 # shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/install-apt.sh"
+source "${DEVBASE_ROOT}/libs/distro.sh"
+# shellcheck disable=SC1091 # File exists at runtime
+source "${DEVBASE_ROOT}/libs/pkg/pkg-manager.sh"
+# shellcheck disable=SC1091 # File exists at runtime
+source "${DEVBASE_ROOT}/libs/install-apt.sh" # Keep for backward compat (install_firefox_deb)
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-snap.sh"
 # shellcheck disable=SC1091 # File exists at runtime
@@ -83,16 +88,29 @@ source "${DEVBASE_ROOT}/libs/configure-shell.sh"
 source "${DEVBASE_ROOT}/libs/configure-services.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
+# shellcheck disable=SC1091 # File exists at runtime
+source "${DEVBASE_ROOT}/libs/summary.sh"
 
 _DEVBASE_TEMP=$(mktemp -d /tmp/devbase.XXXXXX) || {
-  echo "ERROR: Failed to create temp directory" >&2
+  # Early error before TUI is fully initialized - use basic output
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
+      --msgbox "Failed to create temp directory$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
+  else
+    echo "ERROR: Failed to create temp directory" >&2
+  fi
   exit 1
 }
 
 readonly _DEVBASE_TEMP
 
 if [[ -z "${DEVBASE_ROOT:-}" ]] || [[ -z "${DEVBASE_LIBS:-}" ]]; then
-  echo "ERROR: Devbase environment not properly initialized" >&2
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
+      --msgbox "DevBase environment not properly initialized$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
+  else
+    echo "ERROR: Devbase environment not properly initialized" >&2
+  fi
   exit 1
 fi
 
@@ -234,215 +252,6 @@ cleanup() {
   return 0
 }
 
-_summary_header() {
-  cat <<EOF
-DEVBASE INSTALLATION SUMMARY
-============================
-Installation Date: $(date)
-Environment: ${_DEVBASE_ENV:-unknown}
-OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
-Theme: ${DEVBASE_THEME}
-DevBase Version: $(cat "${DEVBASE_CONFIG_DIR}/version" 2>/dev/null || echo "unknown")
-$(if is_wsl; then echo "WSL Version: $(get_wsl_version 2>/dev/null || echo "unknown")"; fi)
-EOF
-}
-
-_summary_system_config() {
-  cat <<EOF
-
-SYSTEM CONFIGURATION
-====================
-User: ${USER}
-Home: ${HOME}
-Shell: ${SHELL}
-XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}
-XDG_DATA_HOME: ${XDG_DATA_HOME}
-EOF
-}
-
-_summary_development_languages() {
-  cat <<EOF
-
-DEVELOPMENT LANGUAGES (mise-managed)
-====================================
-  • Node.js: $(command -v node >/dev/null && node --version | sed 's/^v//' || echo "not found")
-  • Python: $(command -v python >/dev/null && python --version 2>&1 | cut -d' ' -f2 || echo "not found")
-  • Go: $(command -v go >/dev/null && go version | cut -d' ' -f3 | sed 's/go//' || echo "not found")
-  • Ruby: $(command -v ruby >/dev/null && ruby --version | cut -d' ' -f2 || echo "not found")
-  • Rust: $(command -v rustc >/dev/null && rustc --version | cut -d' ' -f2 || echo "not found")
-  • Java: $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo "not found")
-  • Maven: $(command -v mvn >/dev/null && mvn --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not found")
-  • Gradle: $(command -v gradle >/dev/null && gradle --version 2>&1 | grep Gradle | cut -d' ' -f2 || echo "not found")
-EOF
-}
-
-_summary_shell_terminal() {
-  cat <<EOF
-
-SHELL & TERMINAL
-================
-  • Fish: $(fish --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
-  • Starship: $(starship --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
-  • Zellij: $(command -v zellij >/dev/null && zellij --version | cut -d' ' -f2 || echo "not found")
-  • Zellij Autostart: $DEVBASE_ZELLIJ_AUTOSTART
-  • Monaspace Nerd Font: $(if is_wsl; then echo "not applicable (WSL)"; elif [[ -d ~/.local/share/fonts/MonaspaceNerdFont ]]; then
-    font_count=$(find ~/.local/share/fonts/MonaspaceNerdFont -name "*.ttf" -o -name "*.otf" 2>/dev/null | wc -l)
-    if [[ $font_count -gt 0 ]]; then echo "installed ($font_count fonts)"; else echo "not installed"; fi
-  else echo "not installed"; fi)
-EOF
-}
-
-_summary_development_tools() {
-  cat <<EOF
-
-DEVELOPMENT TOOLS
-=================
-  • Git: $(git --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
-  • Neovim: $(nvim --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
-  • LazyVim: $([ -d ~/.config/nvim ] && echo "installed" || echo "not installed")
-  • VS Code: $(code --version 2>/dev/null | head -1 || echo "not found")
-  • Lazygit: $(lazygit --version 2>/dev/null | grep -oP 'version=\K[^,]+' || echo "not found")
-  • Ripgrep: $(rg --version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "not found")
-  • Fd: $(fd --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
-  • Fzf: $(fzf --version 2>/dev/null | cut -d' ' -f1 || echo "not found")
-  • Eza: $(eza --version 2>/dev/null | head -1 | grep -o 'v[0-9.]*' || echo "not found")
-  • Bat: $(bat --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
-  • Delta: $(delta --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
-  • Jq: $(jq --version 2>/dev/null | sed 's/jq-//' || echo "not found")
-  • Yq: $(yq --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
-EOF
-}
-
-_summary_container_tools() {
-  cat <<EOF
-
-CONTAINER TOOLS
-===============
-  • Podman: $(podman --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
-  • Buildah: $(buildah --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
-  • Skopeo: $(skopeo --version 2>/dev/null | cut -d' ' -f3 || echo "not found")
-EOF
-}
-
-_summary_cloud_kubernetes() {
-  cat <<EOF
-
-CLOUD & KUBERNETES
-==================
-  • kubectl: $(kubectl version --client 2>/dev/null | grep -o 'v[0-9.]*' | head -1 || echo "not found")
-  • oc: $(oc version --client 2>/dev/null | grep -o '[0-9.]*' | head -1 || echo "not found")
-  • k9s: $(k9s version 2>/dev/null | grep Version | cut -d' ' -f2 || echo "not found")
-EOF
-}
-
-_summary_optional_tools() {
-  cat <<EOF
-
-OPTIONAL TOOLS
-==============
-  • DBeaver: $([ -f ~/.local/bin/dbeaver ] && echo "installed" || echo "not installed")
-  • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
-  • IntelliJ IDEA: $(compgen -G ~/.local/share/JetBrains/IntelliJIdea* >/dev/null && echo "installed" || echo "not installed")
-  • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
-EOF
-}
-
-_summary_git_config() {
-  cat <<EOF
-
-GIT CONFIGURATION
-=================
-  • Name: $(git config --global user.name 2>/dev/null || echo "not configured")
-  • Email: $(git config --global user.email 2>/dev/null || echo "not configured")
-  • Default Branch: $(git config --global init.defaultBranch 2>/dev/null || echo "not configured")
-  • GPG Sign: $(git config --global commit.gpgsign 2>/dev/null || echo "not configured")
-  • SSH Sign: $(git config --global gpg.format 2>/dev/null || echo "not configured")
-EOF
-}
-
-_summary_ssh_config() {
-  local key_type_upper
-  key_type_upper=$(echo "${DEVBASE_SSH_KEY_TYPE:-ed25519}" | tr '[:lower:]' '[:upper:]')
-  local key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
-
-  cat <<EOF
-
-SSH CONFIGURATION
-=================
-  • Key Type: ${key_type_upper}
-  • Key Path: ${key_path}
-  • Key Exists: $([ -f "${key_path}" ] && echo "yes" || echo "no")
-  • Public Key Exists: $([ -f "${key_path}.pub" ] && echo "yes" || echo "no")
-  • SSH Agent: $([ -n "${SSH_AUTH_SOCK:-}" ] && echo "configured" || echo "not configured")
-EOF
-}
-
-_summary_network_config() {
-  cat <<EOF
-
-NETWORK CONFIGURATION
-=====================
-  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then echo "${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
-  • Registry: $(if [[ -n "${DEVBASE_REGISTRY_HOST:-}" && -n "${DEVBASE_REGISTRY_PORT:-}" ]]; then echo "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"; else echo "not configured"; fi)
-EOF
-}
-
-_summary_mise_activation() {
-  cat <<EOF
-
-MISE ACTIVATION
-===============
-  • Mise Version: $(mise --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
-  • Config File: $([ -f ~/.config/mise/config.toml ] && echo "exists" || echo "missing")
-  • Activation: Run 'eval "\$(mise activate bash)"' or restart shell
-EOF
-}
-
-_summary_custom_config() {
-  cat <<EOF
-
-CUSTOM CONFIGURATION
-====================
-  • Custom Dir: $(if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]]; then echo "${DEVBASE_CUSTOM_DIR}"; else echo "not configured (using defaults)"; fi)
-  • Custom Env: $(if [[ -n "${DEVBASE_CUSTOM_ENV:-}" ]]; then echo "loaded"; else echo "not loaded"; fi)
-EOF
-}
-
-_summary_next_steps() {
-  cat <<EOF
-
-NEXT STEPS
-==========
-1. Restart your shell or run: exec fish
-2. Verify installation: ./verify/verify-install-check.sh
-
-For help and documentation: https://github.com/diggsweden/devbase-core
-EOF
-}
-
-write_installation_summary() {
-  validate_var_set "DEVBASE_CONFIG_DIR" || return 1
-
-  {
-    _summary_header
-    _summary_system_config
-    _summary_development_languages
-    _summary_shell_terminal
-    _summary_development_tools
-    _summary_container_tools
-    _summary_cloud_kubernetes
-    _summary_optional_tools
-    _summary_git_config
-    _summary_ssh_config
-    _summary_network_config
-    _summary_mise_activation
-    _summary_custom_config
-    _summary_next_steps
-  } >"${DEVBASE_CONFIG_DIR}/install-summary.txt"
-
-  return 0
-}
-
 # Brief: Show completion message using gum styling
 _show_completion_message_gum() {
   echo
@@ -497,9 +306,9 @@ _show_completion_message_gum() {
   case "$sb_mode" in
   disabled)
     echo
-    gum style --foreground 196 "⚠ Secure Boot is disabled - enable it in UEFI/BIOS settings"
+    gum style --foreground 196 "⚠ Secure Boot seems to be disabled on this machine - enable it in UEFI/BIOS settings"
     ;;
-  setup|audit)
+  setup | audit)
     echo
     gum style --foreground 196 "⚠ Secure Boot is in $sb_mode mode - complete the setup in UEFI/BIOS"
     ;;
@@ -509,12 +318,12 @@ _show_completion_message_gum() {
 # Brief: Show completion message using whiptail msgbox
 _show_completion_message_whiptail() {
   local message=""
-  
+
   message+="Environment: ${_DEVBASE_ENV:-unknown}\n"
   message+="Summary: ${DEVBASE_CONFIG_DIR}/install-summary.txt\n"
   message+="Verify: ./verify/verify-install-check.sh\n"
   message+="\n"
-  
+
   if [[ "${GENERATED_SSH_PASSPHRASE:-}" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
     local passphrase
     passphrase=$(cat "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" 2>/dev/null)
@@ -525,7 +334,7 @@ _show_completion_message_whiptail() {
     fi
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
   fi
-  
+
   message+="Useful Commands:\n"
   message+="  devbase-theme <name>       Change color theme\n"
   message+="  devbase-update             Update devbase\n"
@@ -535,27 +344,27 @@ _show_completion_message_whiptail() {
   message+="  devbase-smartcard          Configure smart card\n"
   message+="  devbase-citrix             Configure Citrix\n"
   message+="\n"
-  
+
   message+="Next Steps:\n"
-  message+="  1. Restart shell: exec fish\n"
+  message+="  1. Restart your terminal (or open a new tab)\n"
   message+="  2. Verify: ./verify/verify-install-check.sh\n"
-  
+
   # Check Secure Boot status
   local sb_mode
   sb_mode=$(get_secure_boot_mode)
-  
+
   case "$sb_mode" in
   disabled)
-    message+="\n⚠ Secure Boot disabled - enable in UEFI/BIOS"
+    message+="\n⚠ Secure Boot seems to be disabled - enable in UEFI/BIOS"
     ;;
-  setup|audit)
+  setup | audit)
     message+="\n⚠ Secure Boot in $sb_mode mode - complete setup in UEFI/BIOS"
     ;;
   esac
-  
-  # Show completion in whiptail msgbox
-  whiptail --backtitle "DevBase Setup" --title "Installation Complete" \
-    --msgbox "$message" 22 70
+
+  # Show completion in whiptail msgbox with scrolltext for long content
+  whiptail --backtitle "$WT_BACKTITLE" --title "Installation Complete" \
+    --scrolltext --msgbox "$message$WT_NAV_HINTS" "$WT_HEIGHT_XLARGE" "$WT_WIDTH"
 }
 
 show_completion_message() {
@@ -567,8 +376,18 @@ show_completion_message() {
     return 0
   fi
 
-  # Default to whiptail style
+  # Whiptail mode - show installation summary log first
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    _wt_show_final_log
+  fi
+
+  # Then show completion message
   _show_completion_message_whiptail
+
+  # Clear screen after whiptail exits to remove graphical residue
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    clear
+  fi
 }
 
 configure_fonts_post_install() {
@@ -611,69 +430,88 @@ configure_fonts_post_install() {
     fi
   fi
 
-  printf "\n"
-
   if [[ "$already_configured" == "true" ]]; then
-    printf "  %b✓%b GNOME Terminal is already configured to use Nerd Font\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+    show_progress success "GNOME Terminal is already configured to use Nerd Font"
     return 0
   fi
 
   # ===== Prompt user to configure font =====
-  printf "  %bNerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "  %bWould you like to configure your terminal to use it now?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "\n"
-  printf "  %bNote: Configuring now may affect this terminal session.%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
-  printf "  %bYou can also configure it manually later.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
-  printf "\n"
-
-  if ask_yes_no "Configure terminal fonts now? (y/N)" "N"; then
-    printf "\n"
-    # configure_terminal_fonts now only sets the font (theme already applied above)
-    configure_terminal_fonts
-
-    printf "\n"
-    printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
-      "${DEVBASE_COLORS[YELLOW]}" \
-      "${DEVBASE_COLORS[NC]}" \
-      "${DEVBASE_COLORS[BOLD_YELLOW]}" \
-      "${DEVBASE_COLORS[NC]}"
-    printf "  %bClose and reopen your terminal application.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+  # In whiptail mode, use dialog; in gum mode, use terminal output
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+    if whiptail --backtitle "$WT_BACKTITLE" --title "Terminal Font" \
+      --yesno "Nerd Font is available.\n\nWould you like to configure your terminal to use it now?\n\nNote: You can configure it manually later.$WT_NAV_HINTS" "$WT_HEIGHT_MEDIUM" "$WT_WIDTH"; then
+      configure_terminal_fonts
+      whiptail --backtitle "$WT_BACKTITLE" --title "Font Configured" \
+        --msgbox "Font configured!\n\nPlease restart your terminal to see the changes.$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+    else
+      show_progress info "Font configuration skipped"
+    fi
   else
-    printf "\n"
-    printf "  %b✓%b Font configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
-    printf "  %bTo configure later, set the font in your terminal settings to a Nerd Font%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    # Gum mode - use original terminal output
+    tui_blank_line
+    tui_printf "  %bNerd Font is available for use.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    tui_printf "  %bWould you like to configure your terminal to use it now?%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    tui_blank_line
+    tui_printf "  %bNote: Configuring now may affect this terminal session.%b\n" "${DEVBASE_COLORS[YELLOW]}" "${DEVBASE_COLORS[NC]}"
+    tui_printf "  %bYou can also configure it manually later.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    tui_blank_line
+
+    if ask_yes_no "Configure terminal fonts now? (y/N)" "N"; then
+      tui_blank_line
+      configure_terminal_fonts
+      tui_blank_line
+      tui_printf "  %b⚠%b  %bIMPORTANT: Please restart your terminal to see font changes!%b\n" \
+        "${DEVBASE_COLORS[YELLOW]}" \
+        "${DEVBASE_COLORS[NC]}" \
+        "${DEVBASE_COLORS[BOLD_YELLOW]}" \
+        "${DEVBASE_COLORS[NC]}"
+      tui_printf "  %bClose and reopen your terminal application.%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    else
+      tui_blank_line
+      tui_printf "  %b✓%b Font configuration skipped\n" "${DEVBASE_COLORS[GREEN]}" "${DEVBASE_COLORS[NC]}"
+      tui_printf "  %bTo configure later, set the font in your terminal settings to a Nerd Font%b\n" "${DEVBASE_COLORS[DIM]}" "${DEVBASE_COLORS[NC]}"
+    fi
   fi
 }
 
 handle_wsl_restart() {
   if [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     show_progress info "[WSL-specific] WSL must restart to apply all changes"
-    printf "\n"
-    printf "  %b%b%bPress ENTER to shutdown WSL now...%b" \
-      "${DEVBASE_COLORS[BOLD_YELLOW]}" \
-      "${DEVBASE_COLORS[BLINK_SLOW]}" \
-      "${DEVBASE_COLORS[BOLD]}" \
-      "${DEVBASE_COLORS[NC]}"
-    read -r
 
-    printf "\nShutting down WSL...\n"
+    # In whiptail mode, use dialog
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+      whiptail --backtitle "$WT_BACKTITLE" --title "WSL Restart Required" \
+        --msgbox "WSL must restart to apply all changes.\n\nPress OK to shutdown WSL now.$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+    else
+      # Gum mode - use terminal output
+      tui_blank_line
+      tui_printf "  %b%b%bPress ENTER to shutdown WSL now...%b" \
+        "${DEVBASE_COLORS[BOLD_YELLOW]}" \
+        "${DEVBASE_COLORS[BLINK_SLOW]}" \
+        "${DEVBASE_COLORS[BOLD]}" \
+        "${DEVBASE_COLORS[NC]}"
+      read -r
+      tui_blank_line
+    fi
+
+    show_progress info "Shutting down WSL..."
     wsl.exe --shutdown
     exit 0 # Ensure script stops here
   fi
   return 0
 }
 
-# Brief: Install all development tools (APT, snap, mise, custom tools)
+# Brief: Install all development tools (system packages, app store, mise, custom tools)
 # Params: None
-# Uses: install_apt_packages, install_snap_packages, install_mise_and_tools, install_fisher, install_nerd_fonts, install_lazyvim, install_jmc, install_oc_kubectl, install_vscode, install_dbeaver, install_keystore_explorer, install_intellij_idea, install_k3s, die, show_progress (functions)
+# Uses: install_system_packages, install_app_store_packages, install_mise_and_tools, install_fisher, install_nerd_fonts, install_lazyvim, install_jmc, install_oc_kubectl, install_vscode, install_dbeaver, install_keystore_explorer, install_intellij_idea, install_k3s, die, show_progress (functions)
 # Returns: 0 always (critical failures call die)
 # Side-effects: Installs all configured development tools
 download_and_install_tools() {
-  install_apt_packages || die "Failed to install APT packages"
+  install_system_packages || die "Failed to install system packages"
   sudo_refresh
-  install_firefox_deb || show_progress warning "Firefox installation failed (continuing)"
+  install_firefox_native || show_progress warning "Firefox installation failed (continuing)"
   sudo_refresh
-  install_snap_packages || die "Failed to install snap packages"
+  install_app_store_packages || die "Failed to install app store packages"
   sudo_refresh
   install_mise_and_tools || die "Failed to install mise and development tools"
   sudo_refresh
@@ -741,8 +579,14 @@ configure_system_and_shell() {
   if uname -r | grep -qi microsoft; then
     show_progress info "Installing Windows Terminal themes..."
     # shellcheck disable=SC1091 # File exists at runtime
-    if source "${DEVBASE_LIBS}/install-windows-terminal-themes.sh" && install_windows_terminal_themes 2>&1 | tee /dev/tty | grep -q "✓"; then
-      show_progress success "Windows Terminal themes configured"
+    source "${DEVBASE_LIBS}/install-windows-terminal-themes.sh"
+    local wt_output
+    if wt_output=$(install_windows_terminal_themes 2>&1); then
+      if echo "$wt_output" | grep -q "✓"; then
+        show_progress success "Windows Terminal themes configured"
+      else
+        show_progress warning "Windows Terminal themes installation incomplete"
+      fi
     else
       show_progress warning "Windows Terminal themes installation failed (continuing)"
     fi
@@ -808,15 +652,25 @@ display_configuration_summary() {
 # Side-effects: Prompts for sudo password, installs certs, clones repos, creates user directories, configures sudo for proxy
 prepare_system() {
   # PHASE 1: System Preparation (first actual changes)
-  # Check/obtain sudo access right before we need it (after user answers questions)
+  # Sudo access was already obtained in run_preflight_checks
+  # Just refresh the sudo timestamp to keep it alive
   if ! sudo -n true 2>/dev/null; then
-    show_progress info "Sudo access required for system package installation"
-    show_progress info "Please enter your password when prompted"
-
-    if ! sudo -v; then
-      die "Sudo access required to install system packages"
+    # Sudo timed out - need to re-acquire
+    # In whiptail mode, stop gauge, get sudo properly, restart gauge
+    if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
+      stop_installation_progress
+      whiptail --backtitle "$WT_BACKTITLE" --title "Sudo Access Required" \
+        --msgbox "Sudo session expired. Please re-enter your password.$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+      clear
+      if ! sudo -v; then
+        die "Sudo access required to install system packages"
+      fi
+      start_installation_progress
+      show_phase "Preparing system..."
+    else
+      show_progress info "Refreshing sudo access..."
+      sudo -v || die "Sudo access required to install system packages"
     fi
-    show_progress success "Sudo access granted"
   fi
 
   # Install certificates FIRST - required for git clone to custom registries
@@ -882,11 +736,15 @@ main() {
 
   # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token)
   # Note: Sudo check happens later in prepare_system() to avoid timeout issues
-  printf "\n"
+  tui_blank_line
   run_preflight_checks || return 1
 
   collect_user_configuration
   display_configuration_summary
+
+  # Start persistent progress display for whiptail mode
+  # This keeps a gauge on screen throughout installation to prevent terminal flicker
+  start_installation_progress
 
   show_phase "Preparing system..."
   prepare_system
@@ -894,7 +752,11 @@ main() {
   perform_installation
 
   write_installation_summary
-  printf "\n"
+
+  # Stop persistent progress display before showing completion
+  stop_installation_progress
+
+  tui_blank_line
   show_completion_message
   configure_fonts_post_install
   handle_wsl_restart

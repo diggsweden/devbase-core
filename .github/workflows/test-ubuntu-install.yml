@@ -1,23 +1,18 @@
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: CC0-1.0
-name: Test Installation
-on:
-  pull_request:
-    paths:
-      - 'setup.sh'
-      - 'libs/**'
-      - 'dot/**'
-      - 'environments/**'
-      - '.github/workflows/test-install.yml'
+name: Test Ubuntu Installation
+on: # yamllint disable-line rule:truthy
   workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-ubuntu:
-    runs-on: ubuntu-latest
-    name: Test on Ubuntu ${{ matrix.version }}
-    strategy:
-      matrix:
-        version: ['24.04']
+    runs-on: ubuntu-24.04
+    name: Test on Ubuntu 24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -27,25 +22,25 @@ jobs:
           path: |
             ~/.local/share/mise/installs
             ~/.local/share/mise/downloads
-          key: mise-${{ runner.os }}-${{ hashFiles('dot/.config/mise/config.toml') }}
+          key: mise-ubuntu-24.04-${{ hashFiles('dot/.config/mise/config.toml') }}
           restore-keys: |
-            mise-${{ runner.os }}-
+            mise-ubuntu-24.04-
       - name: Cache VS Code extensions
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: |
             ~/.vscode/extensions
             ~/.config/Code/User
-          key: vscode-ext-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/vscode-extensions.yaml') }}
+          key: vscode-ext-ubuntu-24.04-${{ hashFiles('dot/.config/devbase/packages.yaml') }}
           restore-keys: |
-            vscode-ext-${{ runner.os }}-
+            vscode-ext-ubuntu-24.04-
       - name: Cache binary downloads
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.cache/devbase/debs
-          key: binary-downloads-${{ runner.os }}-${{ hashFiles('dot/.config/devbase/custom-tools.yaml') }}
+          key: binary-downloads-ubuntu-24.04-${{ hashFiles('dot/.config/devbase/packages.yaml') }}
           restore-keys: |
-            binary-downloads-${{ runner.os }}-
+            binary-downloads-ubuntu-24.04-
       - name: Prepare binary cache directory
         run: mkdir -p ~/.cache/devbase/debs
       - name: Run installation
