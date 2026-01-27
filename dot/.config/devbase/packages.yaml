@@ -145,7 +145,7 @@ core:
     git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.10.1"} # renovate: datasource=github-releases depName=orhun/git-cliff
     lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.57.0"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
     gh: {backend: "aqua:cli/cli", version: "v2.83.2"} # renovate: datasource=github-releases depName=cli/cli
-    glab: {backend: "ubi:gitlab-org/cli", version: "v1.68.0", options: {provider: "gitlab", exe: "glab"}} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
+    glab: {backend: "gitlab:gitlab-org/cli", version: "v1.68.0"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
     # Neovim
     neovim: {backend: "aqua:neovim/neovim", version: "v0.11.5"} # renovate: datasource=github-releases depName=neovim/neovim
     tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.25.10"} # renovate: datasource=npm depName=tree-sitter-cli
@@ -162,7 +162,7 @@ core:
     hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.14.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
     shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
     shfmt: {backend: "aqua:mvdan/sh", version: "v3.12.0"} # renovate: datasource=github-releases depName=mvdan/sh
-    rumdl: {backend: "ubi:rvben/rumdl", version: "v0.0.188"} # renovate: datasource=github-releases depName=rvben/rumdl
+    rumdl: {backend: "github:rvben/rumdl", version: "v0.0.188"} # renovate: datasource=github-releases depName=rvben/rumdl
     # Security
     gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.29.1"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
     syft: {backend: "aqua:anchore/syft", version: "v1.38.2"} # renovate: datasource=github-releases depName=anchore/syft
@@ -209,7 +209,7 @@ core:
 # ==============================================================================
 packs:
   java:
-    description: "(temurin / maven / gradle / pmd / checkstyle)"
+    description: "(temurin / maven / gradle / pmd)"
     common:
       visualvm: {}
     apt:
@@ -223,7 +223,6 @@ packs:
       maven: {version: "3.9.6"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
       gradle: {version: "8.12"} # renovate: datasource=gradle-version depName=gradle
       pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0"} # renovate: datasource=github-releases depName=pmd/pmd
-      checkstyle: {backend: "ubi:checkstyle/checkstyle", version: "checkstyle-11.0.1"} # renovate: datasource=github-releases depName=checkstyle/checkstyle
     custom:
       keystore_explorer: {version: "v5.6.0", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
       jdk_mission_control: {version: "9.1.1", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
@@ -231,7 +230,6 @@ packs:
       intellij_idea: {version: "2025.2.4", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=jetbrains-releases depName=idea
     vscode:
       redhat.java: {version: "1.40.0"} # renovate: datasource=npm
-      shengchen.vscode-checkstyle: {version: "1.4.2"} # renovate: datasource=npm
       vscjava.vscode-java-debug: {version: "0.58.1"} # renovate: datasource=npm
       vscjava.vscode-java-dependency: {version: "0.24.1"} # renovate: datasource=npm
       vscjava.vscode-java-test: {version: "0.43.0"} # renovate: datasource=npm

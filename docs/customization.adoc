@@ -496,7 +496,7 @@ packs:
     apt:
       company-cli: {}
     mise:
-      internal-tool: { backend: "ubi:company/tool", version: "v1.0.0" }
+      internal-tool: { backend: "github:company/tool", version: "v1.0.0" }
 ----
 
 === Package Types
@@ -532,8 +532,8 @@ mise:
   # With backend
   fzf: { backend: "aqua:junegunn/fzf", version: "v0.67.0" }
   
-  # UBI with options
-  glab: { backend: "ubi:gitlab-org/cli", version: "v1.68.0", options: { provider: "gitlab", exe: "glab" } }
+  # GitLab backend
+  glab: { backend: "gitlab:gitlab-org/cli", version: "v1.68.0" }
 ----
 
 ==== VS Code Extensions

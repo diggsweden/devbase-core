@@ -7,7 +7,7 @@
 # Activate in shell: eval "$(mise activate bash)"
 
 [settings]
-experimental = true  # Enable experimental features (required for ubi backend)
+experimental = true  # Enable experimental features
 paranoid = true      # Enable strict security checks and verification
 
 [env]
@@ -25,7 +25,7 @@ PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 
 [tools]
 "aqua:casey/just" = "1.46.0"
-"ubi:rvben/rumdl" = "v0.0.205"
+"github:rvben/rumdl" = "v0.0.205"
 "aqua:google/yamlfmt" = "v0.20.0"
 "aqua:rhysd/actionlint" = "v1.7.9"
 "aqua:zricethezav/gitleaks" = "v8.30.0"
