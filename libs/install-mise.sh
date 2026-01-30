@@ -163,6 +163,20 @@ install_mise() {
     die "Mise installation failed - not found in PATH after activation"
   fi
 
+  # Bootstrap essential tools early - required before full tool installation
+  # yq: needed by parse-packages.sh for YAML parsing
+  # just: task runner used by devbase
+  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
+    local bootstrap_tools=""
+    command -v yq &>/dev/null || bootstrap_tools="yq"
+    command -v just &>/dev/null || bootstrap_tools="$bootstrap_tools just"
+    if [[ -n "$bootstrap_tools" ]]; then
+      show_progress info "Bootstrapping essential tools ($bootstrap_tools)..."
+      # shellcheck disable=SC2086 # Word splitting intended
+      "$mise_path" install $bootstrap_tools --yes 2>/dev/null || true
+    fi
+  fi
+
   show_progress success "Mise ready at $mise_path"
 }
 
@@ -188,7 +202,7 @@ install_mise_tools() {
   # Source parser if not already loaded
   if ! declare -f generate_mise_config &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
   fi
 
   # Generate mise config.toml from packages.yaml
@@ -384,7 +398,7 @@ install_mise_and_tools() {
   # Source parser for version lookups
   if ! declare -f get_tool_version &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
   fi
 
   install_mise || die "Failed to install mise"
