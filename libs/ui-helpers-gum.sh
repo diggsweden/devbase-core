@@ -60,18 +60,9 @@ _gum_run_with_spinner() {
   local description="$1"
   shift
 
-  local output
-  local exit_code
-  if output=$(gum spin --spinner dot --title "$description" -- "$@" 2>&1); then
-    exit_code=0
-  else
-    exit_code=$?
-    # Show error output if command failed
-    if [[ -n "$output" ]]; then
-      echo "$output" | tail -20
-    fi
-  fi
-  return $exit_code
+  # --show-error displays command output only on failure
+  gum spin --spinner dot --show-error --title "$description" -- "$@"
+  return $?
 }
 
 # Brief: Ask yes/no question using gum confirm

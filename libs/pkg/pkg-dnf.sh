@@ -19,7 +19,7 @@ set -uo pipefail
 # Side-effects: Updates DNF cache
 _pkg_dnf_update() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Updating package lists..." -- \
+    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
       sudo dnf check-update --quiet || true # dnf check-update returns 100 if updates available
     return 0
   fi
@@ -40,7 +40,7 @@ _pkg_dnf_install() {
   [[ $pkg_count -eq 0 ]] && return 0
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Installing ${pkg_count} packages..." -- \
+    gum spin --spinner dot --show-error --title "Installing ${pkg_count} packages..." -- \
       sudo dnf install -y --quiet "${packages[@]}"
     return $?
   fi
@@ -128,7 +128,7 @@ _pkg_dnf_install_fonts() {
   )
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --title "Installing Liberation & DejaVu fonts..." -- \
+    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
       sudo dnf install -y --quiet "${font_packages[@]}"; then
       command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
       return 0

@@ -67,7 +67,7 @@ load_apt_packages() {
 # Side-effects: Updates APT cache
 pkg_update() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Updating package lists..." -- \
+    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
       sudo apt-get -qq update
     return $?
   fi
@@ -93,7 +93,7 @@ pkg_install() {
   local pkg_count=${#packages[@]}
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Installing ${pkg_count} packages..." -- \
+    gum spin --spinner dot --show-error --title "Installing ${pkg_count} packages..." -- \
       sudo apt-get -y -qq install "${packages[@]}"
     return $?
   fi
@@ -135,7 +135,7 @@ configure_locale() {
 # Side-effects: Installs fonts, rebuilds font cache
 install_liberation_fonts() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --title "Installing Liberation & DejaVu fonts..." -- \
+    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
       sudo apt-get install -y -qq fonts-liberation fonts-liberation-sans-narrow fonts-dejavu fonts-dejavu-extra; then
       command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
       return 0
@@ -230,13 +230,13 @@ EOF
 
   # Update and install
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if ! gum spin --spinner dot --title "Updating Mozilla repository..." -- \
+    if ! gum spin --spinner dot --show-error --title "Updating Mozilla repository..." -- \
       sudo apt-get -qq update; then
       show_progress error "Failed to update package cache after adding Mozilla repo"
       return 1
     fi
 
-    if ! gum spin --spinner dot --title "Installing Firefox..." -- \
+    if ! gum spin --spinner dot --show-error --title "Installing Firefox..." -- \
       sudo apt-get -y -qq install firefox; then
       show_progress error "Failed to install Firefox from Mozilla repository"
       return 1

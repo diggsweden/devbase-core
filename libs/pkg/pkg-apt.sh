@@ -19,7 +19,7 @@ set -uo pipefail
 # Side-effects: Updates APT cache
 _pkg_apt_update() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Updating package lists..." -- \
+    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
       sudo apt-get -qq update
     return $?
   fi
@@ -98,21 +98,14 @@ _pkg_apt_install() {
 
   [[ $pkg_count -eq 0 ]] && return 0
 
-  # Gum mode - unchanged
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Installing ${pkg_count} packages..." -- \
-      sudo apt-get -y -qq install "${packages[@]}"
-    return $?
-  fi
-
   # Whiptail mode with persistent gauge - use real progress tracking
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && _wt_gauge_is_running; then
     _pkg_apt_install_with_progress "${packages[@]}"
     return $?
   fi
 
-  # Fallback - no gauge running or other TUI mode
-  run_with_spinner "Installing ${pkg_count} packages" sudo apt-get -y -qq install "${packages[@]}"
+  # All other modes - use run_with_spinner which handles gum/fallback and shows errors
+  run_with_spinner "Installing ${pkg_count} packages" sudo apt-get -y -q install "${packages[@]}"
   return $?
 }
 
@@ -207,8 +200,8 @@ _pkg_apt_install_fonts() {
   )
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --title "Installing Liberation & DejaVu fonts..." -- \
-      sudo apt-get install -y -qq "${font_packages[@]}"; then
+    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
+      sudo apt-get install -y -q "${font_packages[@]}"; then
       command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
       return 0
     fi
@@ -217,7 +210,7 @@ _pkg_apt_install_fonts() {
 
   # Whiptail mode (default)
   if run_with_spinner "Installing Liberation & DejaVu fonts" \
-    sudo apt-get install -y -qq "${font_packages[@]}"; then
+    sudo apt-get install -y -q "${font_packages[@]}"; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
     return 0
   fi
@@ -284,13 +277,13 @@ EOF
 
   # Update and install
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if ! gum spin --spinner dot --title "Updating Mozilla repository..." -- \
+    if ! gum spin --spinner dot --show-error --title "Updating Mozilla repository..." -- \
       sudo apt-get -qq update; then
       show_progress error "Failed to update package cache after adding Mozilla repo"
       return 1
     fi
 
-    if ! gum spin --spinner dot --title "Installing Firefox..." -- \
+    if ! gum spin --spinner dot --show-error --title "Installing Firefox..." -- \
       sudo apt-get -y -qq install firefox; then
       show_progress error "Failed to install Firefox from Mozilla repository"
       return 1
