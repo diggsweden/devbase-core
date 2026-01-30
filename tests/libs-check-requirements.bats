@@ -234,31 +234,33 @@ SCRIPT
 }
 
 @test "detect_environment sets _DEVBASE_ENV to ubuntu on non-WSL" {
+  grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
-    
+
     is_wsl() { return 1; }
     detect_environment >/dev/null 2>&1
     echo \"\$_DEVBASE_ENV\"
   "
-  
+
   assert_success
   assert_output "ubuntu"
 }
 
 @test "detect_environment sets _DEVBASE_ENV to wsl-ubuntu on WSL" {
+  grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
-    
+
     get_wsl_version() { echo '2.6.0'; }
     detect_environment >/dev/null 2>&1
     echo \"\$_DEVBASE_ENV\"
   "
-  
+
   assert_success
   assert_output "wsl-ubuntu"
 }

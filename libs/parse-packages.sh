@@ -24,8 +24,8 @@ SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby rust}"
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
 
-# Detected package manager (cached)
-_PARSE_PKG_MANAGER=""
+# Detected package manager (cached, can be pre-set by tests)
+_PARSE_PKG_MANAGER="${_PARSE_PKG_MANAGER:-}"
 
 # Brief: Get merged packages.yaml content (base + custom if exists)
 # Returns: Merged YAML to stdout (cached after first call)

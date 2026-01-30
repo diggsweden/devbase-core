@@ -436,10 +436,12 @@ EOF
 # =============================================================================
 
 @test "get_pack_contents returns list of pack items" {
+  command -v apt-get &>/dev/null || skip "apt not available"
   create_test_packages
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export PACKAGES_CUSTOM_YAML=""
   _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="apt"
   source "${DEVBASE_LIBS}/parse-packages.sh"
   
   run get_pack_contents "java"
@@ -474,6 +476,7 @@ EOF
 }
 
 @test "get_pack_contents shows primary tools and labels vscode extensions" {
+  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core: {}
 packs:
@@ -493,6 +496,7 @@ EOF
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export PACKAGES_CUSTOM_YAML=""
   _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="apt"
   source "${DEVBASE_LIBS}/parse-packages.sh"
   
   run get_pack_contents "test"
@@ -509,6 +513,7 @@ EOF
 }
 
 @test "get_pack_contents hides vscode extensions when show_vscode is false" {
+  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core: {}
 packs:
@@ -525,6 +530,7 @@ EOF
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export PACKAGES_CUSTOM_YAML=""
   _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="apt"
   source "${DEVBASE_LIBS}/parse-packages.sh"
   
   # With show_vscode=false, extensions should not appear
@@ -534,6 +540,107 @@ EOF
   assert_line "tool1"
   assert_line "+ 1 system packages"
   # VS Code extensions should NOT be shown
+  refute_line "ext1 (VS Code)"
+  refute_line "ext2 (VS Code)"
+}
+
+# -----------------------------------------------------------------------------
+# get_pack_contents tests (dnf)
+# -----------------------------------------------------------------------------
+
+@test "get_pack_contents returns list of pack items (dnf)" {
+  command -v dnf &>/dev/null || skip "dnf not available"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  java:
+    description: "Java development"
+    dnf:
+      java-latest-openjdk: {}
+    mise:
+      java: { version: "temurin-21" }
+      maven: { version: "3.9.6" }
+    custom:
+      intellij: { version: "2024.1", installer: "install_intellij", tags: ["@optional"] }
+    vscode:
+      redhat.java: { version: "1.30.0" }
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="dnf"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  run get_pack_contents "java"
+
+  assert_success
+  assert_line "java"
+  assert_line "maven"
+  assert_line "intellij"
+  assert_line "redhat.java (VS Code)"
+  assert_line "+ 1 system packages"
+}
+
+@test "get_pack_contents shows primary tools and labels vscode extensions (dnf)" {
+  command -v dnf &>/dev/null || skip "dnf not available"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  test:
+    description: "Test pack"
+    dnf:
+      pkg1: {}
+      pkg2: {}
+    mise:
+      tool1: {version: "1.0"}
+    vscode:
+      ext1: {version: "1.0"}
+      ext2: {version: "2.0"}
+    custom:
+      myapp: {version: "1.0", installer: "install_myapp"}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="dnf"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  run get_pack_contents "test"
+
+  assert_success
+  assert_line "tool1"
+  assert_line "myapp"
+  assert_line "ext1 (VS Code)"
+  assert_line "ext2 (VS Code)"
+  assert_line "+ 2 system packages"
+}
+
+@test "get_pack_contents hides vscode extensions when show_vscode is false (dnf)" {
+  command -v dnf &>/dev/null || skip "dnf not available"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core: {}
+packs:
+  test:
+    description: "Test pack"
+    dnf:
+      pkg1: {}
+    mise:
+      tool1: {version: "1.0"}
+    vscode:
+      ext1: {version: "1.0"}
+      ext2: {version: "2.0"}
+EOF
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="dnf"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  run get_pack_contents "test" "false"
+
+  assert_success
+  assert_line "tool1"
+  assert_line "+ 1 system packages"
   refute_line "ext1 (VS Code)"
   refute_line "ext2 (VS Code)"
 }
@@ -768,6 +875,7 @@ EOF
 # =============================================================================
 
 @test "get_system_packages reads common packages" {
+  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:
@@ -793,6 +901,7 @@ EOF
 }
 
 @test "get_system_packages includes pack common and distro-specific" {
+  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:
@@ -825,6 +934,7 @@ EOF
 }
 
 @test "get_system_packages uses dnf section on Fedora" {
+  command -v dnf &>/dev/null || skip "dnf not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:

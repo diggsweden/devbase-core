@@ -80,6 +80,7 @@ teardown() {
 @test "error_msg prints error with cross symbol" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     error_msg 'Test error message'
@@ -94,6 +95,7 @@ teardown() {
 @test "warn_msg prints warning with warn symbol" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     warn_msg 'Test warning message'
@@ -108,6 +110,7 @@ teardown() {
 @test "success_msg prints success with check symbol" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     success_msg 'Test success message'
@@ -122,6 +125,7 @@ teardown() {
 @test "info_msg prints info with info symbol" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     info_msg 'Test info message'

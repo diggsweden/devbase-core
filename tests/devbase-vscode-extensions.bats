@@ -181,11 +181,16 @@ EOF
 }
 
 @test "devbase-vscode-extensions --list shows extensions by pack" {
+  # Skip if VS Code is not installed (CI environment)
+  if ! command -v code &>/dev/null; then
+    skip "VS Code is not installed"
+  fi
+
   create_mock_preferences "java node"
   create_mock_packages
-  
+
   run run_fish_vscode_ext_with_mock_home "devbase-vscode-extensions --list"
-  
+
   assert_success
   assert_output --partial "Core extensions:"
   assert_output --partial "java pack:"

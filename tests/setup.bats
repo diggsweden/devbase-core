@@ -23,8 +23,13 @@ teardown() {
 }
 
 @test "setup.sh requires bash not sh" {
+  # Skip on systems where sh is bash (e.g., Fedora) - BASH_VERSION is set even in POSIX mode
+  if sh -c 'test -n "${BASH_VERSION:-}"' 2>/dev/null; then
+    skip "sh is bash on this system"
+  fi
+
   run sh "${DEVBASE_ROOT}/setup.sh" --help 2>&1
-  
+
   assert_failure
   assert_output --regexp "(must be run with bash|Illegal option)"
 }

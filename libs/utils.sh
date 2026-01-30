@@ -11,11 +11,14 @@ set -uo pipefail
 # Returns: Echoes passphrase to stdout
 # Side-effects: None
 generate_ssh_passphrase() {
+  local pass
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 12 | head -c 12
+    pass=$(openssl rand -base64 12 2>/dev/null)
   else
-    tr -dc 'A-Za-z0-9' </dev/urandom | head -c 12
+    pass=$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 16)
   fi
+  # Use bash string slicing to avoid SIGPIPE from head closing early
+  printf '%s' "${pass:0:12}"
 }
 
 # Verify devbase environment is set
