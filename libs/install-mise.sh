@@ -168,9 +168,20 @@ install_mise() {
   # just: task runner used by devbase
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
     show_progress info "Bootstrapping essential tools (yq)..."
-    if ! "$mise_path" install yq --yes 2>/dev/null; then
+    if ! "$mise_path" install yq --yes; then
       die "Failed to bootstrap yq via mise"
     fi
+    show_progress info "Checking yq availability after bootstrap..."
+    eval "$($mise_path activate bash)"
+
+    if ! command -v yq &>/dev/null; then
+      local yq_path
+      yq_path=$($mise_path which yq 2>/dev/null || true)
+      if [[ -n "$yq_path" ]]; then
+        export PATH="$(dirname "$yq_path"):${PATH}"
+      fi
+    fi
+
     if ! command -v yq &>/dev/null; then
       die "yq not found after mise bootstrap"
     fi
