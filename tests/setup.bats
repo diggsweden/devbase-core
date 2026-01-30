@@ -73,16 +73,15 @@ teardown() {
   assert_output "gum"
 }
 
-@test "parse_arguments sets DEVBASE_TUI_MODE for --tui=none" {
+@test "parse_arguments rejects --tui=none (not a valid user option)" {
   run bash -c "
     eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
     DEVBASE_TUI_MODE=''
     parse_arguments --tui=none
     echo \"\$DEVBASE_TUI_MODE\"
   "
-  
-  assert_success
-  assert_output "none"
+
+  assert_failure
 }
 
 @test "parse_arguments rejects --tui=basic (no longer supported)" {

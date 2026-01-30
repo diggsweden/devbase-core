@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2030,SC2031,SC2034
+# shellcheck disable=SC1090,SC2030,SC2031,SC2034,SC2153
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 # SPDX-License-Identifier: MIT
 

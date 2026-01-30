@@ -48,6 +48,14 @@ configure_git_hooks() {
   # Create hooks directory structure
   mkdir -p "$hooks_dir"
 
+  # Migration: Remove old hooks that have been moved/removed
+  # conform validation moved from commit-msg to post-commit (2025-01)
+  if [[ -f "$hooks_dir/commit-msg.d/01-conventional-commits.sh" ]]; then
+    rm -f "$hooks_dir/commit-msg.d/01-conventional-commits.sh"
+    rmdir "$hooks_dir/commit-msg.d" 2>/dev/null || true
+    show_progress info "Migrated: conform validation moved to post-commit"
+  fi
+
   # Copy core template hooks
   if [[ -d "$templates_dir" ]]; then
     # Copy dispatchers (main hook files)

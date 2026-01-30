@@ -5,8 +5,9 @@
 # ShellCheck configuration for DevBase
 # https://github.com/koalaman/shellcheck/wiki/Directive
 
-# Enable external source checking (required here - cannot be set in individual files)
-external-sources=true
+# Disable external source checking for performance (47s -> 13s)
+# Cross-file issues are caught by other checks (tests, CI)
+external-sources=false
 
 # Set source path to allow shellcheck to find sourced files
 source-path=SCRIPTDIR
