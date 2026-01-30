@@ -32,11 +32,11 @@ _summary_system_config() {
 
 SYSTEM CONFIGURATION
 ====================
-User: ${USER}
-Home: ${HOME}
-Shell: ${SHELL}
-XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}
-XDG_DATA_HOME: ${XDG_DATA_HOME}
+User: ${USER:-$(whoami)}
+Home: ${HOME:-~}
+Shell: ${SHELL:-unknown}
+XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-~/.config}
+XDG_DATA_HOME: ${XDG_DATA_HOME:-~/.local/share}
 EOF
 }
 
