@@ -70,7 +70,7 @@ _wt_start_persistent_gauge() {
 
   # Start gauge in background, reading from FIFO
   # The gauge expects lines of: "XXX\n<percent>\n<message>\nXXX\n"
-  tail -f "$_WT_GAUGE_FIFO" 2>/dev/null | whiptail --backtitle "$WT_BACKTITLE" \
+  tail -f "$_WT_GAUGE_FIFO" 2>/dev/null | TERM="${TERM:-dumb}" whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" --gauge "Initializing..." $WT_GAUGE_HEIGHT $WT_WIDTH 0 &
   _WT_GAUGE_PID=$!
 
@@ -131,12 +131,19 @@ _wt_clear_log() {
 # LOW-LEVEL WHIPTAIL PRIMITIVES
 # =============================================================================
 
+# Brief: Wrapper to ensure TERM is set before calling whiptail
+# Whiptail requires TERM; default to 'dumb' for CI/non-interactive environments
+# Params: $@ - all arguments passed to whiptail
+_wt() {
+  TERM="${TERM:-dumb}" whiptail "$@"
+}
+
 # Brief: Show a whiptail infobox (non-blocking status message)
 # Params: $1 - title, $2 - message
 _wt_infobox() {
   local title="$1"
   local message="$2"
-  whiptail --backtitle "$WT_BACKTITLE" --title "$title" --infobox "$message" $WT_HEIGHT $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --infobox "$message" $WT_HEIGHT $WT_WIDTH
 }
 
 # Brief: Show a whiptail message box (blocking, requires OK)
@@ -144,7 +151,7 @@ _wt_infobox() {
 _wt_msgbox() {
   local title="$1"
   local message="$2"
-  whiptail --backtitle "$WT_BACKTITLE" --title "$title" --msgbox "$message$WT_NAV_HINTS" $WT_HEIGHT $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --msgbox "$message$WT_NAV_HINTS" $WT_HEIGHT $WT_WIDTH
 }
 
 # Brief: Run command with whiptail gauge progress
@@ -160,7 +167,7 @@ _wt_gauge_cmd() {
     echo "0"
     "$@" >/dev/null 2>&1
     echo "100"
-  ) | whiptail --backtitle "$WT_BACKTITLE" --title "$title" --gauge "$message" $WT_GAUGE_HEIGHT $WT_WIDTH 0
+  ) | _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "$message" $WT_GAUGE_HEIGHT $WT_WIDTH 0
 
   return "${PIPESTATUS[0]}"
 }
@@ -183,7 +190,7 @@ _wt_run() {
   fi
 
   if [[ $exit_code -ne 0 ]] && [[ -n "$output" ]]; then
-    whiptail --backtitle "$WT_BACKTITLE" --title "Error" --msgbox "Command failed:\n\n${output:0:500}$WT_NAV_HINTS" 15 $WT_WIDTH
+    _wt --backtitle "$WT_BACKTITLE" --title "Error" --msgbox "Command failed:\n\n${output:0:500}$WT_NAV_HINTS" 15 $WT_WIDTH
   fi
 
   return $exit_code
@@ -193,7 +200,7 @@ _wt_run() {
 # Params: $1 - title, stdin - lines of "percent message"
 _wt_progress() {
   local title="$1"
-  whiptail --backtitle "$WT_BACKTITLE" --title "$title" --gauge "Starting..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "Starting..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
 }
 
 # Brief: Add entry to whiptail log
@@ -216,7 +223,7 @@ _wt_show_log() {
   local title="${1:-Installation Log}"
   local log_text
   log_text=$(printf '%s\n' "${_WT_LOG[@]}")
-  whiptail --backtitle "$WT_BACKTITLE" --title "$title" --scrolltext --msgbox "$log_text$WT_NAV_HINTS" 20 $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --scrolltext --msgbox "$log_text$WT_NAV_HINTS" 20 $WT_WIDTH
   _WT_LOG=() # Clear log
 }
 
@@ -363,7 +370,7 @@ _wt_run_with_spinner() {
         sleep 0.5
       done
       echo "100"
-    ) | whiptail --backtitle "$WT_BACKTITLE" --title "Installing" \
+    ) | TERM="${TERM:-dumb}" whiptail --backtitle "$WT_BACKTITLE" --title "Installing" \
       --gauge "$description..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
   fi
 
@@ -389,7 +396,7 @@ _wt_run_with_spinner() {
       # Strip ANSI escape codes for clean display
       local clean_output
       clean_output=$(printf '%s' "${output:0:1000}" | sed 's/\x1b\[[0-9;]*m//g')
-      whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
+      _wt --backtitle "$WT_BACKTITLE" --title "Error" \
         --scrolltext --msgbox "Failed: $description\n\n$clean_output$WT_NAV_HINTS" $WT_HEIGHT_LARGE $WT_WIDTH
       # Restart gauge with preserved title
       if [[ "$gauge_was_running" == true ]]; then
@@ -410,7 +417,7 @@ _wt_ask_yes_no() {
   local wt_default="--defaultno"
   [[ "$default" == "Y" || "$default" == "y" ]] && wt_default=""
 
-  if whiptail --backtitle "$WT_BACKTITLE" --title "Confirm" \
+  if _wt --backtitle "$WT_BACKTITLE" --title "Confirm" \
     $wt_default --yesno "$question$WT_NAV_HINTS" $WT_HEIGHT_MEDIUM $WT_WIDTH; then
     return 0
   else

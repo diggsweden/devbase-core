@@ -82,7 +82,7 @@ verify_checksum_value() {
   else
     show_progress error "Checksum mismatch for $(basename "$target")"
     show_progress info "Expected: $expected_checksum"
-    show_progress info "Got: $actual_checksum"
+    show_progress info "Got:      $actual_checksum"
     rm -f -- "$target"
     return 1
   fi
