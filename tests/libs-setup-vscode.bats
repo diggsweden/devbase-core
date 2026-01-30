@@ -16,12 +16,12 @@ load 'test_helper'
 setup() {
   common_setup_isolated
   export DEVBASE_DOT="${TEST_DIR}/dot"
-  
+
   # Create mock filesystem root for path tests
   export MOCK_ROOT="${TEST_DIR}/mock_root"
   mkdir -p "${MOCK_ROOT}/usr/bin"
   mkdir -p "${MOCK_ROOT}/usr/local/bin"
-  
+
   source_core_libs_with_requirements
 }
 
