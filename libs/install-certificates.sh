@@ -144,7 +144,11 @@ update_system_certificates() {
     fi
   fi
 
-  configure_snap_certificates
+  # Configure snap certificates if function is available
+  # (install-snap.sh may not be loaded in all contexts, e.g., tests)
+  if declare -f configure_snap_certificates &>/dev/null; then
+    configure_snap_certificates
+  fi
 
   return 0
 }

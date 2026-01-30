@@ -10,6 +10,14 @@
 set -uo pipefail
 
 # =============================================================================
+# TERMINAL REQUIREMENTS
+# =============================================================================
+# Whiptail requires TERM to be set. Default to 'dumb' for CI/non-interactive environments.
+if [[ -z "${TERM:-}" ]]; then
+  export TERM=dumb
+fi
+
+# =============================================================================
 # WHIPTAIL DIMENSIONS - Standardized for consistent UI
 # =============================================================================
 readonly WT_WIDTH=70

@@ -199,9 +199,6 @@ test:
         exit 1
     fi
     bats tests/
-    result=$?
-    # Exit 0 if no failures (bats returns 1 for skipped tests)
-    if [[ $result -le 1 ]]; then exit 0; else exit $result; fi
 
 # Setup test dependencies (bats libraries)
 [group('test')]
@@ -218,8 +215,6 @@ test-verbose:
         exit 1
     fi
     bats --verbose-run tests/
-    result=$?
-    if [[ $result -le 1 ]]; then exit 0; else exit $result; fi
 
 # Run specific test file
 [group('test')]
@@ -231,8 +226,6 @@ test-file file:
         exit 1
     fi
     bats "tests/{{file}}"
-    result=$?
-    if [[ $result -le 1 ]]; then exit 0; else exit $result; fi
 
 # Run tests matching a filter
 [group('test')]
@@ -244,8 +237,6 @@ test-filter filter:
         exit 1
     fi
     bats -f "{{filter}}" tests/
-    result=$?
-    if [[ $result -le 1 ]]; then exit 0; else exit $result; fi
 
 # ==================================================================================== #
 # INTERNAL
