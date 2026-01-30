@@ -645,6 +645,23 @@ display_configuration_summary() {
   return 0
 }
 
+# Brief: Ensure yq is available for configuration parsing
+# Params: None
+# Uses: install_mise, show_progress, die (functions)
+# Returns: 0 on success, dies on failure
+bootstrap_yq_for_configuration() {
+  if command -v yq &>/dev/null; then
+    return 0
+  fi
+
+  show_progress step "Bootstrapping yq for configuration"
+  install_mise || die "Failed to install mise for configuration"
+
+  if ! command -v yq &>/dev/null; then
+    die "yq not available after mise bootstrap"
+  fi
+}
+
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
 # Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, install_certificates, persist_devbase_repos (globals/functions)
@@ -739,6 +756,7 @@ main() {
   tui_blank_line
   run_preflight_checks || return 1
 
+  bootstrap_yq_for_configuration
   collect_user_configuration
   display_configuration_summary
 
