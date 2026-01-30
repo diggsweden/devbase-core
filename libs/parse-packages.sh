@@ -14,6 +14,20 @@
 
 set -uo pipefail
 
+# CRITICAL: yq is required for YAML parsing - fail fast if not available
+if ! command -v yq &>/dev/null; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "ERROR: yq is required but not installed!" >&2
+  echo "" >&2
+  echo "yq is needed to parse packages.yaml configuration." >&2
+  echo "This usually means mise failed to bootstrap yq." >&2
+  echo "" >&2
+  echo "To fix: Install yq manually or check mise installation:" >&2
+  echo "  mise install yq" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  return 1
+fi
+
 # Global: Path to packages.yaml (set by caller or default)
 PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"

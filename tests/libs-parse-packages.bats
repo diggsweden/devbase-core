@@ -78,6 +78,24 @@ EOF
 }
 
 # =============================================================================
+# yq requirement check
+# =============================================================================
+
+@test "parse-packages.sh fails with error when yq not available" {
+  local bash_path temp_bin
+  bash_path=$(command -v bash)
+
+  temp_bin="${TEST_DIR}/bin"
+  mkdir -p "$temp_bin"
+  ln -sf "$bash_path" "$temp_bin/bash"
+
+  run env PATH="$temp_bin" bash -c 'source "'"${DEVBASE_LIBS}"'/parse-packages.sh" 2>&1'
+
+  assert_failure
+  assert_output --partial "yq is required"
+}
+
+# =============================================================================
 # _get_merged_packages tests
 # =============================================================================
 
