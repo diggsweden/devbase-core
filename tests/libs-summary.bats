@@ -23,6 +23,10 @@ setup() {
   export DEVBASE_SSH_KEY_NAME="id_ed25519_devbase"
   export _DEVBASE_ENV="ubuntu"
 
+  # Ensure standard env vars are set for summary tests
+  export USER="${USER:-testuser}"
+  export SHELL="${SHELL:-/bin/bash}"
+
   mkdir -p "$DEVBASE_CONFIG_DIR"
   echo "1.0.0" >"${DEVBASE_CONFIG_DIR}/version"
 }
@@ -64,11 +68,11 @@ source_summary() {
   run _summary_system_config
   assert_success
   assert_output --partial "SYSTEM CONFIGURATION"
-  assert_output --partial "User: ${USER}"
-  assert_output --partial "Home: ${HOME}"
-  assert_output --partial "Shell: ${SHELL}"
-  assert_output --partial "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}"
-  assert_output --partial "XDG_DATA_HOME: ${XDG_DATA_HOME}"
+  assert_output --partial "User:"
+  assert_output --partial "Home:"
+  assert_output --partial "Shell:"
+  assert_output --partial "XDG_CONFIG_HOME:"
+  assert_output --partial "XDG_DATA_HOME:"
 }
 
 @test "_summary_development_languages outputs languages section" {

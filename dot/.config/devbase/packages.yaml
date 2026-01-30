@@ -17,6 +17,7 @@ core:
   common:
     # Essential utilities
     curl: {}
+    gettext: {} # provides envsubst
     git: {}
     unzip: {}
     wget: {}
