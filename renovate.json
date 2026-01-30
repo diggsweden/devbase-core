@@ -5,7 +5,8 @@
   ],
   "mise": {
     "managerFilePatterns": [
-      "/(^|/)dot/\\.config/mise/config\\.toml$/"
+      "/(^|/)dot/\\.config/mise/config\\.toml$/",
+      "/(^|/)\\.mise\\.toml$/"
     ]
   },
   "customManagers": [

@@ -99,9 +99,9 @@ DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}" # Java-specific no-proxy doma
 # Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 
-# TUI mode flag (set by bootstrap_gum based on gum availability)
-# Values: "gum", "whiptail", "basic"
-DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-}"
+# TUI mode flag (default: gum, can be overridden with --tui=whiptail)
+# Values: "gum", "whiptail" (or "none" for non-interactive mode)
+DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
 
 # ============================================================================
 # EXPORTED ENVIRONMENT VARIABLES (see docs/environment.adoc for details)
@@ -150,11 +150,11 @@ parse_arguments() {
     --tui=*)
       local tui_value="${arg#--tui=}"
       case "$tui_value" in
-      gum | whiptail | none)
+      gum | whiptail)
         DEVBASE_TUI_MODE="$tui_value"
         ;;
       *)
-        printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail, none\n" "$tui_value" >&2
+        printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail\n" "$tui_value" >&2
         exit 1
         ;;
       esac
@@ -164,7 +164,7 @@ parse_arguments() {
       printf "\n"
       printf "Options:\n"
       printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
-      printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail, none\n"
+      printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
       printf "  --help, -h         Show this help message\n"
       exit 0
       ;;
@@ -733,7 +733,7 @@ bootstrap_gum() {
 }
 
 # Brief: Determine which TUI mode to use and bootstrap if needed
-# Sets DEVBASE_TUI_MODE to: "gum", "whiptail", or "none"
+# Sets DEVBASE_TUI_MODE to: "gum", "whiptail" (or "none" for NON_INTERACTIVE)
 # Respects --tui=<mode> flag if set by parse_arguments()
 select_tui_mode() {
   # Non-interactive doesn't need TUI
@@ -742,56 +742,58 @@ select_tui_mode() {
     return 0
   fi
 
-  # If --tui flag was specified, use that mode (validate availability)
-  if [[ -n "${DEVBASE_TUI_MODE:-}" ]]; then
-    case "${DEVBASE_TUI_MODE}" in
-    gum)
-      if command -v gum &>/dev/null || bootstrap_gum; then
-        export DEVBASE_TUI_MODE="gum"
-        return 0
-      else
-        printf "Error: gum requested but not available and could not be installed\n" >&2
-        exit 1
-      fi
-      ;;
-    whiptail)
-      if command -v whiptail &>/dev/null; then
-        export DEVBASE_TUI_MODE="whiptail"
-        return 0
-      else
-        printf "Error: whiptail requested but not installed\n" >&2
-        printf "Install with: sudo apt-get install whiptail\n" >&2
-        exit 1
-      fi
-      ;;
-    none)
-      export DEVBASE_TUI_MODE="none"
+  # Handle explicit --tui=whiptail request (no fallback)
+  if [[ "${DEVBASE_TUI_MODE}" == "whiptail" ]]; then
+    if command -v whiptail &>/dev/null; then
+      export DEVBASE_TUI_MODE="whiptail"
       return 0
-      ;;
-    esac
+    else
+      printf "Error: whiptail requested but not installed.\n" >&2
+      case "${_DEVBASE_ENV:-ubuntu}" in
+      fedora)
+        printf "Install with: sudo dnf install newt\n" >&2
+        ;;
+      *)
+        printf "Install with: sudo apt-get install whiptail\n" >&2
+        ;;
+      esac
+      exit 1
+    fi
   fi
 
-  # Auto-detect: Try gum first (best experience)
-  if bootstrap_gum; then
-    export DEVBASE_TUI_MODE="gum"
-    return 0
+  # Handle --tui=gum (default) - try gum, fall back to whiptail
+  if [[ "${DEVBASE_TUI_MODE}" == "gum" ]]; then
+    if command -v gum &>/dev/null || bootstrap_gum; then
+      export DEVBASE_TUI_MODE="gum"
+      return 0
+    fi
+
+    # Gum failed - fall back to whiptail
+    if command -v whiptail &>/dev/null; then
+      show_progress info "Using whiptail as TUI (gum not available)"
+      export DEVBASE_TUI_MODE="whiptail"
+      return 0
+    fi
   fi
 
-  # Fall back to whiptail (should always be available on Ubuntu/Debian)
-  if command -v whiptail &>/dev/null; then
-    export DEVBASE_TUI_MODE="whiptail"
-    return 0
-  fi
-
-  # Neither available - error out
+  # Neither available - exit with helpful message
+  printf "\n"
+  printf "Error: No TUI component available.\n" >&2
+  printf "\n" >&2
+  printf "devbase requires either 'gum' or 'whiptail' for the interactive installer.\n" >&2
+  printf "\n" >&2
   case "${_DEVBASE_ENV:-ubuntu}" in
   fedora)
-    printf "Error: No TUI available. Install whiptail: sudo dnf install newt\n" >&2
+    printf "Install whiptail with:\n" >&2
+    printf "  sudo dnf install newt\n" >&2
     ;;
   *)
-    printf "Error: No TUI available. Install whiptail: sudo apt-get install whiptail\n" >&2
+    printf "Install whiptail with:\n" >&2
+    printf "  sudo apt-get install whiptail\n" >&2
     ;;
   esac
+  printf "\n" >&2
+  printf "Then run this script again.\n" >&2
   exit 1
 }
 
