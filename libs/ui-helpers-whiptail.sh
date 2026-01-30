@@ -12,9 +12,10 @@ set -uo pipefail
 # =============================================================================
 # TERMINAL REQUIREMENTS
 # =============================================================================
-# Whiptail requires TERM to be set. Default to 'dumb' for CI/non-interactive environments.
+# Whiptail requires TERM to be set. Default to 'xterm' for CI/non-interactive environments.
+# (dumb terminal type doesn't support whiptail's screen positioning)
 if [[ -z "${TERM:-}" ]]; then
-  export TERM=dumb
+  export TERM=xterm
 fi
 
 # =============================================================================
@@ -70,7 +71,7 @@ _wt_start_persistent_gauge() {
 
   # Start gauge in background, reading from FIFO
   # The gauge expects lines of: "XXX\n<percent>\n<message>\nXXX\n"
-  tail -f "$_WT_GAUGE_FIFO" 2>/dev/null | TERM="${TERM:-dumb}" whiptail --backtitle "$WT_BACKTITLE" \
+  tail -f "$_WT_GAUGE_FIFO" 2>/dev/null | TERM="${TERM:-xterm}" whiptail --backtitle "$WT_BACKTITLE" \
     --title "$title" --gauge "Initializing..." $WT_GAUGE_HEIGHT $WT_WIDTH 0 &
   _WT_GAUGE_PID=$!
 
@@ -132,10 +133,11 @@ _wt_clear_log() {
 # =============================================================================
 
 # Brief: Wrapper to ensure TERM is set before calling whiptail
-# Whiptail requires TERM; default to 'dumb' for CI/non-interactive environments
+# Whiptail requires TERM; default to 'xterm' for CI/non-interactive environments
+# (dumb terminal type doesn't support whiptail's screen positioning)
 # Params: $@ - all arguments passed to whiptail
 _wt() {
-  TERM="${TERM:-dumb}" whiptail "$@"
+  TERM="${TERM:-xterm}" whiptail "$@"
 }
 
 # Brief: Show a whiptail infobox (non-blocking status message)
@@ -370,7 +372,7 @@ _wt_run_with_spinner() {
         sleep 0.5
       done
       echo "100"
-    ) | TERM="${TERM:-dumb}" whiptail --backtitle "$WT_BACKTITLE" --title "Installing" \
+    ) | TERM="${TERM:-xterm}" whiptail --backtitle "$WT_BACKTITLE" --title "Installing" \
       --gauge "$description..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
   fi
 
