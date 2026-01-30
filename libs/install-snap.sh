@@ -158,11 +158,11 @@ snap_install() {
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     if [[ -n "$snap_options" ]]; then
       # shellcheck disable=SC2086
-      gum spin --spinner dot --title "Installing snap: $snap_name..." -- \
+      gum spin --spinner dot --show-error --title "Installing snap: $snap_name..." -- \
         sudo snap install "$snap_name" $snap_options
       install_result=$?
     else
-      gum spin --spinner dot --title "Installing snap: $snap_name..." -- \
+      gum spin --spinner dot --show-error --title "Installing snap: $snap_name..." -- \
         sudo snap install "$snap_name"
       install_result=$?
     fi
@@ -355,7 +355,7 @@ flatpak_install() {
   # Install with gum spinner or whiptail
   local install_result
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --title "Installing flatpak: $app_id..." -- \
+    gum spin --spinner dot --show-error --title "Installing flatpak: $app_id..." -- \
       flatpak install -y --user "$remote" "$app_id"
     install_result=$?
   else

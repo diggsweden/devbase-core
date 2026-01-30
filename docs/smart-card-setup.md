@@ -35,7 +35,16 @@ Follow the Citrix installation prompts. When complete, smart card support will b
 
 DevBase installs Firefox from Mozilla's APT repository (not Ubuntu's snap) because the snap version has AppArmor restrictions that prevent smart card access.
 
-If Firefox was launched before running this command, the profile already exists and configuration is automatic. Otherwise:
+### Automatic Configuration
+
+During DevBase setup, Firefox's OpenSC configuration is attempted automatically after Firefox is installed. However, it will be **skipped** if:
+
+- **No Firefox profile exists yet** (Firefox has never been launched)
+- **OpenSC is not installed** (not in your selected package packs)
+
+### Manual Configuration
+
+If the automatic configuration was skipped, run the command manually:
 
 ```bash
 # Launch Firefox once to create a profile
