@@ -90,7 +90,7 @@ jq = "jq-1.8.1"
 
 # Code quality and formatting
 "aqua:google/yamlfmt" = "v0.20.0"
-"aqua:rhysd/actionlint" = "v1.7.9"
+"aqua:rhysd/actionlint" = "v1.7.10"
 "github:pmd/pmd" = "pmd_releases/7.17.0"
 "aqua:hadolint/hadolint" = "v2.14.0"
 "aqua:koalaman/shellcheck" = "v0.11.0"
