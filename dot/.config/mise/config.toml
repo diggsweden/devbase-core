@@ -71,7 +71,7 @@ jq = "jq-1.8.1"
 "aqua:eza-community/eza" = "v0.23.4"
 "aqua:sharkdp/bat" = "v0.26.1"
 "aqua:sharkdp/vivid" = "v0.10.1"
-"aqua:starship/starship" = "v1.24.1"
+"aqua:starship/starship" = "v1.24.2"
 "aqua:zellij-org/zellij" = "v0.43.1"
 
 # Git and development tools
