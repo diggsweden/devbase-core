@@ -42,8 +42,27 @@ migrate_legacy_package_files() {
   return 0
 }
 
+# Brief: Remove legacy mise yq install (non-aqua backend)
+# Context: Devbase now pins yq via aqua:mikefarah/yq; remove old mise yq to avoid duplicates
+# Returns: 0 always (cleanup is best-effort)
+migrate_mise_yq_backend() {
+  if ! command -v mise &>/dev/null; then
+    return 0
+  fi
+
+  if mise list --installed yq >/dev/null 2>&1; then
+    if mise uninstall yq >/dev/null 2>&1; then
+      if declare -f show_progress &>/dev/null; then
+        show_progress info "Removed legacy mise yq (non-aqua backend)"
+      fi
+    fi
+  fi
+  return 0
+}
+
 # Brief: Run all migrations
 # Context: Called during setup.sh to ensure clean state
 run_migrations() {
   migrate_legacy_package_files
+  migrate_mise_yq_backend
 }

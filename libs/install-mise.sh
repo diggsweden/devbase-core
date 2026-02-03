@@ -167,8 +167,9 @@ install_mise() {
   # yq: needed by parse-packages.sh for YAML parsing
   # just: task runner used by devbase
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
+    local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
-    if ! "$mise_path" install yq --yes; then
+    if ! "$mise_path" install "$yq_tool" --yes; then
       die "Failed to bootstrap yq via mise"
     fi
     show_progress info "Checking yq availability after bootstrap..."
@@ -176,7 +177,7 @@ install_mise() {
 
     if ! command -v yq &>/dev/null; then
       local yq_path
-      yq_path=$($mise_path which yq 2>/dev/null || true)
+      yq_path=$($mise_path which "$yq_tool" 2>/dev/null || true)
       if [[ -n "$yq_path" ]]; then
         export PATH="$(dirname "$yq_path"):${PATH}"
       fi

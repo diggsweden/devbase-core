@@ -697,7 +697,7 @@ process_maven_templates() {
 _process_maven_yaml_check_yq() {
   if ! command -v yq &>/dev/null; then
     show_progress warning "yq not found, skipping Maven configuration"
-    show_progress info "Install with: mise install yq"
+    show_progress info "Install with: mise install aqua:mikefarah/yq"
     return 1
   fi
 

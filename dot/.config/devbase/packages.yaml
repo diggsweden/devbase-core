@@ -127,7 +127,7 @@ core:
     # Build tools
     just: {backend: "aqua:casey/just", version: "1.44.0"} # renovate: datasource=github-releases depName=casey/just
     jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
-    yq: {backend: "aqua:mikefarah/yq", version: "v4.49.2"} # renovate: datasource=github-releases depName=mikefarah/yq
+    yq: {backend: "aqua:mikefarah/yq", version: "v4.50.1"} # renovate: datasource=github-releases depName=mikefarah/yq
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
     # Shell enhancements
     fzf: {backend: "aqua:junegunn/fzf", version: "v0.67.0"} # renovate: datasource=github-releases depName=junegunn/fzf

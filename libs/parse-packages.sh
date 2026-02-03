@@ -23,7 +23,7 @@ if ! command -v yq &>/dev/null; then
   echo "This usually means mise failed to bootstrap yq." >&2
   echo "" >&2
   echo "To fix: Install yq manually or check mise installation:" >&2
-  echo "  mise install yq" >&2
+  echo "  mise install aqua:mikefarah/yq" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   return 1
 fi
