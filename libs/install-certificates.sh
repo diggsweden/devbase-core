@@ -21,32 +21,56 @@ install_certificates() {
 
   local cert_src="${_DEVBASE_CUSTOM_CERTS}"
 
-  local cert_count
-  cert_count=$(find "${cert_src}" -maxdepth 1 -name "*.crt" -type f 2>/dev/null | wc -l)
+  local cert_files=()
+  while IFS= read -r -d '' cert; do
+    cert_files+=("$cert")
+  done < <(find "${cert_src}" -maxdepth 1 -name "*.crt" -type f -print0 2>/dev/null)
+
+  local cert_count=${#cert_files[@]}
   [[ $cert_count -eq 0 ]] && return 0
 
   show_progress info "Found $cert_count certificate(s) in custom config"
 
+  local valid_certs=()
+  local skipped=0
+  local invalid_certs=()
+  for cert in "${cert_files[@]}"; do
+    if ! openssl x509 -in "$cert" -noout 2>/dev/null; then
+      skipped=$((skipped + 1))
+      invalid_certs+=("$(basename "$cert")")
+      continue
+    fi
+    valid_certs+=("$cert")
+  done
+
+  if [[ ${#valid_certs[@]} -eq 0 ]]; then
+    if [[ ${#invalid_certs[@]} -gt 0 ]]; then
+      show_progress warning "Invalid certificates skipped: ${invalid_certs[*]}"
+    fi
+    show_progress warning "No valid certificates to install"
+    return 0
+  fi
+
+  if ! sudo -n true 2>/dev/null; then
+    show_progress info "Sudo access required to install certificates"
+    if ! sudo -v; then
+      show_progress error "Sudo access denied - cannot install certificates"
+      return 1
+    fi
+  fi
+
   local newly_installed=0
   local already_exists=0
   local updated=0
-  local skipped=0
+  local skipped=$skipped
   local domains_configured=0
 
-  for cert in "${cert_src}"/*.crt; do
-    [[ -f "$cert" ]] || continue
+  for cert in "${valid_certs[@]}"; do
 
     local cert_name
     cert_name=$(basename "$cert")
     local cert_basename="${cert_name%.crt}"
     local target_cert="/usr/local/share/ca-certificates/${cert_name}"
-
-    # Validate certificate format
-    if ! openssl x509 -in "$cert" -noout 2>/dev/null; then
-      skipped=$((skipped + 1))
-      [[ "$DEVBASE_DEBUG" == "1" ]] && echo "    Invalid certificate format: $cert_name"
-      continue
-    fi
 
     # Check if certificate already exists and compare
     if [[ -f "$target_cert" ]]; then

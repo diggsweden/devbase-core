@@ -671,14 +671,14 @@ bootstrap_gum() {
     cp "${cache_dir}/${package_name}" "$gum_pkg"
   else
     # Download gum
-    if ! curl -fsSL "$gum_url" -o "$gum_pkg" 2>/dev/null; then
+    if ! curl -fL --progress-bar "$gum_url" -o "$gum_pkg" 2>/dev/null; then
       show_progress warning "Could not find TUI component gum (download failed), using whiptail as backup"
       return 1
     fi
 
     # Fetch and verify checksum
     local expected_checksum
-    expected_checksum=$(curl -fsSL "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}')
+    expected_checksum=$(curl -fL --progress-bar "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}')
 
     if [[ -n "$expected_checksum" ]] && [[ ${#expected_checksum} -eq 64 ]]; then
       local actual_checksum
@@ -922,8 +922,12 @@ main() {
   load_environment_configuration
   configure_proxy_settings
 
+  # Install certificates before any downloads (gum/mise) to avoid TLS issues
+  install_certificates
+
   # Bootstrap TUI early (needs network for gum download)
   # This enables gum/whiptail for all subsequent UI
+  show_progress info "Preparing installer UI..."
   select_tui_mode
 
   # Now show welcome and run checks using TUI

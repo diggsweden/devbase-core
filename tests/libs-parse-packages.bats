@@ -241,6 +241,9 @@ EOF
   unset WSL_DISTRO_NAME WSL_INTEROP
   _MERGED_YAML=""
   source "${DEVBASE_LIBS}/parse-packages.sh"
+  # shellcheck disable=SC2329
+  is_wsl() { return 1; }
+  export -f is_wsl
   
   run get_apt_packages
   
@@ -260,6 +263,9 @@ EOF
   unset WSL_DISTRO_NAME WSL_INTEROP
   _MERGED_YAML=""
   source "${DEVBASE_LIBS}/parse-packages.sh"
+  # shellcheck disable=SC2329
+  is_wsl() { return 1; }
+  export -f is_wsl
   
   run get_snap_packages
   

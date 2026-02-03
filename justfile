@@ -91,6 +91,7 @@ tools-update: _ensure-devtools
 [group('verify')]
 verify: _ensure-devtools
     @{{devtools_dir}}/scripts/verify.sh
+    @just test
 
 # Verify devbase installation
 [group('verify')]
@@ -198,6 +199,10 @@ test:
         printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
         exit 1
     fi
+    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
+        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
     bats tests/
 
 # Setup test dependencies (bats libraries)
@@ -214,6 +219,10 @@ test-verbose:
         printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
         exit 1
     fi
+    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
+        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
     bats --verbose-run tests/
 
 # Run specific test file
@@ -225,6 +234,10 @@ test-file file:
         printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
         exit 1
     fi
+    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
+        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
     bats "tests/{{file}}"
 
 # Run tests matching a filter
@@ -234,6 +247,10 @@ test-filter filter:
     set -uo pipefail
     if ! command -v bats &>/dev/null; then
         printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
+    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
+        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
         exit 1
     fi
     bats -f "{{filter}}" tests/

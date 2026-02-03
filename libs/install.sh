@@ -645,16 +645,12 @@ display_configuration_summary() {
   return 0
 }
 
-# Brief: Ensure yq is available for configuration parsing
+# Brief: Bootstrap tooling needed for configuration parsing
 # Params: None
 # Uses: install_mise, show_progress, die (functions)
 # Returns: 0 on success, dies on failure
-bootstrap_yq_for_configuration() {
-  if command -v yq &>/dev/null; then
-    return 0
-  fi
-
-  show_progress step "Bootstrapping yq for configuration"
+bootstrap_for_configuration() {
+  show_progress step "Bootstrapping configuration tooling"
   install_mise || die "Failed to install mise for configuration"
 
   if ! command -v yq &>/dev/null; then
@@ -664,9 +660,9 @@ bootstrap_yq_for_configuration() {
 
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
-# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, install_certificates, persist_devbase_repos (globals/functions)
+# Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, persist_devbase_repos (globals/functions)
 # Returns: 0 always (dies on failure)
-# Side-effects: Prompts for sudo password, installs certs, clones repos, creates user directories, configures sudo for proxy
+# Side-effects: Prompts for sudo password, clones repos, creates user directories, configures sudo for proxy
 prepare_system() {
   # PHASE 1: System Preparation (first actual changes)
   # Sudo access was already obtained in run_preflight_checks
@@ -690,13 +686,8 @@ prepare_system() {
     fi
   fi
 
-  # Install certificates FIRST - required for git clone to custom registries
-  # Must happen before persist_devbase_repos which may clone from internal git servers
-  show_phase "Installing certificates..."
-  install_certificates || die "Failed to install certificates"
-
   # Persist devbase repos to ~/.local/share/devbase/ for update support
-  # Done after certs so git can trust custom registry SSL certificates
+  # Certificates are installed earlier to allow trusted cloning
   persist_devbase_repos || show_progress warning "Could not persist devbase repos (continuing)"
 
   ensure_user_dirs
@@ -710,7 +701,7 @@ prepare_system() {
 # Returns: 0 always
 # Side-effects: Installs tools, applies configs, runs custom hooks
 perform_installation() {
-  # Note: Certificates are installed in prepare_system() before this function
+  # Note: Certificates are installed early in setup.sh before downloads
   # Export NODE_EXTRA_CA_CERTS to ensure npm/mise respect custom certificates
   if [[ -f "/etc/ssl/certs/ca-certificates.crt" ]]; then
     export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/ca-certificates.crt"
@@ -752,11 +743,11 @@ main() {
   setup_installation_paths
 
   # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token)
-  # Note: Sudo check happens later in prepare_system() to avoid timeout issues
+  # Note: Sudo access is acquired in run_preflight_checks
   tui_blank_line
   run_preflight_checks || return 1
 
-  bootstrap_yq_for_configuration
+  bootstrap_for_configuration
   collect_user_configuration
   display_configuration_summary
 

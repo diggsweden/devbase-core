@@ -241,6 +241,7 @@ SCRIPT
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
     is_wsl() { return 1; }
+    get_distro() { echo 'ubuntu'; }
     detect_environment >/dev/null 2>&1
     echo \"\$_DEVBASE_ENV\"
   "
