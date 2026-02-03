@@ -185,7 +185,7 @@ core:
     lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
     nerd_fonts: {version: "v3.4.0", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
     oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom depName=openshift/oc
-    k3s: {version: "v1.35.0+k3s1", installer: "install_k3s", tags: ["@optional", "@skip-wsl"]} # renovate: datasource=github-releases depName=k3s-io/k3s
+    k3s: {version: "v1.35.0+k3s1", installer: "install_k3s", tags: ["@optional"]} # renovate: datasource=github-releases depName=k3s-io/k3s
     vscode: {version: "1.107.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
 
   # VS Code extensions (distro-agnostic)

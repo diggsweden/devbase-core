@@ -509,6 +509,11 @@ install_k3s() {
   # Ensure parser is set up and TOOL_VERSIONS populated
   _setup_custom_parser
 
+  if [[ -z "${TOOL_VERSIONS[k3s]:-}" ]]; then
+    show_progress info "k3s not configured - skipping"
+    return 0
+  fi
+
   if command -v k3s &>/dev/null; then
     show_progress info "k3s already installed - skipping"
     return 0
@@ -543,6 +548,11 @@ install_fisher() {
 
   # Ensure parser is set up and TOOL_VERSIONS populated
   _setup_custom_parser
+
+  if [[ -z "${TOOL_VERSIONS[fisher]:-}" ]]; then
+    show_progress info "Fisher not configured - skipping"
+    return 0
+  fi
 
   show_progress info "Installing Fisher (Fish plugin manager)..."
 
@@ -1249,6 +1259,11 @@ install_intellij_idea() {
 
   if [[ "$DEVBASE_INSTALL_INTELLIJ" != "true" ]]; then
     show_progress info "IntelliJ IDEA installation skipped by user preference"
+    return 0
+  fi
+
+  if [[ -z "${TOOL_VERSIONS[intellij_idea]:-}" ]]; then
+    show_progress info "IntelliJ IDEA not configured - skipping"
     return 0
   fi
 
