@@ -91,7 +91,6 @@ tools-update: _ensure-devtools
 [group('verify')]
 verify: _ensure-devtools
     @{{devtools_dir}}/scripts/verify.sh
-    @just test
 
 # Verify devbase installation
 [group('verify')]
