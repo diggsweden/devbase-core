@@ -127,7 +127,7 @@ core:
     # Build tools
     just: {backend: "aqua:casey/just", version: "1.44.0"} # renovate: datasource=github-releases depName=casey/just
     jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
-    yq: {backend: "aqua:mikefarah/yq", version: "v4.50.1"} # renovate: datasource=github-releases depName=mikefarah/yq
+    yq: {backend: "aqua:mikefarah/yq", version: "v4.49.2"} # renovate: datasource=github-releases depName=mikefarah/yq
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
     # Shell enhancements
     fzf: {backend: "aqua:junegunn/fzf", version: "v0.67.0"} # renovate: datasource=github-releases depName=junegunn/fzf
@@ -178,14 +178,14 @@ core:
 
   # Custom installers (distro-agnostic, installers handle deb/rpm)
   custom:
-    mise: {version: "v2025.9.20", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
+    mise: {version: "v2026.2.1", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
     gum: {version: "0.17.0", installer: "install_gum"} # renovate: datasource=github-releases depName=charmbracelet/gum
-    fisher: {version: "4.4.5", installer: "install_fisher"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
+    fisher: {version: "4.4.8", installer: "install_fisher"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
     fzf_fish: {version: "v10.3", installer: "install_fzf_fish"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
     lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
     nerd_fonts: {version: "v3.4.0", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
     oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom depName=openshift/oc
-    k3s: {version: "v1.32.4+k3s1", installer: "install_k3s", tags: ["@optional", "@skip-wsl"]} # renovate: datasource=github-releases depName=k3s-io/k3s
+    k3s: {version: "v1.35.0+k3s1", installer: "install_k3s", tags: ["@optional", "@skip-wsl"]} # renovate: datasource=github-releases depName=k3s-io/k3s
     vscode: {version: "1.107.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
 
   # VS Code extensions (distro-agnostic)
