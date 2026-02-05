@@ -175,21 +175,6 @@ install_mise() {
     "$mise_path" trust "${DEVBASE_ROOT}/.mise.toml" 2>/dev/null || true
   fi
 
-  # Activate mise for current shell session
-  # This sets up PATH and environment properly
-  if [[ -x "$mise_path" ]]; then
-    # Ensure PROMPT_COMMAND is set to avoid unbound variable error with set -u
-    : "${PROMPT_COMMAND:=}"
-    eval "$("$mise_path" activate bash)"
-  else
-    die "Mise binary exists but is not executable at $mise_path (permissions: $(ls -l "$mise_path" 2>&1))"
-  fi
-
-  # Verify mise is now in PATH
-  if ! command -v mise &>/dev/null; then
-    die "Mise installation failed - not found in PATH after activation"
-  fi
-
   # Bootstrap essential tools early - required before full tool installation
   # yq: needed by parse-packages.sh for YAML parsing
   # just: task runner used by devbase
@@ -200,7 +185,6 @@ install_mise() {
       die "Failed to bootstrap yq via mise"
     fi
     show_progress info "Checking yq availability after bootstrap..."
-    eval "$($mise_path activate bash)"
 
     if ! command -v yq &>/dev/null; then
       local yq_path
@@ -220,39 +204,49 @@ install_mise() {
     fi
   fi
 
+  # Generate mise config before activation to avoid stale tool warnings
+  # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
+
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    show_progress info "Using custom package overrides"
+  fi
+
+  if [[ -f "$PACKAGES_YAML" ]]; then
+    if ! declare -f generate_mise_config &>/dev/null; then
+      # shellcheck source=parse-packages.sh
+      source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
+    fi
+
+    local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
+    mkdir -p "$(dirname "$mise_config")"
+    generate_mise_config "$mise_config"
+    show_progress info "Generated mise config from packages.yaml"
+  fi
+
+  # Activate mise for current shell session
+  # This sets up PATH and environment properly
+  if [[ -x "$mise_path" ]]; then
+    # Ensure PROMPT_COMMAND is set to avoid unbound variable error with set -u
+    : "${PROMPT_COMMAND:=}"
+    eval "$("$mise_path" activate bash)"
+  else
+    die "Mise binary exists but is not executable at $mise_path (permissions: $(ls -l "$mise_path" 2>&1))"
+  fi
+
+  # Verify mise is now in PATH
+  if ! command -v mise &>/dev/null; then
+    die "Mise installation failed - not found in PATH after activation"
+  fi
+
   show_progress success "Mise ready at $mise_path"
 }
 
 install_mise_tools() {
   show_progress info "Installing development tools..."
   tui_blank_line
-
-  # Generate mise config from packages.yaml
-  # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    die "Package configuration not found: $PACKAGES_YAML"
-  fi
-
-  # Source parser if not already loaded
-  if ! declare -f generate_mise_config &>/dev/null; then
-    # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
-  fi
-
-  # Generate mise config.toml from packages.yaml
-  local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
-  mkdir -p "$(dirname "$mise_config")"
-  generate_mise_config "$mise_config"
-  show_progress info "Generated mise config from packages.yaml"
 
   # Trust the config files (both user config and devbase-core root)
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
