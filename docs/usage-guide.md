@@ -200,6 +200,16 @@ devbase-theme gruvbox-light
 
 Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows Terminal (WSL), Ghostty (Linux), VSCode
 
+**devbase-update** - Update DevBase core and re-run setup:
+
+```bash
+# Update to latest tag
+devbase-update
+
+# Update to a specific ref (branch, tag, or SHA)
+devbase-update --ref feat/misc-fixes
+```
+
 **Theme Provenance:**
 
 | Tool | Theme Source | Notes |

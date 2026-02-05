@@ -38,6 +38,7 @@ run_fish_update() {
   
   assert_success
   assert_output --partial "Usage:"
+  assert_output --partial "--ref"
   assert_output --partial "--check"
   assert_output --partial "--version"
 }
@@ -493,6 +494,102 @@ SCRIPT
   # Verify checkout was called
   run cat "${TEST_DIR}/logs/git_calls.log"
   assert_output --partial "checkout"
+}
+
+@test "devbase-update --ref uses requested git ref" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  cat > "$core_dir/setup.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "Setup completed"
+exit 0
+SCRIPT
+  chmod +x "$core_dir/setup.sh"
+
+  mkdir -p "${TEST_DIR}/bin"
+  mkdir -p "${TEST_DIR}/logs"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/logs/git_calls.log"
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123\trefs/tags/v1.0.0"
+  echo "def456\trefs/tags/v2.0.0"
+  exit 0
+fi
+if [[ "\$*" == *"checkout"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"stash"* ]]; then
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --ref feature/test-branch
+  " </dev/null
+
+  assert_success
+
+  run cat "${TEST_DIR}/logs/git_calls.log"
+  assert_output --partial "fetch --depth 1 origin feature/test-branch"
+  assert_output --partial "checkout feature/test-branch"
+}
+
+@test "devbase-update --ref=<ref> uses requested git ref" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  cat > "$core_dir/setup.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "Setup completed"
+exit 0
+SCRIPT
+  chmod +x "$core_dir/setup.sh"
+
+  mkdir -p "${TEST_DIR}/bin"
+  mkdir -p "${TEST_DIR}/logs"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/logs/git_calls.log"
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123\trefs/tags/v1.0.0"
+  echo "def456\trefs/tags/v2.0.0"
+  exit 0
+fi
+if [[ "\$*" == *"checkout"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"stash"* ]]; then
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --ref=feature/test-sha
+  " </dev/null
+
+  assert_success
+
+  run cat "${TEST_DIR}/logs/git_calls.log"
+  assert_output --partial "fetch --depth 1 origin feature/test-sha"
+  assert_output --partial "checkout feature/test-sha"
 }
 
 @test "devbase-update --check returns update info without performing update" {

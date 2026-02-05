@@ -60,9 +60,37 @@ migrate_mise_yq_backend() {
   return 0
 }
 
+# Brief: Remove legacy fish mise hook pointing to /usr/bin/mise
+# Context: apt-installed mise adds fish hook scripts that hardcode /usr/bin/mise
+# Returns: 0 always (cleanup is best-effort)
+migrate_mise_fish_hook() {
+  local removed=0
+  local fish_files=(
+    "$HOME/.config/fish/functions/fish_command_not_found.fish"
+    "$HOME/.config/fish/conf.d/mise.fish"
+  )
+
+  for file in "${fish_files[@]}"; do
+    if [[ -f "$file" ]] && grep -q "/usr/bin/mise" "$file" 2>/dev/null; then
+      rm -f "$file"
+      ((removed++))
+      if declare -f show_progress &>/dev/null; then
+        show_progress info "Removed legacy fish mise hook: ${file}"
+      fi
+    fi
+  done
+
+  if [[ $removed -gt 0 ]] && declare -f show_progress &>/dev/null; then
+    show_progress success "Cleaned up legacy fish mise hooks"
+  fi
+
+  return 0
+}
+
 # Brief: Run all migrations
 # Context: Called during setup.sh to ensure clean state
 run_migrations() {
   migrate_legacy_package_files
   migrate_mise_yq_backend
+  migrate_mise_fish_hook
 }

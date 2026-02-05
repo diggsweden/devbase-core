@@ -153,28 +153,36 @@ function __devbase_update_check_custom --description "Check if custom config upd
     return 0
 end
 
-function __devbase_update_core --description "Update core to latest version"
-    # Get latest tag (supports vX.Y.Z, alpha-N, beta-N, rc-N)
-    set -l latest (__devbase_update_get_latest_tag "$CORE_REMOTE")
+function __devbase_update_core --description "Update core to latest version or ref"
+    set -l ref "$argv[1]"
+    set -l target ""
 
-    __devbase_update_print_info "Updating core to $latest..."
+    if test -n "$ref"
+        set target "$ref"
+    else
+        # Get latest tag (supports vX.Y.Z, alpha-N, beta-N, rc-N)
+        set target (__devbase_update_get_latest_tag "$CORE_REMOTE")
+    end
 
-    # Fetch the specific tag (shallow)
-    git -C "$__devbase_core_dir" fetch --depth 1 origin tag "$latest" --quiet 2>/dev/null; \
-        or git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet
+    __devbase_update_print_info "Updating core to $target..."
+
+    # Fetch the target (branch, tag, or SHA)
+    if not git -C "$__devbase_core_dir" fetch --depth 1 origin "$target" --quiet 2>/dev/null
+        git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet
+    end
 
     # Stash any local changes
     git -C "$__devbase_core_dir" stash --quiet 2>/dev/null; or true
 
-    # Checkout the new version
-    git -C "$__devbase_core_dir" checkout "$latest" --quiet
+    # Checkout the target ref
+    git -C "$__devbase_core_dir" checkout "$target" --quiet
 
     # Trust mise config to avoid trust prompt during setup
     if command -q mise; and test -f "$__devbase_core_dir/.mise.toml"
         mise trust "$__devbase_core_dir/.mise.toml"
     end
 
-    __devbase_update_print_success "Core updated to $latest"
+    __devbase_update_print_success "Core updated to $target"
 end
 
 function __devbase_update_custom --description "Update custom config to latest"
@@ -245,6 +253,11 @@ function __devbase_update_show_version --description "Show current version info"
 end
 
 function __devbase_update_do_update --description "Perform the update"
+    set -l target_ref "$argv[1]"
+    set -l force_ref false
+    if test -n "$target_ref"
+        set force_ref true
+    end
     if not __devbase_update_get_core_info
         __devbase_update_print_error "Core repo not found at $__devbase_core_dir"
         __devbase_update_print_info "Run devbase setup.sh first to install"
@@ -261,25 +274,32 @@ function __devbase_update_do_update --description "Perform the update"
     set -l core_check_failed false
     set -l custom_check_failed false
 
-    # Check for core updates
-    # Return 0 = check succeeded, output = update available
-    # Return 1 = check failed (network error, etc.)
-    if set core_msg (__devbase_update_check_core)
-        if test -n "$core_msg"
-            set update_core true
-        end
+    if test "$force_ref" = true
+        set update_core true
+        set core_msg "devbase-core: $CORE_TAG → $target_ref"
     else
-        set core_check_failed true
+        # Check for core updates
+        # Return 0 = check succeeded, output = update available
+        # Return 1 = check failed (network error, etc.)
+        if set core_msg (__devbase_update_check_core)
+            if test -n "$core_msg"
+                set update_core true
+            end
+        else
+            set core_check_failed true
+        end
     end
 
     # Check for custom updates
-    if test -d "$__devbase_custom_dir/.git"
-        if set custom_msg (__devbase_update_check_custom)
-            if test -n "$custom_msg"
-                set update_custom true
+    if test "$force_ref" = false
+        if test -d "$__devbase_custom_dir/.git"
+            if set custom_msg (__devbase_update_check_custom)
+                if test -n "$custom_msg"
+                    set update_custom true
+                end
+            else
+                set custom_check_failed true
             end
-        else
-            set custom_check_failed true
         end
     end
 
@@ -294,13 +314,19 @@ function __devbase_update_do_update --description "Perform the update"
 
     # Show what's available
     echo ""
-    echo "Updates available:"
+    if test "$force_ref" = true
+        echo "Requested core update:"
+    else
+        echo "Updates available:"
+    end
     test -n "$core_msg"; and echo "  • $core_msg"
     test -n "$custom_msg"; and echo "  • $custom_msg"
     echo ""
 
-    # Prompt user (unless non-interactive)
-    if isatty stdin
+    # Prompt user (unless non-interactive or ref forced)
+    if test "$force_ref" = true
+        __devbase_update_print_info "Updating core to requested ref"
+    else if isatty stdin
         read -P "Proceed with update? [y/N] " -n 1 response
         echo
         if not string match -qi 'y' -- $response
@@ -313,7 +339,7 @@ function __devbase_update_do_update --description "Perform the update"
 
     # Perform updates
     if test "$update_core" = true
-        __devbase_update_core
+        __devbase_update_core "$target_ref"
     end
 
     if test "$update_custom" = true
@@ -341,6 +367,7 @@ function __devbase_update_usage --description "Show usage information"
     echo "Check for and apply DevBase updates."
     echo ""
     echo "Options:"
+    echo "  --ref <ref>  Update core to a specific git ref (branch, tag, or SHA)"
     echo "  --check     Check for updates without prompting (for shell integration)"
     echo "  --version   Show current version information"
     echo "  --help      Show this help message"
@@ -353,18 +380,60 @@ function __devbase_update_usage --description "Show usage information"
 end
 
 function devbase-update --description "Check for and apply DevBase updates"
-    switch "$argv[1]"
-        case --check
-            __devbase_update_check_only
-        case --version -v
-            __devbase_update_show_version
-        case --help -h
-            __devbase_update_usage
-        case ''
-            __devbase_update_do_update
-        case '*'
-            __devbase_update_print_error "Unknown option: $argv[1]"
+    set -l ref ""
+    set -l mode ""
+
+    for arg in $argv
+        switch $arg
+            case --ref
+                if test -n "$ref"
+                    continue
+                end
+                set mode "ref"
+            case --check
+                set mode "check"
+            case --version -v
+                set mode "version"
+            case --help -h
+                set mode "help"
+            case '*'
+                if string match -qr '^--ref=' -- $arg
+                    set ref (string replace -r '^--ref=' '' -- $arg)
+                    set mode "ref"
+                else if test "$mode" = "ref" -a -z "$ref"
+                    set ref "$arg"
+                else
+                    __devbase_update_print_error "Unknown option: $arg"
+                    __devbase_update_usage
+                    return 1
+                end
+        end
+    end
+
+    if test "$mode" = "ref"
+        if test -z "$ref"
+            __devbase_update_print_error "Missing value for --ref"
             __devbase_update_usage
             return 1
+        end
+        __devbase_update_do_update "$ref"
+        return $status
     end
+
+    if test "$mode" = "check"
+        __devbase_update_check_only
+        return $status
+    end
+
+    if test "$mode" = "version"
+        __devbase_update_show_version
+        return $status
+    end
+
+    if test "$mode" = "help"
+        __devbase_update_usage
+        return 0
+    end
+
+    __devbase_update_do_update
 end
