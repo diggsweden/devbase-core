@@ -181,10 +181,15 @@ install_mise() {
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
     local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
-    if ! "$mise_path" install "$yq_tool" --yes; then
+    if ! "$mise_path" install "$yq_tool" --yes 2> >(
+      grep -v "WARN  missing:" >&2
+    ); then
       die "Failed to bootstrap yq via mise"
     fi
     show_progress info "Checking yq availability after bootstrap..."
+
+    # Activate mise so yq is available on PATH
+    eval "$("$mise_path" activate bash 2> >(grep -v "WARN  missing:" >&2))"
 
     if ! command -v yq &>/dev/null; then
       local yq_path
