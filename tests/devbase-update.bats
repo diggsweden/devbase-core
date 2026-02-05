@@ -292,6 +292,8 @@ SCRIPT
   
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
   create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
+
+  git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
   
   # Get current SHA
   local current_sha
@@ -443,6 +445,8 @@ SCRIPT
 @test "devbase-update performs core update in non-interactive mode" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
   
   # Create a mock setup.sh that just succeeds
   cat > "$core_dir/setup.sh" << 'SCRIPT'
@@ -500,6 +504,8 @@ SCRIPT
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
 
+  git -C "$core_dir" branch "feature/test-branch"
+
   cat > "$core_dir/setup.sh" << 'SCRIPT'
 #!/usr/bin/env bash
 echo "Setup completed"
@@ -547,6 +553,8 @@ SCRIPT
 @test "devbase-update --ref=<ref> uses requested git ref" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  git -C "$core_dir" branch "feature/test-sha"
 
   cat > "$core_dir/setup.sh" << 'SCRIPT'
 #!/usr/bin/env bash
@@ -700,6 +708,9 @@ fi
 exec /usr/bin/git "$@"
 SCRIPT
   chmod +x "${TEST_DIR}/bin/git"
+
+  # Ensure the tag exists in the real repo for ref validation
+  git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
   
   # Non-interactive mode auto-proceeds (stdin from /dev/null)
   run fish -c "

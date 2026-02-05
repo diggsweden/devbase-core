@@ -23,6 +23,19 @@ setup() {
   export DEVBASE_SSH_KEY_NAME="id_ed25519_devbase"
   export _DEVBASE_ENV="ubuntu"
 
+  # Stub external tool binaries to avoid calling host tools
+  mkdir -p "${TEST_DIR}/bin"
+  for cmd in node python go ruby rustc java mvn gradle fish starship zellij \
+    git nvim code lazygit rg fd fzf eza bat delta jq yq podman buildah \
+    skopeo kubectl oc k9s mise; do
+    cat > "${TEST_DIR}/bin/${cmd}" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "stub"
+SCRIPT
+    chmod +x "${TEST_DIR}/bin/${cmd}"
+  done
+  export PATH="${TEST_DIR}/bin:${PATH}"
+
   # Ensure standard env vars are set for summary tests
   export USER="${USER:-testuser}"
   export SHELL="${SHELL:-/bin/bash}"

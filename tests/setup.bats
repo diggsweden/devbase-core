@@ -291,6 +291,36 @@ teardown() {
   assert_output --partial "core_created=yes"
 }
 
+@test "persist_devbase_repos respects DEVBASE_CORE_REF" {
+  local source_repo="${TEST_DIR}/source-repo"
+  create_mock_git_repo "$source_repo" "v1.0.0" "file://${source_repo}"
+
+  # Create a newer commit and tag it for DEVBASE_CORE_REF
+  echo "ref" >> "${source_repo}/README.md"
+  git -C "$source_repo" add README.md
+  git -C "$source_repo" commit -m "ref commit" --quiet
+  git -C "$source_repo" tag -a test-ref -m "Release test-ref"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export XDG_DATA_HOME='${XDG_DATA_HOME}'
+    export DEVBASE_ROOT='${source_repo}'
+    export _DEVBASE_FROM_GIT='true'
+    export DEVBASE_CUSTOM_DIR=''
+    export DEVBASE_CORE_REF='test-ref'
+
+    show_progress() { :; }
+
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    persist_devbase_repos
+
+    git -C '${XDG_DATA_HOME}/devbase/core' describe --tags --exact-match
+  "
+
+  assert_success
+  assert_output "test-ref"
+}
+
 @test "persist_devbase_repos skips when not from git" {
   run bash -c "
     export HOME='${HOME}'

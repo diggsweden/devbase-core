@@ -166,7 +166,7 @@ function __devbase_update_core --description "Update core to latest version or r
 
     __devbase_update_print_info "Updating core to $target..."
 
-    # Fetch the target (branch, tag, or SHA)
+    # Fetch the target (branch or tag)
     if not git -C "$__devbase_core_dir" fetch --depth 1 origin "$target" --quiet 2>/dev/null
         git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet
     end
@@ -174,8 +174,34 @@ function __devbase_update_core --description "Update core to latest version or r
     # Stash any local changes
     git -C "$__devbase_core_dir" stash --quiet 2>/dev/null; or true
 
+    set -l checkout_target "$target"
+
+    # Ensure the ref exists locally after fetch (branch refs aren't created by default)
+    if not git -C "$__devbase_core_dir" cat-file -e "$checkout_target^{commit}" 2>/dev/null
+        if string match -qr '^[0-9a-f]{40}$' -- "$target"
+            __devbase_update_print_error "SHA refs are not supported: $target"
+            __devbase_update_print_info "Use a branch or tag name instead"
+            return 1
+        end
+
+        if git -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null
+            set checkout_target "origin/$target"
+        else if git -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/tags/$target:refs/tags/$target" --quiet 2>/dev/null
+            set checkout_target "$target"
+        end
+
+        if not git -C "$__devbase_core_dir" cat-file -e "$checkout_target^{commit}" 2>/dev/null
+            __devbase_update_print_error "Ref not found in core repo: $target"
+            __devbase_update_print_info "Ensure the ref exists on the remote (branch/tag) and try again"
+            return 1
+        end
+    end
+
     # Checkout the target ref
-    git -C "$__devbase_core_dir" checkout "$target" --quiet
+    if not git -C "$__devbase_core_dir" checkout "$checkout_target" --quiet
+        __devbase_update_print_error "Failed to checkout core ref: $target"
+        return 1
+    end
 
     # Trust mise config to avoid trust prompt during setup
     if command -q mise; and test -f "$__devbase_core_dir/.mise.toml"
@@ -339,7 +365,9 @@ function __devbase_update_do_update --description "Perform the update"
 
     # Perform updates
     if test "$update_core" = true
+        set -gx DEVBASE_CORE_REF "$target_ref"
         __devbase_update_core "$target_ref"
+        or return 1
     end
 
     if test "$update_custom" = true

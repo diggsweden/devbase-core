@@ -206,9 +206,11 @@ Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows
 # Update to latest tag
 devbase-update
 
-# Update to a specific ref (branch, tag, or SHA)
+# Update to a specific ref (branch or tag)
 devbase-update --ref feat/misc-fixes
 ```
+
+Note: when `--ref` is used, the persisted core repo at `~/.local/share/devbase/core` is pinned to that ref during the setup run. SHA refs are not supported.
 
 **Theme Provenance:**
 
