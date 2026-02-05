@@ -125,68 +125,68 @@ core:
   # Distro-agnostic tools installed via mise
   mise:
     # Build tools
-    just: {backend: "aqua:casey/just", version: "1.44.0"} # renovate: datasource=github-releases depName=casey/just
+    just: {backend: "aqua:casey/just", version: "1.46.0"} # renovate: datasource=github-releases depName=casey/just
     jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
-    yq: {backend: "aqua:mikefarah/yq", version: "v4.49.2"} # renovate: datasource=github-releases depName=mikefarah/yq
+    yq: {backend: "aqua:mikefarah/yq", version: "v4.52.2"} # renovate: datasource=github-releases depName=mikefarah/yq
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
     # Shell enhancements
     fzf: {backend: "aqua:junegunn/fzf", version: "v0.67.0"} # renovate: datasource=github-releases depName=junegunn/fzf
     eza: {backend: "aqua:eza-community/eza", version: "v0.23.4"} # renovate: datasource=github-releases depName=eza-community/eza
-    bat: {backend: "aqua:sharkdp/bat", version: "v0.26.0"} # renovate: datasource=github-releases depName=sharkdp/bat
+    bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1"} # renovate: datasource=github-releases depName=sharkdp/bat
     vivid: {backend: "aqua:sharkdp/vivid", version: "v0.10.1"} # renovate: datasource=github-releases depName=sharkdp/vivid
-    starship: {backend: "aqua:starship/starship", version: "v1.24.1"} # renovate: datasource=github-releases depName=starship/starship
+    starship: {backend: "aqua:starship/starship", version: "v1.24.2"} # renovate: datasource=github-releases depName=starship/starship
     zellij: {backend: "aqua:zellij-org/zellij", version: "v0.43.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
     ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.1.0"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
     fd: {backend: "aqua:sharkdp/fd", version: "v10.3.0"} # renovate: datasource=github-releases depName=sharkdp/fd
     tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.12.0"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
-    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.5"} # renovate: datasource=github-releases depName=aristocratos/btop
-    lf: {backend: "aqua:gokcehan/lf", version: "r38"} # renovate: datasource=github-releases depName=gokcehan/lf
+    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.6"} # renovate: datasource=github-releases depName=aristocratos/btop
+    lf: {backend: "aqua:gokcehan/lf", version: "r41"} # renovate: datasource=github-releases depName=gokcehan/lf
     # Git tools
     delta: {backend: "aqua:dandavison/delta", version: "0.18.2"} # renovate: datasource=github-releases depName=dandavison/delta
-    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.10.1"} # renovate: datasource=github-releases depName=orhun/git-cliff
-    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.57.0"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
-    gh: {backend: "aqua:cli/cli", version: "v2.83.2"} # renovate: datasource=github-releases depName=cli/cli
-    glab: {backend: "gitlab:gitlab-org/cli", version: "v1.68.0"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
+    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.12.0"} # renovate: datasource=github-releases depName=orhun/git-cliff
+    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.58.1"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
+    gh: {backend: "aqua:cli/cli", version: "v2.86.0"} # renovate: datasource=github-releases depName=cli/cli
+    glab: {backend: "gitlab:gitlab-org/cli", version: "v1.82.0"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
     # Neovim
-    neovim: {backend: "aqua:neovim/neovim", version: "v0.11.5"} # renovate: datasource=github-releases depName=neovim/neovim
-    tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.25.10"} # renovate: datasource=npm depName=tree-sitter-cli
+    neovim: {backend: "aqua:neovim/neovim", version: "v0.11.6"} # renovate: datasource=github-releases depName=neovim/neovim
+    tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.26.5"} # renovate: datasource=npm depName=tree-sitter-cli
     # Container/Kubernetes
-    docker-compose: {backend: "aqua:docker/compose", version: "v2.40.3"} # renovate: datasource=github-releases depName=docker/compose
-    k9s: {backend: "aqua:derailed/k9s", version: "v0.50.16"} # renovate: datasource=github-releases depName=derailed/k9s
-    k6: {backend: "aqua:grafana/k6", version: "v1.4.2"} # renovate: datasource=github-releases depName=grafana/k6
-    argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.2.1"} # renovate: datasource=github-releases depName=argoproj/argo-cd
-    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.33.1"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
+    docker-compose: {backend: "aqua:docker/compose", version: "v5.0.2"} # renovate: datasource=github-releases depName=docker/compose
+    k9s: {backend: "aqua:derailed/k9s", version: "v0.50.18"} # renovate: datasource=github-releases depName=derailed/k9s
+    k6: {backend: "aqua:grafana/k6", version: "v1.5.0"} # renovate: datasource=github-releases depName=grafana/k6
+    argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.3.0"} # renovate: datasource=github-releases depName=argoproj/argo-cd
+    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.34.0"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
     tkn: {backend: "aqua:tektoncd/cli", version: "v0.43.0"} # renovate: datasource=github-releases depName=tektoncd/cli
     # Code quality
-    yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.20.0"} # renovate: datasource=github-releases depName=google/yamlfmt
-    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.8"} # renovate: datasource=github-releases depName=rhysd/actionlint
+    yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0"} # renovate: datasource=github-releases depName=google/yamlfmt
+    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.10"} # renovate: datasource=github-releases depName=rhysd/actionlint
     hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.14.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
     shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
     shfmt: {backend: "aqua:mvdan/sh", version: "v3.12.0"} # renovate: datasource=github-releases depName=mvdan/sh
-    rumdl: {backend: "github:rvben/rumdl", version: "v0.0.188"} # renovate: datasource=github-releases depName=rvben/rumdl
+    rumdl: {backend: "github:rvben/rumdl", version: "v0.1.12"} # renovate: datasource=github-releases depName=rvben/rumdl
     # Security
-    gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.29.1"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
-    syft: {backend: "aqua:anchore/syft", version: "v1.38.2"} # renovate: datasource=github-releases depName=anchore/syft
+    gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.0"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
+    syft: {backend: "aqua:anchore/syft", version: "v1.41.2"} # renovate: datasource=github-releases depName=anchore/syft
     scorecard: {backend: "aqua:ossf/scorecard", version: "v5.4.0"} # renovate: datasource=github-releases depName=ossf/scorecard
-    cosign: {backend: "aqua:sigstore/cosign", version: "3.0.3"} # renovate: datasource=github-releases depName=sigstore/cosign
+    cosign: {backend: "aqua:sigstore/cosign", version: "3.0.4"} # renovate: datasource=github-releases depName=sigstore/cosign
     slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
     # Standards
     conform: {backend: "aqua:siderolabs/conform", version: "v0.1.0-alpha.30"} # renovate: datasource=github-releases depName=siderolabs/conform
-    publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v4.3.7"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
+    publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.2.3"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
     # Testing
     bats: {backend: "aqua:bats-core/bats-core", version: "1.13.0"} # renovate: datasource=github-releases depName=bats-core/bats-core
 
   # Custom installers (distro-agnostic, installers handle deb/rpm)
   custom:
-    mise: {version: "v2026.2.1", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
+    mise: {version: "v2026.2.4", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
     gum: {version: "0.17.0", installer: "install_gum"} # renovate: datasource=github-releases depName=charmbracelet/gum
     fisher: {version: "4.4.8", installer: "install_fisher"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
     fzf_fish: {version: "v10.3", installer: "install_fzf_fish"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
     lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
     nerd_fonts: {version: "v3.4.0", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
     oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom depName=openshift/oc
-    k3s: {version: "v1.35.0+k3s1", installer: "install_k3s", tags: ["@optional"]} # renovate: datasource=github-releases depName=k3s-io/k3s
-    vscode: {version: "1.107.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
+    k3s: {version: "v1.35.0+k3s3", installer: "install_k3s", tags: ["@optional"]} # renovate: datasource=github-releases depName=k3s-io/k3s
+    vscode: {version: "1.109.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
 
   # VS Code extensions (distro-agnostic)
   vscode:
@@ -220,14 +220,14 @@ packs:
       java-latest-openjdk: {}
       java-latest-openjdk-devel: {}
     mise:
-      java: {version: "temurin-25.0.1+8.0.LTS"} # renovate: datasource=java-version depName=java-temurin
-      maven: {version: "3.9.6"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
-      gradle: {version: "8.12"} # renovate: datasource=gradle-version depName=gradle
+      java: {version: "temurin-25.0.2+10.0.LTS"} # renovate: datasource=java-version depName=java-temurin
+      maven: {version: "3.9.12"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
+      gradle: {version: "9.3.1"} # renovate: datasource=gradle-version depName=gradle
       pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0"} # renovate: datasource=github-releases depName=pmd/pmd
     custom:
-      keystore_explorer: {version: "v5.6.0", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
+      keystore_explorer: {version: "v5.6.1", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
       jdk_mission_control: {version: "9.1.1", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
-      dbeaver: {version: "25.2.1", installer: "install_dbeaver", tags: ["@optional"]} # renovate: datasource=github-releases depName=dbeaver/dbeaver
+      dbeaver: {version: "25.3.4", installer: "install_dbeaver", tags: ["@optional"]} # renovate: datasource=github-releases depName=dbeaver/dbeaver
       intellij_idea: {version: "2025.2.4", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=jetbrains-releases depName=idea
     vscode:
       redhat.java: {version: "1.40.0"} # renovate: datasource=npm
@@ -240,7 +240,7 @@ packs:
   node:
     description: "(node / eslint / prettier / tailwindcss)"
     mise:
-      node: {version: "24.11.1"} # renovate: datasource=node-version depName=node
+      node: {version: "24.13.0"} # renovate: datasource=node-version depName=node
     vscode:
       dbaeumer.vscode-eslint: {version: "3.0.10"} # renovate: datasource=npm
       esbenp.prettier-vscode: {version: "11.0.0"} # renovate: datasource=npm
@@ -260,12 +260,12 @@ packs:
       python3-devel: {}
       python3-pip: {}
     mise:
-      python: {version: "3.14.0"} # renovate: datasource=python-version depName=python
+      python: {version: "3.14.3"} # renovate: datasource=python-version depName=python
 
   go:
     description: "(go)"
     mise:
-      go: {version: "1.25.4"} # renovate: datasource=go-version depName=go
+      go: {version: "1.25.7"} # renovate: datasource=go-version depName=go
 
   ruby:
     description: "(ruby / build libs)"
@@ -286,7 +286,7 @@ packs:
       libyaml-devel: {}
       zlib-devel: {}
     mise:
-      ruby: {version: "3.4.7"} # renovate: datasource=ruby-version depName=ruby
+      ruby: {version: "3.4.8"} # renovate: datasource=ruby-version depName=ruby
 
   rust:
     description: "(rustc / cargo)"
@@ -297,4 +297,4 @@ packs:
       sqlite-devel: {}
       pkgconf-pkg-config: {}
     mise:
-      rust: {version: "1.91.0"} # renovate: datasource=rust-version depName=rust
+      rust: {version: "1.93.0"} # renovate: datasource=rust-version depName=rust
