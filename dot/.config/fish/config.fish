@@ -25,7 +25,9 @@ if set -q HTTP_PROXY; or set -q HTTPS_PROXY; or set -q http_proxy; or set -q htt
 end
 
 # Starship prompt
-starship init fish | source
+if type -q starship
+    starship init fish | source
+end
 
 # Optional: GOPATH for Go development
 type -q go; and set -gx GOPATH $HOME/go; and fish_add_path $GOPATH/bin

@@ -357,6 +357,21 @@ install_mise_tools() {
 
 	# Verify critical tools are present (based on selected packs)
 	# Only verify the core runtime for each selected pack
+	# Second pass to catch transient install failures (quiet unless it fails)
+	local second_install_log="${_DEVBASE_TEMP}/mise-second-install.log"
+	if ! run_mise_from_home_dir install --yes &>"$second_install_log"; then
+		show_progress warning "Second mise install pass failed"
+		show_progress info "  See log: $second_install_log"
+	fi
+	if ! run_mise_from_home_dir reshim &>>"$second_install_log"; then
+		show_progress warning "mise reshim failed"
+		show_progress info "  See log: $second_install_log"
+	fi
+	if ! run_mise_from_home_dir prune --tools &>>"$second_install_log"; then
+		show_progress warning "mise prune failed"
+		show_progress info "  See log: $second_install_log"
+	fi
+
 	local verified_count=0
 	local missing=()
 
@@ -388,6 +403,12 @@ install_mise_tools() {
 			die "Setup cannot continue without critical development tools"
 		fi
 		die "Missing critical development tools: ${missing[*]}"
+	fi
+
+	# Warn if starship is missing (shell prompt depends on it)
+	if ! run_mise_from_home_dir which starship &>/dev/null; then
+		show_progress warning "Starship not found after install"
+		show_progress info "  Install with: mise install aqua:starship/starship"
 	fi
 
 	# Show summary
