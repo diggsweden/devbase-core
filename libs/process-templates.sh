@@ -24,6 +24,7 @@ prepare_temp_dotfiles_directory() {
 
   local temp_dotfiles="${_DEVBASE_TEMP}/dotfiles"
   cp -r "${DEVBASE_DOT}" "${temp_dotfiles}"
+  rm -f "${temp_dotfiles}/.config/mise/config.toml"
   echo "$temp_dotfiles"
 }
 

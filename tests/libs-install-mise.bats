@@ -142,6 +142,39 @@ EOF
   assert_output --partial 'node = "24.11.1"'
 }
 
+@test "generate_mise_config preserves template and updates versions" {
+  mkdir -p "${TEST_DIR}/mise"
+
+  run env \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${DEVBASE_ROOT}/dot" \
+    DEVBASE_LIBS="${DEVBASE_ROOT}/libs" \
+    PACKAGES_YAML="${DEVBASE_ROOT}/dot/.config/devbase/packages.yaml" \
+    SELECTED_PACKS="java node" \
+    TEST_DIR="${TEST_DIR}" \
+    bash -c '
+      source "$DEVBASE_LIBS/parse-packages.sh"
+
+      output_file="$TEST_DIR/mise/config.toml"
+      generate_mise_config "$output_file"
+
+      template_comment="^# Core Languages & Runtimes"
+      just_backend=$(yq -r ".core.mise.just.backend" "$PACKAGES_YAML")
+      just_version=$(yq -r ".core.mise.just.version" "$PACKAGES_YAML")
+      maven_version=$(yq -r ".packs.java.mise.maven.version" "$PACKAGES_YAML")
+
+      grep -q "$template_comment" "$output_file" || exit 1
+      grep -q "^\"${just_backend}\" = \"${just_version}\"$" "$output_file" || exit 1
+      grep -q "^maven = \"${maven_version}\"$" "$output_file" || exit 1
+
+      echo "OK"
+    '
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial 'OK'
+}
+
 @test "get_core_runtimes returns runtimes based on selected packs" {
   mkdir -p "${TEST_DIR}/.config/devbase"
   
