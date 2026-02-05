@@ -13,6 +13,15 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
+        "/(^|/)dot/\\.config/devbase/packages\\.yaml$/"
+      ],
+      "matchStrings": [
+        "^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+lookupName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
         "/(^|/)dot/\\.config/devbase/custom-tools\\.yaml$/"
       ],
       "matchStrings": [
