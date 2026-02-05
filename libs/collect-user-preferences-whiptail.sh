@@ -510,8 +510,13 @@ collect_pack_preferences() {
     descriptions+=("$desc")
   done < <(get_available_packs)
 
-  # Current selection (space-separated) - default to all
-  local current_selection=" ${DEVBASE_SELECTED_PACKS:-${packs[*]}} "
+  # Current selection (space-separated) - default to all except rust
+  local default_packs=()
+  for pack in "${packs[@]}"; do
+    [[ "$pack" == "rust" ]] && continue
+    default_packs+=("$pack")
+  done
+  local current_selection=" ${DEVBASE_SELECTED_PACKS:-${default_packs[*]}} "
 
   # Build checklist
   local items=()
@@ -540,8 +545,8 @@ collect_pack_preferences() {
   # Convert newline-separated to space-separated
   DEVBASE_SELECTED_PACKS=$(echo "$selected" | tr '\n' ' ' | sed 's/ $//')
 
-  # Default to all if nothing selected
-  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${packs[*]}"
+  # Default to all except rust if nothing selected
+  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${default_packs[*]}"
   export DEVBASE_SELECTED_PACKS
 }
 

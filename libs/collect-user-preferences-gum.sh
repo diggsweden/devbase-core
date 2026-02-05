@@ -625,9 +625,14 @@ collect_pack_preferences() {
     items+=("$pack - $desc")
   done < <(get_available_packs)
 
-  # Pre-select based on saved preferences, or all packs if none saved
+  # Pre-select based on saved preferences, or all packs (except rust) if none saved
+  local default_packs=()
+  for pack in "${packs[@]}"; do
+    [[ "$pack" == "rust" ]] && continue
+    default_packs+=("$pack")
+  done
   local preselected=""
-  local saved_packs=" ${DEVBASE_SELECTED_PACKS:-${packs[*]}} "
+  local saved_packs=" ${DEVBASE_SELECTED_PACKS:-${default_packs[*]}} "
   for i in "${!packs[@]}"; do
     if [[ "$saved_packs" == *" ${packs[$i]} "* ]]; then
       preselected+="${items[$i]},"
@@ -650,10 +655,10 @@ collect_pack_preferences() {
   # Trim trailing space
   DEVBASE_SELECTED_PACKS="${DEVBASE_SELECTED_PACKS% }"
 
-  # Default to all if nothing selected
+  # Default to all (except rust) if nothing selected
   if [[ -z "$DEVBASE_SELECTED_PACKS" ]]; then
-    DEVBASE_SELECTED_PACKS="${packs[*]}"
-    _gum_warning "No packs selected, defaulting to all"
+    DEVBASE_SELECTED_PACKS="${default_packs[*]}"
+    _gum_warning "No packs selected, defaulting to all except rust"
   fi
 
   export DEVBASE_SELECTED_PACKS
