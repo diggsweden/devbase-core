@@ -52,7 +52,7 @@ RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
 # Core Languages & Runtimes (managed by mise, auto-updated by Renovate)
 node = "24.13.0"
 go = "1.25.6"
-python = "3.14.2"
+python = "3.14.3"
 ruby = "3.4.8"
 # rust = "1.91.0"  # Commented out - slow compilation on WSL
 java = "temurin-25.0.1+8.0.LTS"
