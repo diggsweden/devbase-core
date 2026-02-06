@@ -60,7 +60,7 @@ maven = "3.9.6"
 gradle = "8.12"
 
 # Development and build tools
-"aqua:casey/just" = "1.45.0"
+"aqua:casey/just" = "1.46.0"
 "github:rvben/rumdl" = "v0.0.205"
 jq = "jq-1.8.1"
 "aqua:mikefarah/yq" = "v4.50.1"
