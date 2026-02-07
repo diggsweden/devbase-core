@@ -89,7 +89,7 @@ jq = "jq-1.8.1"
 "aqua:tektoncd/cli" = "v0.43.0"  # Tekton CLI (tkn)
 
 # Code quality and formatting
-"aqua:google/yamlfmt" = "v0.20.0"
+"aqua:google/yamlfmt" = "v0.21.0"
 "aqua:rhysd/actionlint" = "v1.7.10"
 "github:pmd/pmd" = "pmd_releases/7.17.0"
 "aqua:hadolint/hadolint" = "v2.14.0"
