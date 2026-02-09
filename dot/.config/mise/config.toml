@@ -84,7 +84,7 @@ jq = "jq-1.8.1"
 "aqua:docker/compose" = "v2.40.3"
 "aqua:derailed/k9s" = "v0.50.18"
 "aqua:grafana/k6" = "v1.5.0"
-"aqua:argoproj/argo-cd" = "v3.2.6"
+"aqua:argoproj/argo-cd" = "v3.3.0"
 "aqua:bitnami-labs/sealed-secrets" = "v0.34.0"
 "aqua:tektoncd/cli" = "v0.43.0"  # Tekton CLI (tkn)
 
