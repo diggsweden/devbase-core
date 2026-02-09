@@ -87,10 +87,29 @@ migrate_mise_fish_hook() {
   return 0
 }
 
+# Brief: Remove legacy pre-push signature hook
+# Context: Signature enforcement moved to conform; old hook should be removed on update
+# Returns: 0 always (cleanup is best-effort)
+migrate_git_signature_hook() {
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local hook_path="${config_dir}/git/git-hooks/pre-push.d/01-verify-signatures.sh"
+
+  if [[ -f "$hook_path" ]]; then
+    rm -f "$hook_path"
+    rmdir "$(dirname "$hook_path")" 2>/dev/null || true
+    if declare -f show_progress &>/dev/null; then
+      show_progress info "Removed legacy pre-push signature hook"
+    fi
+  fi
+
+  return 0
+}
+
 # Brief: Run all migrations
 # Context: Called during setup.sh to ensure clean state
 run_migrations() {
   migrate_legacy_package_files
   migrate_mise_yq_backend
   migrate_mise_fish_hook
+  migrate_git_signature_hook
 }

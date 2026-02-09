@@ -118,3 +118,15 @@ teardown() {
   assert_success
   assert_file_not_exists "${HOME}/.config/devbase/apt-packages.txt"
 }
+
+@test "migrate_git_signature_hook removes pre-push signature hook" {
+  local hooks_dir="${HOME}/.config/git/git-hooks/pre-push.d"
+  mkdir -p "$hooks_dir"
+  touch "${hooks_dir}/01-verify-signatures.sh"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_git_signature_hook
+
+  assert_success
+  assert_file_not_exists "${hooks_dir}/01-verify-signatures.sh"
+}

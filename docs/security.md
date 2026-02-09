@@ -524,7 +524,7 @@ export NO_PROXY="localhost,127.0.0.1,*.internal"
 **Security Model**:
 
 - Organization controls repo
-- Git commit signatures
+- Commit policy enforced by repo tooling (e.g., conform in CI)
 - Code review enforced
 
 **Certificates**:

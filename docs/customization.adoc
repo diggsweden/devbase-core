@@ -618,14 +618,13 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 ├── pre-commit.d/
 │   └── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
 ├── commit-msg                     # Dispatcher
-├── commit-msg.d/
+├── post-commit.d/
 │   └── 01-conventional-commits.sh # Active: Conventional commits (if .conform.yaml exists)
 ├── prepare-commit-msg             # Dispatcher
 ├── prepare-commit-msg.d/
 │   └── 01-add-issue-ref.sh       # Active: Auto-add Refs: from branch
 ├── pre-push                       # Dispatcher
-└── pre-push.d/
-    └── 01-verify-signatures.sh   # Active: GPG/SSH signature verification
+└── pre-push.d/                     # (empty by default)
 ----
 
 DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project using devbase-check or similar tooling.
@@ -633,9 +632,8 @@ DevBase Core provides minimal hooks focused on security and workflow automation.
 === Active Hooks
 
 * **01-secrets-scan.sh** - Scans staged files for secrets using gitleaks before commit. Prevents accidentally committing API keys, passwords, and tokens.
-* **01-conventional-commits.sh** - Validates commit message format using conform. Only active if the repository has a `.conform.yaml` config file.
+* **01-conventional-commits.sh** - Validates commit policy using conform. Only active if the repository has a `.conform.yaml` config file.
 * **01-add-issue-ref.sh** - Automatically adds `Refs: ISSUE-123` footer to commit messages when the branch name contains an issue reference (e.g., `feature/PROJ-456-add-feature`).
-* **01-verify-signatures.sh** - Verifies all commits being pushed have valid GPG/SSH signatures. Blocks pushes with unsigned commits.
 
 === How It Works
 
@@ -645,13 +643,12 @@ When you run `git commit`:
 2. If secrets detected → commit is blocked
 3. **prepare-commit-msg** dispatcher runs, auto-adding issue references from branch name
 4. User edits commit message
-5. **commit-msg** dispatcher validates the message format (if `.conform.yaml` exists)
-6. Git creates the commit
+5. Git creates the commit
+6. **post-commit** dispatcher validates commit policy (non-blocking, if `.conform.yaml` exists)
 
 When you run `git push`:
 
-1. **pre-push** dispatcher verifies all commits have valid signatures
-2. If unsigned commits found → push is blocked
+1. **pre-push** dispatcher runs any custom checks you have configured
 
 === Adding Custom Hooks
 
@@ -712,13 +709,13 @@ git push --no-verify    # Skips pre-push
 
 === During Rebase
 
-NOTE: During non-interactive rebase (`git rebase main`), pre-commit and commit-msg hooks do **not** re-run on existing commits. However, **pre-push** hooks **will** validate all commits when you push.
+NOTE: During non-interactive rebase (`git rebase main`), pre-commit and commit-msg hooks do **not** re-run on existing commits.
 
 **Interactive rebase** (`git rebase -i`):
 - Hooks run when you **edit** or **reword** commits
 - Hooks do **not** run for commits you **pick**
 
-**Enforcement:** The pre-push GPG verification is the critical enforcement point that catches any issues missed during rebase.
+**Enforcement:** Use repository policies (for example, conform in CI) to ensure rebased commits still comply.
 
 == Installation Hooks
 
