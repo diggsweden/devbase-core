@@ -17,10 +17,16 @@
 # Aliases for command behavior changes
 # Auto-sourced by Fish on startup
 
-# Neovim as default editor
-alias vi="nvim"
-alias vim="nvim"
-alias vimbare="nvim -u NONE -N"
+# Neovim as default editor (fallback to vim if missing)
+if command -q nvim
+    alias vi="nvim"
+    alias vim="nvim"
+    alias vimbare="nvim -u NONE -N"
+else if command -q vim
+    alias vi="vim"
+    alias vim="vim"
+    alias vimbare="vim -u NONE -N"
+end
 
 # Better ls with eza
 alias ls="eza --icons"
