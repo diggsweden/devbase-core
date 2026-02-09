@@ -671,6 +671,39 @@ MOCKSCRIPT
   assert_output --partial "Already up to date"
 }
 
+@test "devbase-update --snooze skips prompting" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  # Mock git to show an update available
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'MOCKSCRIPT'
+#!/usr/bin/env bash
+if [[ "$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123\trefs/tags/v1.0.0"
+  echo "def456\trefs/tags/v2.0.0"
+  exit 0
+fi
+exec /usr/bin/git "$@"
+MOCKSCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --snooze 24
+    devbase-update
+  " </dev/null
+
+  assert_success
+  assert_output --partial "Updates snoozed for 24 hour(s)"
+  refute_output --partial "Updates available:"
+}
+
 @test "devbase-update updates both core and custom when both have updates" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   local custom_dir="${XDG_DATA_HOME}/devbase/custom"

@@ -8,6 +8,7 @@
 
 set -g __devbase_core_dir "$HOME/.local/share/devbase/core"
 set -g __devbase_custom_dir "$HOME/.local/share/devbase/custom"
+set -g __devbase_snooze_file "$HOME/.config/devbase/update-snooze"
 
 function __devbase_update_print_info
     printf "%sⓘ%s %s\n" (set_color cyan) (set_color normal) "$argv[1]"
@@ -23,6 +24,40 @@ end
 
 function __devbase_update_print_error
     printf "%s✗%s %s\n" (set_color red) (set_color normal) "$argv[1]" >&2
+end
+
+function __devbase_update_is_snoozed
+    if test -f "$__devbase_snooze_file"
+        set -l now (date +%s)
+        set -l until (cat "$__devbase_snooze_file" 2>/dev/null)
+        if string match -qr '^[0-9]+$' -- "$until"; and test "$now" -lt "$until"
+            return 0
+        end
+    end
+    return 1
+end
+
+function __devbase_update_set_snooze --description "Snooze update prompts for N hours"
+    set -l hours "$argv[1]"
+    if not string match -qr '^[0-9]+$' -- "$hours"
+        __devbase_update_print_error "Invalid hours: $hours"
+        return 1
+    end
+
+    set -l now (date +%s)
+    set -l until (math "$now + ($hours * 3600)")
+    mkdir -p (dirname "$__devbase_snooze_file")
+    echo "$until" >"$__devbase_snooze_file"
+    __devbase_update_print_success "Updates snoozed for $hours hour(s)"
+    return 0
+end
+
+function __devbase_update_clear_snooze
+    if test -f "$__devbase_snooze_file"
+        rm -f "$__devbase_snooze_file"
+        __devbase_update_print_success "Update snooze cleared"
+    end
+    return 0
 end
 
 function __devbase_update_get_latest_tag --description "Get latest tag from remote, supporting semver tags"
@@ -396,6 +431,8 @@ function __devbase_update_usage --description "Show usage information"
     echo ""
     echo "Options:"
     echo "  --ref <ref>  Update core to a specific git ref (branch, tag, or SHA)"
+    echo "  --snooze <h> Snooze update prompts for N hours"
+    echo "  --unsnooze   Clear update snooze"
     echo "  --check     Check for updates without prompting (for shell integration)"
     echo "  --version   Show current version information"
     echo "  --help      Show this help message"
@@ -410,6 +447,7 @@ end
 function devbase-update --description "Check for and apply DevBase updates"
     set -l ref ""
     set -l mode ""
+    set -l snooze_hours ""
 
     for arg in $argv
         switch $arg
@@ -418,18 +456,27 @@ function devbase-update --description "Check for and apply DevBase updates"
                     continue
                 end
                 set mode "ref"
+            case --snooze
+                set mode "snooze"
             case --check
                 set mode "check"
             case --version -v
                 set mode "version"
+            case --unsnooze
+                set mode "unsnooze"
             case --help -h
                 set mode "help"
             case '*'
                 if string match -qr '^--ref=' -- $arg
                     set ref (string replace -r '^--ref=' '' -- $arg)
                     set mode "ref"
+                else if string match -qr '^--snooze=' -- $arg
+                    set snooze_hours (string replace -r '^--snooze=' '' -- $arg)
+                    set mode "snooze"
                 else if test "$mode" = "ref" -a -z "$ref"
                     set ref "$arg"
+                else if test "$mode" = "snooze" -a -z "$snooze_hours"
+                    set snooze_hours "$arg"
                 else
                     __devbase_update_print_error "Unknown option: $arg"
                     __devbase_update_usage
@@ -448,6 +495,21 @@ function devbase-update --description "Check for and apply DevBase updates"
         return $status
     end
 
+    if test "$mode" = "snooze"
+        if test -z "$snooze_hours"
+            __devbase_update_print_error "Missing value for --snooze"
+            __devbase_update_usage
+            return 1
+        end
+        __devbase_update_set_snooze "$snooze_hours"
+        return $status
+    end
+
+    if test "$mode" = "unsnooze"
+        __devbase_update_clear_snooze
+        return $status
+    end
+
     if test "$mode" = "check"
         __devbase_update_check_only
         return $status
@@ -460,6 +522,10 @@ function devbase-update --description "Check for and apply DevBase updates"
 
     if test "$mode" = "help"
         __devbase_update_usage
+        return 0
+    end
+
+    if __devbase_update_is_snoozed
         return 0
     end
 
