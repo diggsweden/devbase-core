@@ -212,7 +212,7 @@ install_mise() {
   # Generate mise config before activation to avoid stale tool warnings
   # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
 
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
     export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
@@ -451,7 +451,7 @@ install_mise_tools() {
 install_mise_and_tools() {
   # Set up package configuration
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
 
   # Check for custom packages override
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then

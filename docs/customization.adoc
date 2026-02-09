@@ -572,13 +572,13 @@ Which language packs do you want to install?
   [x] python  - Python development (Django, Flask, data science)
   [x] go      - Go/Golang development
   [x] ruby    - Ruby/Rails development
-  [x] rust    - Rust development
+  [ ] rust    - Rust development (optional)
   [x] vscode-editor - VS Code editor with full configuration
 
 Space=toggle, Enter=confirm
 ----
 
-All packs are selected by default. Selection is saved to `preferences.yaml` for future updates.
+All packs except rust are selected by default. Selection is saved to `preferences.yaml` for future updates.
 
 === Validation During Installation
 
