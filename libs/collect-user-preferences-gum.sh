@@ -206,7 +206,6 @@ _gum_choose_multi() {
   shift
 
   local args=(
-    --header "Space toggles, Enter confirms"
     --no-limit
     --no-show-help
     --cursor "> "
@@ -216,6 +215,10 @@ _gum_choose_multi() {
     --selected-prefix "✓ "
     --unselected-prefix "  "
   )
+
+  if [[ -n "${GUM_CHOOSE_HEADER:-}" ]]; then
+    args+=(--header "$GUM_CHOOSE_HEADER")
+  fi
 
   # Add pre-selected items (comma-separated in single --selected flag)
   if [[ -n "$preselected" ]]; then
@@ -553,18 +556,20 @@ collect_tool_preferences() {
   [[ "$current_binding" == "vim" ]] && preselected="${options[0]}" || preselected="${options[1]}"
 
   local selected_binding=""
+  local header=""
   while [[ -z "$selected_binding" ]]; do
     local choice
-    choice=$(_gum_choose_multi "$preselected" "${options[@]}")
+    GUM_CHOOSE_HEADER="$header" choice=$(_gum_choose_multi "$preselected" "${options[@]}")
 
     local count
     count=$(echo "$choice" | grep -c .)
     if [[ $count -ne 1 ]]; then
-      _gum_warning "Select exactly one binding"
+      header="Select exactly one binding"
       continue
     fi
 
     selected_binding=$(echo "$choice" | awk '{print $1}')
+    header=""
   done
 
   if [[ "$selected_binding" == "Vim-style" ]]; then

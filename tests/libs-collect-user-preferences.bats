@@ -960,12 +960,21 @@ EOF
     _gum_warning() { echo "WARN:$1"; }
 
     call_count_file="${TEST_DIR}/gum-choose-count"
+    binding_count_file="${TEST_DIR}/gum-choose-binding-count"
     echo 0 >"$call_count_file"
+    echo 0 >"$binding_count_file"
     _gum_choose_multi() {
       local count
       count=$(cat "$call_count_file")
       count=$((count + 1))
       echo "$count" >"$call_count_file"
+
+      if [[ "${2:-}" == "Vim-style"* ]]; then
+        local binding_count
+        binding_count=$(cat "$binding_count_file")
+        binding_count=$((binding_count + 1))
+        echo "$binding_count" >"$binding_count_file"
+      fi
 
       if [[ $count -eq 1 ]]; then
         printf "%s\n%s\n" "Vim-style   Modal editing, hjkl navigation" "Emacs-style Arrow keys, Ctrl shortcuts"
@@ -979,12 +988,14 @@ EOF
     collect_tool_preferences
     echo "EDITOR=$EDITOR"
     echo "VISUAL=$VISUAL"
+    echo "CHOOSE_COUNT=$(cat "$call_count_file")"
+    echo "BINDING_COUNT=$(cat "$binding_count_file")"
   '
 
   assert_success
-  assert_output --partial "WARN:Select exactly one binding"
   assert_output --partial "EDITOR=nvim"
   assert_output --partial "VISUAL=nvim"
+  assert_output --partial "BINDING_COUNT=2"
 }
 
 @test "saved preferences with subset of packs are preserved on load" {
