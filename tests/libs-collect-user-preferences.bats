@@ -977,9 +977,9 @@ EOF
       fi
 
       if [[ $count -eq 1 ]]; then
-        printf "%s\n%s\n" "Vim-style   Modal editing, hjkl navigation" "Emacs-style Arrow keys, Ctrl shortcuts"
+        printf "%s\n%s\n" "Vim-style - Modal editing / hjkl navigation" "Emacs-style - Arrow keys / Ctrl shortcuts"
       elif [[ $count -eq 2 ]]; then
-        printf "%s\n" "Vim-style   Modal editing, hjkl navigation"
+        printf "%s\n" "Vim-style - Modal editing / hjkl navigation"
       else
         echo ""
       fi
