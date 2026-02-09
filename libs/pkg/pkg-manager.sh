@@ -43,7 +43,7 @@ load_system_packages() {
   # Set up for parse-packages.sh
   # shellcheck disable=SC2153 # DEVBASE_DOT is set in setup.sh, not a misspelling of DEVBASE_ROOT
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby rust}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
 
   # Check for custom packages override
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then

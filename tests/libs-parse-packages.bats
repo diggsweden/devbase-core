@@ -754,7 +754,7 @@ EOF
 }
 
 @test "get_core_runtimes includes all runtime types" {
-  export SELECTED_PACKS="java node python go ruby rust"
+	export SELECTED_PACKS="java node python go ruby"
   source "${DEVBASE_LIBS}/parse-packages.sh"
   
   run get_core_runtimes
@@ -767,7 +767,6 @@ EOF
   [[ "$output" == *"python"* ]]
   [[ "$output" == *"go"* ]]
   [[ "$output" == *"ruby"* ]]
-  [[ "$output" == *"rust"* ]]
 }
 
 # =============================================================================

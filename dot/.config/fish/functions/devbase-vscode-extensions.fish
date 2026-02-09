@@ -98,7 +98,7 @@ function __vscode_ext_get_selected_packs
     
     if test (count $packs) -eq 0
         # Fallback to default packs
-        for pack in java node python go ruby rust
+        for pack in java node python go ruby
             echo $pack
         end
     else
