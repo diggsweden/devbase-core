@@ -82,6 +82,13 @@ migrate_mise_fish_hook() {
 
   if [[ $removed -gt 0 ]] && declare -f show_progress &>/dev/null; then
     show_progress success "Cleaned up legacy fish mise hooks"
+    show_progress warning "Restart fish to reload shell hooks"
+    if declare -f tui_printf &>/dev/null && [[ -n "${DEVBASE_COLORS[BLINK_SLOW]:-}" ]]; then
+      tui_printf "  %b%bRestart fish to reload shell hooks%b\n" \
+        "${DEVBASE_COLORS[BOLD_YELLOW]}" \
+        "${DEVBASE_COLORS[BLINK_SLOW]}" \
+        "${DEVBASE_COLORS[NC]}"
+    fi
   fi
 
   return 0
