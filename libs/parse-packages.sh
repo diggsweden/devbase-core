@@ -33,7 +33,7 @@ PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 
 # Selected packs (set by caller, space-separated)
-SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby rust}"
+SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby}"
 
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
@@ -404,75 +404,12 @@ get_core_runtimes() {
 generate_mise_config() {
   local output_file="$1"
 
-  declare -A tool_versions
-  local tool_order=()
-  while IFS='|' read -r tool_key version; do
-    [[ -z "$tool_key" || -z "$version" ]] && continue
-    tool_versions["$tool_key"]="$version"
-    tool_order+=("$tool_key")
-  done < <(get_mise_packages)
-
   local template_config="${DEVBASE_DOT}/.config/mise/config.toml"
   if [[ -f "$template_config" ]]; then
-    local in_tools=false
-    while IFS= read -r line; do
-      if [[ "$line" =~ ^\[tools\]$ ]]; then
-        in_tools=true
-        echo "$line"
-        continue
-      fi
-
-      if [[ "$in_tools" == false ]]; then
-        echo "$line"
-        continue
-      fi
-
-      if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
-        echo "$line"
-        continue
-      fi
-
-      local quoted_regex='^([[:space:]]*)"([^"]+)"[[:space:]]*=[[:space:]]*"[^"]*"(.*)$'
-      local unquoted_regex='^([[:space:]]*)([^[:space:]=#]+)[[:space:]]*=[[:space:]]*"[^"]*"(.*)$'
-
-      if [[ "$line" =~ $quoted_regex ]]; then
-        local prefix="${BASH_REMATCH[1]}"
-        local key="${BASH_REMATCH[2]}"
-        local suffix="${BASH_REMATCH[3]}"
-        if [[ -n "${tool_versions[$key]:-}" ]]; then
-          echo "${prefix}\"${key}\" = \"${tool_versions[$key]}\"${suffix}"
-          unset "tool_versions[$key]"
-        else
-          echo "$line"
-        fi
-        continue
-      fi
-
-      if [[ "$line" =~ $unquoted_regex ]]; then
-        local prefix="${BASH_REMATCH[1]}"
-        local key="${BASH_REMATCH[2]}"
-        local suffix="${BASH_REMATCH[3]}"
-        if [[ -n "${tool_versions[$key]:-}" ]]; then
-          echo "${prefix}${key} = \"${tool_versions[$key]}\"${suffix}"
-          unset "tool_versions[$key]"
-        else
-          echo "$line"
-        fi
-        continue
-      fi
-
-      echo "$line"
-    done <"$template_config" >"$output_file"
-
-    for key in "${tool_order[@]}"; do
-      [[ -z "${tool_versions[$key]:-}" ]] && continue
-      if [[ "$key" == *:* || "$key" == *[* ]]; then
-        echo "\"$key\" = \"${tool_versions[$key]}\""
-      else
-        echo "$key = \"${tool_versions[$key]}\""
-      fi
-      unset "tool_versions[$key]"
-    done >>"$output_file"
+    awk '
+      { print }
+      /^\[tools\]$/ { exit }
+    ' "$template_config" >"$output_file"
   else
     cat >"$output_file" <<'EOF'
 # Auto-generated from packages.yaml - DO NOT EDIT DIRECTLY
@@ -496,16 +433,16 @@ no_proxy = "{{ get_env(name='no_proxy', default='') }}"
 PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 NPM_CONFIG_REGISTRY = "{{ get_env(name='NPM_CONFIG_REGISTRY', default='') }}"
 RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
-
-[tools]
 EOF
-
-    for key in "${tool_order[@]}"; do
-      if [[ "$key" == *:* || "$key" == *[* ]]; then
-        echo "\"$key\" = \"${tool_versions[$key]}\""
-      else
-        echo "$key = \"${tool_versions[$key]}\""
-      fi
-    done >>"$output_file"
   fi
+
+  printf "\n[tools]\n" >>"$output_file"
+  get_mise_packages | while IFS='|' read -r tool_key version; do
+    [[ -z "$tool_key" || -z "$version" ]] && continue
+    if [[ "$tool_key" == *:* || "$tool_key" == *[* ]]; then
+      echo "\"$tool_key\" = \"$version\""
+    else
+      echo "$tool_key = \"$version\""
+    fi
+  done >>"$output_file"
 }
