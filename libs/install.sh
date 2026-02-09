@@ -494,9 +494,14 @@ handle_wsl_restart() {
       tui_blank_line
     fi
 
+    if ! command -v wsl.exe &>/dev/null; then
+      show_progress warning "wsl.exe not found; skipping WSL shutdown"
+      return 0
+    fi
+
     show_progress info "Shutting down WSL..."
     wsl.exe --shutdown
-    exit 0 # Ensure script stops here
+    return 0
   fi
   return 0
 }
