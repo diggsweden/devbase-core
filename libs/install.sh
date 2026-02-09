@@ -642,14 +642,15 @@ configure_docker_proxy() {
 
   if [[ -f "$docker_dropin_file" ]]; then
     show_progress info "Docker proxy drop-in already exists, skipping"
-  else
-    {
-      echo "[Service]"
-      [[ -n "$http_proxy" ]] && echo "Environment=\"HTTP_PROXY=${http_proxy}/\""
-      [[ -n "$https_proxy" ]] && echo "Environment=\"HTTPS_PROXY=${https_proxy}/\""
-      [[ -n "$no_proxy" ]] && echo "Environment=\"NO_PROXY=${no_proxy}\""
-    } | sudo tee "$docker_dropin_file" >/dev/null
+    return 0
   fi
+
+  {
+    echo "[Service]"
+    [[ -n "$http_proxy" ]] && echo "Environment=\"HTTP_PROXY=${http_proxy}/\""
+    [[ -n "$https_proxy" ]] && echo "Environment=\"HTTPS_PROXY=${https_proxy}/\""
+    [[ -n "$no_proxy" ]] && echo "Environment=\"NO_PROXY=${no_proxy}\""
+  } | sudo tee "$docker_dropin_file" >/dev/null
 
   if systemctl list-unit-files docker.service &>/dev/null; then
     sudo systemctl daemon-reload
