@@ -941,6 +941,52 @@ EOF
   assert_output "is_fresh=false"
 }
 
+@test "collect_tool_preferences (gum) enforces single binding selection" {
+  common_setup_isolated
+
+  run bash -c '
+    export DEVBASE_ROOT="'"${DEVBASE_ROOT}"'"
+    export DEVBASE_LIBS="'"${DEVBASE_ROOT}"'/libs"
+    export DEVBASE_CONFIG_DIR="'"${HOME}"'/.config/devbase"
+
+    source "${DEVBASE_ROOT}/libs/define-colors.sh"
+    source "${DEVBASE_ROOT}/libs/validation.sh"
+    source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+    source "${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh"
+
+    _gum_section() { :; }
+    _gum_success() { :; }
+    _gum_exit_on_cancel_any() { :; }
+    _gum_warning() { echo "WARN:$1"; }
+
+    call_count_file="${TEST_DIR}/gum-choose-count"
+    echo 0 >"$call_count_file"
+    _gum_choose_multi() {
+      local count
+      count=$(cat "$call_count_file")
+      count=$((count + 1))
+      echo "$count" >"$call_count_file"
+
+      if [[ $count -eq 1 ]]; then
+        printf "%s\n%s\n" "Vim-style   Modal editing, hjkl navigation" "Emacs-style Arrow keys, Ctrl shortcuts"
+      elif [[ $count -eq 2 ]]; then
+        printf "%s\n" "Vim-style   Modal editing, hjkl navigation"
+      else
+        echo ""
+      fi
+    }
+
+    collect_tool_preferences
+    echo "EDITOR=$EDITOR"
+    echo "VISUAL=$VISUAL"
+  '
+
+  assert_success
+  assert_output --partial "WARN:Select exactly one binding"
+  assert_output --partial "EDITOR=nvim"
+  assert_output --partial "VISUAL=nvim"
+}
+
 @test "saved preferences with subset of packs are preserved on load" {
   common_setup_isolated
   local prefs_dir="${HOME}/.config/devbase"

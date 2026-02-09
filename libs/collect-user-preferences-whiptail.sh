@@ -426,8 +426,9 @@ collect_tool_preferences() {
   [[ "$current_editor" != "nvim" ]] && vim_status="OFF" && emacs_status="ON"
 
   local editor_choice
-  if ! editor_choice=$(_wt_radiolist "Shell Key Bindings" \
-    "
+  while true; do
+    if ! editor_choice=$(_wt_checklist "Shell Key Bindings" \
+      "
   Choose key bindings for command line editing.
 
   Vim:   Modal editing, hjkl navigation
@@ -435,13 +436,24 @@ collect_tool_preferences() {
 
   Emacs: Arrow keys, Ctrl shortcuts
          Ctrl-A start, Ctrl-E end
-" \
-    "vim" "Modal editing, hjkl navigation" "$vim_status" \
-    "emacs" "Arrow keys, Ctrl shortcuts" "$emacs_status"); then
-    _handle_cancel
-    collect_tool_preferences
-    return
-  fi
+
+  Use Space to toggle, Enter to confirm.
+ " \
+      "vim" "Modal editing, hjkl navigation" "$vim_status" \
+      "emacs" "Arrow keys, Ctrl shortcuts" "$emacs_status"); then
+      _handle_cancel
+      collect_tool_preferences
+      return
+    fi
+
+    local count
+    count=$(echo "$editor_choice" | grep -c .)
+    if [[ $count -eq 1 ]]; then
+      break
+    fi
+
+    _wt_msgbox "Shell Key Bindings" "Select exactly one option."
+  done
 
   if [[ "$editor_choice" == "vim" ]]; then
     export EDITOR="nvim"
@@ -472,7 +484,7 @@ collect_tool_preferences() {
 
   local selected
   if ! selected=$(_wt_checklist "Additional Tools" \
-    "Configure additional development tools." \
+    "Configure additional development tools.\n\nUse Space to toggle, Enter to confirm." \
     "${items[@]}"); then
     _handle_cancel
     collect_tool_preferences

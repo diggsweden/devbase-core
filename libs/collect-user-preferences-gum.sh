@@ -206,6 +206,7 @@ _gum_choose_multi() {
   shift
 
   local args=(
+    --header "Space toggles, Enter confirms"
     --no-limit
     --no-show-help
     --cursor "> "
@@ -362,13 +363,16 @@ collect_theme_preference() {
   done
 
   local choice
-  choice=$(gum choose \
-    --no-show-help \
-    --cursor "> " \
-    --cursor.foreground "$_GUM_ACCENT" \
-    --selected.foreground "$_GUM_ACCENT" \
-    --height 14 \
-    "${options[@]}") || _gum_exit_on_cancel_any
+  choice=$(
+    gum choose \
+      --header "Use Enter to select" \
+      --no-show-help \
+      --cursor "> " \
+      --cursor.foreground "$_GUM_ACCENT" \
+      --selected.foreground "$_GUM_ACCENT" \
+      --height 14 \
+      "${options[@]}"
+  ) || _gum_exit_on_cancel_any
 
   # Theme name is the first field
   DEVBASE_THEME="${choice%% *}"
@@ -536,30 +540,32 @@ collect_editor_preferences() {
 collect_tool_preferences() {
   _gum_section "Shell & Tools"
 
-  # Build binding options with checkmark for current selection
+  # Build binding options (single-choice via multi-select)
   local current_binding="vim"
   [[ "${EDITOR:-}" == "nano" ]] && current_binding="emacs"
 
-  local -a options=()
-  if [[ "$current_binding" == "vim" ]]; then
-    options+=("✓ Vim-style   Modal editing, hjkl navigation")
-    options+=("  Emacs-style Arrow keys, Ctrl shortcuts")
-  else
-    options+=("  Vim-style   Modal editing, hjkl navigation")
-    options+=("✓ Emacs-style Arrow keys, Ctrl shortcuts")
-  fi
+  local -a options=(
+    "Vim-style   Modal editing, hjkl navigation"
+    "Emacs-style Arrow keys, Ctrl shortcuts"
+  )
 
-  local choice
-  choice=$(gum choose \
-    --no-show-help \
-    --cursor "> " \
-    --cursor.foreground "$_GUM_ACCENT" \
-    --selected.foreground "$_GUM_ACCENT" \
-    "${options[@]}") || _gum_exit_on_cancel_any
+  local preselected=""
+  [[ "$current_binding" == "vim" ]] && preselected="${options[0]}" || preselected="${options[1]}"
 
-  local selected_binding
-  # Extract binding name (second field, first is checkmark or space)
-  selected_binding=$(echo "$choice" | awk '{print $2}')
+  local selected_binding=""
+  while [[ -z "$selected_binding" ]]; do
+    local choice
+    choice=$(_gum_choose_multi "$preselected" "${options[@]}")
+
+    local count
+    count=$(echo "$choice" | grep -c .)
+    if [[ $count -ne 1 ]]; then
+      _gum_warning "Select exactly one binding"
+      continue
+    fi
+
+    selected_binding=$(echo "$choice" | awk '{print $1}')
+  done
 
   if [[ "$selected_binding" == "Vim-style" ]]; then
     export EDITOR="nvim"
