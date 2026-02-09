@@ -548,8 +548,8 @@ collect_tool_preferences() {
   [[ "${EDITOR:-}" == "nano" ]] && current_binding="emacs"
 
   local -a options=(
-    "Vim-style   Modal editing, hjkl navigation"
-    "Emacs-style Arrow keys, Ctrl shortcuts"
+    "Vim-style - Modal editing / hjkl navigation"
+    "Emacs-style - Arrow keys / Ctrl shortcuts"
   )
 
   local preselected=""
