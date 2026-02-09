@@ -821,14 +821,11 @@ DevBase provides minimal git hooks focused on security and workflow automation. 
 - **pre-commit** - Runs before creating commits:
   - `01-secrets-scan.sh` - Scans staged files for secrets using gitleaks
 
-- **commit-msg** - Validates commit message format:
+- **post-commit** - Validates commit policy (non-blocking):
   - `01-conventional-commits.sh` - Enforces conventional commits via conform (only if `.conform.yaml` exists in repo)
 
 - **prepare-commit-msg** - Prepares commit message:
   - `01-add-issue-ref.sh` - Auto-adds `Refs:` trailer from branch name (e.g., `JIRA-123`)
-
-- **pre-push** - Runs before pushing:
-  - `01-verify-signatures.sh` - Blocks pushes with unsigned commits (GPG/SSH)
 
 **Learn more**:
 
