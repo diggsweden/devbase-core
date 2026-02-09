@@ -84,7 +84,8 @@ When `DEVBASE_PROXY_HOST` and `DEVBASE_PROXY_PORT` are set, DevBase automaticall
    - **Java**: Sets `JAVA_TOOL_OPTIONS` with proxy settings (host, port, nonProxyHosts)
    - **Gradle**: Sets `GRADLE_OPTS` with proxy settings
    - **Git**: Configures `http.proxy` and `https.proxy` globally
-   - **Snap**: Configures system-wide Snap proxy settings
+- **Snap**: Configures system-wide Snap proxy settings
+- **Docker (optional)**: Creates a systemd drop-in for Docker daemon proxy when proxy variables are set
 
 3. **Configures system:**
    - **Sudo**: Preserves proxy environment variables when using sudo
