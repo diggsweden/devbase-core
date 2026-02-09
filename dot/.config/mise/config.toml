@@ -81,7 +81,7 @@ jq = "jq-1.8.1"
 "npm:tree-sitter-cli" = "0.26.5"
 
 # Container and Kubernetes tools
-"aqua:docker/compose" = "v2.40.3"
+"aqua:docker/compose" = "v5.0.2"
 "aqua:derailed/k9s" = "v0.50.18"
 "aqua:grafana/k6" = "v1.5.0"
 "aqua:argoproj/argo-cd" = "v3.3.0"
