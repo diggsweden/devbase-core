@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test on Fedora 43
     container:
-      image: fedora:43
+      image: fedora:44@sha256:64de49837325632232088e59c20518565a9d657095f9f3c2fa6033a42fb1412b
       options: --user root
     steps:
       - name: Install prerequisites
