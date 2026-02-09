@@ -34,13 +34,14 @@ verify_mise_checksum() {
 
   # Get version from packages.yaml if not provided
   if [[ -z "$version" ]]; then
-    if declare -f get_tool_version &>/dev/null; then
+    [[ -n "${MISE_VERSION:-}" ]] && version="$MISE_VERSION"
+    if [[ -z "$version" ]] && declare -f get_tool_version &>/dev/null; then
       version=$(get_tool_version "mise")
     fi
   fi
 
   if [[ -z "$version" ]]; then
-    show_progress warning "Could not determine expected mise version"
+    show_progress info "Mise version not yet available (first-run is OK); checksum verification will run after setup"
     return 0
   fi
 
@@ -366,11 +367,17 @@ install_mise_tools() {
       fi
     fi
   else
-    # Gum/other mode - show real-time output with tee (unchanged)
+    # Gum/other mode - let mise render its own TTY output
     show_progress info "Installing development tools..."
-    if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
-      if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
-        mise_server_error=true
+    if [[ -n "${DEVBASE_DEBUG:-}" ]]; then
+      if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
+        if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+          mise_server_error=true
+        fi
+      fi
+    else
+      if ! run_mise_from_home_dir install --yes; then
+        show_progress warning "mise install returned non-zero exit code"
       fi
     fi
   fi
