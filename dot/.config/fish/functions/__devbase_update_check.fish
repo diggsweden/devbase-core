@@ -27,6 +27,10 @@ function __devbase_update_check --description "Check for devbase updates on shel
         printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
         printf "\n"
 
+        # Drain any buffered stdin (e.g. accidental keypresses during slow output)
+        while read -n 1 -t 0 2>/dev/null
+        end
+
         read -P "Update now? [y/N] " -n 1 response
         printf "\n"
 

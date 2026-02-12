@@ -75,19 +75,23 @@ function __citrix_prompt_yn --description "Prompt user for yes/no with default"
     set -l prompt $argv[1]
     set -l default $argv[2]
     set -l prompt_text
-    
+
     if test "$default" = "y"
         set prompt_text "$prompt [Y/n]: "
     else
         set prompt_text "$prompt [y/N]: "
     end
-    
+
+    # Drain any buffered stdin (e.g. accidental keypresses during slow output)
+    while read -n 1 -t 0 2>/dev/null
+    end
+
     read -l -P "$prompt_text" response
-    
+
     if test -z "$response"
         set response "$default"
     end
-    
+
     string match -qi 'y*' "$response"
 end
 
@@ -104,11 +108,14 @@ function __citrix_configure_install_options --description "Prompt user for Citri
     end
     
     # Device Trust (no default - user must choose)
-    printf "  Enable Device Trust (endpoint compliance checking)? [y/n]: "
-    read -l dt_response
-    while not string match -qri '^[yn]' "$dt_response"
-        printf "  Please enter y or n: "
-        read -l dt_response
+    # Drain any buffered stdin
+    while read -n 1 -t 0 2>/dev/null
+    end
+
+    set -l dt_response
+    while true
+        read -P "  Enable Device Trust (endpoint compliance checking)? [y/n]: " dt_response
+        string match -qri '^[yn]' "$dt_response"; and break
     end
     
     if string match -qi 'y*' "$dt_response"

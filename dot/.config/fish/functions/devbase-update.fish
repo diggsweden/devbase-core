@@ -388,6 +388,10 @@ function __devbase_update_do_update --description "Perform the update"
     if test "$force_ref" = true
         __devbase_update_print_info "Updating core to requested ref"
     else if isatty stdin
+        # Drain any buffered stdin (e.g. accidental keypresses during slow fetch)
+        while read -n 1 -t 0 2>/dev/null
+        end
+
         read -P "Proceed with update? [y/N] " -n 1 response
         echo
         if not string match -qi 'y' -- $response
