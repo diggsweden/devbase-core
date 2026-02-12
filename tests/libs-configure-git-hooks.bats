@@ -15,7 +15,6 @@ load 'test_helper'
 
 setup() {
   common_setup_isolated
-  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
   export DEVBASE_BACKUP_DIR="${HOME}/.devbase_backup"
   export DEVBASE_CUSTOM_DIR=""
   export DEVBASE_ENABLE_GIT_HOOKS="true"
@@ -33,7 +32,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -57,7 +55,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -84,7 +81,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -112,7 +108,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -143,7 +138,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -173,7 +167,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_ENABLE_GIT_HOOKS='false'
     
@@ -196,7 +189,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -228,7 +220,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR='${TEST_DIR}'
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -259,7 +250,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'
@@ -283,7 +273,6 @@ teardown() {
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export DEVBASE_DOT='${DEVBASE_DOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_ENABLE_GIT_HOOKS='true'

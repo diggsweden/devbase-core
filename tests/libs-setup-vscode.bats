@@ -239,7 +239,82 @@ teardown() {
 
 @test "_backup_vscode_settings returns failure when file doesn't exist" {
   source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
-  
+
   run _backup_vscode_settings "${TEST_DIR}/nonexistent.json"
   assert_failure
+}
+
+@test "configure_vscode_settings merges theme without clobbering existing keys" {
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  echo '{"editor.fontSize": 14, "workbench.colorTheme": "Old Theme"}' | jq '.' > "${settings_dir}/settings.json"
+
+  export DEVBASE_THEME="catppuccin-mocha"
+  source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='catppuccin-mocha'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+
+    configure_vscode_settings >/dev/null 2>&1
+    cat '${settings_dir}/settings.json'
+  "
+
+  assert_success
+  # Theme should be updated
+  assert_output --partial '"workbench.colorTheme": "Catppuccin Mocha"'
+  # Existing user key should be preserved
+  assert_output --partial '"editor.fontSize": 14'
+}
+
+@test "configure_vscode_settings creates new settings file with theme" {
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='nord'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+
+    configure_vscode_settings >/dev/null 2>&1
+    cat '${settings_dir}/settings.json'
+  "
+
+  assert_success
+  assert_output --partial '"workbench.colorTheme": "Nord"'
+}
+
+@test "configure_vscode_settings does not inject neovim settings" {
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='everforest-dark'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+
+    configure_vscode_settings >/dev/null 2>&1
+    cat '${settings_dir}/settings.json'
+  "
+
+  assert_success
+  assert_output --partial '"workbench.colorTheme": "Everforest Dark"'
+  refute_output --partial "vscode-neovim"
+  refute_output --partial "neovimExecutablePaths"
 }

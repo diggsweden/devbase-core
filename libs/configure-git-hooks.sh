@@ -13,12 +13,12 @@ fi
 
 # Brief: Configure git hooks from templates and custom sources
 # Params: None
-# Uses: DEVBASE_ENABLE_GIT_HOOKS, DEVBASE_DOT, DEVBASE_CUSTOM_DIR, XDG_CONFIG_HOME, DEVBASE_BACKUP_DIR (globals)
+# Uses: DEVBASE_ENABLE_GIT_HOOKS, DEVBASE_ROOT, DEVBASE_CUSTOM_DIR, XDG_CONFIG_HOME, DEVBASE_BACKUP_DIR (globals)
 # Returns: 0 always
 # Side-effects: Backs up existing hooks, copies templates, sets executable permissions
 configure_git_hooks() {
   validate_var_set "XDG_CONFIG_HOME" || return 1
-  validate_var_set "DEVBASE_DOT" || return 1
+  validate_var_set "DEVBASE_ROOT" || return 1
   validate_var_set "DEVBASE_BACKUP_DIR" || return 1
 
   [[ "$DEVBASE_ENABLE_GIT_HOOKS" != "true" ]] && {
@@ -29,8 +29,7 @@ configure_git_hooks() {
   show_progress info "Configuring git hooks..."
 
   local hooks_dir="${XDG_CONFIG_HOME}/git/git-hooks"
-  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
-  local templates_dir="${DEVBASE_DOT}/.config/git/hooks-templates"
+  local templates_dir="${DEVBASE_ROOT}/devbase_files/git-hooks-templates"
   local custom_hooks_dir="${DEVBASE_CUSTOM_DIR}/git-hooks"
   local backup_dir="${DEVBASE_BACKUP_DIR}/git-hooks"
 

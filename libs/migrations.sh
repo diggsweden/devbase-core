@@ -94,7 +94,7 @@ migrate_mise_fish_hook() {
   return 0
 }
 
-# Brief: Remove legacy pre-push signature hook
+# Brief: Remove legacy pre-push signature hook from active hooks directory
 # Context: Signature enforcement moved to conform; old hook should be removed on update
 # Returns: 0 always (cleanup is best-effort)
 migrate_git_signature_hook() {
@@ -112,6 +112,44 @@ migrate_git_signature_hook() {
   return 0
 }
 
+# Brief: Remove stale deployed hooks-templates directory
+# Context: hooks-templates/ was previously deployed as a dotfile but is only used as a
+#          repo source by configure_git_hooks(). It is now excluded from dotfiles deployment;
+#          this migration cleans up existing installs that still have the deployed copy.
+# Returns: 0 always (cleanup is best-effort)
+migrate_deployed_hooks_templates() {
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local deployed_templates="${config_dir}/git/hooks-templates"
+
+  if [[ -d "$deployed_templates" ]]; then
+    rm -rf "$deployed_templates"
+    if declare -f show_progress &>/dev/null; then
+      show_progress info "Removed stale deployed hooks-templates directory"
+    fi
+  fi
+
+  return 0
+}
+
+# Brief: Remove stale deployed vscode settings directory
+# Context: VS Code settings.json was previously deployed as a dotfile to ~/.config/vscode/
+#          but is now managed inline by configure_vscode_settings(). The deployed copy was
+#          never read by VS Code itself and is just litter.
+# Returns: 0 always (cleanup is best-effort)
+migrate_deployed_vscode_settings() {
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local deployed_vscode="${config_dir}/vscode"
+
+  if [[ -d "$deployed_vscode" ]]; then
+    rm -rf "$deployed_vscode"
+    if declare -f show_progress &>/dev/null; then
+      show_progress info "Removed stale deployed vscode settings directory"
+    fi
+  fi
+
+  return 0
+}
+
 # Brief: Run all migrations
 # Context: Called during setup.sh to ensure clean state
 run_migrations() {
@@ -119,4 +157,6 @@ run_migrations() {
   migrate_mise_yq_backend
   migrate_mise_fish_hook
   migrate_git_signature_hook
+  migrate_deployed_hooks_templates
+  migrate_deployed_vscode_settings
 }

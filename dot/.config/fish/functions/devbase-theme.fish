@@ -301,9 +301,6 @@ function __devbase_theme_get_vscode_settings_path --description "Get VSCode sett
     else if test -d ~/.config/Code/User
         echo ~/.config/Code/User/settings.json
         return 0
-    else if test -d ~/.config/vscode
-        echo ~/.config/vscode/settings.json
-        return 0
     end
     return 1
 end

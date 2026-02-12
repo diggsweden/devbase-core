@@ -136,12 +136,11 @@ _find_native_vscode() {
 
 # Brief: Main VS Code setup including WSL detection and extension installation
 # Params: None
-# Uses: DEVBASE_VSCODE_EXTENSIONS, DEVBASE_VSCODE_NEOVIM, DEVBASE_DOT, HOME, is_wsl, show_progress (globals/functions)
+# Uses: DEVBASE_VSCODE_EXTENSIONS, HOME, is_wsl, show_progress (globals/functions)
 # Returns: 0 always
 # Side-effects: Installs Remote-WSL extension, configures VS Code settings, installs extensions or creates installer script
 setup_vscode() {
   validate_var_set "HOME" || return 1
-  validate_var_set "DEVBASE_DOT" || return 1
 
   show_progress info "Setting up VS Code extensions..."
 
@@ -179,17 +178,13 @@ setup_vscode() {
     show_progress success "VS Code setup completed"
   else
     show_progress info "Skipping VS Code extensions"
-    export DEVBASE_VSCODE_NEOVIM="false"
   fi
 
   return 0
 }
 
-# Brief: Configure VS Code settings.json with theme and optional Neovim integration
-# Params: None
-# Uses: DEVBASE_VSCODE_NEOVIM, DEVBASE_THEME, DEVBASE_DOT, HOME, show_progress (globals/functions)
-# Returns: 0 always
-# Side-effects: Backs up existing settings, merges or creates settings.json in VS Code config directory
+# Brief: Detect VS Code settings directory
+# Returns: 0 and echoes path if found, 1 otherwise
 _get_vscode_settings_dir() {
   if [[ -d "$HOME/.vscode-server/data/Machine" ]]; then
     echo "$HOME/.vscode-server/data/Machine"
@@ -236,97 +231,15 @@ _backup_vscode_settings() {
   return 1
 }
 
-_expand_vscode_template_paths() {
-  local settings_template="$1"
-
-  # Determine if we're in WSL
-  local use_wsl="false"
-  if is_wsl; then
-    use_wsl="true"
-  fi
-
-  # Expand template variables
-  sed -e "s|\${userHome}|$HOME|g" \
-    -e "s|\${USE_WSL}|$use_wsl|g" \
-    "$settings_template"
-}
-
-_merge_vscode_settings_jq() {
-  local settings_target="$1"
-  local vscode_theme="$2"
-  local configure_neovim="$3"
-  local settings_template="$4"
-
-  local new_settings='{"workbench.colorTheme": "'$vscode_theme'"}'
-
-  if [[ "$configure_neovim" == "true" ]]; then
-    new_settings=$(jq -s '.[0] * .[1]' <(echo "$new_settings") <(_expand_vscode_template_paths "$settings_template"))
-  fi
-
-  echo "$new_settings" | jq -s '.[0] * .[1]' "$settings_target" - >"${settings_target}.tmp"
-  mv "${settings_target}.tmp" "$settings_target"
-}
-
-_merge_vscode_settings_manual() {
-  local settings_target="$1"
-  local settings_template="$2"
-  local existing_settings="$3"
-
-  local new_settings
-  new_settings=$(_expand_vscode_template_paths "$settings_template" | grep -Ev '^[{}]')
-
-  if echo "$existing_settings" | grep -q '".*":'; then
-    echo "${existing_settings%\}}" >"$settings_target"
-    echo ",${new_settings}" >>"$settings_target"
-    echo "}" >>"$settings_target"
-  else
-    _expand_vscode_template_paths "$settings_template" >"$settings_target"
-  fi
-}
-
-_create_new_vscode_settings_jq() {
-  local settings_target="$1"
-  local vscode_theme="$2"
-  local configure_neovim="$3"
-  local settings_template="$4"
-
-  if [[ "$configure_neovim" == "true" ]]; then
-    _expand_vscode_template_paths "$settings_template" | jq --arg theme "$vscode_theme" '. + {"workbench.colorTheme": $theme}' >"$settings_target"
-  else
-    echo '{"workbench.colorTheme": "'"$vscode_theme"'"}' | jq '.' >"$settings_target"
-  fi
-}
-
-_create_new_vscode_settings_manual() {
-  local settings_target="$1"
-  local vscode_theme="$2"
-  local configure_neovim="$3"
-  local settings_template="$4"
-
-  if [[ "$configure_neovim" == "true" ]]; then
-    _expand_vscode_template_paths "$settings_template" >"$settings_target"
-    local content
-    content=$(cat "$settings_target")
-    echo "${content%\}}" >"$settings_target"
-    echo ",  \"workbench.colorTheme\": \"$vscode_theme\"" >>"$settings_target"
-    echo "}" >>"$settings_target"
-  else
-    echo '{
-  "workbench.colorTheme": "'"$vscode_theme"'"
-}' >"$settings_target"
-  fi
-}
-
+# Brief: Configure VS Code settings.json with theme
+# Params: None
+# Uses: DEVBASE_THEME, HOME, show_progress (globals/functions)
+# Returns: 0 always
+# Side-effects: Merges theme key into existing settings.json (additive only)
 configure_vscode_settings() {
-  validate_var_set "DEVBASE_DOT" || return 1
   validate_var_set "HOME" || return 1
 
   show_progress info "Configuring VS Code settings..."
-
-  local configure_neovim="${DEVBASE_VSCODE_NEOVIM}"
-  validate_var_set "DEVBASE_DOT" || return 1
-  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
-  local settings_template="${DEVBASE_DOT}/.config/vscode/settings.json"
 
   # Get settings directory
   local vscode_settings_dir
@@ -339,44 +252,27 @@ configure_vscode_settings() {
   local vscode_theme
   vscode_theme=$(_get_vscode_theme_name "${DEVBASE_THEME}")
 
-  # Validate template
-  if [[ ! -f "$settings_template" ]]; then
-    show_progress warning "VS Code settings template not found at $settings_template"
+  local new_settings='{"workbench.colorTheme": "'"$vscode_theme"'"}'
+
+  if ! command -v jq &>/dev/null; then
+    show_progress warning "jq not found, writing minimal VS Code settings (theme only)"
+    if [[ ! -f "$settings_target" ]]; then
+      printf '{\n  "workbench.colorTheme": "%s"\n}\n' "$vscode_theme" >"$settings_target"
+      show_progress success "VS Code settings configured with theme: $vscode_theme"
+    else
+      show_progress info "VS Code settings already exist, skipping (install jq for merge support)"
+    fi
     return 0
   fi
 
-  # Handle existing settings file
   if [[ -f "$settings_target" ]]; then
     _backup_vscode_settings "$settings_target"
-
     show_progress info "Merging VS Code settings..."
-
-    local existing_settings
-    existing_settings=$(cat "$settings_target")
-
-    # Skip neovim configuration if already present
-    local skip_neovim="false"
-    if echo "$existing_settings" | grep -q "vscode-neovim"; then
-      show_progress info "Neovim settings already configured, skipping neovim configuration"
-      skip_neovim="true"
-      configure_neovim="false"
-    fi
-
-    # Always update theme, but conditionally add neovim settings
-    if command -v jq &>/dev/null; then
-      _merge_vscode_settings_jq "$settings_target" "$vscode_theme" "$configure_neovim" "$settings_template"
-      show_progress success "VS Code settings merged successfully"
-    else
-      _merge_vscode_settings_manual "$settings_target" "$settings_template" "$existing_settings"
-      show_progress success "VS Code settings updated"
-    fi
+    echo "$new_settings" | jq -s '.[0] * .[1]' "$settings_target" - >"${settings_target}.tmp"
+    mv "${settings_target}.tmp" "$settings_target"
+    show_progress success "VS Code settings merged successfully"
   else
-    # Create new settings file
-    if command -v jq &>/dev/null; then
-      _create_new_vscode_settings_jq "$settings_target" "$vscode_theme" "$configure_neovim" "$settings_template"
-    else
-      _create_new_vscode_settings_manual "$settings_target" "$vscode_theme" "$configure_neovim" "$settings_template"
-    fi
+    echo "$new_settings" | jq '.' >"$settings_target"
     show_progress success "VS Code settings configured with theme: $vscode_theme"
   fi
 
@@ -422,8 +318,7 @@ get_extension_description() {
 # Returns: 0 on success
 _setup_vscode_parser() {
   validate_var_set "DEVBASE_DOT" || return 1
-
-  # Set up package configuration
+  # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
 
@@ -561,7 +456,7 @@ _install_vscode_ext_print_summary() {
 
 # Brief: Install VS Code extensions from packages.yaml
 # Params: $1 - code_cmd (path to code executable), $2 - remote_flag (optional)
-# Uses: DEVBASE_DOT, DEVBASE_VSCODE_NEOVIM, _DEVBASE_CUSTOM_PACKAGES, get_extension_description, show_progress (globals/functions)
+# Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES, get_extension_description, show_progress (globals/functions)
 # Returns: 0 on success, 1 if code_cmd fails or packages.yaml not found
 # Side-effects: Installs VS Code extensions, prints installation summary
 install_vscode_extensions() {
@@ -588,11 +483,11 @@ install_vscode_extensions() {
   while IFS='|' read -r ext_id version tags; do
     [[ -z "$ext_id" ]] && continue
 
-    # Check @optional tag - skip neovim if user opted out
-    if [[ "$tags" == *"@optional"* ]] && [[ "$ext_id" == "asvetliakov.vscode-neovim" ]] && [[ "${DEVBASE_VSCODE_NEOVIM:-}" != "true" ]]; then
+    # Skip @optional extensions (e.g. neovim) — interactive prompt handled by devbase-vscode-extensions
+    if [[ "$tags" == *"@optional"* ]]; then
       local display_name
       display_name=$(_install_vscode_ext_display_name "$ext_id")
-      show_progress info "$display_name (skipped by user preference)"
+      show_progress info "$display_name (optional - use devbase-vscode-extensions to install)"
       skipped_count=$((skipped_count + 1))
       continue
     fi

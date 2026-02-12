@@ -92,6 +92,48 @@ function __vscode_ext_prompt_neovim --description "Ask user about neovim extensi
     end
 end
 
+function __vscode_ext_get_vscode_settings_path --description "Get VS Code settings file path"
+    if test -d ~/.vscode-server/data/Machine
+        echo ~/.vscode-server/data/Machine/settings.json
+        return 0
+    else if test -d ~/.config/Code/User
+        echo ~/.config/Code/User/settings.json
+        return 0
+    end
+    return 1
+end
+
+function __vscode_ext_configure_neovim_settings --description "Merge neovim settings into VS Code settings.json"
+    if not command -q jq
+        __vscode_ext_print_warning "jq not found, skipping neovim settings (install jq for full support)"
+        return 0
+    end
+
+    set -l settings_file (__vscode_ext_get_vscode_settings_path)
+    if test -z "$settings_file"
+        __vscode_ext_print_warning "VS Code settings directory not found, skipping neovim settings"
+        return 0
+    end
+
+    set -l use_wsl false
+    test -d ~/.vscode-server; and set use_wsl true
+
+    set -l nvim_path "$HOME/.local/share/mise/installs/aqua-neovim-neovim/vlatest/nvim-linux-x86_64/bin/nvim"
+
+    set -l neovim_json (jq -n --arg wsl "$use_wsl" --arg nvim "$nvim_path" \
+        '{"vscode-neovim.useWSL": ($wsl == "true"), "vscode-neovim.neovimExecutablePaths.linux": $nvim, "vscode-neovim.neovimInitVimPaths.linux": ""}')
+
+    if test -f $settings_file
+        jq -s '.[0] * .[1]' $settings_file (echo "$neovim_json" | psub) >$settings_file.tmp
+        and mv $settings_file.tmp $settings_file
+        and __vscode_ext_print_success "Neovim settings configured"
+    else
+        mkdir -p (dirname $settings_file)
+        echo "$neovim_json" >$settings_file
+        and __vscode_ext_print_success "Neovim settings configured (new settings file created)"
+    end
+end
+
 function __vscode_ext_get_selected_packs
     # Read selected packs from preferences.yaml
     set -l packs (yq -r '.packs // [] | .[]' "$__vscode_ext_preferences" 2>/dev/null)
@@ -140,11 +182,12 @@ function __vscode_ext_install --description "Install extensions"
     
     set -l packs (__vscode_ext_get_selected_packs)
     
-    # Prompt for neovim extension preference
+    # Prompt for neovim extension preference and configure settings if accepted
     set -l neovim_pref "false"
     if test "$dry_run" != "true"
         if __vscode_ext_prompt_neovim
             set neovim_pref "true"
+            __vscode_ext_configure_neovim_settings
         end
         echo
     end

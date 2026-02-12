@@ -84,7 +84,6 @@ DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"  # Auto-start Zelli
 # VSCode configuration flags (defaults set during user preferences collection)
 DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-}"       # Install VSCode (set based on WSL detection)
 DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-}" # Install VSCode extensions
-DEVBASE_VSCODE_NEOVIM="${DEVBASE_VSCODE_NEOVIM:-}"         # Install VSCode Neovim extension
 
 # SSH key management configuration
 DEVBASE_SSH_KEY_TYPE="${DEVBASE_SSH_KEY_TYPE:-ed25519}"            # SSH key type: ed25519, ecdsa, ed25519-sk, ecdsa-sk

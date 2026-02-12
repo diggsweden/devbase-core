@@ -405,7 +405,6 @@ collect_editor_preferences() {
     vscode)
       export DEVBASE_VSCODE_INSTALL="true"
       export DEVBASE_VSCODE_EXTENSIONS="true"
-      export DEVBASE_VSCODE_NEOVIM="true"
       ;;
     lazyvim) export DEVBASE_INSTALL_LAZYVIM="true" ;;
     intellij) export DEVBASE_INSTALL_INTELLIJ="true" ;;
@@ -415,7 +414,6 @@ collect_editor_preferences() {
   # If VS Code not selected, disable extensions
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "false" ]]; then
     export DEVBASE_VSCODE_EXTENSIONS="false"
-    export DEVBASE_VSCODE_NEOVIM="false"
   fi
 }
 

@@ -522,7 +522,6 @@ collect_editor_preferences() {
   if echo "$selected" | grep -q "VS Code"; then
     export DEVBASE_VSCODE_INSTALL="true"
     export DEVBASE_VSCODE_EXTENSIONS="true"
-    export DEVBASE_VSCODE_NEOVIM="true"
     _gum_success "VS Code"
   fi
   if echo "$selected" | grep -q "LazyVim"; then
@@ -536,7 +535,6 @@ collect_editor_preferences() {
 
   if [[ "${DEVBASE_VSCODE_INSTALL}" == "false" ]]; then
     export DEVBASE_VSCODE_EXTENSIONS="false"
-    export DEVBASE_VSCODE_NEOVIM="false"
   fi
 }
 

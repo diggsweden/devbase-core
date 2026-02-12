@@ -130,3 +130,45 @@ teardown() {
   assert_success
   assert_file_not_exists "${hooks_dir}/01-verify-signatures.sh"
 }
+
+@test "migrate_deployed_hooks_templates removes stale hooks-templates directory" {
+  local templates_dir="${HOME}/.config/git/hooks-templates"
+  mkdir -p "${templates_dir}/pre-push.d"
+  touch "${templates_dir}/pre-push.d/01-verify-signatures.sh"
+  mkdir -p "${templates_dir}/commit-msg.d"
+  touch "${templates_dir}/commit-msg.d/01-conventional-commits.sh"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_deployed_hooks_templates
+
+  assert_success
+  assert_file_not_exists "${templates_dir}"
+}
+
+@test "migrate_deployed_hooks_templates succeeds when directory does not exist" {
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_deployed_hooks_templates
+
+  assert_success
+}
+
+@test "migrate_deployed_vscode_settings removes stale vscode directory" {
+  local vscode_dir="${HOME}/.config/vscode"
+  mkdir -p "${vscode_dir}"
+  echo '{}' > "${vscode_dir}/settings.json"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_deployed_vscode_settings
+
+  assert_success
+  assert_file_not_exists "${vscode_dir}"
+}
+
+@test "migrate_deployed_vscode_settings succeeds when directory does not exist" {
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_deployed_vscode_settings
+
+  assert_success
+}

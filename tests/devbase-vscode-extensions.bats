@@ -180,6 +180,48 @@ EOF
   assert_failure
 }
 
+@test "__vscode_ext_configure_neovim_settings merges neovim keys into existing settings" {
+  if ! command -v jq &>/dev/null; then
+    skip "jq is required for this test"
+  fi
+
+  local settings_dir="${TEST_DIR}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  echo '{"workbench.colorTheme": "Nord"}' | jq '.' > "${settings_dir}/settings.json"
+
+  run run_fish_vscode_ext_with_mock_home "__vscode_ext_configure_neovim_settings"
+
+  assert_success
+  assert_output --partial "Neovim settings configured"
+
+  # Verify neovim keys were added
+  run jq -r 'keys[]' "${settings_dir}/settings.json"
+  assert_output --partial "vscode-neovim.useWSL"
+  assert_output --partial "vscode-neovim.neovimExecutablePaths.linux"
+
+  # Verify existing theme was preserved
+  run jq -r '.["workbench.colorTheme"]' "${settings_dir}/settings.json"
+  assert_output "Nord"
+}
+
+@test "__vscode_ext_configure_neovim_settings creates new settings file" {
+  if ! command -v jq &>/dev/null; then
+    skip "jq is required for this test"
+  fi
+
+  local settings_dir="${TEST_DIR}/.config/Code/User"
+  mkdir -p "$settings_dir"
+
+  run run_fish_vscode_ext_with_mock_home "__vscode_ext_configure_neovim_settings"
+
+  assert_success
+  assert_output --partial "Neovim settings configured"
+
+  # Verify settings file was created with neovim keys
+  run jq -r 'keys[]' "${settings_dir}/settings.json"
+  assert_output --partial "vscode-neovim.useWSL"
+}
+
 @test "devbase-vscode-extensions --list shows extensions by pack" {
   # Skip if VS Code is not installed (CI environment)
   if ! command -v code &>/dev/null; then

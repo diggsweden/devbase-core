@@ -367,11 +367,11 @@ EOF
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
-    echo \"install=\$DEVBASE_VSCODE_INSTALL ext=\$DEVBASE_VSCODE_EXTENSIONS neovim=\$DEVBASE_VSCODE_NEOVIM\"
+    echo \"install=\$DEVBASE_VSCODE_INSTALL ext=\$DEVBASE_VSCODE_EXTENSIONS\"
   "
-  
+
   assert_success
-  assert_output "install=true ext=true neovim=true"
+  assert_output "install=true ext=true"
 }
 
 @test "write_user_preferences creates preferences file" {
@@ -389,7 +389,6 @@ EOF
     export EDITOR='nano'
     export DEVBASE_VSCODE_INSTALL='false'
     export DEVBASE_VSCODE_EXTENSIONS='false'
-    export DEVBASE_VSCODE_NEOVIM='false'
     export DEVBASE_INSTALL_LAZYVIM='false'
     export DEVBASE_INSTALL_INTELLIJ='true'
     export DEVBASE_INSTALL_JMC='true'
@@ -429,7 +428,6 @@ EOF
     export EDITOR='nvim'
     export DEVBASE_VSCODE_INSTALL='true'
     export DEVBASE_VSCODE_EXTENSIONS='true'
-    export DEVBASE_VSCODE_NEOVIM='false'
     export DEVBASE_INSTALL_LAZYVIM='true'
     export DEVBASE_INSTALL_INTELLIJ='true'
     export DEVBASE_INSTALL_JMC='false'
@@ -446,7 +444,7 @@ EOF
     
     # Clear variables
     unset DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL
-    unset EDITOR DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS DEVBASE_VSCODE_NEOVIM
+    unset EDITOR DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS
     unset DEVBASE_INSTALL_LAZYVIM DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
     unset DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
     
@@ -462,7 +460,6 @@ EOF
     echo \"visual=\$VISUAL\"
     echo \"vscode_install=\$DEVBASE_VSCODE_INSTALL\"
     echo \"vscode_ext=\$DEVBASE_VSCODE_EXTENSIONS\"
-    echo \"vscode_neovim=\$DEVBASE_VSCODE_NEOVIM\"
     echo \"lazyvim=\$DEVBASE_INSTALL_LAZYVIM\"
     echo \"intellij=\$DEVBASE_INSTALL_INTELLIJ\"
     echo \"jmc=\$DEVBASE_INSTALL_JMC\"
@@ -480,7 +477,6 @@ EOF
   assert_output --partial "visual=nvim"
   assert_output --partial "vscode_install=true"
   assert_output --partial "vscode_ext=true"
-  assert_output --partial "vscode_neovim=false"
   assert_output --partial "lazyvim=true"
   assert_output --partial "intellij=true"
   assert_output --partial "jmc=false"
@@ -558,7 +554,6 @@ EOF
     export EDITOR='nvim'
     export DEVBASE_VSCODE_INSTALL='true'
     export DEVBASE_VSCODE_EXTENSIONS='true'
-    export DEVBASE_VSCODE_NEOVIM='false'
     export DEVBASE_INSTALL_LAZYVIM='true'
     export DEVBASE_INSTALL_INTELLIJ='false'
     export DEVBASE_INSTALL_JMC='false'
@@ -594,7 +589,6 @@ EOF
     export EDITOR='nvim'
     export DEVBASE_VSCODE_INSTALL='true'
     export DEVBASE_VSCODE_EXTENSIONS='true'
-    export DEVBASE_VSCODE_NEOVIM='false'
     export DEVBASE_INSTALL_LAZYVIM='true'
     export DEVBASE_INSTALL_INTELLIJ='false'
     export DEVBASE_INSTALL_JMC='false'
@@ -702,7 +696,6 @@ EOF
   export EDITOR="nvim"
   export DEVBASE_VSCODE_INSTALL="true"
   export DEVBASE_VSCODE_EXTENSIONS="true"
-  export DEVBASE_VSCODE_NEOVIM="false"
   export DEVBASE_INSTALL_LAZYVIM="true"
   export DEVBASE_INSTALL_INTELLIJ="false"
   export DEVBASE_INSTALL_JMC="false"
