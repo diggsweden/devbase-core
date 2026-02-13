@@ -83,6 +83,16 @@ verify_mise_checksum() {
 # Uses: _DEVBASE_TEMP, HOME (globals)
 # Returns: 0 on success, calls die() on failure
 # Side-effects: Downloads and installs mise, activates it for current shell
+get_mise_installed_version() {
+  local mise_path="$1"
+  [[ -z "$mise_path" ]] && return 1
+
+  local version
+  version=$($mise_path --version 2>/dev/null | awk '{print $2}')
+  version="${version#v}"
+  [[ -n "$version" ]] && echo "$version"
+}
+
 install_mise() {
   show_progress info "Installing mise (tool version manager)..."
 
@@ -248,6 +258,53 @@ install_mise() {
   fi
 
   show_progress success "Mise ready at $mise_path"
+}
+
+update_mise_if_needed() {
+  if ! command -v mise &>/dev/null; then
+    return 0
+  fi
+
+  if ! declare -f get_tool_version &>/dev/null; then
+    return 0
+  fi
+
+  local desired_version
+  desired_version=$(get_tool_version "mise")
+  [[ -z "$desired_version" ]] && return 0
+
+  local desired_normalized="${desired_version#v}"
+  local current_version
+  current_version=$(get_mise_installed_version "$(command -v mise)")
+
+  if [[ -n "$current_version" ]] && [[ "$current_version" == "$desired_normalized" ]]; then
+    return 0
+  fi
+
+  show_progress info "Updating mise to v${desired_normalized}..."
+
+  local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
+  if ! retry_command download_file "https://mise.run" "$mise_installer"; then
+    die "Failed to download Mise installer after retries"
+  fi
+
+  if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
+    die "Downloaded file doesn't appear to be Mise installer"
+  fi
+
+  export MISE_VERSION="$desired_version"
+
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    run_with_spinner "Updating mise" bash "$mise_installer" || die "Failed to run Mise installer script"
+  else
+    bash "$mise_installer" || die "Failed to run Mise installer script"
+  fi
+
+  export PATH="${HOME}/.local/bin:${PATH}"
+
+  if ! verify_mise_checksum "$desired_version"; then
+    show_progress warning "Could not verify mise checksum, but continuing..."
+  fi
 }
 
 install_mise_tools() {
@@ -472,6 +529,8 @@ install_mise_and_tools() {
     # shellcheck source=parse-packages.sh
     source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
   fi
+
+  update_mise_if_needed || die "Failed to update mise"
 
   install_mise_tools || die "Failed to install mise tools"
 
