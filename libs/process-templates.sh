@@ -23,7 +23,10 @@ prepare_temp_dotfiles_directory() {
   validate_dir_exists "${DEVBASE_DOT}" "Dotfiles directory" || return 1
 
   local temp_dotfiles="${_DEVBASE_TEMP}/dotfiles"
-  cp -r "${DEVBASE_DOT}" "${temp_dotfiles}"
+  cp -r "${DEVBASE_DOT}" "${temp_dotfiles}" || {
+    show_progress error "Failed to copy dotfiles to temp directory"
+    return 1
+  }
   rm -f "${temp_dotfiles}/.config/mise/config.toml"
   echo "$temp_dotfiles"
 }
@@ -472,7 +475,8 @@ EOF
 # Extract hostname from URL (strip protocol, path, and port)
 # Example: "https://registry.company.com:8080/path" -> "registry.company.com"
 extract_hostname() {
-  local url="$1"
+  local url="${1:-}"
+  [[ -z "$url" ]] && return 1
   echo "$url" |
     sed -E 's|^[^:]+://||' | # Remove protocol (https://)
     sed -E 's|/.*$||' |      # Remove path (/path)
