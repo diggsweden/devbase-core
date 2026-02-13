@@ -35,6 +35,29 @@ PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 # Selected packs (set by caller, space-separated)
 SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby}"
 
+# Brief: Set up package YAML environment (shared by all package loaders)
+# Params: None
+# Uses: DEVBASE_DOT, DEVBASE_SELECTED_PACKS, _DEVBASE_CUSTOM_PACKAGES (globals)
+# Returns: 0 on success, 1 if packages.yaml not found
+# Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
+_setup_package_yaml_env() {
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
+
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+  fi
+
+  if [[ ! -f "$PACKAGES_YAML" ]]; then
+    show_progress error "Package configuration not found: $PACKAGES_YAML"
+    return 1
+  fi
+
+  # Reset merge cache so new env is picked up
+  _MERGED_YAML=""
+  return 0
+}
+
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
 

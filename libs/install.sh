@@ -73,8 +73,6 @@ source "${DEVBASE_ROOT}/libs/distro.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/pkg/pkg-manager.sh"
 # shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/install-apt.sh" # Keep for backward compat (install_firefox_deb)
-# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-snap.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-mise.sh"

@@ -61,25 +61,13 @@ _get_app_store_type() {
 # Outputs: Arrays of package names and options to global SNAP_PACKAGES and SNAP_OPTIONS
 # Side-effects: Populates SNAP_PACKAGES and SNAP_OPTIONS arrays
 load_snap_packages() {
-  # Set up for parse-packages.sh
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
   # Source parser if not already loaded
   if ! declare -f get_snap_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
     source "${DEVBASE_LIBS}/parse-packages.sh"
   fi
+
+  _setup_package_yaml_env || return 1
 
   # Get packages from parser (format: "name|options")
   local packages=()
@@ -243,25 +231,13 @@ _install_snap_packages() {
 # Returns: 0 on success
 # Outputs: Arrays to FLATPAK_PACKAGES and FLATPAK_REMOTES
 load_flatpak_packages() {
-  # Set up for parse-packages.sh
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
   # Source parser if not already loaded
   if ! declare -f get_flatpak_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
     source "${DEVBASE_LIBS}/parse-packages.sh"
   fi
+
+  _setup_package_yaml_env || return 1
 
   # Get packages from parser (format: "app_id|remote")
   local packages=()
@@ -304,7 +280,7 @@ configure_flathub() {
 
   # Add flathub for user
   show_progress info "Adding Flathub repository..."
-  if flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo; then
+  if flatpak remote-add --user --if-not-exists flathub "https://dl.flathub.org/repo/flathub.flatpakrepo"; then
     show_progress success "Flathub repository added"
     return 0
   else

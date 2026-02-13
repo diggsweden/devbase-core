@@ -83,6 +83,22 @@ verify_mise_checksum() {
 # Uses: _DEVBASE_TEMP, HOME (globals)
 # Returns: 0 on success, calls die() on failure
 # Side-effects: Downloads and installs mise, activates it for current shell
+# Brief: Extract tool@version from a mise output line
+# Params: $1 = mise output line
+# Returns: tool@version string on stdout, or empty
+_parse_mise_tool_name() {
+  local line="$1"
+  echo "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1
+}
+
+# Brief: Check if a log file contains mise HTTP server errors (5xx)
+# Params: $1 = log file path
+# Returns: 0 if server error found, 1 if not
+_check_mise_server_error() {
+  local log_file="$1"
+  grep -qE "HTTP status server error \(50[0-9]" "$log_file" 2>/dev/null
+}
+
 get_mise_installed_version() {
   local mise_path="$1"
   [[ -z "$mise_path" ]] && return 1
@@ -221,20 +237,14 @@ install_mise() {
   fi
 
   # Generate mise config before activation to avoid stale tool warnings
-  # shellcheck disable=SC2153  # DEVBASE_DOT is set by setup.sh, not a typo of DEVBASE_ROOT
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
+  if ! declare -f generate_mise_config &>/dev/null; then
+    # shellcheck source=parse-packages.sh
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
   fi
 
+  _setup_package_yaml_env || true
+
   if [[ -f "$PACKAGES_YAML" ]]; then
-    if ! declare -f generate_mise_config &>/dev/null; then
-      # shellcheck source=parse-packages.sh
-      source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
-    fi
 
     local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
     mkdir -p "$(dirname "$mise_config")"
@@ -340,7 +350,7 @@ install_mise_tools() {
       # shellcheck disable=SC2086 # Word splitting intended for runtime list
       if ! run_with_spinner "Installing core language runtimes" \
         bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee '$core_install_log'"; then
-        if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
+        if _check_mise_server_error "$core_install_log"; then
           mise_server_error=true
         fi
         show_progress warning "Some core runtimes may have failed (will retry with full install)"
@@ -350,7 +360,7 @@ install_mise_tools() {
       show_progress info "Installing core language runtimes..."
       # shellcheck disable=SC2086 # Word splitting intended for runtime list
       if ! run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee "$core_install_log"; then
-        if grep -qE "HTTP status server error \(50[0-9]" "$core_install_log" 2>/dev/null; then
+        if _check_mise_server_error "$core_install_log"; then
           mise_server_error=true
         fi
         show_progress warning "Some core runtimes may have failed (will retry with full install)"
@@ -392,9 +402,8 @@ install_mise_tools() {
 
       # Parse mise output: "mise tool@version ✓ installed" or "tool@version ✓ installed"
       if [[ "$line" =~ installed ]] || [[ "$line" =~ "install "[a-z] ]]; then
-        # Extract tool name (e.g., "node@20.10.0")
         local tool
-        tool=$(echo "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1)
+        tool=$(_parse_mise_tool_name "$line")
         if [[ -n "$tool" ]]; then
           count=$((count + 1))
           local percent=$(((count * 100) / total))
@@ -417,7 +426,7 @@ install_mise_tools() {
     fi
 
     # Check for server errors in log
-    if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+    if _check_mise_server_error "$full_install_log"; then
       mise_server_error=true
     fi
 
@@ -428,7 +437,7 @@ install_mise_tools() {
     # Whiptail mode without persistent gauge - use spinner fallback
     if ! run_with_spinner "Installing development tools (mise)" \
       bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install --yes 2>&1 | tee '$full_install_log'"; then
-      if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+      if _check_mise_server_error "$full_install_log"; then
         mise_server_error=true
       fi
     fi
@@ -437,7 +446,7 @@ install_mise_tools() {
     show_progress info "Installing development tools..."
     if [[ -n "${DEVBASE_DEBUG:-}" ]]; then
       if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
-        if grep -qE "HTTP status server error \(50[0-9]" "$full_install_log" 2>/dev/null; then
+        if _check_mise_server_error "$full_install_log"; then
           mise_server_error=true
         fi
       fi
@@ -522,15 +531,6 @@ install_mise_tools() {
 # Returns: 0 on success, calls die() on failure
 # Side-effects: Full mise installation workflow
 install_mise_and_tools() {
-  # Set up package configuration
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-  fi
-
   install_mise || die "Failed to install mise"
 
   # Source parser for version lookups (requires yq; should exist after mise bootstrap)
