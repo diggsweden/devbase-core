@@ -189,18 +189,18 @@ teardown() {
   unstub curl
 }
 
-@test "verify_checksum_from_url continues without verification when checksum unavailable" {
+@test "verify_checksum_from_url returns 2 when checksum unavailable" {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"
-  
+
   stub curl "-fsSL --connect-timeout 30 http://example.com/checksum -o * : exit 1"
-  
+
   run --separate-stderr verify_checksum_from_url "$test_file" 'http://example.com/checksum' 30
-  
+
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
-  assert_success
+  assert_failure 2
   [[ "$output" == *"Could not fetch checksum"* ]] || [[ "$stderr" == *"Could not fetch checksum"* ]]
-  
+
   unstub curl
 }
 

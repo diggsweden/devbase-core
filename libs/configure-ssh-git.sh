@@ -111,8 +111,10 @@ configure_ssh() {
     if [[ -f "$ssh_key_path" ]]; then
       local backup_name
       backup_name="${ssh_key_path}.backup.$(date +%Y%m%d_%H%M%S)"
-      mv "$ssh_key_path" "$backup_name"
-      mv "${ssh_key_path}.pub" "${backup_name}.pub"
+      mv "$ssh_key_path" "$backup_name" || die "Failed to backup SSH key: $ssh_key_path"
+      if [[ -f "${ssh_key_path}.pub" ]]; then
+        mv "${ssh_key_path}.pub" "${backup_name}.pub" || die "Failed to backup SSH public key"
+      fi
     fi
 
     # Generate SSH key based on type

@@ -65,8 +65,9 @@ _wt_start_persistent_gauge() {
   _wt_stop_persistent_gauge
 
   # Create named pipe for gauge communication
-  # Use mktemp -u + mkfifo with restricted permissions to minimize race window
-  _WT_GAUGE_FIFO=$(mktemp -u /tmp/devbase-gauge.XXXXXX)
+  # Create a temp file first, then replace it with a FIFO to avoid TOCTOU race
+  _WT_GAUGE_FIFO=$(mktemp /tmp/devbase-gauge.XXXXXX)
+  rm -f "$_WT_GAUGE_FIFO"
   mkfifo -m 600 "$_WT_GAUGE_FIFO"
 
   # Start gauge in background, reading from FIFO

@@ -193,7 +193,7 @@ envsubst_preserve_undefined() {
 
   # Extract variables using pure logic function
   local vars_to_sub
-  vars_to_sub=$(_extract_uppercase_vars "$(cat "$template_file")")
+  vars_to_sub=$(_extract_uppercase_vars "$(<"$template_file")")
 
   # Validate that required template variables are set before processing
   if [[ -n "$vars_to_sub" ]]; then
@@ -349,7 +349,10 @@ merge_dotfiles_with_backup() {
   done < <(find "$src_dir" -maxdepth "$_FIND_DEPTH" -type f -print0)
 
   # Now copy new dotfiles (NOTE: still uses cp -r which follows symlinks in src)
-  cp -r "$src_dir"/. "$target_dir/"
+  cp -r "$src_dir"/. "$target_dir/" || {
+    show_progress error "Failed to copy dotfiles from $src_dir to $target_dir"
+    return 1
+  }
   return 0
 }
 

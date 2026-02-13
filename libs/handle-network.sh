@@ -41,8 +41,8 @@ verify_checksum_from_url() {
 
   if ! curl -fsSL --connect-timeout "$timeout" "$checksum_url" -o "$checksum_file"; then
     show_progress warning "Could not fetch checksum file from: $checksum_url"
-    show_progress info "Continuing without checksum verification (not recommended)"
-    return 0 # Don't fail if checksum unavailable
+    show_progress warning "Skipping checksum verification (not recommended)"
+    return 2 # Distinct code: verification skipped (not verified, not failed)
   fi
 
   # Extract just the checksum (handle various formats: "hash" or "hash *filename" or "hash  filename")
@@ -158,7 +158,8 @@ _download_file_attempt() {
 
   # Try curl first
   if command_exists curl; then
-    curl ${curl_progress} -fL --connect-timeout 30 --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
+    local connect_timeout=$((timeout < 30 ? timeout : 30))
+    curl ${curl_progress} -fL --connect-timeout "$connect_timeout" --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
   fi
 
   # Fallback to wget
@@ -181,7 +182,13 @@ _download_file_verify() {
   if [[ -n "$expected_checksum" ]]; then
     verify_checksum_value "$target" "$expected_checksum"
   elif [[ -n "$checksum_url" ]]; then
-    verify_checksum_from_url "$target" "$checksum_url" "$timeout"
+    local rc=0
+    verify_checksum_from_url "$target" "$checksum_url" "$timeout" || rc=$?
+    # rc=1: checksum mismatch (real failure), rc=2: couldn't fetch checksum (accept download)
+    if [[ $rc -eq 1 ]]; then
+      return 1
+    fi
+    return 0
   else
     show_progress success "$(basename "$target")"
     return 0
