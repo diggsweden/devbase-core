@@ -161,6 +161,83 @@ validate_optional_dir() {
   return 0
 }
 
+# Brief: Validate hostname format (no spaces, no shell metacharacters)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_hostname() {
+  local value="$1"
+  local name="${2:-hostname}"
+
+  if [[ -z "$value" ]]; then
+    return 0 # Empty is OK (optional)
+  fi
+
+  # Reject shell metacharacters and whitespace
+  if [[ "$value" =~ [[:space:]\;\|\&\$\`\(\)\{\}\<\>\!\#] ]]; then
+    show_progress error "${name} contains invalid characters: ${value}"
+    return 1
+  fi
+  return 0
+}
+
+# Brief: Validate port number (1-65535, digits only)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_port() {
+  local value="$1"
+  local name="${2:-port}"
+
+  if [[ -z "$value" ]]; then
+    return 0 # Empty is OK (optional)
+  fi
+
+  if ! [[ "$value" =~ ^[0-9]+$ ]] || [[ "$value" -lt 1 ]] || [[ "$value" -gt 65535 ]]; then
+    show_progress error "${name} must be a number between 1-65535, got: ${value}"
+    return 1
+  fi
+  return 0
+}
+
+# Brief: Validate email format (basic: must contain @, no shell metacharacters)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_email() {
+  local value="$1"
+  local name="${2:-email}"
+
+  if [[ -z "$value" ]]; then
+    return 0
+  fi
+
+  if [[ "$value" =~ [[:space:]\;\|\&\$\`\(\)\{\}\<\>\!] ]]; then
+    show_progress error "${name} contains invalid characters: ${value}"
+    return 1
+  fi
+
+  if [[ ! "$value" =~ @ ]]; then
+    show_progress warning "${name} does not contain @: ${value}"
+  fi
+  return 0
+}
+
+# Brief: Validate value contains no shell metacharacters (safe for use in config files)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_safe_value() {
+  local value="$1"
+  local name="${2:-value}"
+
+  if [[ -z "$value" ]]; then
+    return 0
+  fi
+
+  if [[ "$value" =~ [\;\|\&\$\`\<\>] ]]; then
+    show_progress error "${name} contains shell metacharacters: ${value}"
+    return 1
+  fi
+  return 0
+}
+
 # Brief: Validate that template variables are set in environment
 # Params: $1 - template_file (for error messages)
 #         $2 - vars_to_check (space-separated list like "$VAR1 $VAR2")

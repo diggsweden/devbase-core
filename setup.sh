@@ -465,7 +465,8 @@ check_required_config_variables() {
       exit 1
     fi
     validate_not_empty "${DEVBASE_PROXY_HOST}" "DEVBASE_PROXY_HOST" || exit 1
-    validate_not_empty "${DEVBASE_PROXY_PORT}" "DEVBASE_PROXY_PORT" || exit 1
+    validate_hostname "${DEVBASE_PROXY_HOST}" "DEVBASE_PROXY_HOST" || exit 1
+    validate_port "${DEVBASE_PROXY_PORT}" "DEVBASE_PROXY_PORT" || exit 1
   elif [[ -n "${DEVBASE_PROXY_PORT}" ]]; then
     show_progress error "DEVBASE_PROXY_PORT is set but DEVBASE_PROXY_HOST is missing"
     show_progress info "Check ${_DEVBASE_ENV_FILE}"
@@ -480,11 +481,29 @@ check_required_config_variables() {
       exit 1
     fi
     validate_not_empty "${DEVBASE_REGISTRY_HOST}" "DEVBASE_REGISTRY_HOST" || exit 1
-    validate_not_empty "${DEVBASE_REGISTRY_PORT}" "DEVBASE_REGISTRY_PORT" || exit 1
+    validate_hostname "${DEVBASE_REGISTRY_HOST}" "DEVBASE_REGISTRY_HOST" || exit 1
+    validate_port "${DEVBASE_REGISTRY_PORT}" "DEVBASE_REGISTRY_PORT" || exit 1
   elif [[ -n "${DEVBASE_REGISTRY_PORT}" ]]; then
     show_progress error "DEVBASE_REGISTRY_PORT is set but DEVBASE_REGISTRY_HOST is missing"
     show_progress info "Check ${_DEVBASE_ENV_FILE}"
     exit 1
+  fi
+
+  # Validate user-provided values for shell metacharacter injection
+  validate_email "${GIT_EMAIL}" "GIT_EMAIL" || exit 1
+  validate_safe_value "${GIT_NAME}" "GIT_NAME" || exit 1
+  validate_safe_value "${DEVBASE_THEME}" "DEVBASE_THEME" || exit 1
+  validate_safe_value "${DEVBASE_FONT}" "DEVBASE_FONT" || exit 1
+
+  # Validate registry URLs if set
+  if [[ -n "${DEVBASE_NPM_REGISTRY}" ]]; then
+    validate_url "${DEVBASE_NPM_REGISTRY}" || exit 1
+  fi
+  if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
+    validate_url "${DEVBASE_PYPI_REGISTRY}" || exit 1
+  fi
+  if [[ -n "${DEVBASE_CYPRESS_REGISTRY}" ]]; then
+    validate_url "${DEVBASE_CYPRESS_REGISTRY}" || exit 1
   fi
 }
 
