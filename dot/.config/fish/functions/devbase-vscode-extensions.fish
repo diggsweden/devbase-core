@@ -67,13 +67,7 @@ function __vscode_ext_prompt_yn --description "Prompt user for yes/no"
     end
 
     while true
-        set -l tty (tty 2>/dev/null)
-        if test -n "$tty" -a -e "$tty"
-            printf "%s" "$prompt_text" >"$tty"
-            read -l response <"$tty"
-        else
-            read -l -P "$prompt_text" response
-        end
+        read -l -P "$prompt_text" response
         printf "\n"
         
         if test -z "$response"

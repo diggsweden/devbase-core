@@ -68,7 +68,12 @@ function __citrix_download_file --description "Download a file"
     set -l url $argv[1]
     set -l dest $argv[2]
     
-    curl -sL -o "$dest" "$url"
+    curl --fail --location --show-error --progress-bar \
+        --retry 2 --connect-timeout 10 --max-time 900 \
+        -o "$dest" "$url"
+    or return 1
+
+    test -s "$dest"
 end
 
 function __citrix_prompt_yn --description "Prompt user for yes/no with default"
@@ -83,13 +88,7 @@ function __citrix_prompt_yn --description "Prompt user for yes/no with default"
     end
 
 
-    set -l tty (tty 2>/dev/null)
-    if test -n "$tty" -a -e "$tty"
-        printf "%s" "$prompt_text" >"$tty"
-        read -l response <"$tty"
-    else
-        read -l -P "$prompt_text" response
-    end
+    read -l -P "$prompt_text" response
 
     if test -z "$response"
         set response "$default"
@@ -110,17 +109,21 @@ function __citrix_configure_install_options --description "Prompt user for Citri
         set -g __citrix_app_protection "no"
     end
     
-    # Device Trust (no default - user must choose)
+    # Device Trust (default: No)
+    
     set -l dt_response
     while true
-        set -l tty (tty 2>/dev/null)
-        if test -n "$tty" -a -e "$tty"
-            printf "  Enable Device Trust (endpoint compliance checking)? [y/n]: " >"$tty"
-            read -l dt_response <"$tty"
-        else
-            read -l -P "  Enable Device Trust (endpoint compliance checking)? [y/n]: " dt_response
+        read -l -P "  Enable Device Trust (endpoint compliance checking)? [y/N]: " dt_response
+        if test -z "$dt_response"
+            set dt_response "n"
         end
         string match -qri '^[yn]' "$dt_response"; and break
+    end
+    
+    if string match -qi 'y*' "$dt_response"
+        set -g __citrix_device_trust "yes"
+    else
+        set -g __citrix_device_trust "no"
     end
     
     if string match -qi 'y*' "$dt_response"
