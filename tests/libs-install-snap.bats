@@ -174,31 +174,6 @@ EOF
   assert_output --partial "custom-tool|--classic"
 }
 
-@test "configure_snap_proxy sets proxy when configured" {
-  source "${DEVBASE_ROOT}/libs/install-snap.sh"
-  
-  export DEVBASE_PROXY_HOST="proxy.example.com"
-  export DEVBASE_PROXY_PORT="8080"
-  
-  # Use test_helper's stub_repeated for commands that get called multiple times
-  stub_repeated snap 'exit 0'
-  stub_repeated sudo 'exit 0'
-  
-  run configure_snap_proxy
-  assert_success
-}
-
-@test "configure_snap_proxy does nothing when no proxy configured" {
-  run run_isolated "
-    source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    source '${DEVBASE_ROOT}/libs/check-requirements.sh'
-    source '${DEVBASE_ROOT}/libs/install-snap.sh'
-    configure_snap_proxy
-  "
-  assert_success
-}
 
 @test "snap_install returns success when snap already installed" {
   source "${DEVBASE_ROOT}/libs/install-snap.sh"

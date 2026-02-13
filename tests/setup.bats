@@ -202,17 +202,22 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
-    
+
+    # Stub sudo/snap so tests never touch the host
+    sudo() { :; }
+    snap() { :; }
+    export -f sudo snap
+
     DEVBASE_PROXY_HOST='proxy.example.com'
     DEVBASE_PROXY_PORT='8080'
     DEVBASE_NO_PROXY_DOMAINS='localhost,internal.example.com'
-    
+
     configure_proxy_settings
-    
+
     echo \"http_proxy=\$http_proxy\"
     echo \"no_proxy=\$no_proxy\"
   "
-  
+
   assert_success
   assert_output --partial "http_proxy=http://proxy.example.com:8080"
   assert_output --partial "no_proxy=localhost,internal.example.com"
@@ -226,16 +231,21 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
-    
+
+    # Stub sudo/snap so tests never touch the host
+    sudo() { :; }
+    snap() { :; }
+    export -f sudo snap
+
     DEVBASE_PROXY_HOST='proxy.example.com'
     DEVBASE_PROXY_PORT='8080'
     DEVBASE_NO_PROXY_DOMAINS=''
-    
+
     configure_proxy_settings
-    
+
     echo \"no_proxy=\$no_proxy\"
   "
-  
+
   assert_success
   assert_output --partial "no_proxy=localhost,127.0.0.1,::1"
 }

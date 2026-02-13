@@ -103,25 +103,6 @@ load_snap_packages() {
   return 0
 }
 
-# Brief: Configure snap package manager proxy settings
-# Params: None
-# Uses: DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT (global, optional)
-# Returns: 0 always
-# Side-effects: Sets snap system proxy configuration
-configure_snap_proxy() {
-  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 0
-  command -v snap &>/dev/null || return 0
-
-  local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
-
-  sudo snap unset system proxy.http 2>/dev/null || true
-  sudo snap unset system proxy.https 2>/dev/null || true
-  sudo snap set system proxy.http="${proxy_url}" || show_progress warning "Failed to set snap http proxy"
-  sudo snap set system proxy.https="${proxy_url}" || show_progress warning "Failed to set snap https proxy"
-
-  return 0
-}
-
 # Brief: Install snap package with retry and auto-refresh handling
 # Params: $1 - snap_name, $2 - snap_options (optional)
 # Uses: show_progress (from ui-helpers)
@@ -208,11 +189,9 @@ configure_snap_certificates() {
 # Params: None
 # Uses: load_snap_packages, SNAP_PACKAGES, SNAP_OPTIONS (functions/global arrays)
 # Returns: 0 on success, 1 on failure
-# Side-effects: Configures proxy, loads package list, installs snaps
+# Side-effects: Loads package list, installs snaps
 _install_snap_packages() {
   show_progress info "Installing snap packages..."
-
-  configure_snap_proxy
 
   # Load package list from file
   if ! load_snap_packages; then
