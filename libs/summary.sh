@@ -116,13 +116,28 @@ EOF
 }
 
 _summary_optional_tools() {
+  local intellij_root="${HOME}/.local/share/JetBrains/IntelliJIdea"
+  local intellij_version=""
+  if [[ -f "${intellij_root}/product-info.json" ]]; then
+    intellij_version=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "${intellij_root}/product-info.json" | head -1 | cut -d'"' -f4)
+  fi
+
+  local intellij_status="not installed"
+  if [[ -d "$intellij_root" ]]; then
+    if [[ -n "$intellij_version" ]]; then
+      intellij_status="installed (${intellij_version})"
+    else
+      intellij_status="installed"
+    fi
+  fi
+
   cat <<EOF
 
 OPTIONAL TOOLS
 ==============
   • DBeaver: $([ -f ~/.local/bin/dbeaver ] && echo "installed" || echo "not installed")
   • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
-  • IntelliJ IDEA: $(compgen -G ~/.local/share/JetBrains/IntelliJIdea* >/dev/null && echo "installed" || echo "not installed")
+  • IntelliJ IDEA: ${intellij_status}
   • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
 EOF
 }

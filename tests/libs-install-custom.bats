@@ -201,6 +201,49 @@ EOF
   assert_success
 }
 
+@test "install_intellij_idea updates when version differs" {
+  export DEVBASE_INSTALL_INTELLIJ="true"
+  export DEVBASE_DOT="${TEST_DIR}/dot"
+  export DEVBASE_SELECTED_PACKS=""
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export _DEVBASE_TEMP="${TEST_DIR}/tmp"
+
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    intellij_idea: { version: "2025.3.2", installer: "install_intellij_idea" }
+packs: {}
+EOF
+
+  mkdir -p "${HOME}/.local/share/JetBrains/IntelliJIdea"
+  cat > "${HOME}/.local/share/JetBrains/IntelliJIdea/product-info.json" << 'EOF'
+{
+  "name": "IntelliJ IDEA",
+  "version": "2025.2.0"
+}
+EOF
+
+  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  _download_intellij_archive() { echo "${TEST_DIR}/fake.tar.gz"; }
+  _extract_and_install_intellij() {
+    local extract_dir="$2"
+    mkdir -p "$extract_dir/IntelliJIdea"
+    echo "$extract_dir/IntelliJIdea"
+  }
+  _configure_intellij_vmoptions() { :; }
+  _create_intellij_desktop_file() { echo "$1" >"${TEST_DIR}/idea-desktop"; }
+
+  run install_intellij_idea
+  assert_success
+
+  run ls "${HOME}/.local/share/JetBrains/IntelliJIdea-old"*
+  assert_success
+  assert_file_exists "${TEST_DIR}/idea-desktop"
+}
+
 @test "_is_wayland_session detects X11" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
 

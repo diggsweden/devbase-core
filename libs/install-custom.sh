@@ -1181,6 +1181,28 @@ _extract_and_install_intellij() {
   return 0
 }
 
+# Brief: Read installed IntelliJ IDEA version
+# Params: $1 - install directory
+# Returns: 0 with version on stdout, 1 if unavailable
+_get_intellij_installed_version() {
+  local install_dir="$1"
+  local product_info="${install_dir}/product-info.json"
+
+  if [[ ! -f "$product_info" ]]; then
+    return 1
+  fi
+
+  local version
+  version=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$product_info" | head -1 | cut -d'"' -f4)
+
+  if [[ -n "$version" ]]; then
+    echo "$version"
+    return 0
+  fi
+
+  return 1
+}
+
 # Brief: Check if running on Wayland session
 # Returns: 0 if Wayland, 1 otherwise
 _is_wayland_session() {
@@ -1269,14 +1291,38 @@ install_intellij_idea() {
     return 0
   fi
 
-  if [[ -d "$HOME/.local/share/JetBrains/IntelliJIdea" ]]; then
-    show_progress info "IntelliJ IDEA already installed - skipping"
-    return 0
+  local version="${TOOL_VERSIONS[intellij_idea]}"
+  local extract_dir="$HOME/.local/share/JetBrains"
+  local install_root="$extract_dir/IntelliJIdea"
+
+  if [[ -d "$install_root" ]]; then
+    local installed_version
+    installed_version=$(_get_intellij_installed_version "$install_root" || true)
+
+    if [[ -n "$installed_version" ]]; then
+      if [[ "$installed_version" == "$version" ]]; then
+        show_progress success "IntelliJ IDEA already installed ($installed_version)"
+        _create_intellij_desktop_file "$install_root"
+        return 0
+      fi
+
+      local newest
+      newest=$(printf '%s\n%s\n' "$installed_version" "$version" | sort -V | tail -1)
+      if [[ "$newest" == "$installed_version" ]]; then
+        show_progress warning "Installed IntelliJ IDEA ($installed_version) is newer than pinned ($version) - skipping downgrade"
+        _create_intellij_desktop_file "$install_root"
+        return 0
+      fi
+
+      show_progress info "Updating IntelliJ IDEA from $installed_version to $version..."
+    else
+      show_progress info "Existing IntelliJ IDEA detected - reinstalling to $version..."
+    fi
+
+    backup_if_exists "$install_root" "old"
   fi
 
   show_progress info "Installing IntelliJ IDEA..."
-  local version="${TOOL_VERSIONS[intellij_idea]}"
-  local extract_dir="$HOME/.local/share/JetBrains"
 
   local idea_tar
   if ! idea_tar=$(_download_intellij_archive "$version" "$_DEVBASE_TEMP"); then
