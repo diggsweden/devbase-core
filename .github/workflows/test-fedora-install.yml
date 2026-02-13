@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test on Fedora 43
     container:
-      image: fedora:43
+      image: fedora:43 # renovate: datasource=docker depName=fedora
       options: --user root
     steps:
       - name: Install prerequisites
