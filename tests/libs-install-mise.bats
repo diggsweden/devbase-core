@@ -258,11 +258,12 @@ EOF
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export XDG_BIN_HOME='${XDG_BIN_HOME}'
+    source '${DEVBASE_ROOT}/libs/constants.sh'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
-    
+
     verify_mise_checksum && echo 'EXISTS' || echo 'NOT_EXISTS'
   "
   
@@ -319,6 +320,7 @@ download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
 verify_mise_checksum() { return 0; }
 SCRIPT
 
+    source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
@@ -383,6 +385,7 @@ download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
 verify_mise_checksum() { return 0; }
 SCRIPT
 
+    source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1

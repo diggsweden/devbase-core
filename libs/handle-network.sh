@@ -273,7 +273,7 @@ download_file() {
 # Note: Skips SSL verification since custom certs may not be installed yet
 check_network_connectivity() {
   local timeout="${1:-3}"
-  local test_sites=("https://github.com" "https://google.com" "https://codeberg.org")
+  local test_sites=("${DEVBASE_CONNECTIVITY_TEST_SITES[@]}")
   local site_reached=false
 
   for site in "${test_sites[@]}"; do

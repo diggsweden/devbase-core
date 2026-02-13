@@ -280,7 +280,7 @@ configure_flathub() {
 
   # Add flathub for user
   show_progress info "Adding Flathub repository..."
-  if flatpak remote-add --user --if-not-exists flathub "https://dl.flathub.org/repo/flathub.flatpakrepo"; then
+  if flatpak remote-add --user --if-not-exists flathub "$DEVBASE_URL_FLATHUB_REPO"; then
     show_progress success "Flathub repository added"
     return 0
   else

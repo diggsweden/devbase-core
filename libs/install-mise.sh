@@ -48,7 +48,7 @@ verify_mise_checksum() {
   # Strip 'v' prefix if present
   version="${version#v}"
 
-  local checksums_url="https://github.com/jdx/mise/releases/download/v${version}/SHASUMS256.txt"
+  local checksums_url="${DEVBASE_URL_MISE_RELEASES}/v${version}/SHASUMS256.txt"
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
   if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
@@ -152,7 +152,7 @@ install_mise() {
     # Install mise to XDG_BIN_HOME
     local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
 
-    if ! retry_command download_file "https://mise.run" "$mise_installer"; then
+    if ! retry_command download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
       die "Failed to download Mise installer after retries"
     fi
 
@@ -303,7 +303,7 @@ update_mise_if_needed() {
   show_progress info "Updating mise to v${desired_normalized}..."
 
   local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
-  if ! retry_command download_file "https://mise.run" "$mise_installer"; then
+  if ! retry_command download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
     die "Failed to download Mise installer after retries"
   fi
 
