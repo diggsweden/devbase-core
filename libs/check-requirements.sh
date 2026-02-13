@@ -76,26 +76,10 @@ get_os_version_full() {
   return 0
 }
 
-# Brief: Check if running under Windows Subsystem for Linux
-# Params: None
-# Uses: WSL_DISTRO_NAME, WSL_INTEROP (environment variables)
-# Returns: 0 if WSL, 1 if not WSL
-# Side-effects: Reads /proc/sys/fs/binfmt_misc/WSLInterop and /proc/version
-is_wsl() {
-  if [[ -n "${WSL_DISTRO_NAME:-}" ]] || [[ -n "${WSL_INTEROP:-}" ]]; then
-    return 0
-  fi
-
-  if [[ -f /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
-    return 0
-  fi
-
-  if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-    return 0
-  fi
-
-  return 1
-}
+# is_wsl() is defined in distro.sh - source it if not already available
+if ! declare -f is_wsl &>/dev/null; then
+  source "${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}/distro.sh"
+fi
 
 # Brief: Get WSL version if running on WSL
 # Params: None
@@ -223,26 +207,7 @@ _check_wsl_nerd_font_prereq() {
 # Returns: 0 always
 # Side-effects: Prints warning if unsupported distro, prints newline
 detect_environment() {
-  # Source distro detection if not already available
-  if ! declare -f get_distro &>/dev/null; then
-    local distro_script="${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}/distro.sh"
-    if [[ -f "$distro_script" ]]; then
-      # shellcheck source=distro.sh
-      source "$distro_script"
-    else
-      # Fallback: define minimal get_distro inline
-      get_distro() {
-        if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-          echo "ubuntu-wsl"
-        elif [[ -f /etc/os-release ]]; then
-          grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"'
-        else
-          echo "unknown"
-        fi
-      }
-    fi
-  fi
-
+  # get_distro() is defined in distro.sh (sourced in load_devbase_libraries)
   local distro
   distro=$(get_distro)
 
@@ -703,7 +668,6 @@ export -f get_os_type
 export -f get_os_version
 export -f get_os_name
 export -f get_os_version_full
-export -f is_wsl
 export -f get_wsl_version
 export -f is_ubuntu
 export -f display_os_info

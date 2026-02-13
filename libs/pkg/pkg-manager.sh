@@ -40,27 +40,13 @@ _PKG_MANAGER="${_PKG_MANAGER:-$(get_pkg_manager)}"
 # Outputs: Array of package names to global SYSTEM_PACKAGES_ALL
 # Side-effects: Populates SYSTEM_PACKAGES_ALL array, filters by tags
 load_system_packages() {
-  # Set up for parse-packages.sh
-  # shellcheck disable=SC2153 # DEVBASE_DOT is set in setup.sh, not a misspelling of DEVBASE_ROOT
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
   # Source parser if not already loaded
   if ! declare -f get_system_packages &>/dev/null; then
     # shellcheck source=../parse-packages.sh
     source "${DEVBASE_LIBS}/parse-packages.sh"
   fi
+
+  _setup_package_yaml_env || return 1
 
   # Get packages from parser (common + distro-specific)
   local packages=()

@@ -200,6 +200,7 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/utils.sh"
   source "${DEVBASE_LIBS}/ui-helpers.sh"
   source "${DEVBASE_LIBS}/validation.sh"
+  source "${DEVBASE_LIBS}/distro.sh"
   source "${DEVBASE_LIBS}/handle-network.sh"
   source "${DEVBASE_LIBS}/process-templates.sh"
   source "${DEVBASE_LIBS}/check-requirements.sh"
@@ -700,23 +701,15 @@ bootstrap_gum() {
       return 1
     fi
 
-    # Fetch and verify checksum
+    # Fetch and verify checksum using shared verification logic
     local expected_checksum
     expected_checksum=$(curl -fL --progress-bar "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}')
 
     if [[ -n "$expected_checksum" ]] && [[ ${#expected_checksum} -eq 64 ]]; then
-      local actual_checksum
-      actual_checksum=$(sha256sum "$gum_pkg" | awk '{print $1}')
-
-      if [[ "$actual_checksum" != "$expected_checksum" ]]; then
-        show_progress error "gum checksum verification FAILED - SECURITY RISK"
-        printf "      Expected: %s\n" "$expected_checksum"
-        printf "      Got:      %s\n" "$actual_checksum"
-        rm -f "$gum_pkg"
+      if ! verify_checksum_value "$gum_pkg" "$expected_checksum"; then
         show_progress warning "Could not find TUI component gum (checksum failed), using whiptail as backup"
         return 1
       fi
-      show_progress success "gum checksum verified"
     else
       show_progress warning "Could not verify gum checksum - continuing anyway"
     fi
