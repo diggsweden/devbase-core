@@ -363,6 +363,49 @@ SCRIPT
   assert_output --partial "ssh-ed25519"
 }
 
+@test "configure_git_signing sets correct git config values" {
+  local test_home="${TEST_DIR}/home"
+  mkdir -p "${test_home}/.ssh"
+  mkdir -p "${test_home}/.config/ssh"
+
+  # Create a mock signing key
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@example.com" > "${test_home}/.ssh/id_ed25519.pub"
+
+  # Git mock that logs all config calls
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+if [[ "$1" == "config" ]]; then
+  echo "git config $*" >> "${HOME}/.git-config-log"
+fi
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run bash -c "
+    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export HOME='${test_home}'
+    export XDG_CONFIG_HOME='${test_home}/.config'
+    export DEVBASE_GIT_EMAIL='test@example.com'
+    export DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/configure-ssh-git.sh' >/dev/null 2>&1
+
+    configure_git_signing
+
+    cat '${test_home}/.git-config-log'
+  "
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "gpg.format ssh"
+  assert_output --partial "user.signingkey ${test_home}/.ssh/id_ed25519.pub"
+  assert_output --partial "gpg.ssh.allowedSignersFile ${test_home}/.config/ssh/allowed_signers"
+}
+
 @test "configure_git_signing fails when signing key does not exist" {
   local test_home="${TEST_DIR}/home"
   mkdir -p "${test_home}/.ssh"

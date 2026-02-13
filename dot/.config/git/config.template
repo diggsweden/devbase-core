@@ -61,4 +61,4 @@
 [tag]
   gpgsign = true
 [gpg "ssh"] # the sign with ssh standard expects this, it should containt pub keys of people you trust
-  allowedSignersFile = ~/.config/git/allowed_signers
+  allowedSignersFile = ~/.config/ssh/allowed_signers
