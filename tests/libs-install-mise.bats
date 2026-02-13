@@ -334,3 +334,71 @@ SCRIPT
   assert_success
   assert_output --partial "mise v2026.2.0"
 }
+
+@test "update_mise_if_needed skips downgrade when newer is installed" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  mkdir -p "${TEST_DIR}/bin"
+  mkdir -p "${HOME}/.local/bin"
+  mkdir -p "${TEST_DIR}/tmp"
+
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: { version: "v2026.2.0", installer: "install_mise" }
+packs: {}
+EOF
+
+  cat > "${TEST_DIR}/bin/mise" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "mise v2026.2.10"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  cat > "${TEST_DIR}/mise_installer.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+set -e
+mkdir -p "$HOME/.local/bin"
+cat > "$HOME/.local/bin/mise" << EOF
+#!/usr/bin/env bash
+echo "mise ${MISE_VERSION}"
+EOF
+chmod +x "$HOME/.local/bin/mise"
+SCRIPT
+  chmod +x "${TEST_DIR}/mise_installer.sh"
+
+  run env \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    DEVBASE_LIBS="${DEVBASE_ROOT}/libs" \
+    PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml" \
+    SELECTED_PACKS="" \
+    _DEVBASE_TEMP="${TEST_DIR}/tmp" \
+    PATH="${TEST_DIR}/bin:$PATH" \
+    TEST_DIR="${TEST_DIR}" \
+    HOME="${HOME}" \
+    bash -c '
+    cat > "${TEST_DIR}/mock-fns.sh" << "SCRIPT"
+retry_command() { "$@"; }
+download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
+verify_mise_checksum() { return 0; }
+SCRIPT
+
+    source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+    source "${DEVBASE_ROOT}/libs/install-mise.sh"
+    source "${TEST_DIR}/mock-fns.sh"
+
+    update_mise_if_needed
+    if [[ -f "${HOME}/.local/bin/mise" ]]; then
+      "${HOME}/.local/bin/mise" --version
+    else
+      echo "no-install"
+    fi
+  '
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  assert_success
+  assert_output --partial "no-install"
+}

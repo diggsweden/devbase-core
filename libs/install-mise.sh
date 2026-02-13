@@ -277,8 +277,17 @@ update_mise_if_needed() {
   local current_version
   current_version=$(get_mise_installed_version "$(command -v mise)")
 
-  if [[ -n "$current_version" ]] && [[ "$current_version" == "$desired_normalized" ]]; then
-    return 0
+  if [[ -n "$current_version" ]]; then
+    if [[ "$current_version" == "$desired_normalized" ]]; then
+      return 0
+    fi
+
+    local newest
+    newest=$(printf '%s\n%s\n' "$current_version" "$desired_normalized" | sort -V | tail -1)
+    if [[ "$newest" == "$current_version" ]]; then
+      show_progress warning "Installed mise (${current_version}) is newer than pinned (${desired_normalized}) - skipping downgrade"
+      return 0
+    fi
   fi
 
   show_progress info "Updating mise to v${desired_normalized}..."

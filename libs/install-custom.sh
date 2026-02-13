@@ -124,7 +124,7 @@ get_vscode_checksum() {
 
   local sha_api="https://code.visualstudio.com/sha"
   local checksum
-  checksum=$(curl -fsSL "$sha_api" |
+  checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$sha_api" |
     jq -r --arg ver "$version" --arg plat "$platform" \
       '.products[] | select(.productVersion == $ver and .platform.os == $plat and .build == "stable") | .sha256hash')
 
@@ -150,7 +150,8 @@ get_oc_checksum() {
   local checksum
 
   # Download checksum file and extract the checksum for openshift-client-linux tarball
-  if checksum=$(curl -fsSL "$checksum_url" | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}'); then
+  if checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$checksum_url" | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}'); then
+
     if [[ -n "$checksum" ]]; then
       echo "$checksum"
       return 0
@@ -1358,7 +1359,8 @@ get_gum_checksum() {
   local checksum
 
   # Download checksums and extract the one for our package
-  if checksum=$(curl -fsSL "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}'); then
+  if checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}'); then
+
     if [[ -n "$checksum" ]] && [[ ${#checksum} -eq 64 ]]; then
       echo "$checksum"
       return 0

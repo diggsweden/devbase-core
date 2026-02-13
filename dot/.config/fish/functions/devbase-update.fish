@@ -394,14 +394,6 @@ function __devbase_update_do_update --description "Perform the update"
             __devbase_update_print_info "Update cancelled"
             return 0
         end
-
-        printf "Proceed with update? [y/N] " >&2
-        read -l response
-        printf "\n" >&2
-        if not string match -qi 'y' -- $response
-            __devbase_update_print_info "Update cancelled"
-            return 0
-        end
     else
         __devbase_update_print_info "Non-interactive mode - proceeding with update"
     end
@@ -423,9 +415,7 @@ function __devbase_update_do_update --description "Perform the update"
     echo ""
 
     if test -f "$__devbase_core_dir/setup.sh"
-        pushd "$__devbase_core_dir"
-        bash setup.sh
-        popd
+        bash "$__devbase_core_dir/setup.sh"
     else
         __devbase_update_print_error "setup.sh not found in $__devbase_core_dir"
         return 1

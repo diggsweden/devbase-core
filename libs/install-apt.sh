@@ -209,8 +209,14 @@ install_firefox_deb() {
   sudo install -d -m 0755 /etc/apt/keyrings
 
   # Download and install Mozilla's GPG key
-  if ! wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc >/dev/null; then
+  local mozilla_key="${_DEVBASE_TEMP:-/tmp}/mozilla-repo-signing-key.gpg"
+  mkdir -p "$(dirname "$mozilla_key")"
+  if ! download_file "https://packages.mozilla.org/apt/repo-signing-key.gpg" "$mozilla_key"; then
     show_progress error "Failed to download Mozilla GPG key"
+    return 1
+  fi
+  if ! sudo install -m 0644 "$mozilla_key" /etc/apt/keyrings/packages.mozilla.org.asc; then
+    show_progress error "Failed to install Mozilla GPG key"
     return 1
   fi
 
