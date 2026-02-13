@@ -122,7 +122,7 @@ get_vscode_checksum() {
     return 1
   fi
 
-  local sha_api="https://code.visualstudio.com/sha"
+  local sha_api="$DEVBASE_URL_VSCODE_SHA_API"
   local checksum
   checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$sha_api" |
     jq -r --arg ver "$version" --arg plat "$platform" \
@@ -146,7 +146,7 @@ get_oc_checksum() {
 
   validate_not_empty "$version" "OpenShift version" || return 1
 
-  local checksum_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${version}/sha256sum.txt"
+  local checksum_url="${DEVBASE_URL_OCP_MIRROR}/${version}/sha256sum.txt"
   local checksum
 
   # Download checksum file and extract the checksum for openshift-client-linux tarball
@@ -198,7 +198,7 @@ install_lazyvim() {
 
   show_progress info "Cloning LazyVim starter (version: $lazyvim_version)..."
   local git_output
-  if git_output=$(git clone --quiet https://github.com/LazyVim/starter "$nvim_config" 2>&1); then
+  if git_output=$(git clone --quiet "$DEVBASE_URL_LAZYVIM_STARTER" "$nvim_config" 2>&1); then
     cd "$nvim_config" || return 1
 
     # Checkout specific version (commit SHA or tag) if not main
@@ -270,7 +270,7 @@ install_jmc() {
       show_progress info "Installing JDK Mission Control..."
       local jmc_version="${TOOL_VERSIONS[jdk_mission_control]}"
       # JMC is available from Adoptium (Eclipse Temurin project)
-      local jmc_url="https://github.com/adoptium/jmc-build/releases/download/${jmc_version}/org.openjdk.jmc-${jmc_version}-linux.gtk.x86_64.tar.gz"
+      local jmc_url="${DEVBASE_URL_JMC_RELEASES}/${jmc_version}/org.openjdk.jmc-${jmc_version}-linux.gtk.x86_64.tar.gz"
       local jmc_tar="${_DEVBASE_TEMP}/jmc.tar.gz"
 
       if ! download_with_cache "$jmc_url" "$jmc_tar" "jmc-${jmc_version}.tar.gz" "JMC package"; then
@@ -348,7 +348,7 @@ install_oc_kubectl() {
 
   show_progress info "Installing OpenShift CLI (oc) and kubectl..."
   local oc_version="${TOOL_VERSIONS[oc]}"
-  local oc_url="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${oc_version}/openshift-client-linux.tar.gz"
+  local oc_url="${DEVBASE_URL_OCP_MIRROR}/${oc_version}/openshift-client-linux.tar.gz"
   local oc_tar="${_DEVBASE_TEMP}/openshift-client.tar.gz"
 
   # Get expected checksum using helper function
@@ -412,10 +412,10 @@ install_dbeaver() {
 
   local dbeaver_url dbeaver_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
+    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
     cache_name="dbeaver-${dbeaver_version}.deb"
   else
-    dbeaver_url="https://github.com/dbeaver/dbeaver/releases/download/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-stable.x86_64.rpm"
+    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-stable.x86_64.rpm"
     cache_name="dbeaver-${dbeaver_version}.rpm"
   fi
   dbeaver_pkg="${_DEVBASE_TEMP}/${cache_name}"
@@ -461,7 +461,7 @@ install_keystore_explorer() {
   # For RPM systems, we can use alien or download the tarball instead
   local kse_url kse_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse_${kse_version#v}_all.deb"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}_all.deb"
     cache_name="kse-${kse_version}.deb"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -477,7 +477,7 @@ install_keystore_explorer() {
     fi
   else
     # For RPM systems, download the zip/tarball and install manually
-    kse_url="https://github.com/kaikramer/keystore-explorer/releases/download/${kse_version}/kse-${kse_version#v}.zip"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse-${kse_version#v}.zip"
     cache_name="kse-${kse_version}.zip"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -522,7 +522,7 @@ install_k3s() {
 
   show_progress info "Installing k3s..."
   local k3s_version="${TOOL_VERSIONS[k3s]}"
-  local install_url="https://raw.githubusercontent.com/k3s-io/k3s/${k3s_version}/install.sh"
+  local install_url="${DEVBASE_URL_K3S_RAW}/${k3s_version}/install.sh"
   local install_script="${_DEVBASE_TEMP}/k3s-install.sh"
 
   if retry_command download_file "$install_url" "$install_script"; then
@@ -573,7 +573,7 @@ install_fisher() {
   local fisher_dir="${_DEVBASE_TEMP}/fisher"
 
   local git_output
-  if git_output=$(git clone --quiet --depth 1 --branch "${fisher_version}" https://github.com/jorgebucaran/fisher.git "$fisher_dir" 2>&1); then
+  if git_output=$(git clone --quiet --depth 1 --branch "${fisher_version}" "$DEVBASE_URL_FISHER_REPO" "$fisher_dir" 2>&1); then
     if fish -c "source $fisher_dir/functions/fisher.fish && fisher install jorgebucaran/fisher" >/dev/null 2>&1; then
       show_progress success "Fisher installed ($fisher_version)"
 
@@ -673,7 +673,7 @@ _download_font_to_cache() {
   local nf_version="$3"
   local timeout="$4"
 
-  local font_url="https://github.com/ryanoasis/nerd-fonts/releases/download/${nf_version}/${font_zip_name}"
+  local font_url="${DEVBASE_URL_NERD_FONTS_RELEASES}/${nf_version}/${font_zip_name}"
   local versioned_cache_dir="${cache_dir}/${nf_version}"
   local font_zip="${versioned_cache_dir}/${font_zip_name}"
   local version_file="${versioned_cache_dir}/.version"
@@ -1067,7 +1067,7 @@ install_vscode() {
     platform_name="linux-rpm-x64"
     cache_name="vscode-${version}.rpm"
   fi
-  vscode_url="https://update.code.visualstudio.com/${version}/${platform_name}/stable"
+  vscode_url="${DEVBASE_URL_VSCODE_DOWNLOAD}/${version}/${platform_name}/stable"
   vscode_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
   local vscode_checksum
@@ -1121,7 +1121,7 @@ install_vscode() {
 _download_intellij_archive() {
   local version="$1"
   local temp_dir="$2"
-  local idea_url="https://download.jetbrains.com/idea/ideaIU-${version}.tar.gz"
+  local idea_url="${DEVBASE_URL_JETBRAINS_DOWNLOAD}/ideaIU-${version}.tar.gz"
   local idea_checksum_url="${idea_url}.sha256"
   local idea_tar="${temp_dir}/intellij-idea.tar.gz"
 
@@ -1355,7 +1355,7 @@ get_gum_checksum() {
   validate_not_empty "$version" "gum version" || return 1
   validate_not_empty "$package_name" "package name" || return 1
 
-  local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
+  local checksums_url="${DEVBASE_URL_GUM_RELEASES}/v${version}/checksums.txt"
   local checksum
 
   # Download checksums and extract the one for our package
@@ -1424,7 +1424,7 @@ install_gum() {
   else
     package_name="gum-${version}.${rpm_arch}.rpm"
   fi
-  gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
+  gum_url="${DEVBASE_URL_GUM_RELEASES}/v${version}/${package_name}"
   gum_pkg="${_DEVBASE_TEMP}/${package_name}"
 
   # Get checksum for verification

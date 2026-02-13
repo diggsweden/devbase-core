@@ -258,7 +258,7 @@ _pkg_apt_install_firefox_deb() {
   # Download and install Mozilla's GPG key
   local mozilla_key="${_DEVBASE_TEMP:-/tmp}/mozilla-repo-signing-key.gpg"
   mkdir -p "$(dirname "$mozilla_key")"
-  if ! download_file "https://packages.mozilla.org/apt/repo-signing-key.gpg" "$mozilla_key"; then
+  if ! download_file "${DEVBASE_URL_MOZILLA_GPG_KEY}" "$mozilla_key"; then
     show_progress error "Failed to download Mozilla GPG key"
     return 1
   fi
@@ -268,7 +268,7 @@ _pkg_apt_install_firefox_deb() {
   fi
 
   # Add Mozilla APT repository
-  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
+  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] ${DEVBASE_URL_MOZILLA_APT_REPO} mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
 
   # Set package priority to prefer Mozilla's Firefox and block Ubuntu's snap transitional package
   cat <<'EOF' | sudo tee /etc/apt/preferences.d/mozilla >/dev/null
