@@ -27,17 +27,15 @@ function __devbase_update_check --description "Check for devbase updates on shel
         printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
         printf "\n"
 
-        set -l tty (tty 2>/dev/null)
-        if test -n "$tty" -a -e "$tty"
-            printf "Update now? [y/N] " >"$tty"
-            read -l response <"$tty"
-        else
+        if isatty stdin
             read -l -P "Update now? [y/N] " response
-        end
-        printf "\n"
+            printf "\n"
 
-        if string match -qi 'y' -- $response
-            devbase-update
+            if string match -qi 'y' -- $response
+                devbase-update
+            else
+                printf "%sRun 'devbase-update' later to update.%s\n" (set_color --dim) (set_color normal)
+            end
         else
             printf "%sRun 'devbase-update' later to update.%s\n" (set_color --dim) (set_color normal)
         end
