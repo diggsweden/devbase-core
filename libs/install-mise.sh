@@ -88,7 +88,7 @@ get_mise_installed_version() {
   [[ -z "$mise_path" ]] && return 1
 
   local version
-  version=$($mise_path --version 2>/dev/null | awk '{print $2}')
+  version=$($mise_path --version 2>/dev/null | grep -oE 'v?[0-9]+(\.[0-9]+)+' | head -1)
   version="${version#v}"
   [[ -n "$version" ]] && echo "$version"
 }
