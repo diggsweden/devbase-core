@@ -82,11 +82,14 @@ function __citrix_prompt_yn --description "Prompt user for yes/no with default"
         set prompt_text "$prompt [y/N]: "
     end
 
-    # Drain any buffered stdin (e.g. accidental keypresses during slow output)
-    while read -n 1 -t 0 2>/dev/null
-    end
 
-    read -l -P "$prompt_text" response
+    set -l tty (tty 2>/dev/null)
+    if test -n "$tty" -a -e "$tty"
+        printf "%s" "$prompt_text" >"$tty"
+        read -l response <"$tty"
+    else
+        read -l -P "$prompt_text" response
+    end
 
     if test -z "$response"
         set response "$default"
@@ -108,13 +111,15 @@ function __citrix_configure_install_options --description "Prompt user for Citri
     end
     
     # Device Trust (no default - user must choose)
-    # Drain any buffered stdin
-    while read -n 1 -t 0 2>/dev/null
-    end
-
     set -l dt_response
     while true
-        read -P "  Enable Device Trust (endpoint compliance checking)? [y/n]: " dt_response
+        set -l tty (tty 2>/dev/null)
+        if test -n "$tty" -a -e "$tty"
+            printf "  Enable Device Trust (endpoint compliance checking)? [y/n]: " >"$tty"
+            read -l dt_response <"$tty"
+        else
+            read -l -P "  Enable Device Trust (endpoint compliance checking)? [y/n]: " dt_response
+        end
         string match -qri '^[yn]' "$dt_response"; and break
     end
     

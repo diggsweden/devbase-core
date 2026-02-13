@@ -387,13 +387,17 @@ function __devbase_update_do_update --description "Perform the update"
     # Prompt user (unless non-interactive or ref forced)
     if test "$force_ref" = true
         __devbase_update_print_info "Updating core to requested ref"
-    else if isatty stdin
-        # Drain any buffered stdin (e.g. accidental keypresses during slow fetch)
-        while read -n 1 -t 0 2>/dev/null
+    else if status --is-interactive
+        read -l -P "Proceed with update? [y/N] " response
+        echo
+        if not string match -qi 'y' -- $response
+            __devbase_update_print_info "Update cancelled"
+            return 0
         end
 
-        read -P "Proceed with update? [y/N] " -n 1 response
-        echo
+        printf "Proceed with update? [y/N] " >&2
+        read -l response
+        printf "\n" >&2
         if not string match -qi 'y' -- $response
             __devbase_update_print_info "Update cancelled"
             return 0

@@ -66,12 +66,15 @@ function __vscode_ext_prompt_yn --description "Prompt user for yes/no"
         set prompt_text "$prompt [y/N]: "
     end
 
-    # Drain any buffered stdin (e.g. accidental keypresses during slow yq/code startup)
-    while read -n 1 -t 0 2>/dev/null
-    end
-
     while true
-        read -P "$prompt_text" response
+        set -l tty (tty 2>/dev/null)
+        if test -n "$tty" -a -e "$tty"
+            printf "%s" "$prompt_text" >"$tty"
+            read -l response <"$tty"
+        else
+            read -l -P "$prompt_text" response
+        end
+        printf "\n"
         
         if test -z "$response"
             test "$default" = "y"; and return 0; or return 1
