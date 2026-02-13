@@ -245,9 +245,13 @@ teardown() {
 }
 
 @test "configure_vscode_settings merges theme without clobbering existing keys" {
+  if ! command -v jq >/dev/null 2>&1; then
+    skip "jq required to test merge behavior"
+  fi
+
   local settings_dir="${HOME}/.vscode-server/data/Machine"
   mkdir -p "$settings_dir"
-  echo '{"editor.fontSize": 14, "workbench.colorTheme": "Old Theme"}' | jq '.' > "${settings_dir}/settings.json"
+  printf '{"editor.fontSize": 14, "workbench.colorTheme": "Old Theme"}\n' > "${settings_dir}/settings.json"
 
   export DEVBASE_THEME="catppuccin-mocha"
   source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
