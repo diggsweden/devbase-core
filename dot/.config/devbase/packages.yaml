@@ -229,7 +229,7 @@ packs:
       keystore_explorer: {version: "v5.6.1", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
       jdk_mission_control: {version: "9.1.1", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
       dbeaver: {version: "25.3.4", installer: "install_dbeaver", tags: ["@optional"]} # renovate: datasource=github-releases depName=dbeaver/dbeaver
-      intellij_idea: {version: "2025.2.4", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=jetbrains-releases depName=idea
+      intellij_idea: {version: "2025.3.2", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=jetbrains-releases depName=idea packageName=IIU
     vscode:
       redhat.java: {version: "1.40.0"} # renovate: datasource=npm
       vscjava.vscode-java-debug: {version: "0.58.1"} # renovate: datasource=npm

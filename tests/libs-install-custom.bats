@@ -203,10 +203,55 @@ EOF
 
 @test "_is_wayland_session detects X11" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
+
   unset WAYLAND_DISPLAY
   export XDG_SESSION_TYPE="x11"
-  
+
   run _is_wayland_session
   assert_failure
+}
+
+@test "_configure_intellij_vmoptions enables Wayland with shadow fix" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  export WAYLAND_DISPLAY="wayland-0"
+  local template="${DEVBASE_ROOT}/dot/.config/devbase/intellij-vmoptions.template"
+
+  _configure_intellij_vmoptions "2025.2" "$template"
+
+  local vmoptions="${HOME}/.config/JetBrains/IntelliJIdea2025.2/idea64.vmoptions"
+  assert_file_exists "$vmoptions"
+  run cat "$vmoptions"
+  assert_output --partial "-Dawt.toolkit.name=WLToolkit"
+  assert_output --partial "-Dsun.awt.wl.Shadow=false"
+}
+
+@test "_configure_intellij_vmoptions omits Wayland on X11" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  unset WAYLAND_DISPLAY
+  export XDG_SESSION_TYPE="x11"
+  local template="${DEVBASE_ROOT}/dot/.config/devbase/intellij-vmoptions.template"
+
+  _configure_intellij_vmoptions "2025.2" "$template"
+
+  local vmoptions="${HOME}/.config/JetBrains/IntelliJIdea2025.2/idea64.vmoptions"
+  assert_file_exists "$vmoptions"
+  run cat "$vmoptions"
+  refute_output --partial "WLToolkit"
+  refute_output --partial "wl.Shadow"
+}
+
+@test "_configure_intellij_vmoptions works without template" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  export WAYLAND_DISPLAY="wayland-0"
+
+  _configure_intellij_vmoptions "2025.2" "/nonexistent/template"
+
+  local vmoptions="${HOME}/.config/JetBrains/IntelliJIdea2025.2/idea64.vmoptions"
+  assert_file_exists "$vmoptions"
+  run cat "$vmoptions"
+  assert_output --partial "-Dawt.toolkit.name=WLToolkit"
+  assert_output --partial "-Dsun.awt.wl.Shadow=false"
 }

@@ -1206,6 +1206,8 @@ _configure_intellij_vmoptions() {
 
     if _is_wayland_session; then
       sed 's|# WAYLAND_PLACEHOLDER|-Dawt.toolkit.name=WLToolkit|' "$vmoptions_template" >"$vmoptions_file"
+      # Disable Wayland shadow rendering to avoid shadow artifacts (IJPL-203429)
+      echo "-Dsun.awt.wl.Shadow=false" >>"$vmoptions_file"
       show_progress info "Wayland support enabled"
     else
       sed '/# WAYLAND_PLACEHOLDER/d' "$vmoptions_template" >"$vmoptions_file"
@@ -1215,7 +1217,7 @@ _configure_intellij_vmoptions() {
   else
     if _is_wayland_session; then
       show_progress info "Detected Wayland session - enabling Wayland support for IntelliJ"
-      echo "-Dawt.toolkit.name=WLToolkit" >"$vmoptions_file"
+      printf '%s\n' "-Dawt.toolkit.name=WLToolkit" "-Dsun.awt.wl.Shadow=false" >"$vmoptions_file"
     fi
   fi
 
