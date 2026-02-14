@@ -191,17 +191,7 @@ lint-shell-fmt-fix:
 
 # ▪ Run all tests
 [group('test')]
-test:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    if ! command -v bats &>/dev/null; then
-        printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
-    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
-        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
+test: _ensure-bats
     bats tests/
 
 # Setup test dependencies (bats libraries)
@@ -211,52 +201,35 @@ test-setup:
 
 # Run tests with verbose output
 [group('test')]
-test-verbose:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    if ! command -v bats &>/dev/null; then
-        printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
-    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
-        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
+test-verbose: _ensure-bats
     bats --verbose-run tests/
 
 # Run specific test file
 [group('test')]
-test-file file:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    if ! command -v bats &>/dev/null; then
-        printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
-    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
-        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
+test-file file: _ensure-bats
     bats "tests/{{file}}"
 
 # Run tests matching a filter
 [group('test')]
-test-filter filter:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    if ! command -v bats &>/dev/null; then
-        printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
-    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
-        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
-        exit 1
-    fi
+test-filter filter: _ensure-bats
     bats -f "{{filter}}" tests/
 
 # ==================================================================================== #
 # INTERNAL
 # ==================================================================================== #
+
+[private]
+_ensure-bats:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if ! command -v bats &>/dev/null; then
+        printf "Error: bats not installed. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
+    if [[ ! -f tests/libs/bats-support/load.bash ]]; then
+        printf "Error: bats test libs missing. Run 'just test-setup' first.\n" >&2
+        exit 1
+    fi
 
 [private]
 _ensure-devtools:
