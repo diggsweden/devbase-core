@@ -61,7 +61,7 @@ setup_non_interactive_mode() {
   [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
   export DEVBASE_SSH_KEY_ACTION DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
   export DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
-  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="java node python go ruby"
+  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${DEVBASE_DEFAULT_PACKS:-java node python go ruby}"
   export DEVBASE_SELECTED_PACKS
 
   printf "  Git Name: %s\n  Git Email: %s\n  Theme: %s\n  Packs: %s\n" \
@@ -107,7 +107,7 @@ load_saved_preferences() {
   DEVBASE_ZELLIJ_AUTOSTART=$(_yq_read '.tools.zellij_autostart' "$prefs_file")
   DEVBASE_ENABLE_GIT_HOOKS=$(_yq_read '.tools.git_hooks' "$prefs_file")
   DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
-  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="java node python go ruby"
+  [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${DEVBASE_DEFAULT_PACKS:-java node python go ruby}"
 
   export DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL DEVBASE_SSH_KEY_NAME
   export EDITOR VISUAL DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS

@@ -33,7 +33,7 @@ PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 
 # Selected packs (set by caller, space-separated)
-SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby}"
+SELECTED_PACKS="${SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
 
 # Brief: Set up package YAML environment (shared by all package loaders)
 # Params: None
@@ -42,7 +42,7 @@ SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby}"
 # Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
 _setup_package_yaml_env() {
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
 
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
     export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"

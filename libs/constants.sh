@@ -51,6 +51,11 @@ readonly DEVBASE_URL_FISHER_REPO="https://github.com/jorgebucaran/fisher.git"
 readonly DEVBASE_URL_FLATHUB_REPO="https://dl.flathub.org/repo/flathub.flatpakrepo"
 
 # =============================================================================
+# DEFAULTS
+# =============================================================================
+readonly DEVBASE_DEFAULT_PACKS="java node python go ruby"
+
+# =============================================================================
 # NETWORK CONNECTIVITY TEST SITES
 # =============================================================================
 readonly DEVBASE_CONNECTIVITY_TEST_SITES=("https://github.com" "https://google.com" "https://codeberg.org")
