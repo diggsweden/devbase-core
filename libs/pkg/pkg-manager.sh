@@ -59,8 +59,7 @@ load_system_packages() {
     return 1
   fi
 
-  # Export as readonly array
-  readonly SYSTEM_PACKAGES_ALL=("${packages[@]}")
+  SYSTEM_PACKAGES_ALL=("${packages[@]}")
 
   return 0
 }
