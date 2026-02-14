@@ -199,17 +199,19 @@ install_lazyvim() {
   show_progress info "Cloning LazyVim starter (version: $lazyvim_version)..."
   local git_output
   if git_output=$(git clone --quiet "$DEVBASE_URL_LAZYVIM_STARTER" "$nvim_config" 2>&1); then
-    cd "$nvim_config" || return 1
+    # Use subshell to avoid changing the caller's working directory
+    (
+      cd "$nvim_config" || exit 1
 
-    # Checkout specific version (commit SHA or tag) if not main
-    if [[ "$lazyvim_version" != "main" ]]; then
-      git checkout --quiet "$lazyvim_version" 2>/dev/null || {
-        show_progress warning "Failed to checkout $lazyvim_version, using main"
-      }
-    fi
+      # Checkout specific version (commit SHA or tag) if not main
+      if [[ "$lazyvim_version" != "main" ]]; then
+        git checkout --quiet "$lazyvim_version" 2>/dev/null || {
+          show_progress warning "Failed to checkout $lazyvim_version, using main"
+        }
+      fi
 
-    rm -rf .git
-    cd - >/dev/null || return
+      rm -rf .git
+    )
     show_progress success "LazyVim starter installed ($lazyvim_version)"
   else
     show_progress error "Failed to clone LazyVim starter"
