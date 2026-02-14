@@ -14,6 +14,12 @@
 
 set -uo pipefail
 
+# Re-source guard: skip top-level init if already loaded
+if [[ -n "${_DEVBASE_PARSE_PACKAGES_SOURCED:-}" ]]; then
+  return 0
+fi
+_DEVBASE_PARSE_PACKAGES_SOURCED=1
+
 # CRITICAL: yq is required for YAML parsing - fail fast if not available
 if ! command -v yq &>/dev/null; then
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
@@ -25,6 +31,7 @@ if ! command -v yq &>/dev/null; then
   echo "To fix: Install yq manually or check mise installation:" >&2
   echo "  mise install aqua:mikefarah/yq" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  _DEVBASE_PARSE_PACKAGES_SOURCED=""
   return 1
 fi
 
