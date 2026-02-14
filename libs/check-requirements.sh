@@ -117,7 +117,6 @@ get_wsl_version() {
 # Returns: 0 if Ubuntu, 1 if not Ubuntu
 is_ubuntu() {
   [[ "$(get_os_type)" == "ubuntu" ]]
-  return 0
 }
 
 # Brief: Display OS and environment information to user
