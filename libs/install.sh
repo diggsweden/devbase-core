@@ -13,6 +13,15 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
 fi
 
 set -Euo pipefail
+
+# =============================================================================
+# ERROR HANDLING POLICY
+# =============================================================================
+# Fatal (die):  Missing prerequisites, corrupted config, security violations.
+# Soft (return 1):  Optional features, network glitches, missing extras.
+# The ERR trap below logs failures but does not abort - callers decide severity.
+# =============================================================================
+
 # Error trap - log command failures to whiptail or terminal.
 # Note: Without `set -e`, the ERR trap only fires for commands whose failure
 # propagates (i.e., not inside `if`/`while`/`&&`/`||` guards). The `-E` flag
