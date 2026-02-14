@@ -368,6 +368,10 @@ find_custom_directory() {
 }
 
 load_environment_configuration() {
+  # Trust model: org.env is provided by the org's devbase-custom-config repo,
+  # which the user explicitly opted into. Protected vars (DEVBASE_ROOT, etc.)
+  # are rejected below to prevent privilege escalation via the env file.
+
   # Determine environment file to use
   if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
     _DEVBASE_ENV_FILE="${DEVBASE_CUSTOM_DIR}/config/org.env"
@@ -623,7 +627,9 @@ test_generic_network_connectivity() {
 # Uses: NON_INTERACTIVE, _DEVBASE_TEMP, DEVBASE_DEB_CACHE, _DEVBASE_ENV (globals)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Downloads and installs gum if not present
-# Note: This runs early in setup to enable the gum-based TUI for user preferences
+# Note: This runs early in setup before libs/install-custom.sh is loaded, so
+# it intentionally duplicates some download/arch logic from install-custom.sh.
+# The libs are not yet sourced at bootstrap time.
 bootstrap_gum() {
   # Skip in non-interactive mode - gum not needed
   if [[ "${NON_INTERACTIVE}" == "true" ]]; then
