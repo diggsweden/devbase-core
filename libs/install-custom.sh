@@ -1396,26 +1396,15 @@ install_gum() {
   # Determine architecture and package format
   local arch pkg_format
   pkg_format=$(_get_custom_pkg_format)
-  case "$(uname -m)" in
-  x86_64) arch="amd64" ;;
-  aarch64) arch="arm64" ;;
-  armv7l) arch="armhf" ;;
-  i686) arch="i386" ;;
-  *)
+  arch=$(get_deb_arch) || {
     show_progress warning "Unsupported architecture for gum: $(uname -m)"
     return 1
-    ;;
-  esac
+  }
 
   # For rpm, architecture naming differs
   local rpm_arch="$arch"
   if [[ "$pkg_format" == "rpm" ]]; then
-    case "$arch" in
-    amd64) rpm_arch="x86_64" ;;
-    arm64) rpm_arch="aarch64" ;;
-    armhf) rpm_arch="armv7hl" ;;
-    i386) rpm_arch="i686" ;;
-    esac
+    rpm_arch=$(get_rpm_arch)
   fi
 
   local package_name gum_url gum_pkg
