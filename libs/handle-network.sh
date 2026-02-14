@@ -203,7 +203,7 @@ _download_file_cache() {
   local cached_file="$2"
   local version="$3"
 
-  [[ -n "$version" ]] && cp "$target" "$cached_file" 2>/dev/null || true
+  [[ -n "$version" ]] && { cp "$target" "$cached_file" 2>/dev/null || true; }
   return 0
 }
 
