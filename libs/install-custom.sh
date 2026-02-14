@@ -945,38 +945,21 @@ apply_gnome_terminal_theme() {
 configure_terminal_fonts() {
   validate_var_set "HOME" || return 1
 
-  # Determine font details based on selection
+  # Reuse _determine_font_details for shared fields (font_dir_name, font_display_name)
   local font_choice="${DEVBASE_FONT:-jetbrains-mono}"
-  local font_dir_name=""
-  local font_family_name=""
-  local font_display_name=""
+  local font_details
+  font_details=$(_determine_font_details "$font_choice")
+  local font_dir_name font_display_name
+  IFS='|' read -r _ _ font_dir_name font_display_name _ <<<"$font_details"
 
+  # font_family_name is only needed here (terminal monospace family name)
+  local font_family_name=""
   case "$font_choice" in
-  jetbrains-mono)
-    font_dir_name="JetBrainsMonoNerdFont"
-    font_family_name="JetBrainsMono Nerd Font Mono"
-    font_display_name="JetBrains Mono Nerd Font"
-    ;;
-  firacode)
-    font_dir_name="FiraCodeNerdFont"
-    font_family_name="FiraCode Nerd Font Mono"
-    font_display_name="Fira Code Nerd Font"
-    ;;
-  cascadia-code)
-    font_dir_name="CascadiaCodeNerdFont"
-    font_family_name="CaskaydiaCove Nerd Font Mono"
-    font_display_name="Cascadia Code Nerd Font"
-    ;;
-  monaspace)
-    font_dir_name="MonaspaceNerdFont"
-    font_family_name="MonaspiceNe Nerd Font Mono"
-    font_display_name="Monaspace Nerd Font"
-    ;;
-  *)
-    font_dir_name="JetBrainsMonoNerdFont"
-    font_family_name="JetBrainsMono Nerd Font Mono"
-    font_display_name="JetBrains Mono Nerd Font"
-    ;;
+  jetbrains-mono) font_family_name="JetBrainsMono Nerd Font Mono" ;;
+  firacode) font_family_name="FiraCode Nerd Font Mono" ;;
+  cascadia-code) font_family_name="CaskaydiaCove Nerd Font Mono" ;;
+  monaspace) font_family_name="MonaspiceNe Nerd Font Mono" ;;
+  *) font_family_name="JetBrainsMono Nerd Font Mono" ;;
   esac
 
   # Check if fonts are installed
