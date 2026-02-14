@@ -643,37 +643,21 @@ bootstrap_gum() {
   # Version and architecture
   local version="0.17.0" # renovate: datasource=github-releases depName=charmbracelet/gum
   local arch
-  case "$(uname -m)" in
-  x86_64) arch="amd64" ;;
-  aarch64) arch="arm64" ;;
-  armv7l) arch="armhf" ;;
-  i686) arch="i386" ;;
-  *)
+  arch=$(get_deb_arch) || {
     show_progress warning "Could not find TUI component gum (unsupported architecture: $(uname -m)), using whiptail as backup"
     return 1
-    ;;
-  esac
+  }
 
   # Detect package format based on environment
   local pkg_format="deb"
   case "${_DEVBASE_ENV:-ubuntu}" in
-  fedora)
-    pkg_format="rpm"
-    ;;
-  ubuntu | ubuntu-wsl | wsl-ubuntu)
-    pkg_format="deb"
-    ;;
+  fedora) pkg_format="rpm" ;;
   esac
 
   # For rpm, architecture naming differs
   local rpm_arch="$arch"
   if [[ "$pkg_format" == "rpm" ]]; then
-    case "$arch" in
-    amd64) rpm_arch="x86_64" ;;
-    arm64) rpm_arch="aarch64" ;;
-    armhf) rpm_arch="armv7hl" ;;
-    i386) rpm_arch="i686" ;;
-    esac
+    rpm_arch=$(get_rpm_arch)
   fi
 
   local package_name
