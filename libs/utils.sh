@@ -60,18 +60,18 @@ declare -gA COMMAND_CACHE
 # Params: $1 - command name
 # Uses: COMMAND_CACHE (global associative array)
 # Returns: 0 if exists, 1 if not
-# Side-effects: Updates COMMAND_CACHE
+# Side-effects: Updates COMMAND_CACHE (only caches positive results)
+# Note: Negative results are not cached since commands may be installed mid-session
 command_exists() {
   local cmd="$1"
   validate_not_empty "$cmd" "command name" || return 1
 
-  [[ -n "${COMMAND_CACHE[$cmd]:-}" ]] && return "${COMMAND_CACHE[$cmd]}"
+  [[ "${COMMAND_CACHE[$cmd]:-}" == "0" ]] && return 0
 
   if command -v "$cmd" &>/dev/null; then
     COMMAND_CACHE[$cmd]=0
     return 0
   else
-    COMMAND_CACHE[$cmd]=1
     return 1
   fi
 }
