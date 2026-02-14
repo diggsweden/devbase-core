@@ -12,8 +12,11 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
-set -uo pipefail
-# Error trap - log to whiptail in that mode, otherwise print to terminal
+set -Euo pipefail
+# Error trap - log command failures to whiptail or terminal.
+# Note: Without `set -e`, the ERR trap only fires for commands whose failure
+# propagates (i.e., not inside `if`/`while`/`&&`/`||` guards). The `-E` flag
+# ensures the trap inherits into functions and subshells.
 trap '_handle_error_trap "$LINENO" "$BASH_COMMAND"' ERR
 
 _handle_error_trap() {
