@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test-fedora:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: fedora:43 # renovate: datasource=docker depName=fedora
     steps:
