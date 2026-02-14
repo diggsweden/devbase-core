@@ -94,7 +94,7 @@ _setup_custom_parser() {
   # Source parser if not already loaded
   if ! declare -f get_custom_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
 
   # Populate TOOL_VERSIONS array from packages.yaml

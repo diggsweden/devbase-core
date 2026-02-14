@@ -510,7 +510,7 @@ collect_pack_preferences() {
   # Source parser if needed
   if ! declare -f get_available_packs &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
 
   # Get available packs
