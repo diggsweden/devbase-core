@@ -315,40 +315,18 @@ EOF
   return 0
 }
 
-# Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
-# Params: None
-# Uses: HOME, show_progress (globals/functions)
-# Returns: 0 on success, 1 if no Firefox profile found
-# Side-effects: Adds OpenSC module to Firefox pkcs11.txt
+# Brief: Configure Firefox OpenSC for Debian/Ubuntu
+# Side-effects: Delegates to shared _configure_firefox_opensc with multiarch path
 _pkg_apt_configure_firefox_opensc() {
-  local opensc_lib="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
-
-  # Skip if OpenSC library not installed
-  if [[ ! -f "$opensc_lib" ]]; then
-    show_progress info "OpenSC PKCS#11 library not found, skipping Firefox smart card configuration"
-    return 0
-  fi
-
-  # Find Firefox profile directory
-  local profile_dir
-  profile_dir=$(find "${HOME}/.mozilla/firefox" -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
-
-  if [[ -z "$profile_dir" ]]; then
-    show_progress info "No Firefox profile found, skipping OpenSC configuration (will be configured on first Firefox launch)"
-    return 0
-  fi
-
-  local pkcs11_file="${profile_dir}/pkcs11.txt"
-
-  # Skip if OpenSC already configured
-  if [[ -f "$pkcs11_file" ]] && grep -q "opensc-pkcs11.so" "$pkcs11_file" 2>/dev/null; then
-    show_progress info "OpenSC already configured in Firefox"
-    return 0
-  fi
-
-  # Add OpenSC module to pkcs11.txt
-  printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
-
-  show_progress success "Firefox configured for smart card support (OpenSC)"
-  return 0
+  local arch
+  arch=$(dpkg --print-architecture 2>/dev/null || echo "x86_64")
+  local multiarch
+  case "$arch" in
+  amd64) multiarch="x86_64-linux-gnu" ;;
+  arm64) multiarch="aarch64-linux-gnu" ;;
+  armhf) multiarch="arm-linux-gnueabihf" ;;
+  i386) multiarch="i386-linux-gnu" ;;
+  *) multiarch="x86_64-linux-gnu" ;;
+  esac
+  _configure_firefox_opensc "/usr/lib/${multiarch}/opensc-pkcs11.so"
 }
