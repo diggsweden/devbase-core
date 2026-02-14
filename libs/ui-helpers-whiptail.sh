@@ -64,10 +64,10 @@ _wt_start_persistent_gauge() {
   # Clean up any existing gauge
   _wt_stop_persistent_gauge
 
-  # Create named pipe for gauge communication
-  # Create a temp file first, then replace it with a FIFO to avoid TOCTOU race
-  _WT_GAUGE_FIFO=$(mktemp /tmp/devbase-gauge.XXXXXX)
-  rm -f "$_WT_GAUGE_FIFO"
+  # Create named pipe for gauge communication inside a private temp directory
+  local fifo_dir
+  fifo_dir=$(mktemp -d /tmp/devbase-gauge.XXXXXX)
+  _WT_GAUGE_FIFO="${fifo_dir}/fifo"
   mkfifo -m 600 "$_WT_GAUGE_FIFO"
 
   # Start gauge in background, reading from FIFO
@@ -107,7 +107,10 @@ _wt_stop_persistent_gauge() {
     _WT_GAUGE_PID=""
   fi
   if [[ -n "$_WT_GAUGE_FIFO" ]] && [[ -p "$_WT_GAUGE_FIFO" ]]; then
+    local fifo_dir
+    fifo_dir=$(dirname "$_WT_GAUGE_FIFO")
     rm -f "$_WT_GAUGE_FIFO"
+    [[ -d "$fifo_dir" ]] && rmdir "$fifo_dir" 2>/dev/null || true
     _WT_GAUGE_FIFO=""
   fi
 
