@@ -18,15 +18,7 @@ set -uo pipefail
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 _pkg_apt_update() {
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
-      sudo apt-get -qq update
-    return $?
-  fi
-
-  # Whiptail mode (default)
   run_with_spinner "Updating package lists" sudo apt-get -qq update
-  return $?
 }
 
 # Brief: Install APT packages with real-time progress (whiptail only)
@@ -199,16 +191,6 @@ _pkg_apt_install_fonts() {
     fonts-dejavu-extra
   )
 
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
-      sudo apt-get install -y -q "${font_packages[@]}"; then
-      command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
-      return 0
-    fi
-    return 1
-  fi
-
-  # Whiptail mode (default)
   if run_with_spinner "Installing Liberation & DejaVu fonts" \
     sudo apt-get install -y -q "${font_packages[@]}"; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
@@ -282,29 +264,14 @@ Pin-Priority: -1
 EOF
 
   # Update and install
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if ! gum spin --spinner dot --show-error --title "Updating Mozilla repository..." -- \
-      sudo apt-get -qq update; then
-      show_progress error "Failed to update package cache after adding Mozilla repo"
-      return 1
-    fi
+  if ! run_with_spinner "Updating Mozilla repository" sudo apt-get -qq update; then
+    show_progress error "Failed to update package cache after adding Mozilla repo"
+    return 1
+  fi
 
-    if ! gum spin --spinner dot --show-error --title "Installing Firefox..." -- \
-      sudo apt-get -y -qq install firefox; then
-      show_progress error "Failed to install Firefox from Mozilla repository"
-      return 1
-    fi
-  else
-    # Whiptail mode (default)
-    if ! run_with_spinner "Updating Mozilla repository" sudo apt-get -qq update; then
-      show_progress error "Failed to update package cache after adding Mozilla repo"
-      return 1
-    fi
-
-    if ! run_with_spinner "Installing Firefox" sudo apt-get -y -qq install firefox; then
-      show_progress error "Failed to install Firefox from Mozilla repository"
-      return 1
-    fi
+  if ! run_with_spinner "Installing Firefox" sudo apt-get -y -qq install firefox; then
+    show_progress error "Failed to install Firefox from Mozilla repository"
+    return 1
   fi
 
   show_progress success "Firefox installed from Mozilla APT repository"
