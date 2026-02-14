@@ -229,6 +229,40 @@ add_fish_repo() {
   esac
 }
 
+# Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
+# Params: $1 - path to the OpenSC PKCS#11 library
+# Uses: HOME, show_progress (globals/functions)
+# Returns: 0 on success
+# Side-effects: Adds OpenSC module to Firefox pkcs11.txt
+_configure_firefox_opensc() {
+  local opensc_lib="$1"
+
+  if [[ ! -f "$opensc_lib" ]]; then
+    show_progress info "OpenSC PKCS#11 library not found, skipping Firefox smart card configuration"
+    return 0
+  fi
+
+  local profile_dir
+  profile_dir=$(find "${HOME}/.mozilla/firefox" -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
+
+  if [[ -z "$profile_dir" ]]; then
+    show_progress info "No Firefox profile found, skipping OpenSC configuration"
+    return 0
+  fi
+
+  local pkcs11_file="${profile_dir}/pkcs11.txt"
+
+  if [[ -f "$pkcs11_file" ]] && grep -q "opensc-pkcs11.so" "$pkcs11_file" 2>/dev/null; then
+    show_progress info "OpenSC already configured in Firefox"
+    return 0
+  fi
+
+  printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
+
+  show_progress success "Firefox configured for smart card support (OpenSC)"
+  return 0
+}
+
 # Brief: Install Firefox from official repository (not snap)
 # Params: None
 # Returns: 0 on success, 1 on failure
