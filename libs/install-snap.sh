@@ -59,6 +59,7 @@ _get_app_store_type() {
 # Outputs: Arrays of package names and options to global SNAP_PACKAGES and SNAP_OPTIONS
 # Side-effects: Populates SNAP_PACKAGES and SNAP_OPTIONS arrays
 load_snap_packages() {
+  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
   # Source parser if not already loaded
   if ! declare -f get_snap_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh

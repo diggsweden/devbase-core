@@ -42,10 +42,11 @@ SELECTED_PACKS="${SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go r
 
 # Brief: Set up package YAML environment (shared by all package loaders)
 # Params: None
-# Uses: DEVBASE_DOT, DEVBASE_SELECTED_PACKS, _DEVBASE_CUSTOM_PACKAGES (globals)
+# Uses: DEVBASE_DOT, DEVBASE_DEFAULT_PACKS, DEVBASE_SELECTED_PACKS, _DEVBASE_CUSTOM_PACKAGES (globals)
 # Returns: 0 on success, 1 if packages.yaml not found
 # Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
 _setup_package_yaml_env() {
+  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
 
