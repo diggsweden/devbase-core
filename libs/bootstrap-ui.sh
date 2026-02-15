@@ -5,6 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 show_welcome_banner() {
+  require_env DEVBASE_TUI_MODE || return 1
+
   local devbase_version
   local git_sha
 
@@ -38,7 +40,10 @@ show_welcome_banner() {
 }
 
 show_os_info() {
+  require_env DEVBASE_TUI_MODE || return 1
+
   local os_name env_type install_type
+
   os_name=$(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d'"' -f2 || echo "Unknown")
   env_type=$([[ "${_DEVBASE_ENV:-}" == "wsl-ubuntu" ]] && echo "WSL" || echo "Native Linux")
   install_type=$([[ "${_DEVBASE_FROM_GIT:-}" == "true" ]] && echo "Git repository" || echo "Downloaded")
@@ -60,7 +65,10 @@ show_os_info() {
 }
 
 show_repository_info() {
+  require_env DEVBASE_TUI_MODE || return 1
+
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+
     # Silent in whiptail mode - info shown in whiptail dialogs
     return 0
   fi
