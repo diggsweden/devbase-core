@@ -117,7 +117,7 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     export XDG_CACHE_HOME='${TEST_DIR}'
-    export DEVBASE_STRICT_CHECKSUMS=true
+    export DEVBASE_STRICT_CHECKSUMS=fail
     download_file 'https://example.com/file' '${target}'
   "
 
