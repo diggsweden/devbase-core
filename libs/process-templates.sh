@@ -112,6 +112,7 @@ process_templates_and_tools() {
 # Side-effects: Processes custom config files, prints count
 apply_custom_configs() {
   validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   show_progress info "Applying custom organization configs..."
   local custom_configs
@@ -778,6 +779,7 @@ _process_maven_yaml_add_custom() {
   local -n desc=$3
 
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "maven-repos.yaml" "Custom Maven repos"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     local custom_processed="${temp_dir}/maven-repos.yaml"
     envsubst_preserve_undefined "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
     fragments+=("$custom_processed")
@@ -877,9 +879,11 @@ process_gradle_templates() {
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "init.gradle.template" "Custom Gradle template"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template"
     show_progress info "Configuring Gradle with custom repository settings"
   elif [[ -f "${gradle_templates_dir}/init.gradle.template" ]]; then
+
     template_to_use="${gradle_templates_dir}/init.gradle.template"
     show_progress info "Configuring Gradle with repository mirror"
   fi
@@ -908,9 +912,11 @@ process_container_templates() {
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "registries.conf.template" "Custom registry template"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template"
     show_progress info "Configuring container registry with custom settings"
   elif [[ -f "${container_templates_dir}/registries.conf.template" ]]; then
+
     template_to_use="${container_templates_dir}/registries.conf.template"
     show_progress info "Configuring container registry mirror"
   fi
@@ -923,15 +929,17 @@ process_container_templates() {
 
 process_testcontainers_properties() {
   local core_file="${DEVBASE_FILES}/.testcontainers.properties"
-  local custom_file="${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties"
   local target_file="${HOME}/.testcontainers.properties"
   local source_file=""
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" ".testcontainers.properties" "Custom Testcontainers properties"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+    local custom_file="${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties"
     source_file="$custom_file"
     show_progress info "Configuring Testcontainers with custom settings"
   elif [[ -f "$core_file" ]]; then
+
     source_file="$core_file"
     show_progress info "Configuring Testcontainers"
   fi
