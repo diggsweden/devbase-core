@@ -13,15 +13,15 @@ set -uo pipefail
 # Guard: Verify running in bash (must check before any bash-specific code)
 # Note: BASH_VERSION check must use ${:-} since this runs before our imports
 if [ -z "${BASH_VERSION:-}" ]; then
-	echo "ERROR: This script must be run with bash, not sourced in another shell."
-	echo "Usage: bash setup.sh"
-	echo "   or: ./setup.sh"
-	exit 1
+  echo "ERROR: This script must be run with bash, not sourced in another shell."
+  echo "Usage: bash setup.sh"
+  echo "   or: ./setup.sh"
+  exit 1
 fi
 
 handle_interrupt() {
-	printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
-	exit 130
+  printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
+  exit 130
 }
 
 trap handle_interrupt INT TERM
@@ -145,50 +145,50 @@ DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
 # ============================================================================
 
 parse_arguments() {
-	for arg in "$@"; do
-		case $arg in
-		--non-interactive)
-			NON_INTERACTIVE=true
-			export NON_INTERACTIVE=true
-			export DEBIAN_FRONTEND=noninteractive
-			;;
-		--tui=*)
-			local tui_value="${arg#--tui=}"
-			case "$tui_value" in
-			gum | whiptail)
-				DEVBASE_TUI_MODE="$tui_value"
-				;;
-			*)
-				printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail\n" "$tui_value" >&2
-				exit 1
-				;;
-			esac
-			;;
-		--dry-run)
-			DEVBASE_DRY_RUN=true
-			export DEVBASE_DRY_RUN=true
-			;;
-		--version | -v)
-			SHOW_VERSION=true
-			;;
-		--help | -h)
-			printf "Usage: %s [OPTIONS]\n" "$0"
-			printf "\n"
-			printf "Options:\n"
-			printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
-			printf "  --dry-run          Print planned steps without installing\n"
-			printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
-			printf "  --version, -v      Show version information\n"
-			printf "  --help, -h         Show this help message\n"
-			exit 0
-			;;
-		*)
-			printf "Error: Unknown option '%s'\n" "$arg" >&2
-			printf "Run '%s --help' for valid options.\n" "$0" >&2
-			exit 1
-			;;
-		esac
-	done
+  for arg in "$@"; do
+    case $arg in
+    --non-interactive)
+      NON_INTERACTIVE=true
+      export NON_INTERACTIVE=true
+      export DEBIAN_FRONTEND=noninteractive
+      ;;
+    --tui=*)
+      local tui_value="${arg#--tui=}"
+      case "$tui_value" in
+      gum | whiptail)
+        DEVBASE_TUI_MODE="$tui_value"
+        ;;
+      *)
+        printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail\n" "$tui_value" >&2
+        exit 1
+        ;;
+      esac
+      ;;
+    --dry-run)
+      DEVBASE_DRY_RUN=true
+      export DEVBASE_DRY_RUN=true
+      ;;
+    --version | -v)
+      SHOW_VERSION=true
+      ;;
+    --help | -h)
+      printf "Usage: %s [OPTIONS]\n" "$0"
+      printf "\n"
+      printf "Options:\n"
+      printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
+      printf "  --dry-run          Print planned steps without installing\n"
+      printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
+      printf "  --version, -v      Show version information\n"
+      printf "  --help, -h         Show this help message\n"
+      exit 0
+      ;;
+    *)
+      printf "Error: Unknown option '%s'\n" "$arg" >&2
+      printf "Run '%s --help' for valid options.\n" "$0" >&2
+      exit 1
+      ;;
+    esac
+  done
 }
 
 # Brief: Initialize core DevBase path variables
@@ -198,82 +198,87 @@ parse_arguments() {
 # Returns: 0 always
 # Side-effects: None
 initialize_devbase_paths() {
-	# Get absolute path to devbase root (canonical bash idiom)
-	export DEVBASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-	export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-	export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
-	export DEVBASE_FILES="${DEVBASE_ROOT}/devbase_files"
-	export DEVBASE_ENVS="${DEVBASE_ROOT}/environments"
-	export DEVBASE_DOCS="${DEVBASE_ROOT}/docs"
-	readonly DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS
+  # Get absolute path to devbase root (canonical bash idiom)
+  export DEVBASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export DEVBASE_FILES="${DEVBASE_ROOT}/devbase_files"
+  export DEVBASE_ENVS="${DEVBASE_ROOT}/environments"
+  export DEVBASE_DOCS="${DEVBASE_ROOT}/docs"
+  readonly DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS
 
-	# Determine if running from git clone or release tarball (needed early for display_os_info)
-	if git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
-		export _DEVBASE_FROM_GIT="true"
-	else
-		export _DEVBASE_FROM_GIT="false"
-	fi
+  # Determine if running from git clone or release tarball (needed early for display_os_info)
+  if git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
+    export _DEVBASE_FROM_GIT="true"
+  else
+    export _DEVBASE_FROM_GIT="false"
+  fi
 }
 
 load_devbase_libraries() {
-	source "${DEVBASE_LIBS}/constants.sh"
-	source "${DEVBASE_LIBS}/define-colors.sh"
-	source "${DEVBASE_LIBS}/utils.sh"
-	source "${DEVBASE_LIBS}/ui-helpers.sh"
-	source "${DEVBASE_LIBS}/validation.sh"
-	source "${DEVBASE_LIBS}/distro.sh"
-	source "${DEVBASE_LIBS}/handle-network.sh"
-	source "${DEVBASE_LIBS}/process-templates.sh"
-	source "${DEVBASE_LIBS}/check-requirements.sh"
-	source "${DEVBASE_LIBS}/bootstrap.sh"
-	source "${DEVBASE_LIBS}/migrations.sh"
-	source "${DEVBASE_LIBS}/install-certificates.sh"
-	source "${DEVBASE_LIBS}/configure-ssh-git.sh"
-	source "${DEVBASE_LIBS}/configure-git-hooks.sh"
-	source "${DEVBASE_LIBS}/configure-completions.sh"
-	source "${DEVBASE_LIBS}/configure-shell.sh"
-	source "${DEVBASE_LIBS}/configure-services.sh"
-	source "${DEVBASE_LIBS}/install-custom.sh"
-	source "${DEVBASE_LIBS}/setup-vscode.sh"
-	source "${DEVBASE_LIBS}/configure-theme.sh"
+  source "${DEVBASE_LIBS}/constants.sh"
+  source "${DEVBASE_LIBS}/define-colors.sh"
+  source "${DEVBASE_LIBS}/utils.sh"
+  source "${DEVBASE_LIBS}/ui-helpers.sh"
+  source "${DEVBASE_LIBS}/validation.sh"
+  source "${DEVBASE_LIBS}/distro.sh"
+  source "${DEVBASE_LIBS}/handle-network.sh"
+  source "${DEVBASE_LIBS}/process-templates.sh"
+  source "${DEVBASE_LIBS}/check-requirements.sh"
+  source "${DEVBASE_LIBS}/bootstrap.sh"
+  source "${DEVBASE_LIBS}/migrations.sh"
+  source "${DEVBASE_LIBS}/install-certificates.sh"
+  source "${DEVBASE_LIBS}/configure-ssh-git.sh"
+  source "${DEVBASE_LIBS}/configure-git-hooks.sh"
+  source "${DEVBASE_LIBS}/configure-completions.sh"
+  source "${DEVBASE_LIBS}/configure-shell.sh"
+  source "${DEVBASE_LIBS}/configure-services.sh"
+  source "${DEVBASE_LIBS}/install-custom.sh"
+  source "${DEVBASE_LIBS}/setup-vscode.sh"
+  source "${DEVBASE_LIBS}/configure-theme.sh"
 }
 
 init_env() {
-	initialize_devbase_paths
-	load_devbase_libraries
+  initialize_devbase_paths
+  load_devbase_libraries
 }
 
 resolve_devbase_version() {
-	local git_tag=""
-	local git_sha="unknown"
+  local git_tag=""
+  local git_sha="unknown"
 
-	if command -v git &>/dev/null && git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
-		git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
-		git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
-	fi
+  if command -v git &>/dev/null && git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
+    git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
+    git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  fi
 
-	local devbase_version="0.0.0-dev"
-	if [[ -n "$git_tag" ]]; then
-		devbase_version="$git_tag"
-	fi
+  local devbase_version="0.0.0-dev"
+  if [[ -n "$git_tag" ]]; then
+    devbase_version="$git_tag"
+  fi
 
-	printf "%s %s\n" "$devbase_version" "$git_sha"
+  printf "%s %s\n" "$devbase_version" "$git_sha"
 }
 
 print_version() {
-	local devbase_version
-	local git_sha
+  local devbase_version
+  local git_sha
 
-	read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
-	printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
+  read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
+  printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
 }
 
 show_dry_run_plan() {
-	show_progress info "$(ui_message dry_run_plan_header)"
-	show_progress info "  - $(ui_message dry_run_plan_preflight)"
-	show_progress info "  - $(ui_message dry_run_plan_configuration)"
-	show_progress info "  - $(ui_message dry_run_plan_installation)"
-	show_progress info "  - $(ui_message dry_run_plan_finalize)"
+  show_progress info "$(ui_message dry_run_plan_header)"
+  show_progress info "  - $(ui_message dry_run_plan_preflight)"
+  show_progress info "  - $(ui_message dry_run_plan_configuration)"
+  show_progress info "  - $(ui_message dry_run_plan_installation)"
+  show_progress info "  - $(ui_message dry_run_plan_finalize)"
+
+  local packages="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-}}"
+  if [[ -n "$packages" ]]; then
+    show_progress info "  - $(ui_message dry_run_plan_packages): $packages"
+  fi
 }
 
 # Brief: Persist devbase repos to user data directory for update support
@@ -282,146 +287,146 @@ show_dry_run_plan() {
 # Returns: 0 on success
 # Side-effects: Clones/updates repos to ~/.local/share/devbase/{core,custom}
 persist_devbase_repos() {
-	local core_dest="$XDG_DATA_HOME/devbase/core"
-	local custom_dest="$XDG_DATA_HOME/devbase/custom"
+  local core_dest="$XDG_DATA_HOME/devbase/core"
+  local custom_dest="$XDG_DATA_HOME/devbase/custom"
 
-	mkdir -p "$(dirname "$core_dest")"
+  mkdir -p "$(dirname "$core_dest")"
 
-	# Persist core repo
-	if [[ "$_DEVBASE_FROM_GIT" == "true" ]]; then
-		local current_remote
-		local current_tag
-		local core_ref
-		current_remote=$(git -C "$DEVBASE_ROOT" remote get-url origin 2>/dev/null || echo "")
-		current_tag=$(git -C "$DEVBASE_ROOT" describe --tags --abbrev=0 2>/dev/null || echo "main")
-		core_ref="${DEVBASE_CORE_REF:-$current_tag}"
+  # Persist core repo
+  if [[ "$_DEVBASE_FROM_GIT" == "true" ]]; then
+    local current_remote
+    local current_tag
+    local core_ref
+    current_remote=$(git -C "$DEVBASE_ROOT" remote get-url origin 2>/dev/null || echo "")
+    current_tag=$(git -C "$DEVBASE_ROOT" describe --tags --abbrev=0 2>/dev/null || echo "main")
+    core_ref="${DEVBASE_CORE_REF:-$current_tag}"
 
-		if [[ -z "$current_remote" ]]; then
-			show_progress warning "Could not determine core remote URL - skipping repo persistence"
-			return 1
-		fi
+    if [[ -z "$current_remote" ]]; then
+      show_progress warning "Could not determine core remote URL - skipping repo persistence"
+      return 1
+    fi
 
-		if [[ ! -d "$core_dest/.git" ]]; then
-			show_progress step "Cloning devbase-core to persistent location..."
-			if git clone --depth 1 --branch "$core_ref" "$current_remote" "$core_dest" 2>/dev/null; then
-				show_progress success "Core repo cloned to $core_dest"
-			else
-				# Fallback: clone without branch (tag might not exist on fresh clone)
-				git clone --depth 1 "$current_remote" "$core_dest"
-				git -C "$core_dest" fetch --depth 1 --tags --quiet
+    if [[ ! -d "$core_dest/.git" ]]; then
+      show_progress step "Cloning devbase-core to persistent location..."
+      if git clone --depth 1 --branch "$core_ref" "$current_remote" "$core_dest" 2>/dev/null; then
+        show_progress success "Core repo cloned to $core_dest"
+      else
+        # Fallback: clone without branch (tag might not exist on fresh clone)
+        git clone --depth 1 "$current_remote" "$core_dest"
+        git -C "$core_dest" fetch --depth 1 --tags --quiet
 
-				if [[ -n "${DEVBASE_CORE_REF:-}" ]]; then
-					if git -C "$core_dest" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null &&
-						git -C "$core_dest" checkout "origin/$core_ref" --quiet 2>/dev/null; then
-						show_progress success "Core repo cloned to $core_dest"
-					elif git -C "$core_dest" fetch --depth 1 origin "+refs/tags/$core_ref:refs/tags/$core_ref" --quiet 2>/dev/null &&
-						git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
-						show_progress success "Core repo cloned to $core_dest"
-					else
-						show_progress warning "Could not checkout core ref: $core_ref"
-					fi
-				else
-					if git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
-						show_progress success "Core repo cloned to $core_dest"
-					else
-						show_progress success "Core repo cloned to $core_dest"
-					fi
-				fi
-			fi
-		else
-			# Already exists - update to current tag or requested ref
-			show_progress step "Updating persistent core repo..."
-			if [[ -n "${DEVBASE_CORE_REF:-}" ]]; then
-				if git -C "$core_dest" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null &&
-					git -C "$core_dest" checkout "origin/$core_ref" --quiet 2>/dev/null; then
-					show_progress success "Core repo updated at $core_dest"
-				elif git -C "$core_dest" fetch --depth 1 origin "+refs/tags/$core_ref:refs/tags/$core_ref" --quiet 2>/dev/null &&
-					git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
-					show_progress success "Core repo updated at $core_dest"
-				else
-					show_progress warning "Could not checkout core ref: $core_ref"
-				fi
-			else
-				if git -C "$core_dest" fetch --depth 1 origin "$core_ref" --quiet 2>/dev/null ||
-					git -C "$core_dest" fetch --depth 1 --tags --quiet; then
-					if git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
-						show_progress success "Core repo updated at $core_dest"
-					else
-						show_progress success "Core repo updated at $core_dest"
-					fi
-				fi
-			fi
-		fi
-	else
-		show_progress info "Not running from git clone - skipping core repo persistence"
-	fi
+        if [[ -n "${DEVBASE_CORE_REF:-}" ]]; then
+          if git -C "$core_dest" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null &&
+            git -C "$core_dest" checkout "origin/$core_ref" --quiet 2>/dev/null; then
+            show_progress success "Core repo cloned to $core_dest"
+          elif git -C "$core_dest" fetch --depth 1 origin "+refs/tags/$core_ref:refs/tags/$core_ref" --quiet 2>/dev/null &&
+            git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
+            show_progress success "Core repo cloned to $core_dest"
+          else
+            show_progress warning "Could not checkout core ref: $core_ref"
+          fi
+        else
+          if git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
+            show_progress success "Core repo cloned to $core_dest"
+          else
+            show_progress success "Core repo cloned to $core_dest"
+          fi
+        fi
+      fi
+    else
+      # Already exists - update to current tag or requested ref
+      show_progress step "Updating persistent core repo..."
+      if [[ -n "${DEVBASE_CORE_REF:-}" ]]; then
+        if git -C "$core_dest" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null &&
+          git -C "$core_dest" checkout "origin/$core_ref" --quiet 2>/dev/null; then
+          show_progress success "Core repo updated at $core_dest"
+        elif git -C "$core_dest" fetch --depth 1 origin "+refs/tags/$core_ref:refs/tags/$core_ref" --quiet 2>/dev/null &&
+          git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
+          show_progress success "Core repo updated at $core_dest"
+        else
+          show_progress warning "Could not checkout core ref: $core_ref"
+        fi
+      else
+        if git -C "$core_dest" fetch --depth 1 origin "$core_ref" --quiet 2>/dev/null ||
+          git -C "$core_dest" fetch --depth 1 --tags --quiet; then
+          if git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
+            show_progress success "Core repo updated at $core_dest"
+          else
+            show_progress success "Core repo updated at $core_dest"
+          fi
+        fi
+      fi
+    fi
+  else
+    show_progress info "Not running from git clone - skipping core repo persistence"
+  fi
 
-	# Persist custom config repo (if it's a git repo)
-	if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && git -C "$DEVBASE_CUSTOM_DIR" rev-parse --git-dir &>/dev/null; then
-		local custom_remote
-		custom_remote=$(git -C "$DEVBASE_CUSTOM_DIR" remote get-url origin 2>/dev/null || echo "")
+  # Persist custom config repo (if it's a git repo)
+  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && git -C "$DEVBASE_CUSTOM_DIR" rev-parse --git-dir &>/dev/null; then
+    local custom_remote
+    custom_remote=$(git -C "$DEVBASE_CUSTOM_DIR" remote get-url origin 2>/dev/null || echo "")
 
-		if [[ -n "$custom_remote" ]]; then
-			if [[ ! -d "$custom_dest/.git" ]]; then
-				show_progress step "Cloning custom config to persistent location..."
-				git clone --depth 1 "$custom_remote" "$custom_dest"
-				show_progress success "Custom config cloned to $custom_dest"
-			else
-				show_progress step "Updating persistent custom config..."
-				git -C "$custom_dest" fetch --depth 1 --quiet
-				git -C "$custom_dest" reset --hard origin/HEAD --quiet 2>/dev/null ||
-					git -C "$custom_dest" reset --hard origin/main --quiet 2>/dev/null || true
-				show_progress success "Custom config updated at $custom_dest"
-			fi
-		fi
-	fi
+    if [[ -n "$custom_remote" ]]; then
+      if [[ ! -d "$custom_dest/.git" ]]; then
+        show_progress step "Cloning custom config to persistent location..."
+        git clone --depth 1 "$custom_remote" "$custom_dest"
+        show_progress success "Custom config cloned to $custom_dest"
+      else
+        show_progress step "Updating persistent custom config..."
+        git -C "$custom_dest" fetch --depth 1 --quiet
+        git -C "$custom_dest" reset --hard origin/HEAD --quiet 2>/dev/null ||
+          git -C "$custom_dest" reset --hard origin/main --quiet 2>/dev/null || true
+        show_progress success "Custom config updated at $custom_dest"
+      fi
+    fi
+  fi
 
-	return 0
+  return 0
 }
 
 run_installation() {
-	# Run the main installation script
-	_INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
+  # Run the main installation script
+  _INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
 
-	if [[ -f "$_INSTALL_SCRIPT" ]]; then
-		# Only export what child processes actually need
-		# Proxy variables already exported above if configured
-		# shellcheck disable=SC2153 # _DEVBASE_ENV/_DEVBASE_ENV_FILE set during bootstrap
-		export DEVBASE_ENV="$_DEVBASE_ENV" # Environment type (ubuntu/wsl-ubuntu)
-		# shellcheck disable=SC2153 # _DEVBASE_ENV_FILE set during bootstrap
-		export DEVBASE_ENV_FILE="$_DEVBASE_ENV_FILE" # Path to env file
+  if [[ -f "$_INSTALL_SCRIPT" ]]; then
+    # Only export what child processes actually need
+    # Proxy variables already exported above if configured
+    # shellcheck disable=SC2153 # _DEVBASE_ENV/_DEVBASE_ENV_FILE set during bootstrap
+    export DEVBASE_ENV="$_DEVBASE_ENV" # Environment type (ubuntu/wsl-ubuntu)
+    # shellcheck disable=SC2153 # _DEVBASE_ENV_FILE set during bootstrap
+    export DEVBASE_ENV_FILE="$_DEVBASE_ENV_FILE" # Path to env file
 
-		# Source the main installation script (not bash) to keep arrays available
-		# shellcheck disable=SC1090 # Dynamic source path
-		source "$_INSTALL_SCRIPT"
-	else
-		die "Main installation script not found: ${_INSTALL_SCRIPT}"
-	fi
+    # Source the main installation script (not bash) to keep arrays available
+    # shellcheck disable=SC1090 # Dynamic source path
+    source "$_INSTALL_SCRIPT"
+  else
+    die "Main installation script not found: ${_INSTALL_SCRIPT}"
+  fi
 }
 
 main() {
-	parse_arguments "$@"
-	init_env
+  parse_arguments "$@"
+  init_env
 
-	if [[ "${SHOW_VERSION}" == "true" ]]; then
-		print_version
-		return 0
-	fi
+  if [[ "${SHOW_VERSION}" == "true" ]]; then
+    print_version
+    return 0
+  fi
 
-	run_bootstrap || return 1
+  run_bootstrap || return 1
 
-	if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
-		show_dry_run_plan
-		show_progress info "$(ui_message dry_run_install_skip)"
-		return 0
-	fi
+  if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
+    show_dry_run_plan
+    show_progress info "$(ui_message dry_run_install_skip)"
+    return 0
+  fi
 
-	run_installation || return 1
+  run_installation || return 1
 
-	# Run migrations after successful installation to clean up legacy files
-	if ! run_migrations; then
-		show_progress warning "Migrations failed - continuing"
-	fi
+  # Run migrations after successful installation to clean up legacy files
+  if ! run_migrations; then
+    show_progress warning "Migrations failed - continuing"
+  fi
 }
 
 main "$@"
