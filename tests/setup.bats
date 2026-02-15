@@ -226,6 +226,7 @@ teardown() {
         dry_run_plan_configuration) echo \"Configuration prompts\" ;;
         dry_run_plan_installation) echo \"Installation steps\" ;;
         dry_run_plan_finalize) echo \"Finalize steps\" ;;
+        dry_run_plan_actions) echo \"Actions\" ;;
         dry_run_plan_packages) echo \"Packages\" ;;
         *) echo \"\$1\" ;;
       esac
@@ -237,6 +238,7 @@ teardown() {
   "
 
   assert_success
+  assert_output --partial "Actions:"
   assert_output --partial "Packages: go python"
 }
 
@@ -255,6 +257,33 @@ teardown() {
     show_repository_info() { :; }
     test_generic_network_connectivity() { :; }
     validate_custom_config() { :; }
+    run_pre_install_hook() { :; }
+    set_default_values() { :; }
+    ui_message() { echo \"\$1\"; }
+    show_progress() { :; }
+    eval \"\$(sed -n '/^run_bootstrap()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap.sh')\"
+    DEVBASE_DRY_RUN=false
+    run_bootstrap
+  "
+
+  assert_failure
+}
+
+@test "run_bootstrap fails when custom config invalid" {
+  run bash -c "
+    require_env() { return 0; }
+    detect_environment() { return 0; }
+    find_custom_directory() { return 0; }
+    load_environment_configuration() { return 0; }
+    configure_proxy_settings() { return 0; }
+    install_certificates() { return 0; }
+    select_tui_mode() { return 0; }
+    show_welcome_banner() { :; }
+    show_os_info() { :; }
+    check_required_tools() { return 0; }
+    show_repository_info() { :; }
+    test_generic_network_connectivity() { :; }
+    validate_custom_config() { return 1; }
     run_pre_install_hook() { :; }
     set_default_values() { :; }
     ui_message() { echo \"\$1\"; }
