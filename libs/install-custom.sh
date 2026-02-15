@@ -665,6 +665,29 @@ _check_font_installed() {
   return 1
 }
 
+# Brief: Fetch Nerd Font checksum from release manifest
+# Params: $1 - nf_version, $2 - font_zip_name
+# Returns: 0 with checksum on stdout, 1 on failure
+get_nerd_font_checksum() {
+  local nf_version="$1"
+  local font_zip_name="$2"
+
+  validate_not_empty "$nf_version" "Nerd Fonts version" || return 1
+  validate_not_empty "$font_zip_name" "Nerd Fonts package" || return 1
+
+  local checksum_url="${DEVBASE_URL_NERD_FONTS_RELEASES}/${nf_version}/SHA256SUMS"
+  local checksum
+
+  if checksum=$(get_checksum_from_manifest "$checksum_url" "$font_zip_name" "60"); then
+    if [[ -n "$checksum" ]]; then
+      echo "$checksum"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 # Brief: Download Nerd Font to cache with version tracking
 # Params: $1 - font_zip_name, $2 - cache_dir, $3 - nf_version, $4 - timeout
 # Returns: 0 on success (downloaded or cached), 1 on failure
@@ -690,9 +713,19 @@ _download_font_to_cache() {
 
   # Download new version
   mkdir -p "$versioned_cache_dir"
-  if download_file "$font_url" "$font_zip" "" "" "" "$timeout"; then
-    echo "$nf_version" >"$version_file"
-    return 0
+  local expected_checksum=""
+
+  if expected_checksum=$(get_nerd_font_checksum "$nf_version" "$font_zip_name"); then
+    if download_file "$font_url" "$font_zip" "" "$expected_checksum" "" "$timeout"; then
+      echo "$nf_version" >"$version_file"
+      return 0
+    fi
+  else
+    show_progress warning "No checksum found for ${font_zip_name} - continuing without verification"
+    if download_file "$font_url" "$font_zip" "" "" "" "$timeout"; then
+      echo "$nf_version" >"$version_file"
+      return 0
+    fi
   fi
 
   return 1
