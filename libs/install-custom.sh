@@ -146,10 +146,9 @@ get_oc_checksum() {
 
   local checksum_url="${DEVBASE_URL_OCP_MIRROR}/${version}/sha256sum.txt"
   local checksum
+  local filename="openshift-client-linux-${version}.tar.gz"
 
-  # Download checksum file and extract the checksum for openshift-client-linux tarball
-  if checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$checksum_url" | grep "openshift-client-linux-${version}.tar.gz" | awk '{print $1}'); then
-
+  if checksum=$(retry_command get_checksum_from_manifest "$checksum_url" "$filename" "30"); then
     if [[ -n "$checksum" ]]; then
       echo "$checksum"
       return 0
@@ -1341,9 +1340,7 @@ get_gum_checksum() {
   local checksums_url="${DEVBASE_URL_GUM_RELEASES}/v${version}/checksums.txt"
   local checksum
 
-  # Download checksums and extract the one for our package
-  if checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}'); then
-
+  if checksum=$(retry_command get_checksum_from_manifest "$checksums_url" "$package_name" "30"); then
     if [[ -n "$checksum" ]] && [[ ${#checksum} -eq 64 ]]; then
       echo "$checksum"
       return 0
