@@ -159,6 +159,45 @@ teardown() {
   assert_success
 }
 
+@test "main runs bootstrap, install, and migrations" {
+  run bash -c "
+    parse_arguments() { :; }
+    init_env() { :; }
+    run_bootstrap() { echo bootstrap; }
+    run_installation() { echo install; }
+    run_migrations() { echo migrate; }
+    eval \"\$(sed -n '/^main()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    SHOW_VERSION=false
+    DEVBASE_DRY_RUN=false
+    main
+  "
+
+  assert_success
+  assert_output --partial "bootstrap"
+  assert_output --partial "install"
+  assert_output --partial "migrate"
+}
+
+@test "main skips installation in dry-run" {
+  run bash -c "
+    parse_arguments() { :; }
+    init_env() { :; }
+    run_bootstrap() { echo bootstrap; }
+    run_installation() { echo install; }
+    run_migrations() { echo migrate; }
+    show_progress() { echo dryrun; }
+    eval \"\$(sed -n '/^main()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    SHOW_VERSION=false
+    DEVBASE_DRY_RUN=true
+    main
+  "
+
+  assert_success
+  assert_output --partial "bootstrap"
+  assert_output --partial "dryrun"
+  refute_output --partial "install"
+}
+
 @test "initialize_devbase_paths sets required paths" {
   run bash -c "
     cd '${DEVBASE_ROOT}'
