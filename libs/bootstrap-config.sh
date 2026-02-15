@@ -23,6 +23,7 @@ validate_custom_directory() {
 }
 
 find_custom_directory() {
+  require_env DEVBASE_ROOT HOME || return 1
   # shellcheck disable=SC2153 # DEVBASE_ROOT set by init_env
   local candidates=(
     "${DEVBASE_CUSTOM_DIR}" # Imported at top - empty if user didn't set it
@@ -103,7 +104,8 @@ load_environment_configuration() {
     if grep -q "^${var}=" "${_DEVBASE_ENV_FILE}" 2>/dev/null; then
       printf "  %b%s%b Environment file attempts to override protected variable: %s\n" \
         "${DEVBASE_COLORS[RED]}" "${DEVBASE_SYMBOLS[CROSS]}" "${DEVBASE_COLORS[NC]}" "${var}" >&2
-      die "Please remove ${var} from ${_DEVBASE_ENV_FILE}"
+      show_progress error "Please remove ${var} from ${_DEVBASE_ENV_FILE}"
+      return 1
     fi
   done
 
