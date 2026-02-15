@@ -129,6 +129,22 @@ teardown() {
   assert_failure
 }
 
+@test "install.sh defines phase helpers" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "grep -q 'run_preflight_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_configuration_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_installation_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_finalize_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+}
+
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 

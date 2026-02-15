@@ -832,12 +832,7 @@ perform_installation() {
 	fi
 }
 
-# Brief: Main installation orchestration function
-# Params: None
-# Uses: DEVBASE_COLORS, rotate_backup_directories, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
-# Returns: 0 always
-# Side-effects: Orchestrates entire DevBase installation process
-main() {
+run_preflight_phase() {
 	rotate_backup_directories
 	validate_environment
 	validate_source_repository
@@ -847,11 +842,15 @@ main() {
 	# Note: Sudo access is acquired in run_preflight_checks
 	tui_blank_line
 	run_preflight_checks || return 1
+}
 
+run_configuration_phase() {
 	bootstrap_for_configuration
 	collect_user_configuration
 	display_configuration_summary
+}
 
+run_installation_phase() {
 	# Start persistent progress display for whiptail mode
 	# This keeps a gauge on screen throughout installation to prevent terminal flicker
 	start_installation_progress
@@ -865,11 +864,25 @@ main() {
 
 	# Stop persistent progress display before showing completion
 	stop_installation_progress
+}
 
+run_finalize_phase() {
 	tui_blank_line
 	show_completion_message
 	configure_fonts_post_install
 	handle_wsl_restart
+}
+
+# Brief: Main installation orchestration function
+# Params: None
+# Uses: DEVBASE_COLORS, rotate_backup_directories, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
+# Returns: 0 always
+# Side-effects: Orchestrates entire DevBase installation process
+main() {
+	run_preflight_phase || return 1
+	run_configuration_phase
+	run_installation_phase
+	run_finalize_phase
 	return 0
 }
 
