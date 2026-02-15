@@ -87,15 +87,27 @@ find_custom_directory() {
   show_progress info "  • $HOME/.local/share/devbase/custom"
 }
 
-select_environment_file() {
+resolve_environment_file() {
   require_env DEVBASE_ENVS || return 1
 
-  # Determine environment file to use
   if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
-    _DEVBASE_ENV_FILE="${DEVBASE_CUSTOM_DIR}/config/org.env"
+    echo "${DEVBASE_CUSTOM_DIR}/config/org.env"
+    return 0
+  fi
+
+  echo "${DEVBASE_ENVS}/default.env"
+  return 0
+}
+
+select_environment_file() {
+  local env_file
+  env_file=$(resolve_environment_file) || return 1
+
+  _DEVBASE_ENV_FILE="$env_file"
+
+  if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ "${_DEVBASE_ENV_FILE}" == "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
     show_progress step "Using custom environment: ${_DEVBASE_ENV_FILE}"
   else
-    _DEVBASE_ENV_FILE="${DEVBASE_ENVS}/default.env"
     show_progress step "Using default environment: ${_DEVBASE_ENV_FILE}"
   fi
 
