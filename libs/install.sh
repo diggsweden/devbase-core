@@ -38,12 +38,47 @@ _handle_error_trap() {
 	fi
 }
 
+_get_trap_command() {
+	local trap_line="$1"
+	local signal="$2"
+	local cmd=""
+
+	if [[ -n "$trap_line" ]]; then
+		cmd="${trap_line#trap -- '}"
+		cmd="${cmd%' $signal}"
+	fi
+
+	printf "%s" "$cmd"
+}
+
+_DEVBASE_PREV_TRAP_INT="$(_get_trap_command "$(trap -p INT)" "INT")"
+_DEVBASE_PREV_TRAP_TERM="$(_get_trap_command "$(trap -p TERM)" "TERM")"
+
+_run_prev_trap() {
+	local signal="$1"
+	local prev_cmd=""
+
+	case "$signal" in
+	INT)
+		prev_cmd="${_DEVBASE_PREV_TRAP_INT:-}"
+		;;
+	TERM)
+		prev_cmd="${_DEVBASE_PREV_TRAP_TERM:-}"
+		;;
+	esac
+
+	if [[ -n "$prev_cmd" && "$prev_cmd" != "handle_interrupt" ]]; then
+		eval "$prev_cmd"
+	fi
+}
+
 # Brief: Handle SIGINT/SIGTERM by cleaning up and exiting with code 130
-# Params: None
+# Params: $1 - signal name (INT or TERM)
 # Uses: cleanup_temp_directory, stop_installation_progress (functions)
 # Returns: exits with 130
 # Side-effects: Cleans temp directory, stops progress display, prints cancellation message, exits
 handle_interrupt() {
+	local signal="${1:-INT}"
 	cleanup_temp_directory
 	# Stop persistent gauge first (if running)
 	stop_installation_progress 2>/dev/null || true
@@ -58,11 +93,13 @@ handle_interrupt() {
 	else
 		printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
 	fi
+	_run_prev_trap "$signal"
 	exit 130
 }
 
 trap cleanup_temp_directory EXIT
-trap handle_interrupt INT TERM
+trap 'handle_interrupt INT' INT
+trap 'handle_interrupt TERM' TERM
 
 # Source user preferences collector based on TUI mode
 # DEVBASE_TUI_MODE is set by select_tui_mode() in setup.sh before sourcing this file
