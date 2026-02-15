@@ -145,6 +145,38 @@ teardown() {
   assert_success
 }
 
+@test "run_configuration_phase fails on step error" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "
+    bootstrap_for_configuration() { return 1; }
+    collect_user_configuration() { return 0; }
+    display_configuration_summary() { return 0; }
+    eval \"\$(sed -n '/^run_configuration_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
+    run_configuration_phase
+  "
+
+  assert_failure
+}
+
+@test "run_installation_phase stops progress on failure" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "
+    start_installation_progress() { :; }
+    stop_installation_progress() { echo stopped; }
+    show_phase() { :; }
+    prepare_system() { return 1; }
+    perform_installation() { return 0; }
+    write_installation_summary() { return 0; }
+    eval \"\$(sed -n '/^run_installation_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
+    run_installation_phase
+  "
+
+  assert_failure
+  assert_output --partial "stopped"
+}
+
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 
