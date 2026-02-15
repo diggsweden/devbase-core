@@ -229,6 +229,9 @@ validate_custom_template() {
 copy_custom_templates_to_temp() {
   local temp_dir="$1"
 
+  validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+
   for template in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.template; do
     [[ -f "$template" ]] || continue
 

@@ -321,9 +321,12 @@ _setup_vscode_parser() {
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
 
   # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]]; then
+    require_env _DEVBASE_CUSTOM_PACKAGES || return 1
+    if [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+      export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+      show_progress info "Using custom package overrides"
+    fi
   fi
 
   # Source parser if not already loaded
