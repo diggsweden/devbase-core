@@ -87,7 +87,7 @@ run_bootstrap() {
   configure_proxy_settings || return 1
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
-    show_progress info "Dry run mode: skipping installer modifications"
+    show_progress info "$(ui_message dry_run_bootstrap_skip)"
     return 0
   fi
 
