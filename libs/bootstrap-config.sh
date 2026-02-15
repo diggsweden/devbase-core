@@ -44,6 +44,9 @@ find_custom_directory() {
       if [[ -n "$(ls -A "$fullpath" 2>/dev/null)" ]]; then
         show_progress info "Skipping incomplete custom config: $fullpath"
       fi
+      if [[ -n "${DEVBASE_CUSTOM_DIR}" && "$fullpath" == "$DEVBASE_CUSTOM_DIR" ]]; then
+        DEVBASE_CUSTOM_DIR=""
+      fi
       continue
     fi
 
@@ -84,10 +87,8 @@ find_custom_directory() {
   show_progress info "  • $HOME/.local/share/devbase/custom"
 }
 
-load_environment_configuration() {
-  # Trust model: org.env is provided by the org's devbase-custom-config repo,
-  # which the user explicitly opted into. Protected vars (DEVBASE_ROOT, etc.)
-  # are rejected below to prevent privilege escalation via the env file.
+select_environment_file() {
+  require_env DEVBASE_ENVS || return 1
 
   # Determine environment file to use
   if [[ -n "${DEVBASE_CUSTOM_DIR}" ]] && [[ -f "${DEVBASE_CUSTOM_DIR}/config/org.env" ]]; then
@@ -97,6 +98,21 @@ load_environment_configuration() {
     _DEVBASE_ENV_FILE="${DEVBASE_ENVS}/default.env"
     show_progress step "Using default environment: ${_DEVBASE_ENV_FILE}"
   fi
+
+  if [[ ! -f "${_DEVBASE_ENV_FILE}" ]]; then
+    show_progress error "Environment file not found: ${_DEVBASE_ENV_FILE}"
+    return 1
+  fi
+
+  return 0
+}
+
+load_environment_configuration() {
+  # Trust model: org.env is provided by the org's devbase-custom-config repo,
+  # which the user explicitly opted into. Protected vars (DEVBASE_ROOT, etc.)
+  # are rejected below to prevent privilege escalation via the env file.
+
+  select_environment_file || return 1
 
   # These should only be set by the installation script
   local protected_vars=(DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS)
@@ -115,6 +131,10 @@ load_environment_configuration() {
   # shellcheck disable=SC1090 # Dynamic source path
   source "${_DEVBASE_ENV_FILE}"
 
+  return 0
+}
+
+apply_environment_settings() {
   # Export registry settings immediately after loading environment
   # This ensures they're available for connectivity checks and installations
   if [[ -n "${DEVBASE_REGISTRY_HOST}" ]]; then
@@ -133,6 +153,8 @@ load_environment_configuration() {
     export DEVBASE_PROXY_PORT
     export DEVBASE_NO_PROXY_DOMAINS
   fi
+
+  return 0
 }
 
 # Brief: Configure proxy environment variables for network operations
