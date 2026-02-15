@@ -47,12 +47,12 @@ EOF
   assert_output --partial "Environment file not found"
 }
 
-@test "find_custom_directory skips incomplete config" {
+@test "find_custom_directory fails when explicit custom dir incomplete" {
   mkdir -p "${TEST_DIR}/custom/config"
 
   DEVBASE_CUSTOM_DIR="${TEST_DIR}/custom"
 
   run find_custom_directory
-  assert_success
-  [[ -z "${DEVBASE_CUSTOM_DIR}" ]]
+  assert_failure
+  assert_output --partial "Custom config is incomplete"
 }
