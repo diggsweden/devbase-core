@@ -316,6 +316,7 @@ get_extension_description() {
 # Returns: 0 on success
 _setup_vscode_parser() {
   validate_var_set "DEVBASE_DOT" || return 1
+  require_env DEVBASE_LIBS || return 1
   # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
