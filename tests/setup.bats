@@ -118,6 +118,12 @@ teardown() {
   assert_output --partial "--tui=<mode>"
 }
 
+@test "bootstrap module exposes run_bootstrap" {
+  run bash -c "grep -q '^run_bootstrap()' '${DEVBASE_ROOT}/libs/bootstrap.sh'"
+
+  assert_success
+}
+
 @test "initialize_devbase_paths sets required paths" {
   run bash -c "
     cd '${DEVBASE_ROOT}'
