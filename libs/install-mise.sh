@@ -26,7 +26,7 @@ verify_mise_checksum() {
   arch="$(uname -m)"
 
   if [[ "$arch" != "x86_64" ]]; then
-    show_progress warning "Checksum verification only supported on x86_64, skipping"
+    add_install_warning "Checksum verification only supported on x86_64, skipping"
     return 0
   fi
 
@@ -50,7 +50,7 @@ verify_mise_checksum() {
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
   if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
-    show_progress warning "Could not download checksums for mise v${version}"
+    add_install_warning "Could not download checksums for mise v${version}"
     return 0
   fi
 
@@ -71,7 +71,7 @@ verify_mise_checksum() {
       return 1
     fi
   else
-    show_progress warning "Could not find checksum for $binary_pattern"
+    add_install_warning "Could not find checksum for $binary_pattern"
     return 0
   fi
 }
@@ -186,7 +186,7 @@ install_mise() {
     fi
 
     if ! verify_mise_checksum; then
-      show_progress warning "Could not verify mise checksum, but continuing..."
+      add_install_warning "Could not verify mise checksum, but continuing..."
     fi
   fi
 
@@ -230,7 +230,9 @@ install_mise() {
 
     if ! command -v just &>/dev/null; then
       show_progress info "Bootstrapping essential tools (just)..."
-      "$mise_path" install just --yes 2>/dev/null || show_progress warning "Failed to bootstrap just (continuing)"
+      if ! "$mise_path" install just --yes 2>/dev/null; then
+        add_install_warning "Failed to bootstrap just (continuing)"
+      fi
     fi
   fi
 
@@ -293,7 +295,7 @@ update_mise_if_needed() {
     local newest
     newest=$(printf '%s\n%s\n' "$current_version" "$desired_normalized" | sort -V | tail -1)
     if [[ "$newest" == "$current_version" ]]; then
-      show_progress warning "Installed mise (${current_version}) is newer than pinned (${desired_normalized}) - skipping downgrade"
+      add_install_warning "Installed mise (${current_version}) is newer than pinned (${desired_normalized}) - skipping downgrade"
       return 0
     fi
   fi
@@ -320,7 +322,7 @@ update_mise_if_needed() {
   export PATH="${HOME}/.local/bin:${PATH}"
 
   if ! verify_mise_checksum "$desired_version"; then
-    show_progress warning "Could not verify mise checksum, but continuing..."
+    add_install_warning "Could not verify mise checksum, but continuing..."
   fi
 }
 
@@ -351,7 +353,7 @@ install_mise_tools() {
         if _check_mise_server_error "$core_install_log"; then
           mise_server_error=true
         fi
-        show_progress warning "Some core runtimes may have failed (will retry with full install)"
+        add_install_warning "Some core runtimes may have failed (will retry with full install)"
       fi
     else
       # Gum/other mode - show real-time output
@@ -361,7 +363,7 @@ install_mise_tools() {
         if _check_mise_server_error "$core_install_log"; then
           mise_server_error=true
         fi
-        show_progress warning "Some core runtimes may have failed (will retry with full install)"
+        add_install_warning "Some core runtimes may have failed (will retry with full install)"
       fi
     fi
   fi
@@ -420,7 +422,7 @@ install_mise_tools() {
 
     # Check if parsing worked
     if [[ $count -eq 0 ]] && [[ $tools_to_install -gt 0 ]]; then
-      show_progress warning "Could not parse mise progress output"
+      add_install_warning "Could not parse mise progress output"
     fi
 
     # Check for server errors in log
@@ -429,7 +431,7 @@ install_mise_tools() {
     fi
 
     if [[ $install_exit_code -ne 0 ]]; then
-      show_progress warning "mise install returned non-zero exit code"
+      add_install_warning "mise install returned non-zero exit code"
     fi
   elif [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
     # Whiptail mode without persistent gauge - use spinner fallback
@@ -450,7 +452,7 @@ install_mise_tools() {
       fi
     else
       if ! run_mise_from_home_dir install --yes; then
-        show_progress warning "mise install returned non-zero exit code"
+        add_install_warning "mise install returned non-zero exit code"
       fi
     fi
   fi
@@ -460,16 +462,16 @@ install_mise_tools() {
   # Second pass to catch transient install failures (quiet unless it fails)
   local second_install_log="${_DEVBASE_TEMP}/mise-second-install.log"
   if ! run_mise_from_home_dir install --yes &>"$second_install_log"; then
-    show_progress warning "Second mise install pass failed"
-    show_progress info "  See log: $second_install_log"
+    add_install_warning "Second mise install pass failed"
+    add_install_warning "See log: $second_install_log"
   fi
   if ! run_mise_from_home_dir reshim &>>"$second_install_log"; then
-    show_progress warning "mise reshim failed"
-    show_progress info "  See log: $second_install_log"
+    add_install_warning "mise reshim failed"
+    add_install_warning "See log: $second_install_log"
   fi
   if ! run_mise_from_home_dir prune --tools &>>"$second_install_log"; then
-    show_progress warning "mise prune failed"
-    show_progress info "  See log: $second_install_log"
+    add_install_warning "mise prune failed"
+    add_install_warning "See log: $second_install_log"
   fi
 
   local verified_count=0
@@ -498,7 +500,7 @@ install_mise_tools() {
   if [[ ${#missing[@]} -gt 0 ]]; then
     if [[ "$mise_server_error" == "true" ]]; then
       show_progress error "Missing tools (${missing[*]}) due to mise server errors (HTTP 5xx)"
-      show_progress warning "This is a temporary issue with mise infrastructure. Please try again later:"
+      add_install_warning "This is a temporary issue with mise infrastructure. Please try again later:"
       show_progress info "  mise install ${missing[*]}"
       die "Setup cannot continue without critical development tools"
     fi
@@ -507,7 +509,7 @@ install_mise_tools() {
 
   # Warn if starship is missing (shell prompt depends on it)
   if ! run_mise_from_home_dir which starship &>/dev/null; then
-    show_progress warning "Starship not found after install"
+    add_install_warning "Starship not found after install"
     show_progress info "  Install with: mise install aqua:starship/starship"
   fi
 

@@ -44,9 +44,9 @@ install_certificates() {
 
   if [[ ${#valid_certs[@]} -eq 0 ]]; then
     if [[ ${#invalid_certs[@]} -gt 0 ]]; then
-      show_progress warning "Invalid certificates skipped: ${invalid_certs[*]}"
+      add_install_warning "Invalid certificates skipped: ${invalid_certs[*]}"
     fi
-    show_progress warning "No valid certificates to install"
+    add_install_warning "No valid certificates to install"
     return 0
   fi
 
@@ -124,7 +124,7 @@ install_certificates() {
   elif [[ $already_exists -gt 0 ]]; then
     show_progress success "All $already_exists certificate(s) already installed (no changes needed)"
   else
-    show_progress warning "No valid certificates to install"
+    add_install_warning "No valid certificates to install"
   fi
 }
 
