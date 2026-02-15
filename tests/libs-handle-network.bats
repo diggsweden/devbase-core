@@ -189,6 +189,37 @@ teardown() {
   unstub curl
 }
 
+@test "get_checksum_from_manifest returns checksum for filename" {
+  local manifest="${TEST_DIR}/checksums.txt"
+  local manifest_url="file://${manifest}"
+  echo "abcdef1234567890  gum_0.17.0_linux_amd64.deb" > "$manifest"
+
+  stub curl "-fsSL --connect-timeout 30 --max-time 30 ${manifest_url} -o * : cp '${manifest}' \"\$8\""
+
+  run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+  assert_success
+  assert_output "abcdef1234567890"
+
+  unstub curl
+}
+
+@test "get_checksum_from_manifest fails when filename missing" {
+  local manifest="${TEST_DIR}/checksums.txt"
+  local manifest_url="file://${manifest}"
+  echo "abcdef1234567890  other-file.deb" > "$manifest"
+
+  stub curl "-fsSL --connect-timeout 30 --max-time 30 ${manifest_url} -o * : cp '${manifest}' \"\$8\""
+
+  run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+  assert_failure
+
+  unstub curl
+}
+
 @test "verify_checksum_from_url returns 2 when checksum unavailable" {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"

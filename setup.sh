@@ -736,10 +736,8 @@ bootstrap_gum() {
     fi
 
     # Fetch and verify checksum using shared verification logic
-    local expected_checksum
-    expected_checksum=$(curl -fL --progress-bar "$checksums_url" 2>/dev/null | grep -F "$package_name" | awk '{print $1}')
-
-    if [[ -n "$expected_checksum" ]] && [[ ${#expected_checksum} -eq 64 ]]; then
+    local expected_checksum=""
+    if expected_checksum=$(get_checksum_from_manifest "$checksums_url" "$package_name" "30"); then
       if ! verify_checksum_value "$gum_pkg" "$expected_checksum"; then
         show_progress warning "Could not find TUI component gum (checksum failed), using whiptail as backup"
         return 1
