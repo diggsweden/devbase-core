@@ -51,6 +51,10 @@ cd devbase-core
 
 # Optional: review available flags
 ./setup.sh --help
+
+# Optional: check version or run a dry run
+./setup.sh --version
+./setup.sh --dry-run
 ----
 
 == Verify Installation

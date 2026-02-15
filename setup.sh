@@ -98,6 +98,12 @@ DEVBASE_NO_PROXY_JAVA="${DEVBASE_NO_PROXY_JAVA:-}" # Java-specific no-proxy doma
 # Non-interactive mode flag (initialized here, may be set by --non-interactive arg)
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 
+# Dry-run mode flag (skips installation, shows planned steps only)
+DEVBASE_DRY_RUN="${DEVBASE_DRY_RUN:-false}"
+
+# Internal flag: show version and exit
+SHOW_VERSION="${SHOW_VERSION:-false}"
+
 # TUI mode flag (default: gum, can be overridden with --tui=whiptail)
 # Values: "gum", "whiptail" (or "none" for non-interactive mode)
 DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
@@ -158,14 +164,28 @@ parse_arguments() {
         ;;
       esac
       ;;
+    --dry-run)
+      DEVBASE_DRY_RUN=true
+      export DEVBASE_DRY_RUN=true
+      ;;
+    --version | -v)
+      SHOW_VERSION=true
+      ;;
     --help | -h)
       printf "Usage: %s [OPTIONS]\n" "$0"
       printf "\n"
       printf "Options:\n"
       printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
+      printf "  --dry-run          Print planned steps without installing\n"
       printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
+      printf "  --version, -v      Show version information\n"
       printf "  --help, -h         Show this help message\n"
       exit 0
+      ;;
+    *)
+      printf "Error: Unknown option '%s'\n" "$arg" >&2
+      printf "Run '%s --help' for valid options.\n" "$0" >&2
+      exit 1
       ;;
     esac
   done
@@ -223,19 +243,36 @@ init_env() {
   load_devbase_libraries
 }
 
-show_welcome_banner() {
-  local git_tag
-  local git_sha
-  local devbase_version
+resolve_devbase_version() {
+  local git_tag=""
+  local git_sha="unknown"
 
-  git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
-  git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  if command -v git &>/dev/null && git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
+    git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
+    git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  fi
 
+  local devbase_version="0.0.0-dev"
   if [[ -n "$git_tag" ]]; then
     devbase_version="$git_tag"
-  else
-    devbase_version="0.0.0-dev"
   fi
+
+  printf "%s %s\n" "$devbase_version" "$git_sha"
+}
+
+print_version() {
+  local devbase_version
+  local git_sha
+
+  read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
+  printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
+}
+
+show_welcome_banner() {
+  local devbase_version
+  local git_sha
+
+  read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     echo
@@ -963,7 +1000,17 @@ main() {
   parse_arguments "$@"
   init_env
 
+  if [[ "${SHOW_VERSION}" == "true" ]]; then
+    print_version
+    return 0
+  fi
+
   run_bootstrap
+
+  if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
+    show_progress info "Dry run enabled - skipping installation"
+    return 0
+  fi
 
   run_installation
 

@@ -20,6 +20,11 @@ run_bootstrap() {
   load_environment_configuration
   configure_proxy_settings
 
+  if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
+    show_progress info "Dry run mode: skipping installer modifications"
+    return 0
+  fi
+
   # Install certificates before any downloads (gum/mise) to avoid TLS issues
   install_certificates
 
