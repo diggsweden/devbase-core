@@ -371,6 +371,7 @@ validate_custom_config() {
 
 run_pre_install_hook() {
   # Run pre-install hook if it exists (organization-specific)
+  # Best-effort: failures are warnings only
   if validate_custom_file "_DEVBASE_CUSTOM_HOOKS" "pre-install.sh" "Pre-install hook"; then
     show_progress step "Running pre-install hook"
     # Run in subprocess for isolation (hooks can't pollute main script)
@@ -378,11 +379,14 @@ run_pre_install_hook() {
       show_progress warning "Pre-install hook failed, continuing anyway"
     }
   fi
+
+  return 0
 }
 
 test_generic_network_connectivity() {
   # Test generic network connectivity AFTER proxy is configured
   # This applies to all installations (with or without custom config)
+  # Best-effort: failures are warnings only
   tui_blank_line
   show_progress step "Testing network connectivity"
 
@@ -390,4 +394,6 @@ test_generic_network_connectivity() {
     show_progress warning "Network connectivity check failed - continuing anyway"
     show_progress info "Installation may fail if network access is required"
   fi
+
+  return 0
 }
