@@ -940,6 +940,7 @@ process_testcontainers_properties() {
 
 process_custom_templates() {
   validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   local file_count
   file_count=$(find "${_DEVBASE_CUSTOM_TEMPLATES}" -type f -name "*" ! -name "README*" 2>/dev/null | wc -l)
