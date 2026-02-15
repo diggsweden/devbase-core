@@ -844,9 +844,9 @@ run_preflight_phase() {
 }
 
 run_configuration_phase() {
-  bootstrap_for_configuration
-  collect_user_configuration
-  display_configuration_summary
+  bootstrap_for_configuration || return 1
+  collect_user_configuration || return 1
+  display_configuration_summary || return 1
 }
 
 run_installation_phase() {
@@ -855,11 +855,20 @@ run_installation_phase() {
   start_installation_progress
 
   show_phase "Preparing system..."
-  prepare_system
+  if ! prepare_system; then
+    stop_installation_progress
+    return 1
+  fi
 
-  perform_installation
+  if ! perform_installation; then
+    stop_installation_progress
+    return 1
+  fi
 
-  write_installation_summary
+  if ! write_installation_summary; then
+    stop_installation_progress
+    return 1
+  fi
 
   # Stop persistent progress display before showing completion
   stop_installation_progress
@@ -879,8 +888,8 @@ run_finalize_phase() {
 # Side-effects: Orchestrates entire DevBase installation process
 main() {
   run_preflight_phase || return 1
-  run_configuration_phase
-  run_installation_phase
+  run_configuration_phase || return 1
+  run_installation_phase || return 1
   run_finalize_phase
   return 0
 }
