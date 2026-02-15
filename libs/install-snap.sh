@@ -79,7 +79,7 @@ load_snap_packages() {
   done < <(get_snap_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress warning "No snap packages found in configuration"
+    add_install_warning "No snap packages found in configuration"
     return 0
   fi
 
@@ -100,7 +100,7 @@ snap_install() {
   local snap_options="${2:-}"
 
   if ! command -v snap &>/dev/null; then
-    show_progress warning "snapd not installed, skipping snap: $snap_name"
+    add_install_warning "snapd not installed, skipping snap: $snap_name"
     return 0
   fi
 
@@ -149,7 +149,7 @@ snap_install() {
   if [[ $install_result -eq 0 ]]; then
     show_progress success "Snap installed: $snap_name"
   else
-    show_progress warning "Failed to install snap: $snap_name"
+    add_install_warning "Failed to install snap: $snap_name"
     return 1
   fi
 
@@ -249,7 +249,7 @@ load_flatpak_packages() {
   done < <(get_flatpak_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress warning "No flatpak packages found in configuration"
+    add_install_warning "No flatpak packages found in configuration"
     return 0
   fi
 
@@ -265,7 +265,7 @@ load_flatpak_packages() {
 # Returns: 0 on success, 1 on failure
 configure_flathub() {
   if ! command -v flatpak &>/dev/null; then
-    show_progress warning "flatpak not installed"
+    add_install_warning "flatpak not installed"
     return 1
   fi
 
@@ -283,7 +283,7 @@ configure_flathub() {
     show_progress success "Flathub repository added"
     return 0
   else
-    show_progress warning "Failed to add Flathub repository"
+    add_install_warning "Failed to add Flathub repository"
     return 1
   fi
 }
@@ -296,7 +296,7 @@ flatpak_install() {
   local remote="${2:-flathub}"
 
   if ! command -v flatpak &>/dev/null; then
-    show_progress warning "flatpak not installed, skipping: $app_id"
+    add_install_warning "flatpak not installed, skipping: $app_id"
     return 0
   fi
 
@@ -320,7 +320,7 @@ flatpak_install() {
   if [[ $install_result -eq 0 ]]; then
     show_progress success "Flatpak installed: $app_id"
   else
-    show_progress warning "Failed to install flatpak: $app_id"
+    add_install_warning "Failed to install flatpak: $app_id"
     return 1
   fi
 
@@ -382,7 +382,7 @@ install_app_store_packages() {
     return 0
     ;;
   *)
-    show_progress warning "Unknown app store type: $app_store"
+    add_install_warning "Unknown app store type: $app_store"
     return 1
     ;;
   esac
