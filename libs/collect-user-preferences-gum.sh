@@ -632,6 +632,8 @@ collect_pack_preferences() {
     items+=("$pack - $desc")
   done < <(get_available_packs)
 
+  require_env DEVBASE_DEFAULT_PACKS || return 1
+
   # Pre-select based on saved preferences, or all packs (except rust) if none saved
   local default_packs=()
   for pack in "${packs[@]}"; do

@@ -47,6 +47,7 @@ SELECTED_PACKS="${SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go r
 # Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
 _setup_package_yaml_env() {
   require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
+  require_env DEVBASE_SELECTED_PACKS || return 1
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
 

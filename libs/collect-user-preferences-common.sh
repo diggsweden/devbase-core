@@ -59,6 +59,7 @@ setup_non_interactive_mode() {
   [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
   export DEVBASE_SSH_KEY_ACTION DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
   export DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
+  require_env DEVBASE_DEFAULT_PACKS || return 1
   [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${DEVBASE_DEFAULT_PACKS:-java node python go ruby}"
   export DEVBASE_SELECTED_PACKS
 
@@ -104,6 +105,7 @@ load_saved_preferences() {
   DEVBASE_INSTALL_JMC=$(_yq_read '.ide.jmc' "$prefs_file")
   DEVBASE_ZELLIJ_AUTOSTART=$(_yq_read '.tools.zellij_autostart' "$prefs_file")
   DEVBASE_ENABLE_GIT_HOOKS=$(_yq_read '.tools.git_hooks' "$prefs_file")
+  require_env DEVBASE_DEFAULT_PACKS || return 1
   DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
   [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${DEVBASE_DEFAULT_PACKS:-java node python go ruby}"
 
