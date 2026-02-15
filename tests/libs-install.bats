@@ -119,6 +119,16 @@ teardown() {
   [[ "$result" == "unknown-font" ]]
 }
 
+@test "install.sh avoids duplicate library sourcing" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "grep -q 'process-templates.sh' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_failure
+
+  run bash -c "grep -q 'configure-shell.sh' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_failure
+}
+
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 

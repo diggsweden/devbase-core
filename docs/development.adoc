@@ -195,6 +195,7 @@ Before PR:
 == Conventions
 
 - Bash scripts use `set -uo pipefail` (not -e as we don't want to exit directly)
+- `setup.sh` is the entrypoint; `libs/install.sh` assumes shared libs are sourced there
 - XDG Base Directory compliance
 - `just verify` must pass
 
