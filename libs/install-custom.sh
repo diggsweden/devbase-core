@@ -80,6 +80,8 @@ _setup_custom_parser() {
   # Skip if already initialized (check array size safely with set -u)
   [[ -v TOOL_VERSIONS[@] ]] && [[ ${#TOOL_VERSIONS[@]} -gt 0 ]] && return 0
 
+  require_env DEVBASE_DOT DEVBASE_LIBS || return 1
+
   # Set up package configuration
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"

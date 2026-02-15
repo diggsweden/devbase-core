@@ -199,6 +199,7 @@ Before PR:
 - `setup.sh` is the entrypoint; call `init_env` before using shared libs, `libs/bootstrap.sh` handles UI/env bootstrap, `libs/install.sh` assumes shared libs are sourced there
 - `libs/install.sh` organizes flow into preflight, configuration, installation, and finalize phases
 - Preflight/config/install phases fail fast; finalize is best-effort
+- Prefer checksum verification for downloads; document any sources that lack checksums
 - XDG Base Directory compliance
 - `just verify` must pass
 
