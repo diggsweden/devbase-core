@@ -51,7 +51,6 @@ run_bootstrap() {
   test_generic_network_connectivity
   validate_custom_config || return 1
   run_pre_install_hook
-  set_default_values
 
   return 0
 }

@@ -831,7 +831,35 @@ perform_installation() {
   fi
 }
 
+set_default_values() {
+  # Export variables that were initialized in IMPORT section with defaults
+  export DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT DEVBASE_NO_PROXY_DOMAINS
+  export DEVBASE_REGISTRY_HOST DEVBASE_REGISTRY_PORT
+  export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_BIN_HOME
+  export DEVBASE_THEME DEVBASE_FONT
+
+  # Define DevBase directories using XDG variables
+  export DEVBASE_CACHE_DIR="${XDG_CACHE_HOME}/devbase"
+  export DEVBASE_CONFIG_DIR="${XDG_CONFIG_HOME}/devbase"
+  export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
+
+  # Debug output if DEVBASE_DEBUG environment variable is set
+  if [[ "${DEVBASE_DEBUG}" == "1" ]]; then
+    show_progress info "Debug mode enabled"
+    show_progress info "DEVBASE_ROOT=${DEVBASE_ROOT}"
+    # shellcheck disable=SC2153 # _DEVBASE_FROM_GIT set during bootstrap
+    show_progress info "_DEVBASE_FROM_GIT=${_DEVBASE_FROM_GIT}"
+    show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
+    # shellcheck disable=SC2153 # _DEVBASE_ENV set by detect_environment() during bootstrap
+    show_progress info "_DEVBASE_ENV=${_DEVBASE_ENV}"
+    if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+      show_progress info "Proxy configured: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+    fi
+  fi
+}
+
 run_preflight_phase() {
+  set_default_values
   rotate_backup_directories
   validate_environment
   validate_source_repository
