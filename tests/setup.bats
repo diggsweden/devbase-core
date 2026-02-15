@@ -217,6 +217,29 @@ teardown() {
   refute_output --partial "install"
 }
 
+@test "show_dry_run_plan lists packages when set" {
+  run bash -c "
+    ui_message() {
+      case \"\$1\" in
+        dry_run_plan_header) echo \"Dry run plan:\" ;;
+        dry_run_plan_preflight) echo \"Preflight checks\" ;;
+        dry_run_plan_configuration) echo \"Configuration prompts\" ;;
+        dry_run_plan_installation) echo \"Installation steps\" ;;
+        dry_run_plan_finalize) echo \"Finalize steps\" ;;
+        dry_run_plan_packages) echo \"Packages\" ;;
+        *) echo \"\$1\" ;;
+      esac
+    }
+    show_progress() { echo \"\$2\"; }
+    eval \"\$(sed -n '/^show_dry_run_plan()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_SELECTED_PACKS=\"go python\"
+    show_dry_run_plan
+  "
+
+  assert_success
+  assert_output --partial "Packages: go python"
+}
+
 @test "run_bootstrap fails when required tools missing" {
   run bash -c "
     require_env() { return 0; }
