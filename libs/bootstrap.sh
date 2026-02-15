@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 # Brief: Bootstrap installation prerequisites and UI
 # Params: None
 # Uses: detect_environment, find_custom_directory, load_environment_configuration,

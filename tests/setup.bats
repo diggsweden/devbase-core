@@ -124,6 +124,12 @@ teardown() {
   assert_success
 }
 
+@test "setup.sh exposes init_env" {
+  run bash -c "grep -q '^init_env()' '${DEVBASE_ROOT}/setup.sh'"
+
+  assert_success
+}
+
 @test "initialize_devbase_paths sets required paths" {
   run bash -c "
     cd '${DEVBASE_ROOT}'

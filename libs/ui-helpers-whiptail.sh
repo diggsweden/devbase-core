@@ -7,8 +7,6 @@
 # Whiptail TUI backend for ui-helpers
 # These functions are called by the dispatchers in ui-helpers.sh
 
-set -uo pipefail
-
 # =============================================================================
 # TERMINAL REQUIREMENTS
 # =============================================================================

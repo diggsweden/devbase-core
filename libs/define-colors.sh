@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 # Brief: Define global color codes and UI symbols for DevBase output formatting
 # Usage: Source this file to access DEVBASE_COLORS and DEVBASE_SYMBOLS associative arrays
 # NOTE: These arrays are available to all sourced scripts but cannot be

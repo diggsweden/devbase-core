@@ -218,6 +218,11 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/configure-theme.sh"
 }
 
+init_env() {
+  initialize_devbase_paths
+  load_devbase_libraries
+}
+
 show_welcome_banner() {
   local git_tag
   local git_sha
@@ -956,8 +961,7 @@ run_installation() {
 
 main() {
   parse_arguments "$@"
-  initialize_devbase_paths
-  load_devbase_libraries
+  init_env
 
   run_bootstrap
 

@@ -7,8 +7,6 @@
 # Gum-based TUI for DevBase setup
 # Beautiful, modern interactive prompts using charmbracelet/gum
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1

@@ -7,8 +7,6 @@
 # UI Helpers - Dispatcher and TUI-agnostic functions
 # Backend implementations are in ui-helpers-gum.sh and ui-helpers-whiptail.sh
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then

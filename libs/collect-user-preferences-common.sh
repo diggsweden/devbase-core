@@ -8,8 +8,6 @@
 # This file should be sourced by collect-user-preferences-gum.sh and
 # collect-user-preferences-whiptail.sh
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
