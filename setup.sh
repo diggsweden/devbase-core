@@ -268,6 +268,14 @@ print_version() {
   printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
 }
 
+show_dry_run_plan() {
+  show_progress info "$(ui_message dry_run_plan_header)"
+  show_progress info "  - $(ui_message dry_run_plan_preflight)"
+  show_progress info "  - $(ui_message dry_run_plan_configuration)"
+  show_progress info "  - $(ui_message dry_run_plan_installation)"
+  show_progress info "  - $(ui_message dry_run_plan_finalize)"
+}
+
 validate_custom_directory() {
   local dir="$1"
 
@@ -942,7 +950,8 @@ main() {
   run_bootstrap || return 1
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
-    show_progress info "Dry run enabled - skipping installation"
+    show_dry_run_plan
+    show_progress info "$(ui_message dry_run_install_skip)"
     return 0
   fi
 

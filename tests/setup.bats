@@ -185,7 +185,25 @@ teardown() {
     run_bootstrap() { echo bootstrap; }
     run_installation() { echo install; }
     run_migrations() { echo migrate; }
-    show_progress() { echo dryrun; }
+    ui_message() {
+      case \"\$1\" in
+        dry_run_plan_header) echo \"Dry run plan:\" ;;
+        dry_run_plan_preflight) echo \"Preflight checks\" ;;
+        dry_run_plan_configuration) echo \"Configuration prompts\" ;;
+        dry_run_plan_installation) echo \"Installation steps\" ;;
+        dry_run_plan_finalize) echo \"Finalize steps\" ;;
+        dry_run_install_skip) echo \"Dry run enabled - skipping installation\" ;;
+        *) echo \"\$1\" ;;
+      esac
+    }
+    show_progress() { echo \"\$2\"; }
+    show_dry_run_plan() {
+      echo \"Dry run plan:\"
+      echo \"- Preflight checks\"
+      echo \"- Configuration prompts\"
+      echo \"- Installation steps\"
+      echo \"- Finalize steps\"
+    }
     eval \"\$(sed -n '/^main()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
     SHOW_VERSION=false
     DEVBASE_DRY_RUN=true
@@ -194,7 +212,8 @@ teardown() {
 
   assert_success
   assert_output --partial "bootstrap"
-  assert_output --partial "dryrun"
+  assert_output --partial "Dry run plan:"
+  assert_output --partial "Dry run enabled - skipping installation"
   refute_output --partial "install"
 }
 
