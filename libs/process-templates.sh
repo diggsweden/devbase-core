@@ -63,6 +63,7 @@ count_custom_overlays() {
     echo 0
     return 0
   fi
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   find "${_DEVBASE_CUSTOM_TEMPLATES}" -name "*.template" -type f | wc -l
 }
@@ -78,7 +79,10 @@ apply_customizations() {
   validate_dir_exists "$temp_dotfiles" "Temp dotfiles directory" || return 1
 
   if validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory"; then
-    copy_custom_templates_to_temp "${temp_dotfiles}"
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+    local custom_count
+    custom_count=$(count_custom_overlays)
+    show_progress info "Custom overlay templates: $custom_count"
   fi
 
   apply_theme "$DEVBASE_THEME"
