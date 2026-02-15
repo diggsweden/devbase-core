@@ -79,10 +79,10 @@ show_repository_info() {
 # Side-effects: Configures env, UI, and validations before install
 run_bootstrap() {
   # Minimal pre-TUI setup: detect environment and configure network
-  detect_environment
-  find_custom_directory
-  load_environment_configuration
-  configure_proxy_settings
+  detect_environment || return 1
+  find_custom_directory || return 1
+  load_environment_configuration || return 1
+  configure_proxy_settings || return 1
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
     show_progress info "Dry run mode: skipping installer modifications"
@@ -90,17 +90,17 @@ run_bootstrap() {
   fi
 
   # Install certificates before any downloads (gum/mise) to avoid TLS issues
-  install_certificates
+  install_certificates || return 1
 
   # Bootstrap TUI early (needs network for gum download)
   # This enables gum/whiptail for all subsequent UI
   show_progress info "Preparing installer UI..."
-  select_tui_mode
+  select_tui_mode || return 1
 
   # Now show welcome and run checks using TUI
   show_welcome_banner
   show_os_info
-  check_required_tools
+  check_required_tools || return 1
   show_repository_info
 
   test_generic_network_connectivity
