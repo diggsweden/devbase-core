@@ -758,6 +758,26 @@ bootstrap_for_configuration() {
   fi
 }
 
+declare -Ag INSTALL_CONTEXT=()
+declare -ag INSTALL_WARNINGS=()
+
+init_install_context() {
+  INSTALL_CONTEXT=()
+  INSTALL_WARNINGS=()
+  INSTALL_CONTEXT[custom_hooks_dir]="${_DEVBASE_CUSTOM_HOOKS:-}"
+  INSTALL_CONTEXT[env]="${_DEVBASE_ENV:-}"
+}
+
+get_custom_hooks_dir() {
+  printf "%s" "${INSTALL_CONTEXT[custom_hooks_dir]:-${_DEVBASE_CUSTOM_HOOKS:-}}"
+}
+
+add_install_warning() {
+  local message="$1"
+  INSTALL_WARNINGS+=("$message")
+  show_progress warning "$message"
+}
+
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
 # Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, persist_devbase_repos (globals/functions)
@@ -788,7 +808,7 @@ prepare_system() {
 
   # Persist devbase repos to ~/.local/share/devbase/ for update support
   # Certificates are installed earlier to allow trusted cloning
-  persist_devbase_repos || show_progress warning "Could not persist devbase repos (continuing)"
+  persist_devbase_repos || add_install_warning "Could not persist devbase repos (continuing)"
 
   ensure_user_dirs
 
@@ -818,17 +838,22 @@ perform_installation() {
   show_phase "Configuring system services..."
   configure_system_and_shell
 
-  if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
-    run_custom_hook "post-configuration" || show_progress warning "Post-configuration hook failed"
+  local hooks_dir
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -n "$hooks_dir" && -d "$hooks_dir" ]]; then
+    run_custom_hook "post-configuration" || add_install_warning "Post-configuration hook failed"
   fi
 
   sudo_refresh
   show_phase "Finalizing installation..."
   finalize_installation
 
-  if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
-    run_custom_hook "post-install" || show_progress warning "Post-install hook failed, continuing..."
+  local hooks_dir
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -n "$hooks_dir" && -d "$hooks_dir" ]]; then
+    run_custom_hook "post-install" || add_install_warning "Post-install hook failed"
   fi
+
 }
 
 set_default_values() {
@@ -860,6 +885,7 @@ set_default_values() {
 
 run_preflight_phase() {
   set_default_values
+  init_install_context
   rotate_backup_directories
   validate_environment
   validate_source_repository
@@ -929,11 +955,13 @@ run_custom_hook() {
   validate_not_empty "$hook_name" "Hook name" || return 1
 
   # Check if custom hooks directory is configured
-  if ! validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
+  local hooks_dir
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -z "$hooks_dir" || ! -d "$hooks_dir" ]]; then
     return 0 # No custom hooks directory configured
   fi
 
-  local hook_file="${_DEVBASE_CUSTOM_HOOKS}/${hook_name}.sh"
+  local hook_file="${hooks_dir}/${hook_name}.sh"
 
   if [[ -f "$hook_file" ]] && [[ -x "$hook_file" ]]; then
     show_progress info "Running $hook_name hook"
