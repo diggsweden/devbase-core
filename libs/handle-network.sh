@@ -260,6 +260,11 @@ download_file() {
   local has_checksum=1
   [[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
+  if [[ "${DEVBASE_STRICT_CHECKSUMS:-false}" == "true" && "$has_checksum" -ne 0 ]]; then
+    show_progress error "Checksum required for download: $url"
+    return 1
+  fi
+
   local skip_download=false
   _download_file_should_skip "$target" "$has_checksum" && skip_download=true
 

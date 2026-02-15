@@ -94,6 +94,10 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | `DEBUG`
 | _(unset)_
 | Show verbose debug output during installation: `DEBUG=1 ./setup.sh`
+
+| `DEVBASE_STRICT_CHECKSUMS`
+| `false`
+| Fail downloads when no checksum is available
 |===
 
 NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.

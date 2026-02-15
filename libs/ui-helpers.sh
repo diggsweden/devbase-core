@@ -83,6 +83,20 @@ ui_message() {
   esac
 }
 
+show_dry_run_plan() {
+  show_progress info "$(ui_message dry_run_plan_header)"
+  show_progress info "  - $(ui_message dry_run_plan_preflight)"
+  show_progress info "  - $(ui_message dry_run_plan_configuration)"
+  show_progress info "  - $(ui_message dry_run_plan_installation)"
+  show_progress info "  - $(ui_message dry_run_plan_finalize)"
+  show_progress info "  - $(ui_message dry_run_plan_actions): apt/snap/mise installs, shell + editor setup"
+
+  local packages="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-}}"
+  if [[ -n "$packages" ]]; then
+    show_progress info "  - $(ui_message dry_run_plan_packages): $packages"
+  fi
+}
+
 # Brief: Display formatted progress messages with color and symbols
 # Params: $1 - level (step/info/success/warning/error/validation), $@ - message text
 # Uses: DEVBASE_TUI_MODE (global)
