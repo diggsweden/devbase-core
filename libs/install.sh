@@ -857,7 +857,9 @@ set_default_values() {
     show_progress info "DEVBASE_ROOT=${DEVBASE_ROOT}"
     # shellcheck disable=SC2153 # _DEVBASE_FROM_GIT set during bootstrap
     show_progress info "_DEVBASE_FROM_GIT=${_DEVBASE_FROM_GIT}"
-    show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
+    if require_env _DEVBASE_ENV_FILE; then
+      show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
+    fi
     # shellcheck disable=SC2153 # _DEVBASE_ENV set by detect_environment() during bootstrap
     show_progress info "_DEVBASE_ENV=${_DEVBASE_ENV}"
     if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then

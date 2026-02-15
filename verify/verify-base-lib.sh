@@ -168,7 +168,7 @@ check_file_content() {
 
 # Mask credentials in proxy URLs: http://user:pass@host -> http://***:***@host
 mask_url_credentials() {
-  sed 's/:[^@]*@/:****@/'
+  sed 's|://[^:]*:[^@]*@|://***:***@|'
 }
 
 check_env_var() {
