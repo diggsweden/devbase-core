@@ -71,6 +71,9 @@ ui_message() {
   dry_run_plan_finalize)
     echo "Finalize steps"
     ;;
+  dry_run_plan_actions)
+    echo "Actions"
+    ;;
   dry_run_plan_packages)
     echo "Packages"
     ;;
