@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2155,SC2218
+# shellcheck disable=SC1078,SC1079,SC1090,SC2016,SC2027,SC2030,SC2031,SC2046,SC2123,SC2140,SC2155,SC2218
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -231,8 +231,9 @@ teardown() {
         *) echo \"\$1\" ;;
       esac
     }
-    show_progress() { echo \"\$2\"; }
-    eval \"\$(sed -n '/^show_dry_run_plan()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    show_progress() { echo "\$2"; }
+    # shellcheck disable=SC2027,SC2046
+    eval "$(sed -n '/^show_dry_run_plan()/,/^}/p' '${DEVBASE_ROOT}/libs/ui-helpers.sh')"
     DEVBASE_SELECTED_PACKS=\"go python\"
     show_dry_run_plan
   "

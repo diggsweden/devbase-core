@@ -101,6 +101,9 @@ NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 # Dry-run mode flag (skips installation, shows planned steps only)
 DEVBASE_DRY_RUN="${DEVBASE_DRY_RUN:-false}"
 
+# Strict checksum mode (fail downloads without checksums)
+DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-false}"
+
 # Internal flag: show version and exit
 SHOW_VERSION="${SHOW_VERSION:-false}"
 
@@ -269,20 +272,6 @@ print_version() {
 
   read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
   printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
-}
-
-show_dry_run_plan() {
-  show_progress info "$(ui_message dry_run_plan_header)"
-  show_progress info "  - $(ui_message dry_run_plan_preflight)"
-  show_progress info "  - $(ui_message dry_run_plan_configuration)"
-  show_progress info "  - $(ui_message dry_run_plan_installation)"
-  show_progress info "  - $(ui_message dry_run_plan_finalize)"
-  show_progress info "  - $(ui_message dry_run_plan_actions): apt/snap/mise installs, shell + editor setup"
-
-  local packages="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-}}"
-  if [[ -n "$packages" ]]; then
-    show_progress info "  - $(ui_message dry_run_plan_packages): $packages"
-  fi
 }
 
 run_installation() {

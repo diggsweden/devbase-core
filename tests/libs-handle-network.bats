@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2155,SC2218
+# shellcheck disable=SC1090,SC2016,SC2027,SC2030,SC2031,SC2086,SC2123,SC2155,SC2218
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -100,13 +100,32 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"WGET_OPTIONS=\${WGET_OPTIONS}\"
+    printf 'WGET_OPTIONS=%s\n' "${WGET_OPTIONS}"
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "WGET_OPTIONS=--no-http-keep-alive"
 }
+
+@test "download_file fails without checksum in strict mode" {
+  local target="${TEST_DIR}/file"
+
+  run --separate-stderr bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}'
+    export DEVBASE_STRICT_CHECKSUMS=true
+    download_file 'https://example.com/file' '${target}'
+  "
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+  assert_failure
+  assert_output --partial "Checksum required"
+}
+
 
 @test "configure_curl_for_proxy does nothing when no proxy configured" {
   # Use run_isolated helper for clean environment
