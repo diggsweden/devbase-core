@@ -101,8 +101,8 @@ NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 # Dry-run mode flag (skips installation, shows planned steps only)
 DEVBASE_DRY_RUN="${DEVBASE_DRY_RUN:-false}"
 
-# Strict checksum mode (fail downloads without checksums)
-DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-false}"
+# Strict checksum mode: off, warn, or fail
+DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-warn}"
 
 # Internal flag: show version and exit
 SHOW_VERSION="${SHOW_VERSION:-false}"

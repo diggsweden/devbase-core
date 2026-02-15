@@ -260,9 +260,27 @@ download_file() {
   local has_checksum=1
   [[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
-  if [[ "${DEVBASE_STRICT_CHECKSUMS:-false}" == "true" && "$has_checksum" -ne 0 ]]; then
-    show_progress error "Checksum required for download: $url"
-    return 1
+  local strict_mode="${DEVBASE_STRICT_CHECKSUMS:-warn}"
+  case "$strict_mode" in
+  true) strict_mode="warn" ;;
+  false | off | "") strict_mode="off" ;;
+  warn | fail) ;;
+  *)
+    show_progress warning "Unknown DEVBASE_STRICT_CHECKSUMS=$strict_mode (using warn)"
+    strict_mode="warn"
+    ;;
+  esac
+
+  if [[ "$has_checksum" -ne 0 ]]; then
+    case "$strict_mode" in
+    fail)
+      show_progress error "Checksum required for download: $url"
+      return 1
+      ;;
+    warn)
+      show_progress warning "No checksum available for download: $url"
+      ;;
+    esac
   fi
 
   local skip_download=false
