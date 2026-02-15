@@ -778,6 +778,19 @@ add_install_warning() {
   show_progress warning "$message"
 }
 
+show_installation_warnings() {
+  if [[ ${#INSTALL_WARNINGS[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  show_progress warning "Installation completed with warnings:"
+  for warning in "${INSTALL_WARNINGS[@]}"; do
+    show_progress warning "  - $warning"
+  done
+
+  return 0
+}
+
 # Brief: Prepare system by ensuring sudo access, user directories and system configuration
 # Params: None
 # Uses: USER, show_progress, die, ensure_user_dirs, setup_sudo_and_system, persist_devbase_repos (globals/functions)
@@ -931,6 +944,7 @@ run_installation_phase() {
 run_finalize_phase() {
   tui_blank_line
   show_completion_message
+  show_installation_warnings
   configure_fonts_post_install
   handle_wsl_restart
 }
