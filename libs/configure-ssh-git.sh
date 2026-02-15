@@ -21,6 +21,7 @@ setup_ssh_config_includes() {
   chmod 755 ~/.config/ssh
 
   if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
+    require_env _DEVBASE_CUSTOM_SSH || return 1
     for file in "${_DEVBASE_CUSTOM_SSH}"/*; do
       [[ -f "$file" ]] || continue
 
