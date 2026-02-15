@@ -254,6 +254,7 @@ download_file() {
 
   validate_not_empty "$url" "URL" || return 1
   validate_not_empty "$target" "target file" || return 1
+  require_env XDG_CACHE_HOME || return 1
 
   # Check if we can skip download and just verify checksum
   local has_checksum=1
