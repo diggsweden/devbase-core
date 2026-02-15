@@ -38,6 +38,7 @@ _PKG_MANAGER="${_PKG_MANAGER:-$(get_pkg_manager)}"
 # Outputs: Array of package names to global SYSTEM_PACKAGES_ALL
 # Side-effects: Populates SYSTEM_PACKAGES_ALL array, filters by tags
 load_system_packages() {
+  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
   # Source parser if not already loaded
   if ! declare -f get_system_packages &>/dev/null; then
     # shellcheck source=../parse-packages.sh

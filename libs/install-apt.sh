@@ -25,6 +25,7 @@ fi
 # Side-effects: Populates APT_PACKAGES_ALL array, filters by tags
 # Deprecated: Use load_system_packages() from pkg/pkg-manager.sh instead
 load_apt_packages() {
+  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
   # Source parser if not already loaded
   if ! declare -f get_apt_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
