@@ -222,6 +222,7 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/constants.sh"
   source "${DEVBASE_LIBS}/define-colors.sh"
   source "${DEVBASE_LIBS}/utils.sh"
+  source "${DEVBASE_LIBS}/ui-messages.sh"
   source "${DEVBASE_LIBS}/ui-helpers.sh"
   source "${DEVBASE_LIBS}/validation.sh"
   source "${DEVBASE_LIBS}/distro.sh"

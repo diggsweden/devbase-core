@@ -21,21 +21,21 @@ show_welcome_banner() {
       --padding "1 4" \
       --margin "1 0" \
       --align center \
-      "DevBase Core Installation" \
+      "$(ui_message welcome_title)" \
       "" \
       "Version: $devbase_version ($git_sha)" \
       "Started: $(date +"%H:%M:%S")"
     echo
     gum style --foreground 240 --align center \
-      "Development environment setup wizard"
+      "$(ui_message welcome_subtitle)"
     gum style --foreground 240 \
-      "j/k navigate  SPACE toggle  ENTER select  Ctrl+C cancel"
+      "$(ui_message welcome_hints)"
     echo
   else
     # Whiptail mode (default) - show welcome infobox
     clear
-    whiptail --backtitle "$WT_BACKTITLE" --title "DevBase Core Installation" \
-      --infobox "Version: $devbase_version ($git_sha)\nStarted: $(date +"%H:%M:%S")\n\nInitializing..." "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+    whiptail --backtitle "$WT_BACKTITLE" --title "$(ui_message welcome_title)" \
+      --infobox "Version: $devbase_version ($git_sha)\nStarted: $(date +"%H:%M:%S")\n\n$(ui_message welcome_init)" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
   fi
 }
 
@@ -49,7 +49,7 @@ show_os_info() {
   install_type=$([[ "${_DEVBASE_FROM_GIT:-}" == "true" ]] && echo "Git repository" || echo "Downloaded")
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum style --foreground 240 "System Information"
+    gum style --foreground 240 "$(ui_message system_info_title)"
     echo "  OS:           $os_name"
     echo "  Environment:  $env_type"
     echo "  Installation: $install_type"
@@ -58,8 +58,8 @@ show_os_info() {
     echo
   else
     # Whiptail mode - show system info infobox
-    whiptail --backtitle "$WT_BACKTITLE" --title "System Information" \
-      --infobox "OS: $os_name\nEnvironment: $env_type\nUser: $USER\n\nLoading configuration..." "$WT_HEIGHT_SMALL" "$WT_WIDTH"
+    whiptail --backtitle "$WT_BACKTITLE" --title "$(ui_message system_info_title)" \
+      --infobox "OS: $os_name\nEnvironment: $env_type\nUser: $USER\n\n$(ui_message system_info_loading)" "$WT_HEIGHT_SMALL" "$WT_WIDTH"
     sleep 1
   fi
 }
