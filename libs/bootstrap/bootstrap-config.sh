@@ -67,6 +67,8 @@ find_custom_directory() {
       export DEVBASE_CUSTOM_CERTS="true"
     fi
 
+    set_bootstrap_custom_paths "$fullpath"
+
     # Debug output if DEVBASE_DEBUG is set (see docs/environment.adoc)
     if [[ "${DEVBASE_DEBUG}" == "1" ]]; then
       show_progress info "DEVBASE_CUSTOM_DIR=${DEVBASE_CUSTOM_DIR}"
@@ -79,6 +81,7 @@ find_custom_directory() {
     fi
 
     return 0
+
   done
 
   # If we get here, no custom directory was found
@@ -113,6 +116,7 @@ select_environment_file() {
   else
     show_progress step "Using default environment: ${_DEVBASE_ENV_FILE}"
   fi
+  set_bootstrap_env_file "${_DEVBASE_ENV_FILE}"
 
   if [[ ! -f "${_DEVBASE_ENV_FILE}" ]]; then
     show_progress error "Environment file not found: ${_DEVBASE_ENV_FILE}"
@@ -246,12 +250,13 @@ display_custom_settings() {
 # Returns: 0 always
 # Side-effects: Displays info message if hooks found
 display_custom_hooks() {
-  validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory" || return 0
-  require_env _DEVBASE_CUSTOM_HOOKS || return 1
+  local hooks_dir
+  hooks_dir=$(get_bootstrap_custom_hooks_dir)
+  [[ -z "$hooks_dir" || ! -d "$hooks_dir" ]] && return 0
 
   local hooks=()
   for hook in pre-install post-configuration post-install; do
-    if validate_custom_file "_DEVBASE_CUSTOM_HOOKS" "${hook}.sh" "Custom hook"; then
+    if [[ -f "${hooks_dir}/${hook}.sh" ]]; then
       hooks+=("${hook}.sh")
     fi
   done
@@ -265,12 +270,13 @@ display_custom_hooks() {
 # Returns: 0 always
 # Side-effects: Displays info message if proxied hosts found
 display_ssh_proxy_configuration() {
-  validate_custom_file "_DEVBASE_CUSTOM_SSH" "custom.config" "Custom SSH config" || return 0
-  require_env _DEVBASE_CUSTOM_SSH || return 1
+  local ssh_dir
+  ssh_dir=$(get_bootstrap_custom_ssh_dir)
+  [[ -z "$ssh_dir" || ! -f "${ssh_dir}/custom.config" ]] && return 0
 
   local ssh_proxied_hosts
   ssh_proxied_hosts=$(awk '/^Host / {host=$2} /ProxyCommand/ && host {print host; host=""}' \
-    "${_DEVBASE_CUSTOM_SSH}/custom.config" 2>/dev/null |
+    "${ssh_dir}/custom.config" 2>/dev/null |
     paste -sd "," -)
 
   if [[ -n "$ssh_proxied_hosts" ]] && [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
@@ -311,13 +317,15 @@ validate_custom_config() {
 run_pre_install_hook() {
   # Run pre-install hook if it exists (organization-specific)
   # Best-effort: failures are warnings only
-  if validate_custom_file "_DEVBASE_CUSTOM_HOOKS" "pre-install.sh" "Pre-install hook"; then
-    show_progress step "Running pre-install hook"
-    # Run in subprocess for isolation (hooks can't pollute main script)
-    bash "${_DEVBASE_CUSTOM_HOOKS}/pre-install.sh" || {
-      show_progress warning "Pre-install hook failed, continuing anyway"
-    }
-  fi
+  local hooks_dir
+  hooks_dir=$(get_bootstrap_custom_hooks_dir)
+  [[ -z "$hooks_dir" || ! -f "${hooks_dir}/pre-install.sh" ]] && return 0
+
+  show_progress step "Running pre-install hook"
+  # Run in subprocess for isolation (hooks can't pollute main script)
+  bash "${hooks_dir}/pre-install.sh" || {
+    show_progress warning "Pre-install hook failed, continuing anyway"
+  }
 
   return 0
 }

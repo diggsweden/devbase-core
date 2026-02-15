@@ -230,6 +230,7 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/process-templates.sh"
   source "${DEVBASE_LIBS}/check-requirements.sh"
   source "${DEVBASE_LIBS}/bootstrap/bootstrap-ui.sh"
+  source "${DEVBASE_LIBS}/bootstrap/bootstrap-context.sh"
   source "${DEVBASE_LIBS}/bootstrap/bootstrap-config.sh"
   source "${DEVBASE_LIBS}/bootstrap/bootstrap-apply.sh"
   source "${DEVBASE_LIBS}/bootstrap/bootstrap.sh"
