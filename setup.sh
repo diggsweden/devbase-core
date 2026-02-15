@@ -939,17 +939,19 @@ main() {
     return 0
   fi
 
-  run_bootstrap
+  run_bootstrap || return 1
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
     show_progress info "Dry run enabled - skipping installation"
     return 0
   fi
 
-  run_installation
+  run_installation || return 1
 
   # Run migrations after successful installation to clean up legacy files
-  run_migrations
+  if ! run_migrations; then
+    show_progress warning "Migrations failed - continuing"
+  fi
 }
 
 main "$@"
