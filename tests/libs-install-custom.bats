@@ -66,13 +66,22 @@ teardown() {
 
 @test "get_oc_checksum fetches checksum from mirror" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
-  stub curl 'echo "abc123def456  openshift-client-linux-4.15.33.tar.gz"'
-  
+
+  # shellcheck disable=SC2329
+  get_checksum_from_manifest() { echo "abc123def456"; }
+
   result=$(get_oc_checksum "4.15.33")
   [[ "$result" == "abc123def456" ]]
-  
-  unstub curl
+}
+
+@test "get_nerd_font_checksum returns checksum from manifest" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  # shellcheck disable=SC2329
+  get_checksum_from_manifest() { echo "abc123"; }
+
+  result=$(get_nerd_font_checksum "v3.4.0" "JetBrainsMono.zip")
+  [[ "$result" == "abc123" ]]
 }
 
 @test "get_oc_checksum validates version parameter" {
