@@ -37,3 +37,22 @@ EOF
   assert_failure
   assert_output --partial "override protected variable"
 }
+
+@test "load_environment_configuration fails when default env missing" {
+  DEVBASE_CUSTOM_DIR=""
+  DEVBASE_ENVS="${TEST_DIR}/missing"
+
+  run load_environment_configuration
+  assert_failure
+  assert_output --partial "Environment file not found"
+}
+
+@test "find_custom_directory skips incomplete config" {
+  mkdir -p "${TEST_DIR}/custom/config"
+
+  DEVBASE_CUSTOM_DIR="${TEST_DIR}/custom"
+
+  run find_custom_directory
+  assert_success
+  [[ -z "${DEVBASE_CUSTOM_DIR}" ]]
+}

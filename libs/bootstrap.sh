@@ -20,6 +20,7 @@ run_bootstrap() {
   detect_environment || return 1
   find_custom_directory || return 1
   load_environment_configuration || return 1
+  apply_environment_settings || return 1
   configure_proxy_settings || return 1
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
