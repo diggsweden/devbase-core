@@ -63,6 +63,37 @@ verify_checksum_from_url() {
   fi
 }
 
+# Brief: Extract checksum from manifest file
+# Params: $1-manifest_url $2-filename $3-timeout(optional)
+# Returns: 0 with checksum on stdout, 1 on failure
+# Side-effects: Downloads manifest file to temp location
+get_checksum_from_manifest() {
+  local manifest_url="$1"
+  local filename="$2"
+  local timeout="${3:-30}"
+
+  local checksum_file
+  checksum_file=$(mktemp)
+
+  if ! curl -fsSL --connect-timeout "$timeout" --max-time "$timeout" "$manifest_url" -o "$checksum_file"; then
+    show_progress warning "Could not fetch checksum manifest: $manifest_url"
+    rm -f "$checksum_file"
+    return 1
+  fi
+
+  local checksum
+  checksum=$(grep -F "${filename}" "$checksum_file" | head -1 | awk '{print $1}')
+  rm -f "$checksum_file"
+
+  if [[ -z "$checksum" ]]; then
+    show_progress warning "Checksum not found for ${filename}"
+    return 1
+  fi
+
+  printf "%s\n" "$checksum"
+  return 0
+}
+
 # Brief: Verify file checksum from expected value
 # Params: $1-target_file $2-expected_checksum
 # Returns: 0 if checksum matches, 1 if mismatch
