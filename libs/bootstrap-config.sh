@@ -339,6 +339,18 @@ display_ssh_proxy_configuration() {
   fi
 }
 
+require_custom_paths() {
+  [[ -z "${DEVBASE_CUSTOM_DIR}" ]] && return 0
+
+  require_env \
+    DEVBASE_CUSTOM_ENV \
+    _DEVBASE_CUSTOM_CERTS \
+    _DEVBASE_CUSTOM_HOOKS \
+    _DEVBASE_CUSTOM_TEMPLATES \
+    _DEVBASE_CUSTOM_SSH \
+    _DEVBASE_CUSTOM_PACKAGES || return 1
+}
+
 # Brief: Validate and display custom organization configuration
 # Params: None
 # Uses: DEVBASE_CUSTOM_DIR, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, DEVBASE_REGISTRY_HOST, DEVBASE_REGISTRY_PORT (globals)
@@ -349,6 +361,7 @@ validate_custom_config() {
 
   show_progress step "Validating custom configuration"
 
+  require_custom_paths || return 1
   check_required_config_variables || return 1
   display_network_configuration
   display_custom_settings
