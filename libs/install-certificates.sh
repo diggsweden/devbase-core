@@ -16,6 +16,7 @@ fi
 # Side-effects: Copies certs to system, updates trust store, configures Git
 install_certificates() {
   validate_custom_dir "_DEVBASE_CUSTOM_CERTS" "Custom certificates directory" || return 0
+  require_env _DEVBASE_CUSTOM_CERTS || return 1
 
   local cert_src="${_DEVBASE_CUSTOM_CERTS}"
 

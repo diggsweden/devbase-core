@@ -38,7 +38,7 @@ PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 
 # Selected packs (set by caller, space-separated)
-SELECTED_PACKS="${SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
+SELECTED_PACKS="${SELECTED_PACKS:-}"
 
 # Brief: Set up package YAML environment (shared by all package loaders)
 # Params: None
