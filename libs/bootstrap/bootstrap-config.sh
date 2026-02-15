@@ -247,6 +247,7 @@ display_custom_settings() {
 # Side-effects: Displays info message if hooks found
 display_custom_hooks() {
   validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory" || return 0
+  require_env _DEVBASE_CUSTOM_HOOKS || return 1
 
   local hooks=()
   for hook in pre-install post-configuration post-install; do
@@ -265,6 +266,7 @@ display_custom_hooks() {
 # Side-effects: Displays info message if proxied hosts found
 display_ssh_proxy_configuration() {
   validate_custom_file "_DEVBASE_CUSTOM_SSH" "custom.config" "Custom SSH config" || return 0
+  require_env _DEVBASE_CUSTOM_SSH || return 1
 
   local ssh_proxied_hosts
   ssh_proxied_hosts=$(awk '/^Host / {host=$2} /ProxyCommand/ && host {print host; host=""}' \
