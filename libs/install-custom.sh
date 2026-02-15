@@ -56,7 +56,7 @@ _install_pkg_file() {
     if sudo dpkg -i "$pkg_file"; then
       return 0
     else
-      show_progress warning "Package installation failed - trying to fix dependencies"
+      add_install_warning "Package installation failed - trying to fix dependencies"
       sudo apt-get install -f -y -q
       return 0
     fi
@@ -66,7 +66,7 @@ _install_pkg_file() {
       sudo rpm -i "$pkg_file" 2>/dev/null; then
       return 0
     else
-      show_progress warning "RPM installation failed"
+      add_install_warning "RPM installation failed"
       return 1
     fi
   fi
@@ -208,7 +208,7 @@ install_lazyvim() {
       # Checkout specific version (commit SHA or tag) if not main
       if [[ "$lazyvim_version" != "main" ]]; then
         git checkout --quiet "$lazyvim_version" 2>/dev/null || {
-          show_progress warning "Failed to checkout $lazyvim_version, using main"
+          add_install_warning "Failed to checkout $lazyvim_version, using main"
         }
       fi
 
@@ -236,7 +236,7 @@ install_lazyvim() {
     THEME_BACKGROUND="$theme_background" envsubst_preserve_undefined "$colorscheme_template" "$colorscheme_target"
     show_progress success "LazyVim colorscheme configured (${DEVBASE_THEME})"
   else
-    show_progress warning "Colorscheme template not found"
+    add_install_warning "Colorscheme template not found"
   fi
 
   # Copy treesitter config to prevent compilation issues in VSCode
@@ -247,7 +247,7 @@ install_lazyvim() {
     cp "$treesitter_source" "$treesitter_target"
     show_progress success "LazyVim treesitter configured (VSCode-compatible)"
   else
-    show_progress warning "Treesitter config not found"
+    add_install_warning "Treesitter config not found"
   fi
 
   return 0
@@ -278,7 +278,7 @@ install_jmc() {
       local jmc_tar="${_DEVBASE_TEMP}/jmc.tar.gz"
 
       if ! download_with_cache "$jmc_url" "$jmc_tar" "jmc-${jmc_version}.tar.gz" "JMC package"; then
-        show_progress warning "JMC download failed - skipping"
+        add_install_warning "JMC download failed - skipping"
         return 0
       fi
 
@@ -291,7 +291,7 @@ install_jmc() {
         if [[ -d "$extracted_dir" ]]; then
           mv -f "$extracted_dir" "${XDG_DATA_HOME}/"
         else
-          show_progress warning "Unexpected JMC archive structure - skipping"
+          add_install_warning "Unexpected JMC archive structure - skipping"
           return 0
         fi
         ln -sf "${XDG_DATA_HOME}/JDK Mission Control/jmc" "${XDG_BIN_HOME}/jmc"
@@ -323,7 +323,7 @@ DESKTOP_EOF
 
         show_progress success "JDK Mission Control installed"
       else
-        show_progress warning "JMC download failed - skipping"
+        add_install_warning "JMC download failed - skipping"
       fi
     fi
   fi
@@ -358,7 +358,7 @@ install_oc_kubectl() {
   # Get expected checksum using helper function
   local expected_checksum=""
   if ! expected_checksum=$(get_oc_checksum "$oc_version"); then
-    show_progress warning "Could not fetch OpenShift CLI checksum"
+    add_install_warning "Could not fetch OpenShift CLI checksum"
     expected_checksum=""
   fi
 
@@ -381,10 +381,10 @@ install_oc_kubectl() {
     # Check if failure was due to checksum mismatch (security issue) vs download failure
     if [[ -n "$expected_checksum" ]] && [[ ! -f "$oc_tar" ]]; then
       show_progress error "OpenShift CLI download/verification FAILED - SECURITY RISK"
-      show_progress warning "Possible causes: MITM attack, corrupted mirror, or network issue"
-      show_progress warning "Skipping OpenShift CLI installation for safety"
+      add_install_warning "Possible causes: MITM attack, corrupted mirror, or network issue"
+      add_install_warning "Skipping OpenShift CLI installation for safety"
     else
-      show_progress warning "OpenShift CLI download failed - skipping"
+      add_install_warning "OpenShift CLI download failed - skipping"
     fi
   fi
 }
@@ -425,14 +425,14 @@ install_dbeaver() {
   dbeaver_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
   if ! download_with_cache "$dbeaver_url" "$dbeaver_pkg" "$cache_name" "DBeaver package"; then
-    show_progress warning "DBeaver download failed - skipping"
+    add_install_warning "DBeaver download failed - skipping"
     return 0
   fi
 
   if _install_pkg_file "$dbeaver_pkg"; then
     show_progress success "DBeaver installed"
   else
-    show_progress warning "DBeaver installation failed"
+    add_install_warning "DBeaver installation failed"
   fi
 }
 
@@ -470,14 +470,14 @@ install_keystore_explorer() {
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
     if ! download_with_cache "$kse_url" "$kse_pkg" "$cache_name" "KeyStore Explorer package"; then
-      show_progress warning "KeyStore Explorer download failed - skipping"
+      add_install_warning "KeyStore Explorer download failed - skipping"
       return 0
     fi
 
     if _install_pkg_file "$kse_pkg"; then
       show_progress success "KeyStore Explorer installed"
     else
-      show_progress warning "KeyStore Explorer installation failed"
+      add_install_warning "KeyStore Explorer installation failed"
     fi
   else
     # For RPM systems, download the zip/tarball and install manually
@@ -486,7 +486,7 @@ install_keystore_explorer() {
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
     if ! download_with_cache "$kse_url" "$kse_pkg" "$cache_name" "KeyStore Explorer package"; then
-      show_progress warning "KeyStore Explorer download failed - skipping"
+      add_install_warning "KeyStore Explorer download failed - skipping"
       return 0
     fi
 
@@ -498,7 +498,7 @@ install_keystore_explorer() {
       chmod +x "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
       show_progress success "KeyStore Explorer installed"
     else
-      show_progress warning "KeyStore Explorer installation failed"
+      add_install_warning "KeyStore Explorer installation failed"
     fi
   fi
 }
@@ -539,11 +539,11 @@ install_k3s() {
     if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
     else
-      show_progress warning "k3s installation failed - skipping"
+      add_install_warning "k3s installation failed - skipping"
       return 1
     fi
   else
-    show_progress warning "k3s installer download failed - skipping"
+    add_install_warning "k3s installer download failed - skipping"
     return 1
   fi
 }
@@ -591,7 +591,7 @@ install_fisher() {
       if fish -c "fisher install PatrickF1/fzf.fish" >/dev/null 2>&1; then
         show_progress success "fzf.fish plugin installed (Ctrl+R for history, Ctrl+Alt+F for files)"
       else
-        show_progress warning "fzf.fish plugin installation failed"
+        add_install_warning "fzf.fish plugin installation failed"
         return 1
       fi
     else
@@ -650,7 +650,7 @@ _determine_font_details() {
     font_display_name="Monaspace Nerd Font"
     ;;
   *)
-    show_progress warning "Unknown font choice: $font_choice, defaulting to JetBrains Mono"
+    add_install_warning "Unknown font choice: $font_choice, defaulting to JetBrains Mono"
     font_name="JetBrainsMono"
     font_zip_name="JetBrainsMono.zip"
     font_dir_name="JetBrainsMonoNerdFont"
@@ -729,7 +729,7 @@ _download_font_to_cache() {
       return 0
     fi
   else
-    show_progress warning "No checksum found for ${font_zip_name} - continuing without verification"
+    add_install_warning "No checksum found for ${font_zip_name} - continuing without verification"
     if download_file "$font_url" "$font_zip" "" "" "" "$timeout"; then
       echo "$nf_version" >"$version_file"
       return 0
@@ -781,13 +781,13 @@ _download_all_fonts_to_cache() {
     if _download_font_to_cache "$font_zip_name" "$cache_dir" "$nf_version" "$timeout"; then
       show_progress success "$font_display_name cached"
     else
-      show_progress warning "Failed to cache $font_display_name"
+      add_install_warning "Failed to cache $font_display_name"
       ((failed_count++))
     fi
   done
 
   if [[ $failed_count -gt 0 ]]; then
-    show_progress warning "$failed_count font(s) failed to download"
+    add_install_warning "$failed_count font(s) failed to download"
   fi
 
   return 0
@@ -1009,7 +1009,7 @@ configure_terminal_fonts() {
   local font_dir="${fonts_dir}/${font_dir_name}"
 
   if [[ ! -d "$font_dir" ]] || [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -eq 0 ]]; then
-    show_progress warning "$font_display_name not installed - skipping terminal configuration"
+    add_install_warning "$font_display_name not installed - skipping terminal configuration"
     return 1
   fi
 
@@ -1097,7 +1097,7 @@ install_vscode() {
 
   local vscode_checksum
   if ! vscode_checksum=$(get_vscode_checksum "$version" "$platform_name"); then
-    show_progress warning "Could not fetch VS Code checksum (jq not available or API failed)"
+    add_install_warning "Could not fetch VS Code checksum (jq not available or API failed)"
     vscode_checksum=""
   fi
 
@@ -1123,10 +1123,10 @@ install_vscode() {
       # Check if failure was due to checksum mismatch (security issue)
       if [[ -n "$vscode_checksum" ]] && [[ ! -f "$vscode_pkg" ]]; then
         show_progress error "VS Code download/verification FAILED - SECURITY RISK"
-        show_progress warning "Possible causes: MITM attack, corrupted mirror, or network issue"
-        show_progress warning "Skipping VS Code installation for safety"
+        add_install_warning "Possible causes: MITM attack, corrupted mirror, or network issue"
+        add_install_warning "Skipping VS Code installation for safety"
       else
-        show_progress warning "VS Code download failed - skipping"
+        add_install_warning "VS Code download failed - skipping"
       fi
       return 1
     fi
@@ -1135,7 +1135,7 @@ install_vscode() {
   if _install_pkg_file "$vscode_pkg"; then
     show_progress success "VS Code installed ($version)"
   else
-    show_progress warning "VS Code installation failed"
+    add_install_warning "VS Code installation failed"
     return 1
   fi
 }
@@ -1170,7 +1170,7 @@ _download_intellij_archive() {
       fi
       show_progress success "IntelliJ IDEA download complete" >&2
     else
-      show_progress warning "IntelliJ IDEA download failed - skipping" >&2
+      add_install_warning "IntelliJ IDEA download failed - skipping"
       return 1
     fi
   fi
@@ -1190,7 +1190,7 @@ _extract_and_install_intellij() {
   show_progress info "Extracting IntelliJ IDEA (this may take a few minutes)..." >&2
 
   if ! tar -xzf "$idea_tar" -C "$extract_dir"; then
-    show_progress warning "Failed to extract IntelliJ IDEA" >&2
+    add_install_warning "Failed to extract IntelliJ IDEA"
     return 1
   fi
 
@@ -1198,7 +1198,7 @@ _extract_and_install_intellij() {
   idea_dir=$(find "$extract_dir" -maxdepth 1 -type d \( -name "idea-IU-*" -o -name "ideaIU-*" \) | head -1)
 
   if [[ -z "$idea_dir" ]]; then
-    show_progress warning "IntelliJ IDEA directory not found in archive" >&2
+    add_install_warning "IntelliJ IDEA directory not found in archive"
     return 1
   fi
 
@@ -1335,7 +1335,7 @@ install_intellij_idea() {
       local newest
       newest=$(printf '%s\n%s\n' "$installed_version" "$version" | sort -V | tail -1)
       if [[ "$newest" == "$installed_version" ]]; then
-        show_progress warning "Installed IntelliJ IDEA ($installed_version) is newer than pinned ($version) - skipping downgrade"
+        add_install_warning "Installed IntelliJ IDEA ($installed_version) is newer than pinned ($version) - skipping downgrade"
         _create_intellij_desktop_file "$install_root"
         return 0
       fi
@@ -1420,7 +1420,7 @@ install_gum() {
   local arch pkg_format
   pkg_format=$(_get_custom_pkg_format)
   arch=$(get_deb_arch) || {
-    show_progress warning "Unsupported architecture for gum: $(uname -m)"
+    add_install_warning "Unsupported architecture for gum: $(uname -m)"
     return 1
   }
 
@@ -1442,7 +1442,7 @@ install_gum() {
   # Get checksum for verification
   local gum_checksum
   if ! gum_checksum=$(get_gum_checksum "$version" "$package_name"); then
-    show_progress warning "Could not fetch gum checksum - continuing without verification"
+    add_install_warning "Could not fetch gum checksum - continuing without verification"
     gum_checksum=""
   fi
 
@@ -1467,9 +1467,9 @@ install_gum() {
     else
       if [[ -n "$gum_checksum" ]] && [[ ! -f "$gum_pkg" ]]; then
         show_progress error "gum download/verification FAILED - SECURITY RISK"
-        show_progress warning "Possible causes: MITM attack, corrupted download, or network issue"
+        add_install_warning "Possible causes: MITM attack, corrupted download, or network issue"
       else
-        show_progress warning "gum download failed - skipping"
+        add_install_warning "gum download failed - skipping"
       fi
       return 1
     fi
