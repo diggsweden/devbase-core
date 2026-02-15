@@ -525,8 +525,13 @@ install_k3s() {
   local k3s_version="${TOOL_VERSIONS[k3s]}"
   local install_url="${DEVBASE_URL_K3S_RAW}/${k3s_version}/install.sh"
   local install_script="${_DEVBASE_TEMP}/k3s-install.sh"
+  local expected_checksum="${DEVBASE_K3S_INSTALL_SHA256:-}"
 
-  if retry_command download_file "$install_url" "$install_script"; then
+  if [[ -n "$expected_checksum" ]]; then
+    show_progress info "Verifying k3s installer checksum"
+  fi
+
+  if retry_command download_file "$install_url" "$install_script" "" "$expected_checksum"; then
     chmod +x "$install_script"
     if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
