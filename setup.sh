@@ -205,6 +205,7 @@ load_devbase_libraries() {
   source "${DEVBASE_LIBS}/handle-network.sh"
   source "${DEVBASE_LIBS}/process-templates.sh"
   source "${DEVBASE_LIBS}/check-requirements.sh"
+  source "${DEVBASE_LIBS}/bootstrap.sh"
   source "${DEVBASE_LIBS}/migrations.sh"
   source "${DEVBASE_LIBS}/install-certificates.sh"
   source "${DEVBASE_LIBS}/configure-ssh-git.sh"
@@ -958,30 +959,7 @@ main() {
   initialize_devbase_paths
   load_devbase_libraries
 
-  # Minimal pre-TUI setup: detect environment and configure network
-  detect_environment
-  find_custom_directory
-  load_environment_configuration
-  configure_proxy_settings
-
-  # Install certificates before any downloads (gum/mise) to avoid TLS issues
-  install_certificates
-
-  # Bootstrap TUI early (needs network for gum download)
-  # This enables gum/whiptail for all subsequent UI
-  show_progress info "Preparing installer UI..."
-  select_tui_mode
-
-  # Now show welcome and run checks using TUI
-  show_welcome_banner
-  show_os_info
-  check_required_tools
-  show_repository_info
-
-  test_generic_network_connectivity
-  validate_custom_config
-  run_pre_install_hook
-  set_default_values
+  run_bootstrap
 
   run_installation
 
