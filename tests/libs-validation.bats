@@ -118,3 +118,23 @@ teardown() {
   assert_failure
   [[ "$stderr" == *"not set"* ]] || [[ "$output" == *"not set"* ]]
 }
+
+@test "require_env succeeds when variables are set" {
+  export REQUIRED_ONE="value"
+  export REQUIRED_TWO="value"
+
+  run --separate-stderr require_env REQUIRED_ONE REQUIRED_TWO
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+  assert_success
+}
+
+@test "require_env fails when variables are missing" {
+  unset REQUIRED_MISSING 2>/dev/null || true
+
+  run --separate-stderr require_env REQUIRED_MISSING
+
+  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+  assert_failure
+  [[ "$stderr" == *"Required environment variable"* ]] || [[ "$output" == *"Required environment variable"* ]]
+}

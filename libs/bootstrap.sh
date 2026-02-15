@@ -78,6 +78,8 @@ show_repository_info() {
 # Returns: 0 on success
 # Side-effects: Configures env, UI, and validations before install
 run_bootstrap() {
+  require_env DEVBASE_ROOT DEVBASE_LIBS || return 1
+
   # Minimal pre-TUI setup: detect environment and configure network
   detect_environment || return 1
   find_custom_directory || return 1

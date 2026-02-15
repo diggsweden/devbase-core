@@ -78,6 +78,26 @@ validate_var_set() {
   return 0
 }
 
+# Brief: Require one or more environment variables to be set
+# Params: $@ - variable names to check
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if all variables are set, 1 if any are missing
+require_env() {
+  local missing=0
+
+  for varname in "$@"; do
+    if [[ -z "${!varname:-}" ]]; then
+      show_progress error "Required environment variable ${varname} is not set"
+      missing=1
+    fi
+  done
+
+  if [[ "$missing" -eq 1 ]]; then
+    return 1
+  fi
+  return 0
+}
+
 # Brief: Validate custom directory path is set and exists
 # Params: $1 - variable name containing directory path
 #         $2 - description (optional, default: "custom directory")

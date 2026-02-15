@@ -195,6 +195,7 @@ Before PR:
 == Conventions
 
 - Entrypoints use `set -uo pipefail` (not -e as we don't want to exit directly); sourced libs avoid mutating shell options
+- Use `require_env` (in `libs/validation.sh`) to declare required globals inside libs
 - `setup.sh` is the entrypoint; call `init_env` before using shared libs, `libs/bootstrap.sh` handles UI/env bootstrap, `libs/install.sh` assumes shared libs are sourced there
 - `libs/install.sh` organizes flow into preflight, configuration, installation, and finalize phases
 - Preflight/config/install phases fail fast; finalize is best-effort
