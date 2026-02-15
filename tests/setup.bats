@@ -78,6 +78,18 @@ teardown() {
   assert_output "gum"
 }
 
+@test "parse_arguments sets DEVBASE_DRY_RUN for --dry-run" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_DRY_RUN=false
+    parse_arguments --dry-run
+    echo \"\$DEVBASE_DRY_RUN\"
+  "
+
+  assert_success
+  assert_output "true"
+}
+
 @test "parse_arguments rejects --tui=none (not a valid user option)" {
   run bash -c "
     eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
@@ -111,11 +123,28 @@ teardown() {
   assert_output --partial "Invalid TUI mode"
 }
 
+@test "parse_arguments rejects unknown options" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --not-a-real-flag
+  "
+
+  assert_failure
+  assert_output --partial "Unknown option"
+}
+
 @test "setup.sh help shows --tui option" {
   run bash "${DEVBASE_ROOT}/setup.sh" --help
   
   assert_success
   assert_output --partial "--tui=<mode>"
+}
+
+@test "setup.sh --version prints version string" {
+  run bash "${DEVBASE_ROOT}/setup.sh" --version
+
+  assert_success
+  assert_output --partial "devbase-core"
 }
 
 @test "bootstrap module exposes run_bootstrap" {
