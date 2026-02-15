@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 # Brief: Generate a random 12-character SSH passphrase (NIST minimum)
 # Params: None
 # Returns: Echoes passphrase to stdout

@@ -7,8 +7,6 @@
 # APT package manager implementation for Debian/Ubuntu
 # This file is sourced by pkg-manager.sh - do not source directly
 
-set -uo pipefail
-
 # =============================================================================
 # CORE PACKAGE OPERATIONS
 # =============================================================================

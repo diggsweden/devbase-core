@@ -7,8 +7,6 @@
 # Distro detection and helper functions for multi-distribution support
 # Supported distros: ubuntu, ubuntu-wsl, fedora (experimental)
 
-set -uo pipefail
-
 # =============================================================================
 # DISTRO DETECTION
 # =============================================================================

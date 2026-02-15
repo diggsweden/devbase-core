@@ -7,8 +7,6 @@
 # Centralized external URLs and constants
 # All hardcoded download/API URLs in one place for easy auditing and updates
 
-set -uo pipefail
-
 # =============================================================================
 # MISE (TOOL VERSION MANAGER)
 # =============================================================================

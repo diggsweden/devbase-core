@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 # Brief: Detect Windows username using multiple methods
 # Params: None
 # Returns: 0 on success, 1 on failure

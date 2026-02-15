@@ -7,8 +7,6 @@
 # Migration scripts for DevBase upgrades
 # Handles cleanup of legacy files and configuration changes between versions
 
-set -uo pipefail
-
 # Brief: Remove legacy package files replaced by unified packages.yaml
 # Context: Prior to unified package management, packages were defined in separate files.
 #          These are now consolidated into packages.yaml and the old files are orphaned.

@@ -7,8 +7,6 @@
 # Gum TUI backend for ui-helpers
 # These functions are called by the dispatchers in ui-helpers.sh
 
-set -uo pipefail
-
 # Brief: Display formatted progress message using gum
 # Params: $1 - level (step/info/success/warning/error/validation), $@ - message text
 _gum_show_progress() {

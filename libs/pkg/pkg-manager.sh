@@ -13,8 +13,6 @@
 #   pkg_install curl git vim
 #   pkg_cleanup
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1

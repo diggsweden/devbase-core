@@ -12,8 +12,6 @@
 #   apt:     - Ubuntu/Debian specific packages
 #   dnf:     - Fedora/RHEL specific packages (experimental)
 
-set -uo pipefail
-
 # Re-source guard: skip top-level init if already loaded
 if [[ -n "${_DEVBASE_PARSE_PACKAGES_SOURCED:-}" ]]; then
   return 0

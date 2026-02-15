@@ -12,8 +12,6 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
-set -uo pipefail
-
 _summary_header() {
   cat <<EOF
 DEVBASE INSTALLATION SUMMARY

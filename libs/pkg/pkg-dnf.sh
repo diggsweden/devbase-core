@@ -7,8 +7,6 @@
 # DNF package manager implementation for Fedora/RHEL
 # This file is sourced by pkg-manager.sh - do not source directly
 
-set -uo pipefail
-
 # =============================================================================
 # CORE PACKAGE OPERATIONS
 # =============================================================================

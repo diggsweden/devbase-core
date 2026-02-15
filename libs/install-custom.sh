@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 # Global: Cached tool versions from packages.yaml (populated by _setup_custom_parser)
 declare -gA TOOL_VERSIONS 2>/dev/null || true
 
