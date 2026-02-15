@@ -10,6 +10,8 @@
 # Returns: 0 on success
 # Side-effects: Clones/updates repos to ~/.local/share/devbase/{core,custom}
 persist_devbase_repos() {
+  require_env XDG_DATA_HOME DEVBASE_ROOT _DEVBASE_FROM_GIT || return 1
+
   local core_dest="$XDG_DATA_HOME/devbase/core"
   local custom_dest="$XDG_DATA_HOME/devbase/custom"
 

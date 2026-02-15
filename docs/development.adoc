@@ -196,8 +196,9 @@ Before PR:
 
 - Entrypoints use `set -uo pipefail` (not -e as we don't want to exit directly); sourced libs avoid mutating shell options
 - Use `require_env` (in `libs/validation.sh`) to declare required globals inside libs
-- `setup.sh` is the entrypoint; call `init_env` before using shared libs, `libs/bootstrap.sh` handles UI/env bootstrap, `libs/install.sh` assumes shared libs are sourced there
+- `setup.sh` is the entrypoint; call `init_env` before using shared libs, `libs/bootstrap.sh` orchestrates bootstrap while `libs/bootstrap-ui.sh` and `libs/bootstrap-config.sh` provide helpers, `libs/install.sh` assumes shared libs are sourced there
 - `libs/install.sh` organizes flow into preflight, configuration, installation, and finalize phases
+- Repo persistence logic lives in `libs/persist.sh`
 - Preflight/config/install phases fail fast; finalize is best-effort
 - Prefer checksum verification for downloads; document any sources that lack checksums
 - XDG Base Directory compliance
