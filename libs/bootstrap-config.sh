@@ -39,13 +39,16 @@ find_custom_directory() {
     fullpath=$(cd "$path" && pwd) || continue
 
     if ! validate_custom_directory "$fullpath"; then
+      # Fail fast if the user explicitly set DEVBASE_CUSTOM_DIR
+      if [[ -n "${DEVBASE_CUSTOM_DIR}" && "$fullpath" == "$DEVBASE_CUSTOM_DIR" ]]; then
+        show_progress error "Custom config is incomplete: $fullpath"
+        return 1
+      fi
+
       # Skip silently if directory is empty (leftover from previous install)
       # Only warn if directory has some content but incomplete structure
       if [[ -n "$(ls -A "$fullpath" 2>/dev/null)" ]]; then
         show_progress info "Skipping incomplete custom config: $fullpath"
-      fi
-      if [[ -n "${DEVBASE_CUSTOM_DIR}" && "$fullpath" == "$DEVBASE_CUSTOM_DIR" ]]; then
-        DEVBASE_CUSTOM_DIR=""
       fi
       continue
     fi
