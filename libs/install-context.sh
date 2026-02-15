@@ -4,18 +4,21 @@
 #
 # SPDX-License-Identifier: MIT
 
+# shellcheck disable=SC1091 # Loaded via DEVBASE_ROOT at runtime
+source "${DEVBASE_ROOT}/libs/context.sh"
+
 declare -Ag INSTALL_CONTEXT=()
 declare -ag INSTALL_WARNINGS=()
 
 init_install_context() {
-  INSTALL_CONTEXT=()
+  init_context_array INSTALL_CONTEXT
   INSTALL_WARNINGS=()
-  INSTALL_CONTEXT[custom_hooks_dir]="${_DEVBASE_CUSTOM_HOOKS:-}"
-  INSTALL_CONTEXT[env]="${_DEVBASE_ENV:-}"
+  context_set INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
+  context_set INSTALL_CONTEXT env "${_DEVBASE_ENV:-}"
 }
 
 get_custom_hooks_dir() {
-  printf "%s" "${INSTALL_CONTEXT[custom_hooks_dir]:-${_DEVBASE_CUSTOM_HOOKS:-}}"
+  context_get INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
 }
 
 add_install_warning() {
