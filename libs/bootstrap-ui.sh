@@ -5,12 +5,12 @@
 # SPDX-License-Identifier: MIT
 
 show_welcome_banner() {
-  require_env DEVBASE_TUI_MODE || return 1
+  require_env DEVBASE_TUI_MODE DEVBASE_VERSION DEVBASE_VERSION_SHA || return 1
 
-  local devbase_version
-  local git_sha
-
-  read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
+  # shellcheck disable=SC2153 # DEVBASE_VERSION set during bootstrap
+  local devbase_version="$DEVBASE_VERSION"
+  # shellcheck disable=SC2153 # DEVBASE_VERSION_SHA set during bootstrap
+  local git_sha="$DEVBASE_VERSION_SHA"
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
     echo

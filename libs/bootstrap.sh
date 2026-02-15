@@ -37,6 +37,12 @@ run_bootstrap() {
   select_tui_mode || return 1
 
   # Now show welcome and run checks using TUI
+  local devbase_version
+  local devbase_sha
+  read -r devbase_version devbase_sha <<<"$(resolve_devbase_version)"
+  export DEVBASE_VERSION="$devbase_version"
+  export DEVBASE_VERSION_SHA="$devbase_sha"
+
   show_welcome_banner
   show_os_info
   check_required_tools || return 1
