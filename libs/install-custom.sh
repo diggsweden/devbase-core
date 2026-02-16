@@ -819,7 +819,7 @@ install_nerd_fonts() {
   _download_all_fonts_to_cache "$font_cache_dir" "$nf_version"
 
   # Install selected font
-  local font_choice="${DEVBASE_FONT:-jetbrains-mono}"
+  local font_choice="${DEVBASE_FONT:-$(get_default_font)}"
   local font_details
   font_details=$(_determine_font_details "$font_choice")
 
@@ -988,7 +988,7 @@ configure_terminal_fonts() {
   validate_var_set "HOME" || return 1
 
   # Reuse _determine_font_details for shared fields (font_dir_name, font_display_name)
-  local font_choice="${DEVBASE_FONT:-jetbrains-mono}"
+  local font_choice="${DEVBASE_FONT:-$(get_default_font)}"
   local font_details
   font_details=$(_determine_font_details "$font_choice")
   local font_dir_name font_display_name

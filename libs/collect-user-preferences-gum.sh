@@ -393,7 +393,7 @@ collect_font_preference() {
 
   _gum_section "Font Selection"
 
-  local current="${DEVBASE_FONT:-monaspace}"
+  local current="${DEVBASE_FONT:-$(get_default_font)}"
 
   local -A font_info=(
     ["monaspace"]="Superfamily, multiple styles"
@@ -423,7 +423,7 @@ collect_font_preference() {
 
   # Font name is the first field
   DEVBASE_FONT="${choice%% *}"
-  [[ -z "${DEVBASE_FONT:-}" ]] && DEVBASE_FONT="monaspace"
+  [[ -z "${DEVBASE_FONT:-}" ]] && DEVBASE_FONT="$(get_default_font)"
   export DEVBASE_FONT
 
   _gum_success "Font: $DEVBASE_FONT"
