@@ -36,9 +36,65 @@ get_default_editor() {
   fi
 }
 
+get_default_vscode_install() {
+  if [[ -n "${DEVBASE_DEFAULT_VSCODE_INSTALL:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_VSCODE_INSTALL"
+  else
+    printf "%s" "true"
+  fi
+}
+
 get_default_vscode_extensions() {
   if [[ -n "${DEVBASE_DEFAULT_VSCODE_EXTENSIONS:-}" ]]; then
     printf "%s" "$DEVBASE_DEFAULT_VSCODE_EXTENSIONS"
+  else
+    printf "%s" "true"
+  fi
+}
+
+get_default_install_devtools() {
+  if [[ -n "${DEVBASE_DEFAULT_INSTALL_DEVTOOLS:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_INSTALL_DEVTOOLS"
+  else
+    printf "%s" "true"
+  fi
+}
+
+get_default_install_lazyvim() {
+  if [[ -n "${DEVBASE_DEFAULT_INSTALL_LAZYVIM:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_INSTALL_LAZYVIM"
+  else
+    printf "%s" "true"
+  fi
+}
+
+get_default_install_intellij() {
+  if [[ -n "${DEVBASE_DEFAULT_INSTALL_INTELLIJ:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_INSTALL_INTELLIJ"
+  else
+    printf "%s" "false"
+  fi
+}
+
+get_default_install_jmc() {
+  if [[ -n "${DEVBASE_DEFAULT_INSTALL_JMC:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_INSTALL_JMC"
+  else
+    printf "%s" "false"
+  fi
+}
+
+get_default_zellij_autostart() {
+  if [[ -n "${DEVBASE_DEFAULT_ZELLIJ_AUTOSTART:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_ZELLIJ_AUTOSTART"
+  else
+    printf "%s" "false"
+  fi
+}
+
+get_default_enable_git_hooks() {
+  if [[ -n "${DEVBASE_DEFAULT_ENABLE_GIT_HOOKS:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_ENABLE_GIT_HOOKS"
   else
     printf "%s" "true"
   fi
