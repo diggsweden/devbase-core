@@ -313,7 +313,7 @@ _show_completion_message_gum() {
       echo "  $passphrase"
       echo
       gum style --foreground 240 "To change:"
-      echo "  ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+      echo "  ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
       echo
     fi
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"

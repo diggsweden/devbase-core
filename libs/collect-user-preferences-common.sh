@@ -54,7 +54,7 @@ setup_non_interactive_mode() {
     [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="true"
   fi
   export DEVBASE_VSCODE_INSTALL
-  [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="true"
+  [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="$(get_default_vscode_extensions)"
   export DEVBASE_VSCODE_EXTENSIONS
   [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
   export DEVBASE_SSH_KEY_ACTION DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
@@ -98,8 +98,10 @@ load_saved_preferences() {
   EDITOR=$(_yq_read '.editor.default' "$prefs_file")
   VISUAL="$EDITOR"
   [[ -z "$DEVBASE_FONT" ]] && DEVBASE_FONT="$(get_default_font)"
+  [[ -z "$DEVBASE_SSH_KEY_NAME" ]] && DEVBASE_SSH_KEY_NAME="$(get_default_ssh_key_name)"
   [[ -z "$EDITOR" ]] && EDITOR="$(get_default_editor)"
   [[ -z "$VISUAL" ]] && VISUAL="$EDITOR"
+
   DEVBASE_VSCODE_INSTALL=$(_yq_read '.vscode.install' "$prefs_file")
   DEVBASE_VSCODE_EXTENSIONS=$(_yq_read '.vscode.extensions' "$prefs_file")
   DEVBASE_INSTALL_LAZYVIM=$(_yq_read '.ide.lazyvim' "$prefs_file")

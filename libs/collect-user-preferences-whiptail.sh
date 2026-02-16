@@ -313,7 +313,7 @@ collect_font_preference() {
 
 collect_ssh_configuration() {
   validate_var_set "HOME" || return 1
-  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
 
   if [[ -f "$ssh_key_path" ]]; then
     # Existing key
