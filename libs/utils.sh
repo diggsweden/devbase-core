@@ -233,6 +233,28 @@ envsubst_preserve_undefined() {
 # Uses: _RETRY_ATTEMPTS, _RETRY_DELAY (constants)
 # Returns: 0 on success, last exit code on failure
 # Side-effects: Executes command, sleeps between retries
+declare -ag DEVBASE_GLOBAL_WARNINGS=()
+
+add_global_warning() {
+  local message="$1"
+  DEVBASE_GLOBAL_WARNINGS+=("$message")
+  show_progress warning "$message"
+}
+
+show_global_warnings() {
+  if [[ ${#DEVBASE_GLOBAL_WARNINGS[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  show_progress warning "Warnings during setup:"
+  for warning in "${DEVBASE_GLOBAL_WARNINGS[@]}"; do
+    show_progress warning "  - $warning"
+  done
+
+  DEVBASE_GLOBAL_WARNINGS=()
+  return 0
+}
+
 retry_command() {
   local max_attempts="${_RETRY_ATTEMPTS}"
   local base_delay="${_RETRY_DELAY}"

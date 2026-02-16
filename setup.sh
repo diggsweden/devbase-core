@@ -309,6 +309,7 @@ main() {
   fi
 
   run_bootstrap || return 1
+  show_global_warnings
 
   if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
     show_dry_run_plan

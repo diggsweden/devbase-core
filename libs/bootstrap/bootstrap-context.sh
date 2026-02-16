@@ -30,13 +30,13 @@ set_bootstrap_custom_paths() {
 }
 
 get_bootstrap_env_file() {
-  context_get BOOTSTRAP_CONTEXT env_file "${_DEVBASE_ENV_FILE:-}"
+  context_get_default BOOTSTRAP_CONTEXT env_file "${_DEVBASE_ENV_FILE:-}"
 }
 
 get_bootstrap_custom_hooks_dir() {
-  context_get BOOTSTRAP_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
+  context_get_default BOOTSTRAP_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
 }
 
 get_bootstrap_custom_ssh_dir() {
-  context_get BOOTSTRAP_CONTEXT custom_ssh_dir "${_DEVBASE_CUSTOM_SSH:-}"
+  context_get_default BOOTSTRAP_CONTEXT custom_ssh_dir "${_DEVBASE_CUSTOM_SSH:-}"
 }
