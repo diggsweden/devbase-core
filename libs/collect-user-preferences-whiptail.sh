@@ -172,7 +172,7 @@ collect_git_configuration() {
 
   # Get defaults
   local default_name default_email
-  default_name="${DEVBASE_GIT_AUTHOR:-$(git config --global user.name 2>/dev/null || echo "")}"
+  default_name="${DEVBASE_GIT_AUTHOR:-$(get_default_git_author)}"
   [[ ! "$default_name" =~ $name_pattern ]] && default_name=""
 
   # Prompt for name with validation
@@ -192,7 +192,7 @@ collect_git_configuration() {
   export DEVBASE_GIT_AUTHOR="$git_name"
 
   # Derive default email
-  default_email="${DEVBASE_GIT_EMAIL:-$(git config --global user.email 2>/dev/null || echo "")}"
+  default_email="${DEVBASE_GIT_EMAIL:-$(get_default_git_email)}"
   if [[ ! "$default_email" =~ $email_pattern ]]; then
     default_email=$(_generate_default_email_from_name "$DEVBASE_GIT_AUTHOR" "${DEVBASE_EMAIL_DOMAIN:-}")
   fi
