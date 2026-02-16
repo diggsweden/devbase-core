@@ -35,3 +35,19 @@ get_default_editor() {
     printf "%s" "nvim"
   fi
 }
+
+get_default_vscode_extensions() {
+  if [[ -n "${DEVBASE_DEFAULT_VSCODE_EXTENSIONS:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_VSCODE_EXTENSIONS"
+  else
+    printf "%s" "true"
+  fi
+}
+
+get_default_ssh_key_name() {
+  if [[ -n "${DEVBASE_DEFAULT_SSH_KEY_NAME:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_SSH_KEY_NAME"
+  else
+    printf "%s" "id_ed25519_devbase"
+  fi
+}

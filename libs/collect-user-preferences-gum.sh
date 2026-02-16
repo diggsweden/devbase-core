@@ -435,7 +435,7 @@ collect_ssh_configuration() {
   _gum_section "SSH Key Setup"
   _gum_help "Secure authentication for Git and remote servers"
 
-  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
 
   if [[ -f "$ssh_key_path" ]]; then
     _gum_success "SSH key exists: ${ssh_key_path/#$HOME/~}"
@@ -715,12 +715,12 @@ _show_configuration_summary() {
   gum style --foreground "$_GUM_SUBTLE" "SSH Key"
   if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
     echo "  Action:   Generate new key"
-    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
   elif [[ "${DEVBASE_SSH_KEY_ACTION}" == "skip" ]]; then
     echo "  Action:   Skip (no SSH key)"
   else
     echo "  Action:   Keep existing key"
-    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
   fi
   echo
 
