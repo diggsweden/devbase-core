@@ -107,3 +107,27 @@ get_default_ssh_key_name() {
     printf "%s" "id_ed25519_devbase"
   fi
 }
+
+get_default_git_author() {
+  if [[ -n "${DEVBASE_DEFAULT_GIT_AUTHOR:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_GIT_AUTHOR"
+    return 0
+  fi
+  if command -v git &>/dev/null; then
+    local author
+    author=$(git config --global user.name 2>/dev/null || true)
+    [[ -n "$author" ]] && printf "%s" "$author"
+  fi
+}
+
+get_default_git_email() {
+  if [[ -n "${DEVBASE_DEFAULT_GIT_EMAIL:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_GIT_EMAIL"
+    return 0
+  fi
+  if command -v git &>/dev/null; then
+    local email
+    email=$(git config --global user.email 2>/dev/null || true)
+    [[ -n "$email" ]] && printf "%s" "$email"
+  fi
+}
