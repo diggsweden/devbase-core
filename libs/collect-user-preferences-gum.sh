@@ -306,7 +306,7 @@ collect_git_configuration() {
 collect_theme_preference() {
   _gum_section "Theme Selection"
 
-  local current="${DEVBASE_THEME:-everforest-dark}"
+  local current="${DEVBASE_THEME:-$(get_default_theme)}"
 
   # Theme data: "bg,fg,keyword,function,string,comment"
   local -A theme_colors=(
@@ -377,7 +377,8 @@ collect_theme_preference() {
 
   # Theme name is the first field
   DEVBASE_THEME="${choice%% *}"
-  [[ -z "${DEVBASE_THEME:-}" ]] && DEVBASE_THEME="everforest-dark"
+  [[ -z "${DEVBASE_THEME:-}" ]] && DEVBASE_THEME="$(get_default_theme)"
+
   export DEVBASE_THEME
 
   _gum_success "Theme: $DEVBASE_THEME"

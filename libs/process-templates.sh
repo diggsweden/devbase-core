@@ -264,6 +264,7 @@ copy_custom_templates_to_temp() {
   done
 
   # Also handle non-template overlay files (e.g., .fish files that override vanilla versions)
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
   for custom_file in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.fish; do
     [[ -f "$custom_file" ]] || continue
 

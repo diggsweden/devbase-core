@@ -200,7 +200,7 @@ _get_vscode_settings_dir() {
 }
 
 _get_vscode_theme_name() {
-  local theme="${1:-everforest-dark}"
+  local theme="${1:-$(get_default_theme)}"
   case "$theme" in
   everforest-dark) echo "Everforest Dark" ;;
   everforest-light) echo "Everforest Light" ;;
