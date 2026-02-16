@@ -319,7 +319,7 @@ _setup_vscode_parser() {
   require_env DEVBASE_LIBS || return 1
   # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-$(get_default_packs)}"
 
   # Check for custom packages override
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]]; then

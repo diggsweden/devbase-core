@@ -46,10 +46,12 @@ SELECTED_PACKS="${SELECTED_PACKS:-}"
 # Returns: 0 on success, 1 if packages.yaml not found
 # Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
 _setup_package_yaml_env() {
-  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
-  require_env DEVBASE_SELECTED_PACKS || return 1
+  require_env DEVBASE_DOT || return 1
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-java node python go ruby}}"
+  if [[ -z "${DEVBASE_SELECTED_PACKS:-}" ]]; then
+    export DEVBASE_SELECTED_PACKS="$(get_default_packs)"
+  fi
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS}"
 
   if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
     export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
