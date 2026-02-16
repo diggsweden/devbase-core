@@ -31,7 +31,7 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
-  local safe_temp="/tmp/devbase.ABC123"
+  local safe_temp="$(get_temp_root)/devbase.ABC123"
   mkdir -p "$safe_temp"
   export _DEVBASE_TEMP="$safe_temp"
 
@@ -65,7 +65,7 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
-  export _DEVBASE_TEMP="/tmp/devbase.nonexistent"
+  export _DEVBASE_TEMP="$(get_temp_root)/devbase.nonexistent"
 
   run --separate-stderr cleanup_temp_directory
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
@@ -194,7 +194,7 @@ teardown() {
 @test "setup_installation_paths validates required variables" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
-  export _DEVBASE_TEMP="/tmp/devbase.test123"
+  export _DEVBASE_TEMP="$(get_temp_root)/devbase.test123"
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
