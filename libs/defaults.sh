@@ -11,3 +11,11 @@ get_default_packs() {
     printf "%s" "java node python go ruby"
   fi
 }
+
+get_default_theme() {
+  if [[ -n "${DEVBASE_DEFAULT_THEME:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_THEME"
+  else
+    printf "%s" "everforest-dark"
+  fi
+}

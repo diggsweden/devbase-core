@@ -219,7 +219,7 @@ collect_git_configuration() {
 }
 
 collect_theme_preference() {
-  local current="${DEVBASE_THEME:-everforest-dark}"
+  local current="${DEVBASE_THEME:-$(get_default_theme)}"
 
   # Build radiolist items - mark current as selected
   local items=()
@@ -262,7 +262,8 @@ collect_theme_preference() {
     return
   fi
 
-  export DEVBASE_THEME="${choice:-everforest-dark}"
+  export DEVBASE_THEME="${choice:-$(get_default_theme)}"
+
 }
 
 collect_font_preference() {
