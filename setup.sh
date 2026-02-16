@@ -13,15 +13,15 @@ set -uo pipefail
 # Guard: Verify running in bash (must check before any bash-specific code)
 # Note: BASH_VERSION check must use ${:-} since this runs before our imports
 if [ -z "${BASH_VERSION:-}" ]; then
-  echo "ERROR: This script must be run with bash, not sourced in another shell."
-  echo "Usage: bash setup.sh"
-  echo "   or: ./setup.sh"
-  exit 1
+	echo "ERROR: This script must be run with bash, not sourced in another shell."
+	echo "Usage: bash setup.sh"
+	echo "   or: ./setup.sh"
+	exit 1
 fi
 
 handle_interrupt() {
-  printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
-  exit 130
+	printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
+	exit 130
 }
 
 trap handle_interrupt INT TERM
@@ -35,16 +35,16 @@ trap handle_interrupt INT TERM
 # For complete documentation: docs/environment.adoc
 
 # User-provided overrides
-DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}"      # Custom config directory path
-DEVBASE_DEBUG="${DEVBASE_DEBUG:-}"                # Debug mode (set DEVBASE_DEBUG=1 for verbose output)
-DEVBASE_THEME="${DEVBASE_THEME:-everforest-dark}" # Theme choice (default: everforest-dark)
-DEVBASE_FONT="${DEVBASE_FONT:-monaspace}"         # Font choice (default: monaspace)
-export EDITOR="${EDITOR:-nvim}"                   # Default editor: nvim or nano
-export VISUAL="${VISUAL:-$EDITOR}"                # Visual editor (defaults to EDITOR)
-GIT_EMAIL="${GIT_EMAIL:-@$(hostname)}"            # Git email for non-interactive (default: user@hostname)
-GIT_NAME="${GIT_NAME:-DevBase User}"              # Git name for non-interactive (default: DevBase User)
-MISE_GITHUB_TOKEN="${MISE_GITHUB_TOKEN:-}"        # GitHub token for mise downloads
-SSH_KEY_PASSPHRASE="${SSH_KEY_PASSPHRASE:-}"      # SSH key passphrase
+DEVBASE_CUSTOM_DIR="${DEVBASE_CUSTOM_DIR:-}" # Custom config directory path
+DEVBASE_DEBUG="${DEVBASE_DEBUG:-}"           # Debug mode (set DEVBASE_DEBUG=1 for verbose output)
+DEVBASE_THEME="${DEVBASE_THEME:-}"           # Theme choice (default applied later)
+DEVBASE_FONT="${DEVBASE_FONT:-}"             # Font choice (default applied later)
+export EDITOR="${EDITOR:-}"                  # Default editor (default applied later)
+export VISUAL="${VISUAL:-$EDITOR}"           # Visual editor (defaults to EDITOR)
+GIT_EMAIL="${GIT_EMAIL:-@$(hostname)}"       # Git email for non-interactive (default: user@hostname)
+GIT_NAME="${GIT_NAME:-DevBase User}"         # Git name for non-interactive (default: DevBase User)
+MISE_GITHUB_TOKEN="${MISE_GITHUB_TOKEN:-}"   # GitHub token for mise downloads
+SSH_KEY_PASSPHRASE="${SSH_KEY_PASSPHRASE:-}" # SSH key passphrase
 
 # XDG directories (may be pre-set by user, defaults follow XDG Base Directory spec)
 XDG_BIN_HOME="${XDG_BIN_HOME:-${HOME}/.local/bin}" # Not in spec, but follows pattern
@@ -74,22 +74,22 @@ _DEVBASE_CUSTOM_SSH=""
 _DEVBASE_CUSTOM_PACKAGES=""
 
 # Installation feature flags (user can override via environment)
-DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-true}"  # Install development tools
-DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-true}"    # Install LazyVim configuration
-DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-false}"           # Install Java Mission Control
-DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-false}" # Install IntelliJ IDEA
-DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-true}"  # Enable Git hooks
-DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-true}"  # Auto-start Zellij terminal multiplexer
+DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-}" # Install development tools (default applied later)
+DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-}"   # Install LazyVim configuration (default applied later)
+DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-}"           # Install Java Mission Control (default applied later)
+DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-}" # Install IntelliJ IDEA (default applied later)
+DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-}" # Enable Git hooks (default applied later)
+DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-}" # Auto-start Zellij terminal multiplexer (default applied later)
 
 # VSCode configuration flags (defaults set during user preferences collection)
 DEVBASE_VSCODE_INSTALL="${DEVBASE_VSCODE_INSTALL:-}"       # Install VSCode (set based on WSL detection)
 DEVBASE_VSCODE_EXTENSIONS="${DEVBASE_VSCODE_EXTENSIONS:-}" # Install VSCode extensions
 
 # SSH key management configuration
-DEVBASE_SSH_KEY_TYPE="${DEVBASE_SSH_KEY_TYPE:-ed25519}"            # SSH key type: ed25519, ecdsa, ed25519-sk, ecdsa-sk
-DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}" # SSH key filename
-DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}"               # SSH key action: new, keep, or import
-GENERATED_SSH_PASSPHRASE="${GENERATED_SSH_PASSPHRASE:-false}"      # Flag: passphrase was auto-generated
+DEVBASE_SSH_KEY_TYPE="${DEVBASE_SSH_KEY_TYPE:-ed25519}"       # SSH key type: ed25519, ecdsa, ed25519-sk, ecdsa-sk
+DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-}"              # SSH key filename (default applied later)
+DEVBASE_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}"          # SSH key action: new, keep, or import
+GENERATED_SSH_PASSPHRASE="${GENERATED_SSH_PASSPHRASE:-false}" # Flag: passphrase was auto-generated
 
 # Advanced configuration (offline installs, registry overrides)
 DEVBASE_DEB_CACHE="${DEVBASE_DEB_CACHE:-}"         # Path to offline .deb package cache
@@ -148,50 +148,50 @@ DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
 # ============================================================================
 
 parse_arguments() {
-  for arg in "$@"; do
-    case $arg in
-    --non-interactive)
-      NON_INTERACTIVE=true
-      export NON_INTERACTIVE=true
-      export DEBIAN_FRONTEND=noninteractive
-      ;;
-    --tui=*)
-      local tui_value="${arg#--tui=}"
-      case "$tui_value" in
-      gum | whiptail)
-        DEVBASE_TUI_MODE="$tui_value"
-        ;;
-      *)
-        printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail\n" "$tui_value" >&2
-        exit 1
-        ;;
-      esac
-      ;;
-    --dry-run)
-      DEVBASE_DRY_RUN=true
-      export DEVBASE_DRY_RUN=true
-      ;;
-    --version | -v)
-      SHOW_VERSION=true
-      ;;
-    --help | -h)
-      printf "Usage: %s [OPTIONS]\n" "$0"
-      printf "\n"
-      printf "Options:\n"
-      printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
-      printf "  --dry-run          Print planned steps without installing\n"
-      printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
-      printf "  --version, -v      Show version information\n"
-      printf "  --help, -h         Show this help message\n"
-      exit 0
-      ;;
-    *)
-      printf "Error: Unknown option '%s'\n" "$arg" >&2
-      printf "Run '%s --help' for valid options.\n" "$0" >&2
-      exit 1
-      ;;
-    esac
-  done
+	for arg in "$@"; do
+		case $arg in
+		--non-interactive)
+			NON_INTERACTIVE=true
+			export NON_INTERACTIVE=true
+			export DEBIAN_FRONTEND=noninteractive
+			;;
+		--tui=*)
+			local tui_value="${arg#--tui=}"
+			case "$tui_value" in
+			gum | whiptail)
+				DEVBASE_TUI_MODE="$tui_value"
+				;;
+			*)
+				printf "Error: Invalid TUI mode '%s'. Valid options: gum, whiptail\n" "$tui_value" >&2
+				exit 1
+				;;
+			esac
+			;;
+		--dry-run)
+			DEVBASE_DRY_RUN=true
+			export DEVBASE_DRY_RUN=true
+			;;
+		--version | -v)
+			SHOW_VERSION=true
+			;;
+		--help | -h)
+			printf "Usage: %s [OPTIONS]\n" "$0"
+			printf "\n"
+			printf "Options:\n"
+			printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
+			printf "  --dry-run          Print planned steps without installing\n"
+			printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
+			printf "  --version, -v      Show version information\n"
+			printf "  --help, -h         Show this help message\n"
+			exit 0
+			;;
+		*)
+			printf "Error: Unknown option '%s'\n" "$arg" >&2
+			printf "Run '%s --help' for valid options.\n" "$0" >&2
+			exit 1
+			;;
+		esac
+	done
 }
 
 # Brief: Initialize core DevBase path variables
@@ -201,128 +201,130 @@ parse_arguments() {
 # Returns: 0 always
 # Side-effects: None
 initialize_devbase_paths() {
-  # Get absolute path to devbase root (canonical bash idiom)
-  export DEVBASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
-  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
-  export DEVBASE_FILES="${DEVBASE_ROOT}/devbase_files"
-  export DEVBASE_ENVS="${DEVBASE_ROOT}/environments"
-  export DEVBASE_DOCS="${DEVBASE_ROOT}/docs"
-  readonly DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS
+	# Get absolute path to devbase root (canonical bash idiom)
+	export DEVBASE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
+	export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+	export DEVBASE_FILES="${DEVBASE_ROOT}/devbase_files"
+	export DEVBASE_ENVS="${DEVBASE_ROOT}/environments"
+	export DEVBASE_DOCS="${DEVBASE_ROOT}/docs"
+	readonly DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS
 
-  # Determine if running from git clone or release tarball (needed early for display_os_info)
-  if git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
-    export _DEVBASE_FROM_GIT="true"
-  else
-    export _DEVBASE_FROM_GIT="false"
-  fi
+	# Determine if running from git clone or release tarball (needed early for display_os_info)
+	if git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
+		export _DEVBASE_FROM_GIT="true"
+	else
+		export _DEVBASE_FROM_GIT="false"
+	fi
 }
 
 load_devbase_libraries() {
-  source "${DEVBASE_LIBS}/constants.sh"
-  source "${DEVBASE_LIBS}/define-colors.sh"
-  source "${DEVBASE_LIBS}/utils.sh"
-  source "${DEVBASE_LIBS}/defaults.sh"
-  source "${DEVBASE_LIBS}/ui/ui-messages.sh"
-  source "${DEVBASE_LIBS}/ui/ui-helpers.sh"
-  source "${DEVBASE_LIBS}/validation.sh"
-  source "${DEVBASE_LIBS}/distro.sh"
-  source "${DEVBASE_LIBS}/handle-network.sh"
-  source "${DEVBASE_LIBS}/process-templates.sh"
-  source "${DEVBASE_LIBS}/check-requirements.sh"
-  source "${DEVBASE_LIBS}/bootstrap/bootstrap-ui.sh"
-  source "${DEVBASE_LIBS}/bootstrap/bootstrap-context.sh"
-  source "${DEVBASE_LIBS}/bootstrap/bootstrap-config.sh"
-  source "${DEVBASE_LIBS}/bootstrap/bootstrap-apply.sh"
-  source "${DEVBASE_LIBS}/bootstrap/bootstrap.sh"
+	source "${DEVBASE_LIBS}/constants.sh"
+	source "${DEVBASE_LIBS}/define-colors.sh"
+	source "${DEVBASE_LIBS}/utils.sh"
+	source "${DEVBASE_LIBS}/defaults.sh"
+	source "${DEVBASE_LIBS}/ui/ui-messages.sh"
+	source "${DEVBASE_LIBS}/ui/ui-helpers.sh"
+	source "${DEVBASE_LIBS}/validation.sh"
+	source "${DEVBASE_LIBS}/distro.sh"
+	source "${DEVBASE_LIBS}/handle-network.sh"
+	source "${DEVBASE_LIBS}/process-templates.sh"
+	source "${DEVBASE_LIBS}/check-requirements.sh"
+	source "${DEVBASE_LIBS}/bootstrap/bootstrap-ui.sh"
+	source "${DEVBASE_LIBS}/bootstrap/bootstrap-context.sh"
+	source "${DEVBASE_LIBS}/bootstrap/bootstrap-config.sh"
+	source "${DEVBASE_LIBS}/bootstrap/bootstrap-apply.sh"
+	source "${DEVBASE_LIBS}/bootstrap/bootstrap.sh"
 
-  source "${DEVBASE_LIBS}/migrations.sh"
-  source "${DEVBASE_LIBS}/persist.sh"
-  source "${DEVBASE_LIBS}/install-certificates.sh"
-  source "${DEVBASE_LIBS}/configure-ssh-git.sh"
-  source "${DEVBASE_LIBS}/configure-git-hooks.sh"
-  source "${DEVBASE_LIBS}/configure-completions.sh"
-  source "${DEVBASE_LIBS}/configure-shell.sh"
-  source "${DEVBASE_LIBS}/configure-services.sh"
-  source "${DEVBASE_LIBS}/install-custom.sh"
-  source "${DEVBASE_LIBS}/setup-vscode.sh"
-  source "${DEVBASE_LIBS}/configure-theme.sh"
+	source "${DEVBASE_LIBS}/migrations.sh"
+	source "${DEVBASE_LIBS}/persist.sh"
+	source "${DEVBASE_LIBS}/install-certificates.sh"
+	source "${DEVBASE_LIBS}/configure-ssh-git.sh"
+	source "${DEVBASE_LIBS}/configure-git-hooks.sh"
+	source "${DEVBASE_LIBS}/configure-completions.sh"
+	source "${DEVBASE_LIBS}/configure-shell.sh"
+	source "${DEVBASE_LIBS}/configure-services.sh"
+	source "${DEVBASE_LIBS}/install-custom.sh"
+	source "${DEVBASE_LIBS}/setup-vscode.sh"
+	source "${DEVBASE_LIBS}/configure-theme.sh"
 }
 
 init_env() {
-  initialize_devbase_paths
-  load_devbase_libraries
+	initialize_devbase_paths
+	load_devbase_libraries
 }
 
 resolve_devbase_version() {
-  local git_tag=""
-  local git_sha="unknown"
+	local git_tag=""
+	local git_sha="unknown"
 
-  if command -v git &>/dev/null && git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
-    git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
-    git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
-  fi
+	if command -v git &>/dev/null && git -C "${DEVBASE_ROOT}" rev-parse --git-dir >/dev/null 2>&1; then
+		git_tag=$(git -C "${DEVBASE_ROOT}" describe --tags --abbrev=0 2>/dev/null || echo "")
+		git_sha=$(git -C "${DEVBASE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+	fi
 
-  local devbase_version="0.0.0-dev"
-  if [[ -n "$git_tag" ]]; then
-    devbase_version="$git_tag"
-  fi
+	local devbase_version="0.0.0-dev"
+	if [[ -n "$git_tag" ]]; then
+		devbase_version="$git_tag"
+	fi
 
-  printf "%s %s\n" "$devbase_version" "$git_sha"
+	printf "%s %s\n" "$devbase_version" "$git_sha"
 }
 
 print_version() {
-  local devbase_version
-  local git_sha
+	local devbase_version
+	local git_sha
 
-  read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
-  printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
+	read -r devbase_version git_sha <<<"$(resolve_devbase_version)"
+	printf "devbase-core %s (%s)\n" "$devbase_version" "$git_sha"
 }
 
 run_installation() {
-  # Run the main installation script
-  _INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
+	# Run the main installation script
+	_INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
 
-  if [[ -f "$_INSTALL_SCRIPT" ]]; then
-    # Only export what child processes actually need
-    # Proxy variables already exported above if configured
-    # shellcheck disable=SC2153 # _DEVBASE_ENV/_DEVBASE_ENV_FILE set during bootstrap
-    export DEVBASE_ENV="$_DEVBASE_ENV" # Environment type (ubuntu/wsl-ubuntu)
-    # shellcheck disable=SC2153 # _DEVBASE_ENV_FILE set during bootstrap
-    export DEVBASE_ENV_FILE="$_DEVBASE_ENV_FILE" # Path to env file
+	if [[ -f "$_INSTALL_SCRIPT" ]]; then
+		# Only export what child processes actually need
+		# Proxy variables already exported above if configured
+		# shellcheck disable=SC2153 # _DEVBASE_ENV/_DEVBASE_ENV_FILE set during bootstrap
+		export DEVBASE_ENV="$_DEVBASE_ENV" # Environment type (ubuntu/wsl-ubuntu)
+		# shellcheck disable=SC2153 # _DEVBASE_ENV_FILE set during bootstrap
+		export DEVBASE_ENV_FILE="$_DEVBASE_ENV_FILE" # Path to env file
 
-    # Source the main installation script (not bash) to keep arrays available
-    # shellcheck disable=SC1090 # Dynamic source path
-    source "$_INSTALL_SCRIPT"
-  else
-    die "Main installation script not found: ${_INSTALL_SCRIPT}"
-  fi
+		# Source the main installation script (not bash) to keep arrays available
+		# shellcheck disable=SC1090 # Dynamic source path
+		source "$_INSTALL_SCRIPT"
+	else
+		die "Main installation script not found: ${_INSTALL_SCRIPT}"
+	fi
 }
 
 main() {
-  parse_arguments "$@"
-  init_env
+	parse_arguments "$@"
+	init_env
+	apply_setup_defaults
 
-  if [[ "${SHOW_VERSION}" == "true" ]]; then
-    print_version
-    return 0
-  fi
+	if [[ "${SHOW_VERSION}" == "true" ]]; then
 
-  run_bootstrap || return 1
-  show_global_warnings
+		print_version
+		return 0
+	fi
 
-  if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
-    show_dry_run_plan
-    show_progress info "$(ui_message dry_run_install_skip)"
-    return 0
-  fi
+	run_bootstrap || return 1
+	show_global_warnings
 
-  run_installation || return 1
+	if [[ "${DEVBASE_DRY_RUN}" == "true" ]]; then
+		show_dry_run_plan
+		show_progress info "$(ui_message dry_run_install_skip)"
+		return 0
+	fi
 
-  # Run migrations after successful installation to clean up legacy files
-  if ! run_migrations; then
-    show_progress warning "Migrations failed - continuing"
-  fi
+	run_installation || return 1
+
+	# Run migrations after successful installation to clean up legacy files
+	if ! run_migrations; then
+		show_progress warning "Migrations failed - continuing"
+	fi
 }
 
 main "$@"
