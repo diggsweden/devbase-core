@@ -11,9 +11,9 @@ declare -Ag BOOTSTRAP_CONTEXT=()
 
 init_bootstrap_context() {
   init_context_array BOOTSTRAP_CONTEXT
-  context_set BOOTSTRAP_CONTEXT env_file "${_DEVBASE_ENV_FILE:-}"
-  context_set BOOTSTRAP_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
-  context_set BOOTSTRAP_CONTEXT custom_ssh_dir "${_DEVBASE_CUSTOM_SSH:-}"
+  context_set_default BOOTSTRAP_CONTEXT env_file "${_DEVBASE_ENV_FILE:-}"
+  context_set_default BOOTSTRAP_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
+  context_set_default BOOTSTRAP_CONTEXT custom_ssh_dir "${_DEVBASE_CUSTOM_SSH:-}"
 }
 
 set_bootstrap_env_file() {

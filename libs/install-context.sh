@@ -13,8 +13,8 @@ declare -ag INSTALL_WARNINGS=()
 init_install_context() {
   init_context_array INSTALL_CONTEXT
   INSTALL_WARNINGS=()
-  context_set INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
-  context_set INSTALL_CONTEXT env "${_DEVBASE_ENV:-}"
+  context_set_default INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
+  context_set_default INSTALL_CONTEXT env "${_DEVBASE_ENV:-}"
 }
 
 get_custom_hooks_dir() {
