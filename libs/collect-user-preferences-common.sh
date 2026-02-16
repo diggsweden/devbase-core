@@ -51,11 +51,17 @@ setup_non_interactive_mode() {
   if [[ "${_DEVBASE_ENV}" == "wsl-ubuntu" ]]; then
     [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="false"
   else
-    [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="true"
+    [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="$(get_default_vscode_install)"
   fi
   export DEVBASE_VSCODE_INSTALL
   [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="$(get_default_vscode_extensions)"
   export DEVBASE_VSCODE_EXTENSIONS
+  [[ -z "$DEVBASE_INSTALL_DEVTOOLS" ]] && DEVBASE_INSTALL_DEVTOOLS="$(get_default_install_devtools)"
+  [[ -z "$DEVBASE_INSTALL_LAZYVIM" ]] && DEVBASE_INSTALL_LAZYVIM="$(get_default_install_lazyvim)"
+  [[ -z "$DEVBASE_INSTALL_INTELLIJ" ]] && DEVBASE_INSTALL_INTELLIJ="$(get_default_install_intellij)"
+  [[ -z "$DEVBASE_INSTALL_JMC" ]] && DEVBASE_INSTALL_JMC="$(get_default_install_jmc)"
+  [[ -z "$DEVBASE_ZELLIJ_AUTOSTART" ]] && DEVBASE_ZELLIJ_AUTOSTART="$(get_default_zellij_autostart)"
+  [[ -z "$DEVBASE_ENABLE_GIT_HOOKS" ]] && DEVBASE_ENABLE_GIT_HOOKS="$(get_default_enable_git_hooks)"
   [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
   export DEVBASE_SSH_KEY_ACTION DEVBASE_ZELLIJ_AUTOSTART DEVBASE_ENABLE_GIT_HOOKS
   export DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
@@ -110,6 +116,13 @@ load_saved_preferences() {
   DEVBASE_ZELLIJ_AUTOSTART=$(_yq_read '.tools.zellij_autostart' "$prefs_file")
   DEVBASE_ENABLE_GIT_HOOKS=$(_yq_read '.tools.git_hooks' "$prefs_file")
   DEVBASE_SELECTED_PACKS=$(yq -r '.packs // [] | .[]' "$prefs_file" | tr '\n' ' ' | sed 's/ $//')
+  [[ -z "$DEVBASE_VSCODE_INSTALL" ]] && DEVBASE_VSCODE_INSTALL="$(get_default_vscode_install)"
+  [[ -z "$DEVBASE_VSCODE_EXTENSIONS" ]] && DEVBASE_VSCODE_EXTENSIONS="$(get_default_vscode_extensions)"
+  [[ -z "$DEVBASE_INSTALL_LAZYVIM" ]] && DEVBASE_INSTALL_LAZYVIM="$(get_default_install_lazyvim)"
+  [[ -z "$DEVBASE_INSTALL_INTELLIJ" ]] && DEVBASE_INSTALL_INTELLIJ="$(get_default_install_intellij)"
+  [[ -z "$DEVBASE_INSTALL_JMC" ]] && DEVBASE_INSTALL_JMC="$(get_default_install_jmc)"
+  [[ -z "$DEVBASE_ZELLIJ_AUTOSTART" ]] && DEVBASE_ZELLIJ_AUTOSTART="$(get_default_zellij_autostart)"
+  [[ -z "$DEVBASE_ENABLE_GIT_HOOKS" ]] && DEVBASE_ENABLE_GIT_HOOKS="$(get_default_enable_git_hooks)"
   [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="$(get_default_packs)"
 
   export DEVBASE_THEME DEVBASE_FONT DEVBASE_GIT_AUTHOR DEVBASE_GIT_EMAIL DEVBASE_SSH_KEY_NAME
