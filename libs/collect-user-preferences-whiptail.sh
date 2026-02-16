@@ -273,7 +273,7 @@ collect_font_preference() {
     return 0
   fi
 
-  local current="${DEVBASE_FONT:-monaspace}"
+  local current="${DEVBASE_FONT:-$(get_default_font)}"
   local items=()
   local fonts=(
     "monaspace:Superfamily, multiple styles"
@@ -307,7 +307,8 @@ collect_font_preference() {
     return
   fi
 
-  export DEVBASE_FONT="${choice:-monaspace}"
+  export DEVBASE_FONT="${choice:-$(get_default_font)}"
+
 }
 
 collect_ssh_configuration() {
@@ -418,7 +419,8 @@ collect_editor_preferences() {
 
 collect_tool_preferences() {
   # Shell bindings - radiolist
-  local current_editor="${EDITOR:-nvim}"
+  local current_editor="${EDITOR:-$(get_default_editor)}"
+
   local vim_status="ON" emacs_status="OFF"
   [[ "$current_editor" != "nvim" ]] && vim_status="OFF" && emacs_status="ON"
 

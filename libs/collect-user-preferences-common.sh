@@ -97,6 +97,9 @@ load_saved_preferences() {
   DEVBASE_SSH_KEY_NAME=$(_yq_read '.ssh.key_name' "$prefs_file")
   EDITOR=$(_yq_read '.editor.default' "$prefs_file")
   VISUAL="$EDITOR"
+  [[ -z "$DEVBASE_FONT" ]] && DEVBASE_FONT="$(get_default_font)"
+  [[ -z "$EDITOR" ]] && EDITOR="$(get_default_editor)"
+  [[ -z "$VISUAL" ]] && VISUAL="$EDITOR"
   DEVBASE_VSCODE_INSTALL=$(_yq_read '.vscode.install' "$prefs_file")
   DEVBASE_VSCODE_EXTENSIONS=$(_yq_read '.vscode.extensions' "$prefs_file")
   DEVBASE_INSTALL_LAZYVIM=$(_yq_read '.ide.lazyvim' "$prefs_file")

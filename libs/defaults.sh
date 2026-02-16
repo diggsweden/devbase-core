@@ -19,3 +19,19 @@ get_default_theme() {
     printf "%s" "everforest-dark"
   fi
 }
+
+get_default_font() {
+  if [[ -n "${DEVBASE_DEFAULT_FONT:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_FONT"
+  else
+    printf "%s" "monaspace"
+  fi
+}
+
+get_default_editor() {
+  if [[ -n "${DEVBASE_DEFAULT_EDITOR:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_EDITOR"
+  else
+    printf "%s" "nvim"
+  fi
+}
