@@ -19,6 +19,17 @@ context_set() {
   ctx["$key"]="$value"
 }
 
+context_set_default() {
+  local name="$1"
+  local key="$2"
+  local value="$3"
+  # shellcheck disable=SC2178 # Nameref to associative array
+  local -n ctx="$name"
+  if [[ -z "${ctx[$key]:-}" ]]; then
+    ctx["$key"]="$value"
+  fi
+}
+
 context_get() {
   local name="$1"
   local key="$2"
