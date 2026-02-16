@@ -162,17 +162,14 @@ DevBase sets the following when a proxy is detected:
 |===
 | Configuration | Purpose
 
-| `CURLOPT_FORBID_REUSE=1`
-| Prevents connection reuse issues with proxy authentication
+| `DEVBASE_CURL_PROXY_ARGS`
+| Adds `--no-keepalive --no-sessionid -H "Connection: close"` for the internal curl wrapper
 
-| `CURLOPT_FRESH_CONNECT=1`
-| Forces fresh connections for each request
+| `DEVBASE_WGET_PROXY_ARGS`
+| Adds `--no-http-keep-alive` for the internal wget wrapper
 
-| `WGET_OPTIONS="--no-http-keep-alive"`
-| Disables HTTP keep-alive for wget
-
-| curl wrapper function
-| Adds `--no-keepalive --no-sessionid -H "Connection: close"` to all curl commands
+| `devbase_curl` wrapper
+| Uses configured proxy-safe curl options
 |===
 
 This configuration happens automatically:

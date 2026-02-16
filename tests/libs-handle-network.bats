@@ -81,14 +81,12 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"CURLOPT_FORBID_REUSE=\${CURLOPT_FORBID_REUSE}\"
-    echo \"CURLOPT_FRESH_CONNECT=\${CURLOPT_FRESH_CONNECT}\"
+    printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert_output --partial "CURLOPT_FORBID_REUSE=1"
-  assert_output --partial "CURLOPT_FRESH_CONNECT=1"
+  assert_output --partial "CURL_ARGS=--no-keepalive --no-sessionid -H Connection: close"
 }
 
 @test "configure_curl_for_proxy sets wget options when proxy exists" {
@@ -100,12 +98,12 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    printf 'WGET_OPTIONS=%s\n' "${WGET_OPTIONS}"
+    printf 'WGET_ARGS=%s\n' "${DEVBASE_WGET_PROXY_ARGS[*]}"
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert_output --partial "WGET_OPTIONS=--no-http-keep-alive"
+  assert_output --partial "WGET_ARGS=--no-http-keep-alive"
 }
 
 @test "download_file fails without checksum in strict mode" {
@@ -135,12 +133,12 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"CURLOPT_FORBID_REUSE=\${CURLOPT_FORBID_REUSE:-unset}\"
+    printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert_output --partial "CURLOPT_FORBID_REUSE=unset"
+  assert_output --partial "CURL_ARGS="
 }
 
 @test "_download_file_get_cache_name includes version when provided" {
