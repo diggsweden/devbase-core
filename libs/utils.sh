@@ -150,7 +150,6 @@ validate_path() {
 
   # ===== SECURITY CHECKS (always applied) =====
   [[ "$real_path" = /* ]] || die "Path must be absolute: $real_path"
-  [[ "$real_path" != *".."* ]] || die "Path traversal detected: $real_path"
 
   # ===== STRICT MODE WHITELIST =====
   if [[ "$strict_mode" == "true" ]]; then

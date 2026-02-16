@@ -163,12 +163,33 @@ _fallback_run_with_spinner() {
 }
 
 _fallback_ask_yes_no() {
+  local question="$1"
   local default="${2:-N}"
-  if [[ "$default" == "Y" || "$default" == "y" ]]; then
-    return 0
-  else
+  local reply=""
+
+  if [[ ! -t 0 ]]; then
+    [[ "$default" == "Y" || "$default" == "y" ]] && return 0
     return 1
   fi
+
+  while true; do
+    read -r -p "$question " reply
+    case "$reply" in
+    [Yy])
+      return 0
+      ;;
+    [Nn])
+      return 1
+      ;;
+    "")
+      [[ "$default" == "Y" || "$default" == "y" ]] && return 0
+      return 1
+      ;;
+    *)
+      printf "Please answer y or n.\n"
+      ;;
+    esac
+  done
 }
 
 # =============================================================================
