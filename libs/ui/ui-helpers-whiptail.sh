@@ -64,7 +64,7 @@ _wt_start_persistent_gauge() {
 
   # Create named pipe for gauge communication inside a private temp directory
   local fifo_dir
-  fifo_dir=$(mktemp -d /tmp/devbase-gauge.XXXXXX)
+  fifo_dir=$(make_temp_dir "devbase-gauge")
   _WT_GAUGE_FIFO="${fifo_dir}/fifo"
   mkfifo -m 600 "$_WT_GAUGE_FIFO"
 

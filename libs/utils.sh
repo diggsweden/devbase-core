@@ -102,6 +102,32 @@ sudo_refresh() {
   sudo -v
 }
 
+# Brief: Determine writable temp root directory
+# Params: None
+# Returns: Path to temp directory
+get_temp_root() {
+  local candidate
+  for candidate in "${TMPDIR:-}" "${XDG_RUNTIME_DIR:-}" "/tmp"; do
+    [[ -n "$candidate" ]] || continue
+    if [[ -d "$candidate" ]] && [[ -w "$candidate" ]]; then
+      printf "%s" "$candidate"
+      return 0
+    fi
+  done
+
+  printf "%s" "/tmp"
+}
+
+# Brief: Create temp directory with prefix
+# Params: $1 - prefix (optional, default: devbase)
+# Returns: Created temp directory path
+make_temp_dir() {
+  local prefix="${1:-devbase}"
+  local temp_root
+  temp_root=$(get_temp_root)
+  mktemp -d "${temp_root%/}/${prefix}.XXXXXX"
+}
+
 # Brief: Validate path for security (traversal, system dirs, whitelisting)
 # Params: $1 - path to validate, $2 - strict_mode (true/false, default: true)
 # Returns: 0 if valid, calls die() on invalid paths
@@ -562,9 +588,15 @@ cleanup_temp_directory() {
   local real_path
   real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
 
-  if [[ "$real_path" =~ ^/tmp/devbase\.[A-Za-z0-9]+$ ]]; then
+  local temp_root
+  temp_root=$(get_temp_root)
+  temp_root=$(realpath -m "$temp_root" 2>/dev/null || printf "%s" "/tmp")
+
+  case "$real_path" in
+  "${temp_root%/}/devbase."*)
     rm -rf "$real_path" 2>/dev/null || true
-  fi
+    ;;
+  esac
 
   return 0
 }

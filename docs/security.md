@@ -24,7 +24,7 @@ SPDX-License-Identifier: CC0-1.0
 | | Secure permissions | ✅ Enabled | SSH 600/700, configs 600 | Enforced at creation |
 | **Cryptography** | Secure SSH | ✅ Enabled | ED25519, ChaCha20-Poly1305 | Default configuration |
 | | SSH key type | ✅ Strong | ED25519 (256-bit) | Modern standard |
-| **Known Issues** | Temp cleanup | ⚠️ Missing | `/tmp/devbase.*` persists | Tracked for fix |
+| **Temp Files** | Temp cleanup | ✅ Enabled | devbase temp directories cleaned | Respects TMPDIR/XDG_RUNTIME_DIR |
 | **Malware Protection** | ClamAV scanning | ✅ Enabled | Daily full system scan | Low-priority, scheduled |
 | | Virus definitions | ✅ Auto-update | freshclam service | Continuous updates |
 | **Network** | Firewall (UFW) | ✅ Enabled | Default on Linux | K3s rules auto-configured |
@@ -52,7 +52,7 @@ SPDX-License-Identifier: CC0-1.0
 - ✅ Firewall: UFW enabled by default with K3s integration
 - ✅ Antivirus: ClamAV with daily automated scanning
 - ✅ System hardening: resource limits for development workloads
-- ⚠️ Known issue: temp directory cleanup missing
+- ✅ Temp cleanup: devbase temp directories cleaned
 
 ## Supply Chain
 
@@ -734,25 +734,11 @@ cat /proc/<PID>/limits
 
 ### High Priority
 
-#### 1. Temp Directory Cleanup
-
-```bash
-ls -la /tmp/devbase.*
-# Directories persist after install
-```
-
-**Fix**:
-
-```bash
-cleanup_temp() {
-  [[ -n "${_DEVBASE_TEMP:-}" ]] && rm -rf "${_DEVBASE_TEMP}"
-}
-trap cleanup_temp EXIT INT TERM
-```
+No open high-priority issues.
 
 ### Medium Priority
 
-#### 2. Proxy Password in Environment
+#### 1. Proxy Password in Environment
 
 - Status: Accepted (standard practice)
 - Masked in output
@@ -760,7 +746,7 @@ trap cleanup_temp EXIT INT TERM
 
 ### Low Priority
 
-#### 3. No Checksums: JMC, DBeaver, KSE
+#### 2. No Checksums: JMC, DBeaver, KSE
 
 - Vendors don't provide
 - HTTPS + dpkg signatures
@@ -788,9 +774,9 @@ grep "renovate:" devbase-core/dot/.config/devbase/packages.yaml | wc -l
 grep "aqua:" devbase-core/dot/.config/devbase/packages.yaml | wc -l
 # Expected: 35+
 
-# 7. Temp cleanup issue
-ls -la /tmp/devbase.*
-# Expected: exists (needs fix)
+# 7. Temp cleanup check
+ls -la "${TMPDIR:-${XDG_RUNTIME_DIR:-/tmp}}"/devbase.*
+# Expected: empty after install completes
 ```
 
 ---
