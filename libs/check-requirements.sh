@@ -161,7 +161,7 @@ check_required_tools() {
 # Side-effects: Displays Nerd Font warning and installation instructions
 _check_wsl_nerd_font_prereq() {
   tui_blank_line
-  show_progress warning "WSL: Nerd Font needed (install on Windows side)"
+  add_global_warning "WSL: Nerd Font needed (install on Windows side)"
   show_progress info "If you see strange chars (boxes/?), install a Nerd Font on Windows"
   tui_blank_line
 
@@ -213,7 +213,7 @@ detect_environment() {
     export _DEVBASE_ENV="fedora"
     ;;
   *)
-    show_progress warning "Unsupported distribution: ${distro}. Proceeding with best effort."
+    add_global_warning "Unsupported distribution: ${distro}. Proceeding with best effort."
     export _DEVBASE_ENV="$distro"
     ;;
   esac
@@ -239,18 +239,18 @@ check_ubuntu_version() {
   current_version=$(get_os_version)
 
   if ! command -v dpkg &>/dev/null; then
-    show_progress warning "Cannot verify Ubuntu version (dpkg not found)"
+    add_global_warning "Cannot verify Ubuntu version (dpkg not found)"
     return 0
   fi
 
   if [[ "$current_version" != "unknown" ]]; then
     if dpkg --compare-versions "$current_version" "lt" "$min_version" 2>/dev/null; then
-      show_progress warning "Ubuntu $min_version or later recommended (found: $current_version)"
+      add_global_warning "Ubuntu $min_version or later recommended (found: $current_version)"
     else
       show_progress success "Ubuntu version $current_version"
     fi
   else
-    show_progress warning "Cannot determine Ubuntu version"
+    add_global_warning "Cannot determine Ubuntu version"
   fi
 
   return 0
@@ -268,7 +268,7 @@ check_disk_space() {
   available_gb=$(df -BG "$HOME" | awk 'NR==2 {print $4}' | sed 's/G//')
 
   if [[ "$available_gb" -lt "$required_gb" ]]; then
-    show_progress warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
+    add_global_warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
     if ! ask_yes_no "Disk space may be insufficient, continue anyway?" "N"; then
       exit 1
     fi
@@ -363,7 +363,7 @@ check_mise_github_token() {
     return 0
   fi
 
-  show_progress warning "MISE_GITHUB_TOKEN not set"
+  add_global_warning "MISE_GITHUB_TOKEN not set"
   show_progress info "Without this token, mise downloads MAY be rate limited or stalled"
   show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
 
@@ -491,15 +491,15 @@ check_secure_boot() {
     return 0
     ;;
   setup)
-    show_progress warning "Secure Boot is in Setup Mode (key provisioning state)"
-    show_progress warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
-    show_progress warning "Sign modules or disable Secure Boot before exiting Setup Mode"
+    add_global_warning "Secure Boot is in Setup Mode (key provisioning state)"
+    add_global_warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
+    add_global_warning "Sign modules or disable Secure Boot before exiting Setup Mode"
     return 0
     ;;
   audit)
-    show_progress warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
-    show_progress warning "Unsigned kernel modules currently allowed but violations are logged"
-    show_progress warning "Sign modules or disable Secure Boot before transitioning to User Mode"
+    add_global_warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
+    add_global_warning "Unsigned kernel modules currently allowed but violations are logged"
+    add_global_warning "Sign modules or disable Secure Boot before transitioning to User Mode"
     return 0
     ;;
   disabled)
@@ -523,12 +523,12 @@ check_fedora_version() {
 
   if [[ "$current_version" != "unknown" ]]; then
     if [[ "$current_version" -lt "$min_version" ]] 2>/dev/null; then
-      show_progress warning "Fedora $min_version or later recommended (found: $current_version)"
+      add_global_warning "Fedora $min_version or later recommended (found: $current_version)"
     else
       show_progress success "Fedora version $current_version"
     fi
   else
-    show_progress warning "Cannot determine Fedora version"
+    add_global_warning "Cannot determine Fedora version"
   fi
 
   return 0

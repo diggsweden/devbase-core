@@ -38,8 +38,8 @@ verify_checksum_from_url() {
   local checksum_file="${target}.sha256"
 
   if ! curl -fsSL --connect-timeout "$timeout" "$checksum_url" -o "$checksum_file"; then
-    show_progress warning "Could not fetch checksum file from: $checksum_url"
-    show_progress warning "Skipping checksum verification (not recommended)"
+    add_global_warning "Could not fetch checksum file from: $checksum_url"
+    add_global_warning "Skipping checksum verification (not recommended)"
     return 2 # Distinct code: verification skipped (not verified, not failed)
   fi
 
@@ -58,7 +58,7 @@ verify_checksum_from_url() {
     show_progress error "Checksum mismatch for $(basename "$target")"
     show_progress info "Expected: $expected_sum"
     show_progress info "Got: $actual_sum"
-    show_progress warning "File kept at: $target (verify manually or delete to retry)"
+    add_global_warning "File kept at: $target (verify manually or delete to retry)"
     return 1
   fi
 }
@@ -76,7 +76,7 @@ get_checksum_from_manifest() {
   checksum_file=$(mktemp)
 
   if ! curl -fsSL --connect-timeout "$timeout" --max-time "$timeout" "$manifest_url" -o "$checksum_file"; then
-    show_progress warning "Could not fetch checksum manifest: $manifest_url"
+    add_global_warning "Could not fetch checksum manifest: $manifest_url"
     rm -f "$checksum_file"
     return 1
   fi
@@ -86,7 +86,7 @@ get_checksum_from_manifest() {
   rm -f "$checksum_file"
 
   if [[ -z "$checksum" ]]; then
-    show_progress warning "Checksum not found for ${filename}"
+    add_global_warning "Checksum not found for ${filename}"
     return 1
   fi
 
@@ -266,7 +266,7 @@ download_file() {
   false | off | "") strict_mode="off" ;;
   warn | fail) ;;
   *)
-    show_progress warning "Unknown DEVBASE_STRICT_CHECKSUMS=$strict_mode (using warn)"
+    add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$strict_mode (using warn)"
     strict_mode="warn"
     ;;
   esac
@@ -278,7 +278,7 @@ download_file() {
       return 1
       ;;
     warn)
-      show_progress warning "No checksum available for download: $url"
+      add_global_warning "No checksum available for download: $url"
       ;;
     esac
   fi
@@ -300,7 +300,7 @@ download_file() {
   local attempt=1
   while [[ "$attempt" -le "$max_retries" ]]; do
     if ! _download_file_attempt "$url" "$target" "$timeout" "$skip_download"; then
-      show_progress warning "Attempt ${attempt}/${max_retries} failed"
+      add_global_warning "Attempt ${attempt}/${max_retries} failed"
       ((attempt++))
       [[ "$attempt" -le "$max_retries" ]] && sleep "$retry_delay"
       continue
@@ -384,7 +384,7 @@ check_registry_connectivity() {
   if [[ $curl_exit -eq 0 ]]; then
     show_progress success "Registry accessible: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
   else
-    show_progress warning "Registry unreachable: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT} (exit code: $curl_exit)"
+    add_global_warning "Registry unreachable: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT} (exit code: $curl_exit)"
   fi
   return 0
 }

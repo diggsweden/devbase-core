@@ -18,7 +18,7 @@ init_install_context() {
 }
 
 get_custom_hooks_dir() {
-  context_get INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
+  context_get_default INSTALL_CONTEXT custom_hooks_dir "${_DEVBASE_CUSTOM_HOOKS:-}"
 }
 
 add_install_warning() {

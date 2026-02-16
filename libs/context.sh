@@ -30,6 +30,18 @@ context_set_default() {
   fi
 }
 
+context_get_default() {
+  local name="$1"
+  local key="$2"
+  local fallback="$3"
+  # shellcheck disable=SC2178 # Nameref to associative array
+  local -n ctx="$name"
+  if [[ -z "${ctx[$key]:-}" ]]; then
+    ctx["$key"]="$fallback"
+  fi
+  printf "%s" "${ctx[$key]}"
+}
+
 context_get() {
   local name="$1"
   local key="$2"
