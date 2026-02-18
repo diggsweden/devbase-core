@@ -102,7 +102,13 @@ NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 DEVBASE_DRY_RUN="${DEVBASE_DRY_RUN:-false}"
 
 # Strict checksum mode: off, warn, or fail
-DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-warn}"
+DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-fail}"
+
+# Allowlist of URL patterns allowed without checksums
+DEVBASE_STRICT_CHECKSUMS_ALLOWLIST="${DEVBASE_STRICT_CHECKSUMS_ALLOWLIST:-}"
+
+# Optional checksum for mise installer script
+DEVBASE_MISE_INSTALLER_SHA256="${DEVBASE_MISE_INSTALLER_SHA256:-}"
 
 # Internal flag: show version and exit
 SHOW_VERSION="${SHOW_VERSION:-false}"
