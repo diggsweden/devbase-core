@@ -535,7 +535,8 @@ run_mise_from_home_dir() {
 
 # Brief: Download file with optional caching support
 # Params: $1 - url, $2 - target_file, $3 - cache_filename, $4 - package_name (for messages)
-# Uses: DEVBASE_DEB_CACHE (optional global), validate_optional_dir, retry_command, download_file (functions)
+#         $5 - checksum_url (optional), $6 - expected_checksum (optional), $7 - timeout (default 30)
+# Uses: DEVBASE_DEB_CACHE (optional global), validate_optional_dir, download_file (functions)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Downloads file, may cache it if DEVBASE_DEB_CACHE is set
 download_with_cache() {
@@ -554,21 +555,11 @@ download_with_cache() {
 	local has_checksum=1
 	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
-	local strict_mode="${DEVBASE_STRICT_CHECKSUMS:-fail}"
-	case "$strict_mode" in
-	true) strict_mode="warn" ;;
-	false | off | "") strict_mode="off" ;;
-	warn | fail) ;;
-	*)
-		add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$strict_mode (using warn)"
-		strict_mode="warn"
-		;;
-	esac
+	local strict_mode
+	strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
 
 	local allowlisted=false
-	if _checksum_allowlisted "$url"; then
-		allowlisted=true
-	fi
+	_checksum_allowlisted "$url" && allowlisted=true
 
 	if [[ "$has_checksum" -ne 0 ]]; then
 		if [[ "$allowlisted" == "true" ]]; then
@@ -623,7 +614,7 @@ download_with_cache() {
 			fi
 		fi
 
-		if retry_command download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"; then
+		if download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"; then
 			mkdir -p "${DEVBASE_DEB_CACHE}"
 			cp "$target" "$cached_file" 2>/dev/null || true
 			return 0
@@ -631,7 +622,7 @@ download_with_cache() {
 		return 1
 	fi
 
-	retry_command download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"
+	download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"
 }
 
 # Brief: Safely remove temporary directory with path validation
