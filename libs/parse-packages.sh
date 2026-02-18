@@ -418,20 +418,20 @@ get_tool_version() {
 }
 
 # Brief: Get core language runtimes from selected packs
-# Output: Space-separated list of runtime names
+# Output: One runtime name per line
 get_core_runtimes() {
-  local runtimes=""
+  local -a runtimes=()
   for pack in $SELECTED_PACKS; do
     case "$pack" in
-    java) runtimes+=" java maven gradle" ;;
-    node) runtimes+=" node" ;;
-    python) runtimes+=" python" ;;
-    go) runtimes+=" go" ;;
-    ruby) runtimes+=" ruby" ;;
-    rust) runtimes+=" rust" ;;
+    java) runtimes+=(java maven gradle) ;;
+    node) runtimes+=(node) ;;
+    python) runtimes+=(python) ;;
+    go) runtimes+=(go) ;;
+    ruby) runtimes+=(ruby) ;;
+    rust) runtimes+=(rust) ;;
     esac
   done
-  echo "${runtimes# }"
+  printf '%s\n' "${runtimes[@]}"
 }
 
 # Brief: Generate mise config.toml from packages.yaml

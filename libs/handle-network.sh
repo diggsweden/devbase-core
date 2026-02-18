@@ -137,13 +137,13 @@ verify_checksum_value() {
 }
 
 # Brief: Check if file exists for checksum-only verification
-# Params: $1-target $2-has_checksum (0=yes, 1=no)
+# Params: $1-target $2-has_checksum (true/false)
 # Returns: 0 if should skip download, 1 if should download
 _download_file_should_skip() {
 	local target="$1"
 	local has_checksum="$2"
 
-	if [[ -f "$target" ]] && [[ "$has_checksum" -eq 0 ]]; then
+	if [[ -f "$target" ]] && [[ "$has_checksum" == true ]]; then
 		show_progress info "File exists, will verify checksum only (use rm to force re-download)"
 		return 0
 	fi
@@ -169,14 +169,14 @@ _download_file_get_cache_name() {
 }
 
 # Brief: Try to use cached file
-# Params: $1-cached_file $2-target $3-has_checksum
+# Params: $1-cached_file $2-target $3-has_checksum (true/false)
 # Returns: 0 if cache used, 1 if should proceed with download
 _download_file_try_cache() {
 	local cached_file="$1"
 	local target="$2"
 	local has_checksum="$3"
 
-	if [[ -f "$cached_file" ]] && [[ "$has_checksum" -eq 1 ]]; then
+	if [[ -f "$cached_file" ]] && [[ "$has_checksum" == false ]]; then
 		show_progress info "Using cached: $(basename "$cached_file")"
 		cp "$cached_file" "$target"
 		return 0
@@ -336,8 +336,8 @@ download_file() {
 	require_env XDG_CACHE_HOME || return 1
 
 	# Check if we can skip download and just verify checksum
-	local has_checksum=1
-	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
+	local has_checksum=false
+	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=true
 
 	local strict_mode
 	strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
@@ -345,7 +345,7 @@ download_file() {
 	local allowlisted=false
 	_checksum_allowlisted "$url" && allowlisted=true
 
-	if [[ "$has_checksum" -ne 0 ]]; then
+	if [[ "$has_checksum" == false ]]; then
 		if [[ "$allowlisted" == "true" ]]; then
 			add_global_warning "Checksum allowlisted for download: $url"
 		else

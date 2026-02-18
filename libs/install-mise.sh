@@ -401,18 +401,19 @@ install_mise_tools() {
 	# This MUST happen before any `mise list` commands, because mise tries to resolve
 	# all tools in config.toml (including npm:tree-sitter-cli) which requires node
 	# We filter the npm:tree-sitter-cli warning since node isn't installed yet
-	local core_runtimes
-	core_runtimes=$(get_core_runtimes)
+	local -a core_runtimes=()
+	while IFS= read -r runtime; do
+		[[ -n "$runtime" ]] && core_runtimes+=("$runtime")
+	done < <(get_core_runtimes)
 
 	local mise_server_error=false
-	if [[ -n "$core_runtimes" ]]; then
+	if [[ ${#core_runtimes[@]} -gt 0 ]]; then
 		local core_install_log="${_DEVBASE_TEMP}/mise-core-install.log"
 
 		if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-			# Whiptail mode - use spinner with gauge
-			# shellcheck disable=SC2086 # Word splitting intended for runtime list
+			# Whiptail mode - use spinner with gauge; pass array via declare -p
 			if ! run_with_spinner "Installing core language runtimes" \
-				bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee '$core_install_log'"; then
+				bash -c "$(declare -p core_runtimes); $(declare -f run_mise_from_home_dir); run_mise_from_home_dir install \"\${core_runtimes[@]}\" --yes 2>&1 | tee '$core_install_log'"; then
 				if _check_mise_server_error "$core_install_log"; then
 					mise_server_error=true
 				fi
@@ -421,8 +422,7 @@ install_mise_tools() {
 		else
 			# Gum/other mode - show real-time output
 			show_progress info "Installing core language runtimes..."
-			# shellcheck disable=SC2086 # Word splitting intended for runtime list
-			if ! run_mise_from_home_dir install $core_runtimes --yes 2>&1 | tee "$core_install_log"; then
+			if ! run_mise_from_home_dir install "${core_runtimes[@]}" --yes 2>&1 | tee "$core_install_log"; then
 				if _check_mise_server_error "$core_install_log"; then
 					mise_server_error=true
 				fi

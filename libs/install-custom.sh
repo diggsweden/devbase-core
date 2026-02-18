@@ -603,7 +603,7 @@ install_fisher() {
 
 # Brief: Determine font details (name, zip, directory, display name, timeout) from font choice
 # Params: $1 - font choice name
-# Returns: Echoes "font_name font_zip_name font_dir_name font_display_name timeout" to stdout
+# Returns: Echoes "font_name|font_zip_name|font_dir_name|font_display_name|timeout|font_family_name" to stdout
 _determine_font_details() {
 	local font_choice="$1"
 	local font_name=""
@@ -611,6 +611,7 @@ _determine_font_details() {
 	local font_dir_name=""
 	local font_display_name=""
 	local timeout="300"
+	local font_family_name=""
 
 	case "$font_choice" in
 	jetbrains-mono)
@@ -618,12 +619,14 @@ _determine_font_details() {
 		font_zip_name="JetBrainsMono.zip"
 		font_dir_name="JetBrainsMonoNerdFont"
 		font_display_name="JetBrains Mono Nerd Font"
+		font_family_name="JetBrainsMono Nerd Font Mono"
 		;;
 	firacode)
 		font_name="FiraCode"
 		font_zip_name="FiraCode.zip"
 		font_dir_name="FiraCodeNerdFont"
 		font_display_name="Fira Code Nerd Font"
+		font_family_name="FiraCode Nerd Font Mono"
 		timeout="180"
 		;;
 	cascadia-code)
@@ -631,12 +634,14 @@ _determine_font_details() {
 		font_zip_name="CascadiaCode.zip"
 		font_dir_name="CascadiaCodeNerdFont"
 		font_display_name="Cascadia Code Nerd Font"
+		font_family_name="CaskaydiaCove Nerd Font Mono"
 		;;
 	monaspace)
 		font_name="Monaspace"
 		font_zip_name="Monaspace.zip"
 		font_dir_name="MonaspaceNerdFont"
 		font_display_name="Monaspace Nerd Font"
+		font_family_name="MonaspiceNe Nerd Font Mono"
 		;;
 	*)
 		add_install_warning "Unknown font choice: $font_choice, defaulting to JetBrains Mono"
@@ -644,10 +649,11 @@ _determine_font_details() {
 		font_zip_name="JetBrainsMono.zip"
 		font_dir_name="JetBrainsMonoNerdFont"
 		font_display_name="JetBrains Mono Nerd Font"
+		font_family_name="JetBrainsMono Nerd Font Mono"
 		;;
 	esac
 
-	echo "$font_name|$font_zip_name|$font_dir_name|$font_display_name|$timeout"
+	echo "$font_name|$font_zip_name|$font_dir_name|$font_display_name|$timeout|$font_family_name"
 }
 
 # Brief: Check if font is already installed
@@ -970,22 +976,11 @@ apply_gnome_terminal_theme() {
 configure_terminal_fonts() {
 	validate_var_set "HOME" || return 1
 
-	# Reuse _determine_font_details for shared fields (font_dir_name, font_display_name)
 	local font_choice="${DEVBASE_FONT:-$(get_default_font)}"
 	local font_details
 	font_details=$(_determine_font_details "$font_choice")
-	local font_dir_name font_display_name
-	IFS='|' read -r _ _ font_dir_name font_display_name _ <<<"$font_details"
-
-	# font_family_name is only needed here (terminal monospace family name)
-	local font_family_name=""
-	case "$font_choice" in
-	jetbrains-mono) font_family_name="JetBrainsMono Nerd Font Mono" ;;
-	firacode) font_family_name="FiraCode Nerd Font Mono" ;;
-	cascadia-code) font_family_name="CaskaydiaCove Nerd Font Mono" ;;
-	monaspace) font_family_name="MonaspiceNe Nerd Font Mono" ;;
-	*) font_family_name="JetBrainsMono Nerd Font Mono" ;;
-	esac
+	local font_dir_name font_display_name font_family_name
+	IFS='|' read -r _ _ font_dir_name font_display_name _ font_family_name <<<"$font_details"
 
 	# Check if fonts are installed
 	local fonts_dir="${HOME}/.local/share/fonts"
