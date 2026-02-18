@@ -16,10 +16,11 @@ fi
 # Side-effects: Creates config files, sets permissions
 setup_ssh_config_includes() {
 	validate_var_set "HOME" || return 1
+	validate_var_set "XDG_CONFIG_HOME" || return 1
 
-	mkdir -p ~/.ssh ~/.config/ssh
-	chmod 700 ~/.ssh
-	chmod 700 ~/.config/ssh
+	local ssh_config_dir="${XDG_CONFIG_HOME}/ssh"
+	mkdir -p ~/.ssh "$ssh_config_dir"
+	chmod 700 ~/.ssh "$ssh_config_dir"
 
 	if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
 		require_env _DEVBASE_CUSTOM_SSH || return 1
@@ -34,8 +35,8 @@ setup_ssh_config_includes() {
 				continue
 				;;
 			*.config)
-				cp "$file" ~/.config/ssh/"$filename"
-				chmod 600 ~/.config/ssh/"$filename"
+				cp "$file" "${ssh_config_dir}/${filename}"
+				chmod 600 "${ssh_config_dir}/${filename}"
 				;;
 			*.append)
 				local target_name="${filename%.append}"
@@ -46,7 +47,7 @@ setup_ssh_config_includes() {
 				# for content with '|| [[ -n "$line" ]]' to handle files without trailing newline
 				while IFS= read -r line || [[ -n "$line" ]]; do
 					if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
-						echo "$line" >>"$target_file"
+						printf '%s\n' "$line" >>"$target_file"
 					fi
 				done <"$file"
 				;;
@@ -58,8 +59,8 @@ setup_ssh_config_includes() {
 		done
 	fi
 
-	if [[ ! -f ~/.config/ssh/user.config ]]; then
-		cat >~/.config/ssh/user.config <<'EOF'
+	if [[ ! -f "${ssh_config_dir}/user.config" ]]; then
+		cat >"${ssh_config_dir}/user.config" <<'EOF'
 # Personal SSH Configuration
 # This file is NEVER modified by DevBase - safe to edit
 #
@@ -71,7 +72,7 @@ setup_ssh_config_includes() {
 #   User myuser
 #   IdentityFile ~/.ssh/id_ed25519_personal
 EOF
-		chmod 600 ~/.config/ssh/user.config
+		chmod 600 "${ssh_config_dir}/user.config"
 	fi
 }
 
@@ -213,8 +214,9 @@ configure_git_proxy() {
 	if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
 		IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"
 		for domain in "${NO_PROXY_ARRAY[@]}"; do
-			# Trim whitespace
-			domain=$(echo "$domain" | xargs)
+			# Trim leading and trailing whitespace
+			domain="${domain#"${domain%%[![:space:]]*}"}"
+			domain="${domain%"${domain##*[![:space:]]}"}"
 			[[ -z "$domain" ]] && continue
 
 			# Convert .domain.com to *.domain.com for git config

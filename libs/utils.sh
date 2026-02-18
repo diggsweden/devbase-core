@@ -96,10 +96,11 @@ die() {
 
 # Brief: Refresh sudo credentials to prevent timeout during long operations
 # Params: None
-# Returns: 0 on success, 1 on failure
-# Side-effects: Extends sudo timeout
+# Returns: 0 always (failure to refresh is non-fatal; install continues without sudo cache)
+# Side-effects: Extends sudo timestamp if already authenticated; never prompts
 sudo_refresh() {
-	sudo -v
+	command -v sudo &>/dev/null || return 0
+	sudo -vn 2>/dev/null || true
 }
 
 # Brief: Determine writable temp root directory
@@ -348,19 +349,10 @@ _calculate_safe_relative_path() {
 	return 0
 }
 
-# Brief: Determine backup path for a file (pure logic)
-# Params: $1 - rel_path, $2 - backup_base_dir
-# Returns: Echoes full backup path to stdout
-# Side-effects: None (pure function)
-_get_backup_path() {
-	local rel_path="$1"
-	local backup_base="$2"
-	echo "$backup_base/$rel_path"
-}
 
 # Brief: Merge source dotfiles into target with backup of existing files
 # Params: $1 - src_dir, $2 - target_dir (default: $HOME)
-# Uses: DEVBASE_BACKUP_DIR, _FIND_DEPTH, _calculate_safe_relative_path, _get_backup_path (globals/functions)
+# Uses: DEVBASE_BACKUP_DIR, _FIND_DEPTH, _calculate_safe_relative_path (globals/functions)
 # Returns: 0 on success, 1 on error
 # Side-effects: Creates backups, copies files
 merge_dotfiles_with_backup() {
@@ -382,9 +374,7 @@ merge_dotfiles_with_backup() {
 
 		local target_file="$target_dir/$rel_path"
 		[[ -e "$target_file" ]] && {
-			# Use pure logic function to determine backup path
-			local backup_path
-			backup_path=$(_get_backup_path "$rel_path" "$dotfiles_backup")
+			local backup_path="${dotfiles_backup}/${rel_path}"
 			mkdir -p "$(dirname "$backup_path")"
 			# Symlink protection
 			cp --no-dereference -r "$target_file" "$backup_path"
@@ -552,8 +542,8 @@ download_with_cache() {
 	validate_not_empty "$target" "Target file" || return 1
 	validate_not_empty "$cache_filename" "Cache filename" || return 1
 
-	local has_checksum=1
-	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
+	local has_checksum=false
+	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=true
 
 	local strict_mode
 	strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
@@ -561,7 +551,7 @@ download_with_cache() {
 	local allowlisted=false
 	_checksum_allowlisted "$url" && allowlisted=true
 
-	if [[ "$has_checksum" -ne 0 ]]; then
+	if [[ "$has_checksum" == false ]]; then
 		if [[ "$allowlisted" == "true" ]]; then
 			add_global_warning "Checksum allowlisted for download: $url"
 		else
@@ -582,7 +572,7 @@ download_with_cache() {
 
 		if [[ -f "$cached_file" ]]; then
 			local cached_ok=false
-			if [[ "$has_checksum" -eq 0 ]]; then
+			if [[ "$has_checksum" == true ]]; then
 				local rc=0
 				show_progress info "Verifying cached ${package_name}"
 				if [[ -n "$expected_checksum" ]]; then

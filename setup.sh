@@ -157,7 +157,6 @@ parse_arguments() {
 	for arg in "$@"; do
 		case $arg in
 		--non-interactive)
-			NON_INTERACTIVE=true
 			export NON_INTERACTIVE=true
 			export DEBIAN_FRONTEND=noninteractive
 			;;
@@ -174,7 +173,6 @@ parse_arguments() {
 			esac
 			;;
 		--dry-run)
-			DEVBASE_DRY_RUN=true
 			export DEVBASE_DRY_RUN=true
 			;;
 		--version | -v)
@@ -255,11 +253,6 @@ load_devbase_libraries() {
 	source "${DEVBASE_LIBS}/configure-theme.sh"
 }
 
-init_env() {
-	initialize_devbase_paths
-	load_devbase_libraries
-}
-
 resolve_devbase_version() {
 	local git_tag=""
 	local git_sha="unknown"
@@ -307,7 +300,8 @@ run_installation() {
 
 main() {
 	parse_arguments "$@"
-	init_env
+	initialize_devbase_paths
+	load_devbase_libraries
 	apply_setup_defaults
 
 	if [[ "${SHOW_VERSION}" == "true" ]]; then
