@@ -255,7 +255,7 @@ teardown() {
 @test "check_network_connectivity succeeds when sites are reachable" {
   source "${DEVBASE_ROOT}/libs/utils.sh"
   
-  stub curl '-sk --connect-timeout 3 --max-time 6 https://github.com : exit 0'
+  stub curl '-s --connect-timeout 3 --max-time 6 https://github.com : exit 0'
   
   run --separate-stderr check_network_connectivity 3
   
@@ -270,8 +270,8 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/utils.sh"
   
   stub curl \
-    '-sk --connect-timeout 3 --max-time 6 https://github.com : exit 1' \
-    '-sk --connect-timeout 3 --max-time 6 https://google.com : exit 0'
+    '-s --connect-timeout 3 --max-time 6 https://github.com : exit 1' \
+    '-s --connect-timeout 3 --max-time 6 https://google.com : exit 0'
   
   run --separate-stderr check_network_connectivity 3
   

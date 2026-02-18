@@ -96,8 +96,16 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | Show verbose debug output during installation: `DEBUG=1 ./setup.sh`
 
 | `DEVBASE_STRICT_CHECKSUMS`
-| `warn`
+| `fail`
 | Checksum strictness: `off`, `warn`, or `fail`
+
+| `DEVBASE_STRICT_CHECKSUMS_ALLOWLIST`
+| _(unset)_
+| Comma-separated URL patterns allowed without checksums
+
+| `DEVBASE_MISE_INSTALLER_SHA256`
+| _(unset)_
+| SHA256 checksum required to verify the mise installer script
 |===
 
 NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.

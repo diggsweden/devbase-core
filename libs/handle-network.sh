@@ -218,22 +218,66 @@ _download_file_attempt() {
 	return 1
 }
 
+# Brief: Check if a URL is allowlisted for missing checksums
+# Params: $1-url
+# Returns: 0 if allowlisted, 1 otherwise
+_checksum_allowlisted() {
+	local url="$1"
+	local allowlist="${DEVBASE_STRICT_CHECKSUMS_ALLOWLIST:-}"
+	[[ -z "$allowlist" ]] && return 1
+
+	local pattern
+	local -a allowlist_items
+	IFS=',' read -ra allowlist_items <<<"$allowlist"
+	for pattern in "${allowlist_items[@]}"; do
+		pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+		pattern="${pattern%"${pattern##*[![:space:]]}"}"
+		[[ -z "$pattern" ]] && continue
+		if [[ "$url" == $pattern ]]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+# Brief: Enforce checksum policy for remote installer scripts
+# Params: $1-url $2-expected_checksum $3-label
+# Returns: 0 if checksum present, 1 otherwise
+require_remote_script_checksum() {
+	local url="$1"
+	local expected_checksum="$2"
+	local label="${3:-remote installer}"
+
+	if [[ -z "$expected_checksum" ]]; then
+		show_progress error "${label} checksum required for remote script: $url"
+		return 1
+	fi
+
+	return 0
+}
+
 # Brief: Verify downloaded file checksum
-# Params: $1-target $2-checksum_url $3-expected_checksum $4-timeout
+# Params: $1-target $2-checksum_url $3-expected_checksum $4-timeout $5-strict_mode
 # Returns: 0 if verified or no checksum, 1 if verification failed
 _download_file_verify() {
 	local target="$1"
 	local checksum_url="$2"
 	local expected_checksum="$3"
 	local timeout="$4"
+	local strict_mode="${5:-warn}"
 
 	if [[ -n "$expected_checksum" ]]; then
 		verify_checksum_value "$target" "$expected_checksum"
 	elif [[ -n "$checksum_url" ]]; then
 		local rc=0
 		verify_checksum_from_url "$target" "$checksum_url" "$timeout" || rc=$?
-		# rc=1: checksum mismatch (real failure), rc=2: couldn't fetch checksum (accept download)
+		# rc=1: checksum mismatch (real failure), rc=2: couldn't fetch checksum
 		if [[ $rc -eq 1 ]]; then
+			return 1
+		fi
+		if [[ $rc -eq 2 ]] && [[ "$strict_mode" == "fail" ]]; then
+			show_progress error "Checksum required but unavailable for $(basename "$target")"
 			return 1
 		fi
 		return 0
@@ -279,7 +323,7 @@ download_file() {
 	local has_checksum=1
 	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
-	local strict_mode="${DEVBASE_STRICT_CHECKSUMS:-warn}"
+	local strict_mode="${DEVBASE_STRICT_CHECKSUMS:-fail}"
 	case "$strict_mode" in
 	true) strict_mode="warn" ;;
 	false | off | "") strict_mode="off" ;;
@@ -290,16 +334,25 @@ download_file() {
 		;;
 	esac
 
+	local allowlisted=false
+	if _checksum_allowlisted "$url"; then
+		allowlisted=true
+	fi
+
 	if [[ "$has_checksum" -ne 0 ]]; then
-		case "$strict_mode" in
-		fail)
-			show_progress error "Checksum required for download: $url"
-			return 1
-			;;
-		warn)
-			add_global_warning "No checksum available for download: $url"
-			;;
-		esac
+		if [[ "$allowlisted" == "true" ]]; then
+			add_global_warning "Checksum allowlisted for download: $url"
+		else
+			case "$strict_mode" in
+			fail)
+				show_progress error "Checksum required for download: $url"
+				return 1
+				;;
+			warn)
+				add_global_warning "No checksum available for download: $url"
+				;;
+			esac
+		fi
 	fi
 
 	local skip_download=false
@@ -326,7 +379,7 @@ download_file() {
 		fi
 
 		# Verify checksum
-		_download_file_verify "$target" "$checksum_url" "$expected_checksum" "$timeout" || return 1
+		_download_file_verify "$target" "$checksum_url" "$expected_checksum" "$timeout" "$strict_mode" || return 1
 
 		# Cache and return success
 		_download_file_cache "$target" "$cached_file" "$version"
@@ -347,15 +400,29 @@ check_network_connectivity() {
 	local timeout="${1:-3}"
 	local test_sites=("${DEVBASE_CONNECTIVITY_TEST_SITES[@]}")
 	local site_reached=false
+	local insecure_tls=false
 
 	for site in "${test_sites[@]}"; do
-		if devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
+		if devbase_curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
 			site_reached=true
 			break
 		fi
 	done
 
+	if [[ "$site_reached" != true ]]; then
+		for site in "${test_sites[@]}"; do
+			if devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
+				site_reached=true
+				insecure_tls=true
+				break
+			fi
+		done
+	fi
+
 	if [[ "$site_reached" == true ]]; then
+		if [[ "$insecure_tls" == true ]]; then
+			add_global_warning "Network reachable but TLS verification failed; check certificates or proxy"
+		fi
 		show_progress success "Network connectivity verified"
 		return 0
 	else
