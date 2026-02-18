@@ -109,6 +109,7 @@ _setup_custom_parser() {
 
 	return 0
 }
+_setup_custom_parser || true
 
 # Brief: Fetch VS Code package SHA256 checksum from official API
 # Params: $1 - version (e.g. "1.85.1"), $2 - platform (default: "linux-deb-x64")
@@ -173,8 +174,6 @@ install_lazyvim() {
 	validate_var_set "DEVBASE_THEME" || return 1
 	validate_var_set "DEVBASE_DOT" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ "$DEVBASE_INSTALL_LAZYVIM" != "true" ]]; then
 		show_progress info "LazyVim installation skipped by user preference"
@@ -263,8 +262,6 @@ install_jmc() {
 	validate_var_set "XDG_DATA_HOME" || return 1
 	validate_var_set "XDG_BIN_HOME" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -n "${TOOL_VERSIONS[jdk_mission_control]:-}" ]] && [[ "$DEVBASE_INSTALL_JMC" == "true" ]]; then
 		if command_exists jmc; then
@@ -338,8 +335,6 @@ install_oc_kubectl() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 	validate_var_set "XDG_BIN_HOME" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -z "${TOOL_VERSIONS[oc]:-}" ]]; then
 		return 0
@@ -363,7 +358,7 @@ install_oc_kubectl() {
 	fi
 
 	# OpenShift mirror can be slow, use 60s timeout (default is 30s)
-	if retry_command download_file "$oc_url" "$oc_tar" "" "$expected_checksum" "" "60"; then
+	if download_file "$oc_url" "$oc_tar" "" "$expected_checksum" "" "60"; then
 		tui_run_cmd "Extracting OpenShift CLI" tar -C "${_DEVBASE_TEMP}" -xzf "$oc_tar"
 
 		if [[ -f "${_DEVBASE_TEMP}/oc" ]]; then
@@ -397,8 +392,6 @@ install_oc_kubectl() {
 install_dbeaver() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -z "${TOOL_VERSIONS[dbeaver]:-}" ]]; then
 		return 0
@@ -444,8 +437,6 @@ install_dbeaver() {
 install_keystore_explorer() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -z "${TOOL_VERSIONS[keystore_explorer]:-}" ]]; then
 		return 0
@@ -511,8 +502,6 @@ install_keystore_explorer() {
 install_k3s() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -z "${TOOL_VERSIONS[k3s]:-}" ]]; then
 		show_progress info "k3s not configured - skipping"
@@ -536,7 +525,7 @@ install_k3s() {
 
 	show_progress info "Verifying k3s installer checksum"
 
-	if retry_command download_file "$install_url" "$install_script" "" "$expected_checksum"; then
+	if download_file "$install_url" "$install_script" "" "$expected_checksum"; then
 		chmod +x "$install_script"
 		if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
 			show_progress success "k3s installed and started ($k3s_version)"
@@ -558,8 +547,6 @@ install_k3s() {
 install_fisher() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ -z "${TOOL_VERSIONS[fisher]:-}" ]]; then
 		show_progress info "Fisher not configured - skipping"
@@ -755,11 +742,7 @@ _extract_font_from_cache() {
 	mkdir -p "$font_dir"
 	unzip -q -o "$font_zip" "*.ttf" "*.otf" -d "$font_dir" 2>/dev/null || true
 
-	if [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -gt 0 ]]; then
-		return 0
-	fi
-
-	return 1
+	_check_font_installed "$font_dir"
 }
 
 # Brief: Download all Nerd Fonts to cache for offline use
@@ -805,8 +788,6 @@ install_nerd_fonts() {
 	validate_var_set "HOME" || return 1
 	validate_var_set "DEVBASE_CACHE_DIR" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if is_wsl; then
 		show_progress info "Skipping Nerd Font installation on WSL (manage fonts on Windows)"
@@ -1010,7 +991,7 @@ configure_terminal_fonts() {
 	local fonts_dir="${HOME}/.local/share/fonts"
 	local font_dir="${fonts_dir}/${font_dir_name}"
 
-	if [[ ! -d "$font_dir" ]] || [[ $(find "$font_dir" \( -name "*.ttf" -o -name "*.otf" \) 2>/dev/null | wc -l) -eq 0 ]]; then
+	if ! _check_font_installed "$font_dir"; then
 		add_install_warning "$font_display_name not installed - skipping terminal configuration"
 		return 1
 	fi
@@ -1062,8 +1043,6 @@ configure_terminal_fonts() {
 install_vscode() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	# Skip VS Code installation on WSL - it should be installed on Windows
 	if is_wsl; then
@@ -1103,35 +1082,9 @@ install_vscode() {
 		vscode_checksum=""
 	fi
 
-	# Check cache first if DEVBASE_DEB_CACHE is set
-	local download_needed=true
-	if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-		local cached_pkg="${DEVBASE_DEB_CACHE}/${cache_name}"
-		if [[ -f "$cached_pkg" ]]; then
-			show_progress info "Using cached VS Code package"
-			cp "$cached_pkg" "$vscode_pkg"
-			download_needed=false
-		fi
-	fi
-
-	if [[ "$download_needed" == "true" ]]; then
-		if retry_command download_file "$vscode_url" "$vscode_pkg" "" "$vscode_checksum"; then
-			# Save to cache if DEVBASE_DEB_CACHE is set
-			if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-				mkdir -p "${DEVBASE_DEB_CACHE}"
-				cp "$vscode_pkg" "${DEVBASE_DEB_CACHE}/${cache_name}"
-			fi
-		else
-			# Check if failure was due to checksum mismatch (security issue)
-			if [[ -n "$vscode_checksum" ]] && [[ ! -f "$vscode_pkg" ]]; then
-				show_progress error "VS Code download/verification FAILED - SECURITY RISK"
-				add_install_warning "Possible causes: MITM attack, corrupted mirror, or network issue"
-				add_install_warning "Skipping VS Code installation for safety"
-			else
-				add_install_warning "VS Code download failed - skipping"
-			fi
-			return 1
-		fi
+	if ! download_with_cache "$vscode_url" "$vscode_pkg" "$cache_name" "VS Code" "" "$vscode_checksum"; then
+		add_install_warning "VS Code download failed - skipping"
+		return 1
 	fi
 
 	if _install_pkg_file "$vscode_pkg"; then
@@ -1152,29 +1105,12 @@ _download_intellij_archive() {
 	local idea_checksum_url="${idea_url}.sha256"
 	local idea_tar="${temp_dir}/intellij-idea.tar.gz"
 
-	local download_needed=true
-	if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-		local cached_tar="${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
-		if [[ -f "$cached_tar" ]]; then
-			show_progress info "Using cached IntelliJ IDEA package" >&2
-			cp "$cached_tar" "$idea_tar"
-			download_needed=false
-		fi
-	fi
-
-	if [[ "$download_needed" == "true" ]]; then
-		show_progress info "Downloading IntelliJ IDEA ${version} (~900MB, this may take a few minutes)..." >&2
-		# Use 600 second (10 minute) timeout for large file download
-		if retry_command download_file "$idea_url" "$idea_tar" "$idea_checksum_url" "" "" 600 >&2; then
-			if validate_optional_dir "DEVBASE_DEB_CACHE" "Offline package cache"; then
-				mkdir -p "${DEVBASE_DEB_CACHE}"
-				cp "$idea_tar" "${DEVBASE_DEB_CACHE}/intellij-${version}.tar.gz"
-			fi
-			show_progress success "IntelliJ IDEA download complete" >&2
-		else
-			add_install_warning "IntelliJ IDEA download failed - skipping"
-			return 1
-		fi
+	show_progress info "Downloading IntelliJ IDEA ${version} (~900MB, this may take a few minutes)..."
+	# Use 600 second (10 minute) timeout for large file download
+	if ! download_with_cache "$idea_url" "$idea_tar" "intellij-${version}.tar.gz" "IntelliJ IDEA" \
+		"$idea_checksum_url" "" 600; then
+		add_install_warning "IntelliJ IDEA download failed - skipping"
+		return 1
 	fi
 
 	echo "$idea_tar"
@@ -1306,8 +1242,6 @@ install_intellij_idea() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 	validate_var_set "HOME" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if [[ "$DEVBASE_INSTALL_INTELLIJ" != "true" ]]; then
 		show_progress info "IntelliJ IDEA installation skipped by user preference"
@@ -1403,8 +1337,6 @@ get_gum_checksum() {
 install_gum() {
 	validate_var_set "_DEVBASE_TEMP" || return 1
 
-	# Ensure parser is set up and TOOL_VERSIONS populated
-	_setup_custom_parser
 
 	if command_exists gum; then
 		local current_version
@@ -1448,42 +1380,9 @@ install_gum() {
 		gum_checksum=""
 	fi
 
-	# Check cache first
-	local download_needed=true
-	if [[ -n "${DEVBASE_DEB_CACHE:-}" ]] && [[ -d "${DEVBASE_DEB_CACHE}" ]]; then
-		local cached_pkg="${DEVBASE_DEB_CACHE}/${package_name}"
-		if [[ -f "$cached_pkg" ]]; then
-			show_progress info "Using cached gum package"
-			cp "$cached_pkg" "$gum_pkg"
-			download_needed=false
-		fi
-	fi
-
-	if [[ "$download_needed" == "true" ]]; then
-		if retry_command download_file "$gum_url" "$gum_pkg" "" "$gum_checksum"; then
-			# Save to cache
-			if [[ -n "${DEVBASE_DEB_CACHE:-}" ]]; then
-				mkdir -p "${DEVBASE_DEB_CACHE}"
-				cp "$gum_pkg" "${DEVBASE_DEB_CACHE}/${package_name}"
-			fi
-		else
-			if [[ -n "$gum_checksum" ]] && [[ ! -f "$gum_pkg" ]]; then
-				show_progress error "gum download/verification FAILED - SECURITY RISK"
-				add_install_warning "Possible causes: MITM attack, corrupted download, or network issue"
-			else
-				add_install_warning "gum download failed - skipping"
-			fi
-			return 1
-		fi
-	fi
-
-	# Verify checksum if we have it and file exists
-	if [[ -f "$gum_pkg" ]] && [[ -n "$gum_checksum" ]]; then
-		if ! verify_checksum_value "$gum_pkg" "$gum_checksum"; then
-			show_progress error "gum checksum verification FAILED"
-			rm -f "$gum_pkg"
-			return 1
-		fi
+	if ! download_with_cache "$gum_url" "$gum_pkg" "$package_name" "gum" "" "$gum_checksum"; then
+		add_install_warning "gum download failed - skipping"
+		return 1
 	fi
 
 	# Install the package

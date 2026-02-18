@@ -206,8 +206,8 @@ install_mise() {
 		# Install mise to XDG_BIN_HOME
 		local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
 
-		if ! retry_command download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
-			die "Failed to download Mise installer after retries"
+		if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
+			die "Failed to download Mise installer"
 		fi
 
 		if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
@@ -362,8 +362,8 @@ update_mise_if_needed() {
 	show_progress info "Updating mise to v${desired_normalized}..."
 
 	local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
-	if ! retry_command download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
-		die "Failed to download Mise installer after retries"
+	if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
+		die "Failed to download Mise installer"
 	fi
 
 	if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then

@@ -299,6 +299,22 @@ _download_file_cache() {
 	return 0
 }
 
+# Brief: Normalize DEVBASE_STRICT_CHECKSUMS value to canonical form
+# Params: $1 - raw value (from env or default)
+# Returns: Echoes one of: off, warn, fail
+_normalize_strict_mode() {
+	local mode="${1:-fail}"
+	case "$mode" in
+	true) printf '%s' "warn" ;;
+	false | off | "") printf '%s' "off" ;;
+	warn | fail) printf '%s' "$mode" ;;
+	*)
+		add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$mode (using warn)"
+		printf '%s' "warn"
+		;;
+	esac
+}
+
 # Brief: Download file with caching, retry logic, and optional checksum verification
 # Params: $1-url $2-target $3-checksum_url(opt) $4-expected_checksum(opt) $5-version(opt) $6-timeout(opt) $7-max_retries(opt) $8-retry_delay(opt)
 # Uses: XDG_CACHE_HOME (global)
@@ -323,21 +339,11 @@ download_file() {
 	local has_checksum=1
 	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=0
 
-	local strict_mode="${DEVBASE_STRICT_CHECKSUMS:-fail}"
-	case "$strict_mode" in
-	true) strict_mode="warn" ;;
-	false | off | "") strict_mode="off" ;;
-	warn | fail) ;;
-	*)
-		add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$strict_mode (using warn)"
-		strict_mode="warn"
-		;;
-	esac
+	local strict_mode
+	strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
 
 	local allowlisted=false
-	if _checksum_allowlisted "$url"; then
-		allowlisted=true
-	fi
+	_checksum_allowlisted "$url" && allowlisted=true
 
 	if [[ "$has_checksum" -ne 0 ]]; then
 		if [[ "$allowlisted" == "true" ]]; then
