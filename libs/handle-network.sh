@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
-	echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-	return 1
+  echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  return 1
 fi
 
 declare -ag DEVBASE_CURL_PROXY_ARGS=()
@@ -19,7 +19,7 @@ declare -ag DEVBASE_WGET_PROXY_ARGS=()
 # Note: Some corporate proxies have problems with persistent connections
 #       These options avoid connection reuse when proxies are configured.
 devbase_curl() {
-	curl "${DEVBASE_CURL_PROXY_ARGS[@]}" "$@"
+  curl "${DEVBASE_CURL_PROXY_ARGS[@]}" "$@"
 }
 
 # Brief: Wrapper for wget with proxy-safe options
@@ -27,7 +27,7 @@ devbase_curl() {
 # Returns: wget exit code
 # Side-effects: None
 devbase_wget() {
-	wget "${DEVBASE_WGET_PROXY_ARGS[@]}" "$@"
+  wget "${DEVBASE_WGET_PROXY_ARGS[@]}" "$@"
 }
 
 # Brief: Configure curl/wget for proxy environments to avoid connection reuse issues
@@ -37,13 +37,13 @@ devbase_wget() {
 # Side-effects: Sets DEVBASE_CURL_PROXY_ARGS and DEVBASE_WGET_PROXY_ARGS
 # Note: Some corporate proxies have problems with persistent connections
 configure_curl_for_proxy() {
-	DEVBASE_CURL_PROXY_ARGS=()
-	DEVBASE_WGET_PROXY_ARGS=()
+  DEVBASE_CURL_PROXY_ARGS=()
+  DEVBASE_WGET_PROXY_ARGS=()
 
-	if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
-		DEVBASE_CURL_PROXY_ARGS=(--no-keepalive --no-sessionid -H "Connection: close")
-		DEVBASE_WGET_PROXY_ARGS=(--no-http-keep-alive)
-	fi
+  if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${http_proxy:-}${https_proxy:-}" ]]; then
+    DEVBASE_CURL_PROXY_ARGS=(--no-keepalive --no-sessionid -H "Connection: close")
+    DEVBASE_WGET_PROXY_ARGS=(--no-http-keep-alive)
+  fi
 }
 
 # Brief: Verify file checksum from URL
@@ -51,35 +51,35 @@ configure_curl_for_proxy() {
 # Returns: 0 if checksum matches, 1 if mismatch
 # Side-effects: Downloads checksum file, shows detailed error on mismatch
 verify_checksum_from_url() {
-	local target="$1"
-	local checksum_url="$2"
-	local timeout="${3:-30}"
-	local checksum_file="${target}.sha256"
+  local target="$1"
+  local checksum_url="$2"
+  local timeout="${3:-30}"
+  local checksum_file="${target}.sha256"
 
-	if ! devbase_curl -fsSL --connect-timeout "$timeout" "$checksum_url" -o "$checksum_file"; then
-		add_global_warning "Could not fetch checksum file from: $checksum_url"
-		add_global_warning "Skipping checksum verification (not recommended)"
-		return 2 # Distinct code: verification skipped (not verified, not failed)
-	fi
+  if ! devbase_curl -fsSL --connect-timeout "$timeout" "$checksum_url" -o "$checksum_file"; then
+    add_global_warning "Could not fetch checksum file from: $checksum_url"
+    add_global_warning "Skipping checksum verification (not recommended)"
+    return 2 # Distinct code: verification skipped (not verified, not failed)
+  fi
 
-	# Extract just the checksum (handle various formats: "hash" or "hash *filename" or "hash  filename")
-	local expected_sum
-	expected_sum=$(head -n1 "$checksum_file" | awk '{print $1}')
-	local actual_sum
-	actual_sum=$(sha256sum "$target" | awk '{print $1}')
+  # Extract just the checksum (handle various formats: "hash" or "hash *filename" or "hash  filename")
+  local expected_sum
+  expected_sum=$(head -n1 "$checksum_file" | awk '{print $1}')
+  local actual_sum
+  actual_sum=$(sha256sum "$target" | awk '{print $1}')
 
-	rm -f "$checksum_file"
+  rm -f "$checksum_file"
 
-	if [[ "$actual_sum" == "$expected_sum" ]]; then
-		show_progress success "$(basename "$target") ✓"
-		return 0
-	else
-		show_progress error "Checksum mismatch for $(basename "$target")"
-		show_progress info "Expected: $expected_sum"
-		show_progress info "Got: $actual_sum"
-		add_global_warning "File kept at: $target (verify manually or delete to retry)"
-		return 1
-	fi
+  if [[ "$actual_sum" == "$expected_sum" ]]; then
+    show_progress success "$(basename "$target") ✓"
+    return 0
+  else
+    show_progress error "Checksum mismatch for $(basename "$target")"
+    show_progress info "Expected: $expected_sum"
+    show_progress info "Got: $actual_sum"
+    add_global_warning "File kept at: $target (verify manually or delete to retry)"
+    return 1
+  fi
 }
 
 # Brief: Extract checksum from manifest file
@@ -87,30 +87,30 @@ verify_checksum_from_url() {
 # Returns: 0 with checksum on stdout, 1 on failure
 # Side-effects: Downloads manifest file to temp location
 get_checksum_from_manifest() {
-	local manifest_url="$1"
-	local filename="$2"
-	local timeout="${3:-30}"
+  local manifest_url="$1"
+  local filename="$2"
+  local timeout="${3:-30}"
 
-	local checksum_file
-	checksum_file=$(mktemp)
+  local checksum_file
+  checksum_file=$(mktemp)
 
-	if ! devbase_curl -fsSL --connect-timeout "$timeout" --max-time "$timeout" "$manifest_url" -o "$checksum_file"; then
-		add_global_warning "Could not fetch checksum manifest: $manifest_url"
-		rm -f "$checksum_file"
-		return 1
-	fi
+  if ! devbase_curl -fsSL --connect-timeout "$timeout" --max-time "$timeout" "$manifest_url" -o "$checksum_file"; then
+    add_global_warning "Could not fetch checksum manifest: $manifest_url"
+    rm -f "$checksum_file"
+    return 1
+  fi
 
-	local checksum
-	checksum=$(grep -F "${filename}" "$checksum_file" | head -1 | awk '{print $1}')
-	rm -f "$checksum_file"
+  local checksum
+  checksum=$(grep -F "${filename}" "$checksum_file" | head -1 | awk '{print $1}')
+  rm -f "$checksum_file"
 
-	if [[ -z "$checksum" ]]; then
-		add_global_warning "Checksum not found for ${filename}"
-		return 1
-	fi
+  if [[ -z "$checksum" ]]; then
+    add_global_warning "Checksum not found for ${filename}"
+    return 1
+  fi
 
-	printf "%s\n" "$checksum"
-	return 0
+  printf "%s\n" "$checksum"
+  return 0
 }
 
 # Brief: Verify file checksum from expected value
@@ -118,209 +118,210 @@ get_checksum_from_manifest() {
 # Returns: 0 if checksum matches, 1 if mismatch
 # Side-effects: Shows error and deletes file on mismatch
 verify_checksum_value() {
-	local target="$1"
-	local expected_checksum="$2"
-	local actual_checksum
+  local target="$1"
+  local expected_checksum="$2"
+  local actual_checksum
 
-	actual_checksum=$(sha256sum "$target" | cut -d' ' -f1)
+  actual_checksum=$(sha256sum "$target" | cut -d' ' -f1)
 
-	if [[ "$actual_checksum" == "$expected_checksum" ]]; then
-		show_progress success "$(basename "$target")"
-		return 0
-	else
-		show_progress error "Checksum mismatch for $(basename "$target")"
-		show_progress info "Expected: $expected_checksum"
-		show_progress info "Got:      $actual_checksum"
-		rm -f -- "$target"
-		return 1
-	fi
+  if [[ "$actual_checksum" == "$expected_checksum" ]]; then
+    show_progress success "$(basename "$target")"
+    return 0
+  else
+    show_progress error "Checksum mismatch for $(basename "$target")"
+    show_progress info "Expected: $expected_checksum"
+    show_progress info "Got:      $actual_checksum"
+    rm -f -- "$target"
+    return 1
+  fi
 }
 
 # Brief: Check if file exists for checksum-only verification
 # Params: $1-target $2-has_checksum (true/false)
 # Returns: 0 if should skip download, 1 if should download
 _download_file_should_skip() {
-	local target="$1"
-	local has_checksum="$2"
+  local target="$1"
+  local has_checksum="$2"
 
-	if [[ -f "$target" ]] && [[ "$has_checksum" == true ]]; then
-		show_progress info "File exists, will verify checksum only (use rm to force re-download)"
-		return 0
-	fi
-	return 1
+  if [[ -f "$target" ]] && [[ "$has_checksum" == true ]]; then
+    show_progress info "File exists, will verify checksum only (use rm to force re-download)"
+    return 0
+  fi
+  return 1
 }
 
 # Brief: Build cache filename from target and version
 # Params: $1-target $2-version
 # Returns: prints cache filename
 _download_file_get_cache_name() {
-	local target="$1"
-	local version="$2"
+  local target="$1"
+  local version="$2"
 
-	local base_name
-	base_name=$(basename "$target")
+  local base_name
+  base_name=$(basename "$target")
 
-	if [[ -z "$version" ]]; then
-		printf '%s\n' "$base_name"
-		return
-	fi
+  if [[ -z "$version" ]]; then
+    printf '%s\n' "$base_name"
+    return
+  fi
 
-	# Guard: no dot means no extension — avoids garbled names like "-v1.0.filename"
-	if [[ "$base_name" != *.* ]]; then
-		printf '%s-v%s\n' "$base_name" "$version"
-		return
-	fi
+  # Guard: no dot means no extension — avoids garbled names like "-v1.0.filename"
+  if [[ "$base_name" != *.* ]]; then
+    printf '%s-v%s\n' "$base_name" "$version"
+    return
+  fi
 
-	local extension="${base_name##*.}"
-	local name_without_ext="${base_name%.*}"
-	printf '%s-v%s.%s\n' "$name_without_ext" "$version" "$extension"
+  local extension="${base_name##*.}"
+  local name_without_ext="${base_name%.*}"
+  printf '%s-v%s.%s\n' "$name_without_ext" "$version" "$extension"
 }
 
 # Brief: Try to use cached file
 # Params: $1-cached_file $2-target $3-has_checksum (true/false)
 # Returns: 0 if cache used, 1 if should proceed with download
 _download_file_try_cache() {
-	local cached_file="$1"
-	local target="$2"
-	local has_checksum="$3"
+  local cached_file="$1"
+  local target="$2"
+  local has_checksum="$3"
 
-	if [[ -f "$cached_file" ]] && [[ "$has_checksum" == false ]]; then
-		show_progress info "Using cached: $(basename "$cached_file")"
-		cp "$cached_file" "$target"
-		return 0
-	fi
-	return 1
+  if [[ -f "$cached_file" ]] && [[ "$has_checksum" == false ]]; then
+    show_progress info "Using cached: $(basename "$cached_file")"
+    cp "$cached_file" "$target"
+    return 0
+  fi
+  return 1
 }
 
 # Brief: Perform single download attempt with curl or wget
 # Params: $1-url $2-target $3-timeout $4-skip_download
 # Returns: 0 on success, 1 on failure
 _download_file_attempt() {
-	local url="$1"
-	local target="$2"
-	local timeout="$3"
-	local skip_download="$4"
+  local url="$1"
+  local target="$2"
+  local timeout="$3"
+  local skip_download="$4"
 
-	[[ "$skip_download" == "true" ]] && return 0
+  [[ "$skip_download" == "true" ]] && return 0
 
-	# In whiptail mode, use silent downloads (progress shown via gauge)
-	# In gum mode, show progress bar
-	local curl_progress="-#"
-	local wget_progress="--show-progress"
-	if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-		curl_progress="-s"
-		wget_progress="--quiet"
-	fi
+  # In whiptail mode, use silent downloads (progress shown via gauge)
+  # In gum mode, show progress bar
+  local curl_progress="-#"
+  local wget_progress="--show-progress"
+  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+    curl_progress="-s"
+    wget_progress="--quiet"
+  fi
 
-	# Try curl first
-	if command_exists curl; then
-		local connect_timeout=$((timeout < 30 ? timeout : 30))
-		devbase_curl ${curl_progress} -fL --connect-timeout "$connect_timeout" --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
-	fi
+  # Try curl first
+  if command_exists curl; then
+    local connect_timeout=$((timeout < 30 ? timeout : 30))
+    devbase_curl ${curl_progress} -fL --connect-timeout "$connect_timeout" --max-time "$timeout" "$url" -o "$target" 2>&1 && return 0
+  fi
 
-	# Fallback to wget
-	if command_exists wget; then
-		devbase_wget --timeout="$timeout" --tries=1 ${wget_progress} -O "$target" "$url" 2>&1 && return 0
-	fi
+  # Fallback to wget
+  if command_exists wget; then
+    devbase_wget --timeout="$timeout" --tries=1 ${wget_progress} -O "$target" "$url" 2>&1 && return 0
+  fi
 
-	return 1
+  return 1
 }
 
 # Brief: Check if a URL is allowlisted for missing checksums
 # Params: $1-url
 # Returns: 0 if allowlisted, 1 otherwise
 _checksum_allowlisted() {
-	local url="$1"
-	local allowlist="${DEVBASE_STRICT_CHECKSUMS_ALLOWLIST:-}"
-	[[ -z "$allowlist" ]] && return 1
+  local url="$1"
+  local allowlist="${DEVBASE_STRICT_CHECKSUMS_ALLOWLIST:-}"
+  [[ -z "$allowlist" ]] && return 1
 
-	local pattern
-	local -a allowlist_items
-	IFS=',' read -ra allowlist_items <<<"$allowlist"
-	for pattern in "${allowlist_items[@]}"; do
-		pattern="${pattern#"${pattern%%[![:space:]]*}"}"
-		pattern="${pattern%"${pattern##*[![:space:]]}"}"
-		[[ -z "$pattern" ]] && continue
-		if [[ "$url" == $pattern ]]; then
-			return 0
-		fi
-	done
+  local pattern
+  local -a allowlist_items
+  IFS=',' read -ra allowlist_items <<<"$allowlist"
+  for pattern in "${allowlist_items[@]}"; do
+    pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+    pattern="${pattern%"${pattern##*[![:space:]]}"}"
+    [[ -z "$pattern" ]] && continue
+    # shellcheck disable=SC2053 # unquoted intentional: $pattern is a glob (e.g. *.example.com*)
+    if [[ "$url" == $pattern ]]; then
+      return 0
+    fi
+  done
 
-	return 1
+  return 1
 }
 
 # Brief: Enforce checksum policy for remote installer scripts
 # Params: $1-url $2-expected_checksum $3-label
 # Returns: 0 if checksum present, 1 otherwise
 require_remote_script_checksum() {
-	local url="$1"
-	local expected_checksum="$2"
-	local label="${3:-remote installer}"
+  local url="$1"
+  local expected_checksum="$2"
+  local label="${3:-remote installer}"
 
-	if [[ -z "$expected_checksum" ]]; then
-		show_progress error "${label} checksum required for remote script: $url"
-		return 1
-	fi
+  if [[ -z "$expected_checksum" ]]; then
+    show_progress error "${label} checksum required for remote script: $url"
+    return 1
+  fi
 
-	return 0
+  return 0
 }
 
 # Brief: Verify downloaded file checksum
 # Params: $1-target $2-checksum_url $3-expected_checksum $4-timeout $5-strict_mode
 # Returns: 0 if verified or no checksum, 1 if verification failed
 _download_file_verify() {
-	local target="$1"
-	local checksum_url="$2"
-	local expected_checksum="$3"
-	local timeout="$4"
-	local strict_mode="${5:-warn}"
+  local target="$1"
+  local checksum_url="$2"
+  local expected_checksum="$3"
+  local timeout="$4"
+  local strict_mode="${5:-warn}"
 
-	if [[ -n "$expected_checksum" ]]; then
-		verify_checksum_value "$target" "$expected_checksum"
-	elif [[ -n "$checksum_url" ]]; then
-		local rc=0
-		verify_checksum_from_url "$target" "$checksum_url" "$timeout" || rc=$?
-		# rc=1: checksum mismatch (real failure), rc=2: couldn't fetch checksum
-		if [[ $rc -eq 1 ]]; then
-			return 1
-		fi
-		if [[ $rc -eq 2 ]] && [[ "$strict_mode" == "fail" ]]; then
-			show_progress error "Checksum required but unavailable for $(basename "$target")"
-			return 1
-		fi
-		return 0
-	else
-		show_progress success "$(basename "$target")"
-		return 0
-	fi
+  if [[ -n "$expected_checksum" ]]; then
+    verify_checksum_value "$target" "$expected_checksum"
+  elif [[ -n "$checksum_url" ]]; then
+    local rc=0
+    verify_checksum_from_url "$target" "$checksum_url" "$timeout" || rc=$?
+    # rc=1: checksum mismatch (real failure), rc=2: couldn't fetch checksum
+    if [[ $rc -eq 1 ]]; then
+      return 1
+    fi
+    if [[ $rc -eq 2 ]] && [[ "$strict_mode" == "fail" ]]; then
+      show_progress error "Checksum required but unavailable for $(basename "$target")"
+      return 1
+    fi
+    return 0
+  else
+    show_progress success "$(basename "$target")"
+    return 0
+  fi
 }
 
 # Brief: Cache successfully downloaded file
 # Params: $1-target $2-cached_file $3-version
 # Returns: always 0
 _download_file_cache() {
-	local target="$1"
-	local cached_file="$2"
-	local version="$3"
+  local target="$1"
+  local cached_file="$2"
+  local version="$3"
 
-	[[ -n "$version" ]] && { cp "$target" "$cached_file" 2>/dev/null || true; }
-	return 0
+  [[ -n "$version" ]] && { cp "$target" "$cached_file" 2>/dev/null || true; }
+  return 0
 }
 
 # Brief: Normalize DEVBASE_STRICT_CHECKSUMS value to canonical form
 # Params: $1 - raw value (from env or default)
 # Returns: Echoes one of: off, warn, fail
 _normalize_strict_mode() {
-	local mode="${1:-fail}"
-	case "$mode" in
-	true) printf '%s' "warn" ;;
-	false | off | "") printf '%s' "off" ;;
-	warn | fail) printf '%s' "$mode" ;;
-	*)
-		add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$mode (using warn)"
-		printf '%s' "warn"
-		;;
-	esac
+  local mode="${1:-fail}"
+  case "$mode" in
+  true) printf '%s' "warn" ;;
+  false | off | "") printf '%s' "off" ;;
+  warn | fail) printf '%s' "$mode" ;;
+  *)
+    add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$mode (using warn)"
+    printf '%s' "warn"
+    ;;
+  esac
 }
 
 # Brief: Download file with caching, retry logic, and optional checksum verification
@@ -330,78 +331,78 @@ _normalize_strict_mode() {
 # Side-effects: Downloads file, creates cache, verifies checksums
 # Note: If file exists but checksum fails, keeps file and returns error (avoids re-download)
 download_file() {
-	local url="$1"
-	local target="$2"
-	local checksum_url="${3:-}"
-	local expected_checksum="${4:-}"
-	local version="${5:-}"
-	local timeout="${6:-30}"
-	local max_retries="${7:-3}"
-	local retry_delay="${8:-5}"
+  local url="$1"
+  local target="$2"
+  local checksum_url="${3:-}"
+  local expected_checksum="${4:-}"
+  local version="${5:-}"
+  local timeout="${6:-30}"
+  local max_retries="${7:-3}"
+  local retry_delay="${8:-5}"
 
-	validate_not_empty "$url" "URL" || return 1
-	validate_not_empty "$target" "target file" || return 1
-	require_env XDG_CACHE_HOME || return 1
+  validate_not_empty "$url" "URL" || return 1
+  validate_not_empty "$target" "target file" || return 1
+  require_env XDG_CACHE_HOME || return 1
 
-	# Check if we can skip download and just verify checksum
-	local has_checksum=false
-	[[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=true
+  # Check if we can skip download and just verify checksum
+  local has_checksum=false
+  [[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=true
 
-	local strict_mode
-	strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
+  local strict_mode
+  strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
 
-	local allowlisted=false
-	_checksum_allowlisted "$url" && allowlisted=true
+  local allowlisted=false
+  _checksum_allowlisted "$url" && allowlisted=true
 
-	if [[ "$has_checksum" == false ]]; then
-		if [[ "$allowlisted" == "true" ]]; then
-			add_global_warning "Checksum allowlisted for download: $url"
-		else
-			case "$strict_mode" in
-			fail)
-				show_progress error "Checksum required for download: $url"
-				return 1
-				;;
-			warn)
-				add_global_warning "No checksum available for download: $url"
-				;;
-			esac
-		fi
-	fi
+  if [[ "$has_checksum" == false ]]; then
+    if [[ "$allowlisted" == "true" ]]; then
+      add_global_warning "Checksum allowlisted for download: $url"
+    else
+      case "$strict_mode" in
+      fail)
+        show_progress error "Checksum required for download: $url"
+        return 1
+        ;;
+      warn)
+        add_global_warning "No checksum available for download: $url"
+        ;;
+      esac
+    fi
+  fi
 
-	local skip_download=false
-	_download_file_should_skip "$target" "$has_checksum" && skip_download=true
+  local skip_download=false
+  _download_file_should_skip "$target" "$has_checksum" && skip_download=true
 
-	# Setup cache
-	local cache_dir="${XDG_CACHE_HOME}/devbase/downloads"
-	mkdir -p "$cache_dir"
-	local cache_name
-	cache_name=$(_download_file_get_cache_name "$target" "$version")
-	local cached_file="${cache_dir}/${cache_name}"
+  # Setup cache
+  local cache_dir="${XDG_CACHE_HOME}/devbase/downloads"
+  mkdir -p "$cache_dir"
+  local cache_name
+  cache_name=$(_download_file_get_cache_name "$target" "$version")
+  local cached_file="${cache_dir}/${cache_name}"
 
-	# Try to use cached file
-	_download_file_try_cache "$cached_file" "$target" "$has_checksum" && return 0
+  # Try to use cached file
+  _download_file_try_cache "$cached_file" "$target" "$has_checksum" && return 0
 
-	# Retry loop
-	local attempt=1
-	while [[ "$attempt" -le "$max_retries" ]]; do
-		if ! _download_file_attempt "$url" "$target" "$timeout" "$skip_download"; then
-			add_global_warning "Attempt ${attempt}/${max_retries} failed"
-			((attempt++))
-			[[ "$attempt" -le "$max_retries" ]] && sleep "$retry_delay"
-			continue
-		fi
+  # Retry loop
+  local attempt=1
+  while [[ "$attempt" -le "$max_retries" ]]; do
+    if ! _download_file_attempt "$url" "$target" "$timeout" "$skip_download"; then
+      add_global_warning "Attempt ${attempt}/${max_retries} failed"
+      ((attempt++))
+      [[ "$attempt" -le "$max_retries" ]] && sleep "$retry_delay"
+      continue
+    fi
 
-		# Verify checksum
-		_download_file_verify "$target" "$checksum_url" "$expected_checksum" "$timeout" "$strict_mode" || return 1
+    # Verify checksum
+    _download_file_verify "$target" "$checksum_url" "$expected_checksum" "$timeout" "$strict_mode" || return 1
 
-		# Cache and return success
-		_download_file_cache "$target" "$cached_file" "$version"
-		return 0
-	done
+    # Cache and return success
+    _download_file_cache "$target" "$cached_file" "$version"
+    return 0
+  done
 
-	show_progress error "Failed to download $(basename "$target") after $max_retries attempts"
-	return 1
+  show_progress error "Failed to download $(basename "$target") after $max_retries attempts"
+  return 1
 }
 
 # Brief: Check general internet connectivity by testing common sites
@@ -411,38 +412,38 @@ download_file() {
 # Side-effects: Tests network connectivity to github.com, google.com, codeberg.org
 # Note: Skips SSL verification since custom certs may not be installed yet
 check_network_connectivity() {
-	local timeout="${1:-3}"
-	local test_sites=("${DEVBASE_CONNECTIVITY_TEST_SITES[@]}")
-	local site_reached=false
-	local insecure_tls=false
+  local timeout="${1:-3}"
+  local test_sites=("${DEVBASE_CONNECTIVITY_TEST_SITES[@]}")
+  local site_reached=false
+  local insecure_tls=false
 
-	for site in "${test_sites[@]}"; do
-		if devbase_curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
-			site_reached=true
-			break
-		fi
-	done
+  for site in "${test_sites[@]}"; do
+    if devbase_curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
+      site_reached=true
+      break
+    fi
+  done
 
-	if [[ "$site_reached" != true ]]; then
-		for site in "${test_sites[@]}"; do
-			if devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
-				site_reached=true
-				insecure_tls=true
-				break
-			fi
-		done
-	fi
+  if [[ "$site_reached" != true ]]; then
+    for site in "${test_sites[@]}"; do
+      if devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "$site" &>/dev/null; then
+        site_reached=true
+        insecure_tls=true
+        break
+      fi
+    done
+  fi
 
-	if [[ "$site_reached" == true ]]; then
-		if [[ "$insecure_tls" == true ]]; then
-			add_global_warning "Network reachable but TLS verification failed; check certificates or proxy"
-		fi
-		show_progress success "Network connectivity verified"
-		return 0
-	else
-		show_progress error "No external network access - check connection/proxy"
-		return 1
-	fi
+  if [[ "$site_reached" == true ]]; then
+    if [[ "$insecure_tls" == true ]]; then
+      add_global_warning "Network reachable but TLS verification failed; check certificates or proxy"
+    fi
+    show_progress success "Network connectivity verified"
+    return 0
+  else
+    show_progress error "No external network access - check connection/proxy"
+    return 1
+  fi
 }
 
 # Brief: Check if configured proxy is working
@@ -451,17 +452,17 @@ check_network_connectivity() {
 # Returns: 0 on success, 1 if proxy not working
 # Side-effects: Tests proxy connection
 check_proxy_connectivity() {
-	local timeout="${1:-5}"
-	[[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 0
+  local timeout="${1:-5}"
+  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 0
 
-	# Test with a site that should go through proxy (github.com is not in NO_PROXY)
-	if devbase_curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) https://github.com &>/dev/null; then
-		show_progress info "Proxy works: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
-	else
-		show_progress error "Proxy not working: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
-		return 1
-	fi
-	return 0
+  # Test with a site that should go through proxy (github.com is not in NO_PROXY)
+  if devbase_curl -s --connect-timeout "$timeout" --max-time $((timeout * 2)) https://github.com &>/dev/null; then
+    show_progress info "Proxy works: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+  else
+    show_progress error "Proxy not working: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+    return 1
+  fi
+  return 0
 }
 
 # Brief: Check if configured container registry is accessible
@@ -470,21 +471,21 @@ check_proxy_connectivity() {
 # Returns: 0 always (warnings only, non-fatal)
 # Side-effects: Tests registry connection
 check_registry_connectivity() {
-	local timeout="${1:-5}"
-	[[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]] && return 0
+  local timeout="${1:-5}"
+  [[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]] && return 0
 
-	# Build registry URL - try HTTPS first (common for registries)
-	local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+  # Build registry URL - try HTTPS first (common for registries)
+  local registry_url="https://${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
 
-	# Simple connectivity check with --insecure (ignoring cert issues)
-	# curl will automatically use http_proxy/https_proxy/no_proxy env vars
-	devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "${registry_url}" -o /dev/null
-	local curl_exit=$?
+  # Simple connectivity check with --insecure (ignoring cert issues)
+  # curl will automatically use http_proxy/https_proxy/no_proxy env vars
+  devbase_curl -sk --connect-timeout "$timeout" --max-time $((timeout * 2)) "${registry_url}" -o /dev/null
+  local curl_exit=$?
 
-	if [[ $curl_exit -eq 0 ]]; then
-		show_progress success "Registry accessible: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
-	else
-		add_global_warning "Registry unreachable: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT} (exit code: $curl_exit)"
-	fi
-	return 0
+  if [[ $curl_exit -eq 0 ]]; then
+    show_progress success "Registry accessible: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"
+  else
+    add_global_warning "Registry unreachable: ${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT} (exit code: $curl_exit)"
+  fi
+  return 0
 }
