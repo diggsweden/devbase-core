@@ -43,8 +43,15 @@ setup_non_interactive_mode() {
 	if [[ "$passphrase_was_generated" == true ]]; then
 		export GENERATED_SSH_PASSPHRASE="true"
 		mkdir -p "${DEVBASE_CONFIG_DIR}"
-		printf '%s\n' "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
-		chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
+		local _tmp_passphrase="${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
+		printf '%s\n' "$DEVBASE_SSH_PASSPHRASE" >"$_tmp_passphrase"
+		chmod 600 "$_tmp_passphrase"
+		# Guard against interrupted installs leaving the passphrase on disk.
+		# show_completion_message (install.sh) reads and deletes this on success;
+		# this EXIT trap ensures cleanup on any other exit (INT, TERM, crash).
+		# Path is expanded at registration time — safe after this function returns.
+		# shellcheck disable=SC2064 # Intentional: expand now, not at trap-fire time
+		trap "rm -f -- '${_tmp_passphrase}'" EXIT
 	fi
 
 	validate_var_set "GIT_NAME" || return 1

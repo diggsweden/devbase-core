@@ -214,6 +214,43 @@ EOF
   assert_output --partial "example.com ssh-ed25519"
 }
 
+@test "setup_ssh_config_includes copies allowlisted pub key to .ssh" {
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${HOME}/.ssh"
+  mkdir -p "${custom_ssh}"
+
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest" >"${custom_ssh}/id_ed25519_corp.pub"
+
+  export _DEVBASE_CUSTOM_SSH="${custom_ssh}"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_file_exists "${HOME}/.ssh/id_ed25519_corp.pub"
+}
+
+@test "setup_ssh_config_includes blocks unrecognised files with warning" {
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${HOME}/.ssh"
+  mkdir -p "${custom_ssh}"
+
+  echo "something" >"${custom_ssh}/authorized_keys2"
+  echo "something" >"${custom_ssh}/environment"
+  echo "something" >"${custom_ssh}/rc"
+
+  export _DEVBASE_CUSTOM_SSH="${custom_ssh}"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  # Dangerous files must NOT be copied
+  assert_file_not_exists "${HOME}/.ssh/authorized_keys2"
+  assert_file_not_exists "${HOME}/.ssh/environment"
+  assert_file_not_exists "${HOME}/.ssh/rc"
+  # Warning emitted for each skipped file (show_progress warning → stdout)
+  assert_output --partial "authorized_keys2"
+}
+
 @test "configure_git_signing creates allowed_signers in XDG config dir" {
   mkdir -p "${HOME}/.ssh"
 

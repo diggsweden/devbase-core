@@ -22,13 +22,17 @@ verify_mise_checksum() {
 		return 1
 	fi
 
-	local arch
-	arch="$(uname -m)"
-
-	if [[ "$arch" != "x86_64" ]]; then
-		add_install_warning "Checksum verification only supported on x86_64, skipping"
-		return 0
-	fi
+	# Map uname architecture to mise's binary naming convention.
+	# Explicit table avoids the silent x86_64→x64 mismatch and makes
+	# adding future architectures (armv7l, riscv64…) straightforward.
+	local mise_arch
+	case "$(uname -m)" in
+	x86_64)  mise_arch="x64" ;;    # mise ships as mise-vX.Y-linux-x64
+	aarch64) mise_arch="arm64" ;;  # mise ships as mise-vX.Y-linux-arm64
+	*)
+		die "Mise checksum verification not supported on architecture: $(uname -m). Install mise manually or skip with DEVBASE_STRICT_CHECKSUMS=warn"
+		;;
+	esac
 
 	# Get version from packages.yaml if not provided
 	if [[ -z "$version" ]]; then
@@ -57,7 +61,7 @@ verify_mise_checksum() {
 	local actual_checksum
 	actual_checksum=$(sha256sum "$mise_bin" | cut -d' ' -f1)
 
-	local binary_pattern="mise-v${version}-linux-x64"
+	local binary_pattern="mise-v${version}-linux-${mise_arch}"
 	if grep -q "$binary_pattern" "$checksums_file" 2>/dev/null; then
 		local expected_checksum
 		expected_checksum=$(grep "$binary_pattern" "$checksums_file" | head -1 | cut -d' ' -f1)
