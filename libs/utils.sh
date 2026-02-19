@@ -251,19 +251,29 @@ envsubst_preserve_undefined() {
 	fi
 }
 
-# Brief: Retry command with exponential backoff and jitter
-# Params: [--attempts N] [--delay N] -- command args...
-# Uses: _RETRY_ATTEMPTS, _RETRY_DELAY (constants)
-# Returns: 0 on success, last exit code on failure
-# Side-effects: Executes command, sleeps between retries
+# =============================================================================
+# GLOBAL WARNING ACCUMULATOR
+# Collects non-fatal warnings that occur during setup and replays them in the
+# final summary. Use add_install_warning (install-context.sh) for install-phase
+# warnings; add_global_warning is the lower-level primitive used by that alias.
+# =============================================================================
+
 declare -ag DEVBASE_GLOBAL_WARNINGS=()
 
+# Brief: Append a warning to the global accumulator and display it immediately
+# Params: $1 - warning message
+# Uses: DEVBASE_GLOBAL_WARNINGS (global array), show_progress (function)
+# Returns: 0 always
 add_global_warning() {
 	local message="$1"
 	DEVBASE_GLOBAL_WARNINGS+=("$message")
 	show_progress warning "$message"
 }
 
+# Brief: Display all accumulated warnings and clear the accumulator
+# Params: None
+# Uses: DEVBASE_GLOBAL_WARNINGS (global array), show_progress (function)
+# Returns: 0 always
 show_global_warnings() {
 	if [[ ${#DEVBASE_GLOBAL_WARNINGS[@]} -eq 0 ]]; then
 		return 0
@@ -275,9 +285,15 @@ show_global_warnings() {
 	done
 
 	DEVBASE_GLOBAL_WARNINGS=()
-	return 0
 }
 
+# =============================================================================
+
+# Brief: Retry command with exponential backoff and jitter
+# Params: [--attempts N] [--delay N] -- command args...
+# Uses: _RETRY_ATTEMPTS, _RETRY_DELAY (constants)
+# Returns: 0 on success, last exit code on failure
+# Side-effects: Executes command, sleeps between retries
 retry_command() {
 	local max_attempts="${_RETRY_ATTEMPTS}"
 	local base_delay="${_RETRY_DELAY}"
