@@ -15,19 +15,18 @@ fi
 [[ -n "${_DEVBASE_UTILS_SOURCED:-}" ]] && return 0
 _DEVBASE_UTILS_SOURCED=1
 
-# Brief: Generate a random 12-character SSH passphrase (NIST minimum)
+# Brief: Generate a random SSH passphrase (18 bytes / 24 base64 chars)
 # Params: None
 # Returns: Echoes passphrase to stdout
 # Side-effects: None
 generate_ssh_passphrase() {
 	local pass
 	if command -v openssl >/dev/null 2>&1; then
-		pass=$(openssl rand -base64 12 2>/dev/null)
+		pass=$(openssl rand -base64 18 2>/dev/null)
 	else
-		pass=$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 16)
+		pass=$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 24)
 	fi
-	# Use bash string slicing to avoid SIGPIPE from head closing early
-	printf '%s' "${pass:0:12}"
+	printf '%s' "$pass"
 }
 
 # Internal configuration constants (not exported)
@@ -194,7 +193,7 @@ validate_path() {
 _extract_uppercase_vars() {
 	local content="$1"
 	# shellcheck disable=SC2016 # Single quotes intentional - we're searching for literal $ patterns
-	echo "$content" |
+	printf '%s\n' "$content" |
 		grep -o '\${\?[A-Z_][A-Z0-9_]*}\?' | # Extract ${VAR} or $VAR patterns
 		sed 's/[{}$]//g' |                   # Remove $ { } characters
 		sort -u |                            # Get unique variable names only

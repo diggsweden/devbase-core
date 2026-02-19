@@ -23,12 +23,12 @@ teardown() {
   common_teardown
 }
 
-@test "generate_ssh_passphrase returns 12 character string" {
+@test "generate_ssh_passphrase returns 24 character string" {
   run --separate-stderr generate_ssh_passphrase
-  
+
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert [ ${#output} -eq 12 ]
+  assert [ ${#output} -eq 24 ]
 }
 
 @test "generate_ssh_passphrase generates different passphrases" {
