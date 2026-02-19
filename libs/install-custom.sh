@@ -855,6 +855,94 @@ install_nerd_fonts() {
 	fi
 }
 
+# Brief: Load GNOME Terminal color data for a given theme into caller's named variables
+# Params: $1 - theme name, $2 - bg var name, $3 - fg var name,
+#         $4 - cursor var name, $5 - palette array var name
+# Returns: 0 if theme found, 1 if unknown theme (caller should skip gracefully)
+# Side-effects: Populates caller's variables via namerefs (data separated from logic)
+_gnome_terminal_theme_data() {
+	local theme_name="$1"
+	local -n _gtd_bg="$2" _gtd_fg="$3" _gtd_cursor="$4" _gtd_palette="$5"
+
+	case "$theme_name" in
+	everforest-dark)
+		_gtd_bg='#272E33'
+		_gtd_fg='#D3C6AA'
+		_gtd_cursor='#D3C6AA'
+		_gtd_palette=('#2E383C' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA' '#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8')
+		;;
+	everforest-light)
+		_gtd_bg='#FDF6E3'
+		_gtd_fg='#5C6A72'
+		_gtd_cursor='#5C6A72'
+		_gtd_palette=('#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8' '#343F44' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA')
+		;;
+	catppuccin-mocha)
+		_gtd_bg='#1E1E2E'
+		_gtd_fg='#CDD6F4'
+		_gtd_cursor='#CDD6F4'
+		_gtd_palette=('#45475A' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#BAC2DE' '#585B70' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#A6ADC8')
+		;;
+	catppuccin-latte)
+		_gtd_bg='#EFF1F5'
+		_gtd_fg='#4C4F69'
+		_gtd_cursor='#4C4F69'
+		_gtd_palette=('#5C5F77' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#ACB0BE' '#6C6F85' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#BCC0CC')
+		;;
+	tokyonight-night)
+		_gtd_bg='#1A1B26'
+		_gtd_fg='#C0CAF5'
+		_gtd_cursor='#C0CAF5'
+		_gtd_palette=('#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#A9B1D6' '#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#C0CAF5')
+		;;
+	tokyonight-day)
+		_gtd_bg='#D5D6DB'
+		_gtd_fg='#565A6E'
+		_gtd_cursor='#565A6E'
+		_gtd_palette=('#0F0F14' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58' '#9699A3' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58')
+		;;
+	gruvbox-dark)
+		_gtd_bg='#282828'
+		_gtd_fg='#EBDBB2'
+		_gtd_cursor='#EBDBB2'
+		_gtd_palette=('#282828' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#A89984' '#928374' '#FB4934' '#B8BB26' '#FABD2F' '#83A598' '#D3869B' '#8EC07C' '#EBDBB2')
+		;;
+	gruvbox-light)
+		_gtd_bg='#FBF1C7'
+		_gtd_fg='#654735'
+		_gtd_cursor='#654735'
+		_gtd_palette=('#FBF1C7' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#7C6F64' '#928374' '#9D0006' '#79740E' '#B57614' '#076678' '#8F3F71' '#427B58' '#3C3836')
+		;;
+	nord)
+		_gtd_bg='#2E3440'
+		_gtd_fg='#D8DEE9'
+		_gtd_cursor='#D8DEE9'
+		_gtd_palette=('#3B4252' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#88C0D0' '#E5E9F0' '#4C566A' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#8FBCBB' '#ECEFF4')
+		;;
+	dracula)
+		_gtd_bg='#282A36'
+		_gtd_fg='#F8F8F2'
+		_gtd_cursor='#F8F8F2'
+		_gtd_palette=('#21222C' '#FF5555' '#50FA7B' '#F1FA8C' '#BD93F9' '#FF79C6' '#8BE9FD' '#F8F8F2' '#6272A4' '#FF6E6E' '#69FF94' '#FFFFA5' '#D6ACFF' '#FF92DF' '#A4FFFF' '#FFFFFF')
+		;;
+	solarized-dark)
+		_gtd_bg='#002B36'
+		_gtd_fg='#839496'
+		_gtd_cursor='#839496'
+		_gtd_palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
+		;;
+	solarized-light)
+		_gtd_bg='#FDF6E3'
+		_gtd_fg='#657B83'
+		_gtd_cursor='#657B83'
+		_gtd_palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
+		;;
+	*)
+		return 1 # Unknown theme
+		;;
+	esac
+}
+
 # Brief: Apply GNOME Terminal theme colors
 # Params: $1 - theme name, $2 - profile ID
 # Returns: 0 on success, 1 on failure
@@ -869,87 +957,10 @@ apply_gnome_terminal_theme() {
 
 	local profile_path="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:${profile_id}/"
 
-	# Color variables
 	local bg fg cursor
 	local -a palette
-
-	case "$theme_name" in
-	everforest-dark)
-		bg='#272E33'
-		fg='#D3C6AA'
-		cursor='#D3C6AA'
-		palette=('#2E383C' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA' '#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8')
-		;;
-	everforest-light)
-		bg='#FDF6E3'
-		fg='#5C6A72'
-		cursor='#5C6A72'
-		palette=('#5C6A72' '#F85552' '#8DA101' '#DFA000' '#3A94C5' '#DF69BA' '#35A77C' '#DFDDC8' '#343F44' '#E67E80' '#A7C080' '#DBBC7F' '#7FBBB3' '#D699B6' '#83C092' '#D3C6AA')
-		;;
-	catppuccin-mocha)
-		bg='#1E1E2E'
-		fg='#CDD6F4'
-		cursor='#CDD6F4'
-		palette=('#45475A' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#BAC2DE' '#585B70' '#F38BA8' '#A6E3A1' '#F9E2AF' '#89B4FA' '#F5C2E7' '#94E2D5' '#A6ADC8')
-		;;
-	catppuccin-latte)
-		bg='#EFF1F5'
-		fg='#4C4F69'
-		cursor='#4C4F69'
-		palette=('#5C5F77' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#ACB0BE' '#6C6F85' '#D20F39' '#40A02B' '#DF8E1D' '#1E66F5' '#EA76CB' '#179299' '#BCC0CC')
-		;;
-	tokyonight-night)
-		bg='#1A1B26'
-		fg='#C0CAF5'
-		cursor='#C0CAF5'
-		palette=('#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#A9B1D6' '#414868' '#F7768E' '#9ECE6A' '#E0AF68' '#7AA2F7' '#BB9AF7' '#7DCFFF' '#C0CAF5')
-		;;
-	tokyonight-day)
-		bg='#D5D6DB'
-		fg='#565A6E'
-		cursor='#565A6E'
-		palette=('#0F0F14' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58' '#9699A3' '#8C4351' '#485E30' '#8F5E15' '#34548A' '#5A4A78' '#0F4B6E' '#343B58')
-		;;
-	gruvbox-dark)
-		bg='#282828'
-		fg='#EBDBB2'
-		cursor='#EBDBB2'
-		palette=('#282828' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#A89984' '#928374' '#FB4934' '#B8BB26' '#FABD2F' '#83A598' '#D3869B' '#8EC07C' '#EBDBB2')
-		;;
-	gruvbox-light)
-		bg='#FBF1C7'
-		fg='#654735'
-		cursor='#654735'
-		palette=('#FBF1C7' '#CC241D' '#98971A' '#D79921' '#458588' '#B16286' '#689D6A' '#7C6F64' '#928374' '#9D0006' '#79740E' '#B57614' '#076678' '#8F3F71' '#427B58' '#3C3836')
-		;;
-	nord)
-		bg='#2E3440'
-		fg='#D8DEE9'
-		cursor='#D8DEE9'
-		palette=('#3B4252' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#88C0D0' '#E5E9F0' '#4C566A' '#BF616A' '#A3BE8C' '#EBCB8B' '#81A1C1' '#B48EAD' '#8FBCBB' '#ECEFF4')
-		;;
-	dracula)
-		bg='#282A36'
-		fg='#F8F8F2'
-		cursor='#F8F8F2'
-		palette=('#21222C' '#FF5555' '#50FA7B' '#F1FA8C' '#BD93F9' '#FF79C6' '#8BE9FD' '#F8F8F2' '#6272A4' '#FF6E6E' '#69FF94' '#FFFFA5' '#D6ACFF' '#FF92DF' '#A4FFFF' '#FFFFFF')
-		;;
-	solarized-dark)
-		bg='#002B36'
-		fg='#839496'
-		cursor='#839496'
-		palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
-		;;
-	solarized-light)
-		bg='#FDF6E3'
-		fg='#657B83'
-		cursor='#657B83'
-		palette=('#073642' '#DC322F' '#859900' '#B58900' '#268BD2' '#D33682' '#2AA198' '#EEE8D5' '#002B36' '#CB4B16' '#586E75' '#657B83' '#839496' '#6C71C4' '#93A1A1' '#FDF6E3')
-		;;
-	*)
-		return 0 # Unknown theme, skip
-		;;
-	esac
+	# Load color data; unknown theme is silently skipped (not an error)
+	_gnome_terminal_theme_data "$theme_name" bg fg cursor palette || return 0
 
 	# Build palette string
 	local palette_str="["

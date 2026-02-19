@@ -15,6 +15,8 @@ fi
 # Returns: 0 always
 # Side-effects: Sources /etc/os-release if it exists
 get_os_info() {
+  # Populate once; re-sourcing /etc/os-release on every call pollutes the namespace
+  [[ -v _DEVBASE_OS_INFO ]] && return 0
   declare -gA _DEVBASE_OS_INFO
 
   if [[ -f /etc/os-release ]]; then

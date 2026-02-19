@@ -40,7 +40,3 @@ show_installation_warnings() {
   return 0
 }
 
-export -f init_install_context
-export -f get_custom_hooks_dir
-export -f add_install_warning
-export -f show_installation_warnings
