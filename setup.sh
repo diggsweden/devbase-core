@@ -21,10 +21,16 @@ fi
 
 handle_interrupt() {
 	printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
-	exit 130
+	exit 130  # 128 + SIGINT(2)
 }
 
-trap handle_interrupt INT TERM
+handle_terminate() {
+	printf "\n\nInstallation terminated\n" >&2
+	exit 143  # 128 + SIGTERM(15)
+}
+
+trap handle_interrupt INT
+trap handle_terminate TERM
 
 # ============================================================================
 # OPTIONAL ENVIRONMENT VARIABLES (fail-fast initialization)
