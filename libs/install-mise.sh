@@ -158,6 +158,40 @@ get_mise_installed_version() {
 	[[ -n "$version" ]] && echo "$version"
 }
 
+# Brief: Download, verify checksum, and run the mise installer script
+# Params: $1 - progress label shown in the spinner/output (e.g. "Installing mise")
+# Uses: DEVBASE_URL_MISE_INSTALLER, _DEVBASE_TEMP, DEVBASE_TUI_MODE,
+#       MISE_VERSION (optional, set by caller before invoking)
+# Returns: calls die() on any failure (download, validation, or run)
+# Side-effects: Runs installer; adds ~/.local/bin to PATH once (idempotent guard)
+_run_mise_installer() {
+	local label="${1:-Installing mise}"
+	local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
+
+	if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
+		die "Failed to download Mise installer"
+	fi
+
+	if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
+		die "Downloaded file doesn't appear to be Mise installer"
+	fi
+
+	if ! _verify_mise_installer_checksum "$mise_installer"; then
+		die "Mise installer checksum verification failed"
+	fi
+
+	if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
+		run_with_spinner "$label" bash "$mise_installer" || die "Failed to run Mise installer script"
+	else
+		bash "$mise_installer" || die "Failed to run Mise installer script"
+	fi
+
+	# Add the default mise install location to PATH once.  The guard prevents
+	# a duplicate entry when both install_mise and update_mise_if_needed run
+	# in the same session.
+	[[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
+}
+
 # Brief: Install mise tool version manager
 # Params: None
 # Uses: _DEVBASE_TEMP, HOME, XDG_BIN_HOME, DEVBASE_URL_MISE_INSTALLER (globals)
@@ -203,41 +237,15 @@ install_mise() {
 	fi
 
 	if [[ -z "$mise_path" ]]; then
-		# Install mise to XDG_BIN_HOME
-		local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
-
-		if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
-			die "Failed to download Mise installer"
-		fi
-
-		if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
-			die "Downloaded file doesn't appear to be Mise installer"
-		fi
-
-		if ! _verify_mise_installer_checksum "$mise_installer"; then
-			die "Mise installer checksum verification failed"
-		fi
-
-		# Get mise version from packages.yaml via parser
-
+		# Set MISE_VERSION from packages.yaml so the installer downloads the
+		# pinned version; unset means the installer picks the latest release.
 		local mise_version=""
 		if declare -f get_tool_version &>/dev/null; then
 			mise_version=$(get_tool_version "mise")
 		fi
+		[[ -n "$mise_version" ]] && export MISE_VERSION="$mise_version"
 
-		# Set mise version for installer script (if specified)
-		if [[ -n "$mise_version" ]]; then
-			export MISE_VERSION="$mise_version"
-		fi
-
-		if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-			run_with_spinner "Installing mise" bash "$mise_installer" || die "Failed to run Mise installer script"
-		else
-			bash "$mise_installer" || die "Failed to run Mise installer script"
-		fi
-
-		# Add default mise install location to PATH so we can find it
-		export PATH="${HOME}/.local/bin:${PATH}"
+		_run_mise_installer "Installing mise"
 
 		# Find where mise was actually installed
 		if ! mise_path=$(command -v mise 2>/dev/null); then
@@ -361,28 +369,8 @@ update_mise_if_needed() {
 
 	show_progress info "Updating mise to v${desired_normalized}..."
 
-	local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
-	if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
-		die "Failed to download Mise installer"
-	fi
-
-	if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
-		die "Downloaded file doesn't appear to be Mise installer"
-	fi
-
-	if ! _verify_mise_installer_checksum "$mise_installer"; then
-		die "Mise installer checksum verification failed"
-	fi
-
 	export MISE_VERSION="$desired_version"
-
-	if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-		run_with_spinner "Updating mise" bash "$mise_installer" || die "Failed to run Mise installer script"
-	else
-		bash "$mise_installer" || die "Failed to run Mise installer script"
-	fi
-
-	export PATH="${HOME}/.local/bin:${PATH}"
+	_run_mise_installer "Updating mise"
 
 	if ! verify_mise_checksum "$desired_version"; then
 		add_install_warning "Could not verify mise checksum, but continuing..."
