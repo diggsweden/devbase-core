@@ -51,12 +51,15 @@ setup_ssh_config_includes() {
 					fi
 				done <"$file"
 				;;
-			authorized_keys | known_hosts | known_hosts.old)
-				show_progress warning "Refusing to overwrite sensitive SSH file from custom dir: $filename"
-				;;
-			*)
+			*.pub | *.pem | id_*)
+				# Allowlisted: public keys, PEM keys, standard OpenSSH key files
 				cp "$file" "${HOME}/.ssh/${filename}"
 				chmod 600 "${HOME}/.ssh/${filename}"
+				;;
+			*)
+				# Blocklist is inherently incomplete (e.g. authorized_keys2, environment,
+				# rc all have special SSH meaning). Skip anything not in the allowlist.
+				show_progress warning "Skipping unrecognised SSH file from custom dir (not in allowlist): $filename"
 				;;
 			esac
 		done
