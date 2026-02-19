@@ -4,109 +4,62 @@
 #
 # SPDX-License-Identifier: MIT
 
-get_default_packs() {
-	if [[ -n "${DEVBASE_DEFAULT_PACKS:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_PACKS"
-	else
-		printf "%s" "java node python go ruby"
-	fi
-}
+# Each getter returns the value of the corresponding DEVBASE_DEFAULT_* override
+# when set, otherwise the built-in fallback.  The pattern is simply:
+#   printf '%s' "${DEVBASE_DEFAULT_X:-fallback}"
+# which is equivalent to the previous 5-line if/else but with no redundancy.
 
-get_default_theme() {
-	if [[ -n "${DEVBASE_DEFAULT_THEME:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_THEME"
-	else
-		printf "%s" "everforest-dark"
-	fi
-}
+# Brief: Return the default language pack selection
+# Returns: $DEVBASE_DEFAULT_PACKS or "java node python go ruby"
+get_default_packs() { printf '%s' "${DEVBASE_DEFAULT_PACKS:-java node python go ruby}"; }
 
-get_default_font() {
-	if [[ -n "${DEVBASE_DEFAULT_FONT:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_FONT"
-	else
-		printf "%s" "monaspace"
-	fi
-}
+# Brief: Return the default colour theme
+# Returns: $DEVBASE_DEFAULT_THEME or "everforest-dark"
+get_default_theme() { printf '%s' "${DEVBASE_DEFAULT_THEME:-everforest-dark}"; }
 
-get_default_editor() {
-	if [[ -n "${DEVBASE_DEFAULT_EDITOR:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_EDITOR"
-	else
-		printf "%s" "nvim"
-	fi
-}
+# Brief: Return the default Nerd Font family
+# Returns: $DEVBASE_DEFAULT_FONT or "monaspace"
+get_default_font() { printf '%s' "${DEVBASE_DEFAULT_FONT:-monaspace}"; }
 
-get_default_vscode_install() {
-	if [[ -n "${DEVBASE_DEFAULT_VSCODE_INSTALL:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_VSCODE_INSTALL"
-	else
-		printf "%s" "true"
-	fi
-}
+# Brief: Return the default terminal editor
+# Returns: $DEVBASE_DEFAULT_EDITOR or "nvim"
+get_default_editor() { printf '%s' "${DEVBASE_DEFAULT_EDITOR:-nvim}"; }
 
-get_default_vscode_extensions() {
-	if [[ -n "${DEVBASE_DEFAULT_VSCODE_EXTENSIONS:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_VSCODE_EXTENSIONS"
-	else
-		printf "%s" "true"
-	fi
-}
+# Brief: Return whether VS Code should be installed by default
+# Returns: $DEVBASE_DEFAULT_VSCODE_INSTALL or "true"
+get_default_vscode_install() { printf '%s' "${DEVBASE_DEFAULT_VSCODE_INSTALL:-true}"; }
 
-get_default_install_devtools() {
-	if [[ -n "${DEVBASE_DEFAULT_INSTALL_DEVTOOLS:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_INSTALL_DEVTOOLS"
-	else
-		printf "%s" "true"
-	fi
-}
+# Brief: Return whether VS Code extensions should be installed by default
+# Returns: $DEVBASE_DEFAULT_VSCODE_EXTENSIONS or "true"
+get_default_vscode_extensions() { printf '%s' "${DEVBASE_DEFAULT_VSCODE_EXTENSIONS:-true}"; }
 
-get_default_install_lazyvim() {
-	if [[ -n "${DEVBASE_DEFAULT_INSTALL_LAZYVIM:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_INSTALL_LAZYVIM"
-	else
-		printf "%s" "true"
-	fi
-}
+# Brief: Return whether dev tools (lazygit, etc.) should be installed by default
+# Returns: $DEVBASE_DEFAULT_INSTALL_DEVTOOLS or "true"
+get_default_install_devtools() { printf '%s' "${DEVBASE_DEFAULT_INSTALL_DEVTOOLS:-true}"; }
 
-get_default_install_intellij() {
-	if [[ -n "${DEVBASE_DEFAULT_INSTALL_INTELLIJ:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_INSTALL_INTELLIJ"
-	else
-		printf "%s" "false"
-	fi
-}
+# Brief: Return whether LazyVim should be installed by default
+# Returns: $DEVBASE_DEFAULT_INSTALL_LAZYVIM or "true"
+get_default_install_lazyvim() { printf '%s' "${DEVBASE_DEFAULT_INSTALL_LAZYVIM:-true}"; }
 
-get_default_install_jmc() {
-	if [[ -n "${DEVBASE_DEFAULT_INSTALL_JMC:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_INSTALL_JMC"
-	else
-		printf "%s" "false"
-	fi
-}
+# Brief: Return whether IntelliJ IDEA should be installed by default
+# Returns: $DEVBASE_DEFAULT_INSTALL_INTELLIJ or "false"
+get_default_install_intellij() { printf '%s' "${DEVBASE_DEFAULT_INSTALL_INTELLIJ:-false}"; }
 
-get_default_zellij_autostart() {
-	if [[ -n "${DEVBASE_DEFAULT_ZELLIJ_AUTOSTART:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_ZELLIJ_AUTOSTART"
-	else
-		printf "%s" "false"
-	fi
-}
+# Brief: Return whether JDK Mission Control should be installed by default
+# Returns: $DEVBASE_DEFAULT_INSTALL_JMC or "false"
+get_default_install_jmc() { printf '%s' "${DEVBASE_DEFAULT_INSTALL_JMC:-false}"; }
 
-get_default_enable_git_hooks() {
-	if [[ -n "${DEVBASE_DEFAULT_ENABLE_GIT_HOOKS:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_ENABLE_GIT_HOOKS"
-	else
-		printf "%s" "true"
-	fi
-}
+# Brief: Return whether Zellij should autostart by default
+# Returns: $DEVBASE_DEFAULT_ZELLIJ_AUTOSTART or "false"
+get_default_zellij_autostart() { printf '%s' "${DEVBASE_DEFAULT_ZELLIJ_AUTOSTART:-false}"; }
 
-get_default_ssh_key_name() {
-	if [[ -n "${DEVBASE_DEFAULT_SSH_KEY_NAME:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_SSH_KEY_NAME"
-	else
-		printf "%s" "id_ed25519_devbase"
-	fi
-}
+# Brief: Return whether Git hooks should be enabled by default
+# Returns: $DEVBASE_DEFAULT_ENABLE_GIT_HOOKS or "true"
+get_default_enable_git_hooks() { printf '%s' "${DEVBASE_DEFAULT_ENABLE_GIT_HOOKS:-true}"; }
+
+# Brief: Return the default SSH key filename (without path)
+# Returns: $DEVBASE_DEFAULT_SSH_KEY_NAME or "id_ed25519_devbase"
+get_default_ssh_key_name() { printf '%s' "${DEVBASE_DEFAULT_SSH_KEY_NAME:-id_ed25519_devbase}"; }
 
 apply_setup_defaults() {
 	DEVBASE_THEME="${DEVBASE_THEME:-$(get_default_theme)}"
@@ -123,6 +76,9 @@ apply_setup_defaults() {
 	export EDITOR VISUAL
 }
 
+# Brief: Return the default git author name
+# Params: None
+# Returns: $DEVBASE_DEFAULT_GIT_AUTHOR, then global git config user.name, or empty
 get_default_git_author() {
 	if [[ -n "${DEVBASE_DEFAULT_GIT_AUTHOR:-}" ]]; then
 		printf "%s" "$DEVBASE_DEFAULT_GIT_AUTHOR"
@@ -135,6 +91,9 @@ get_default_git_author() {
 	fi
 }
 
+# Brief: Return the default git author email
+# Params: None
+# Returns: $DEVBASE_DEFAULT_GIT_EMAIL, then global git config user.email, or empty
 get_default_git_email() {
 	if [[ -n "${DEVBASE_DEFAULT_GIT_EMAIL:-}" ]]; then
 		printf "%s" "$DEVBASE_DEFAULT_GIT_EMAIL"

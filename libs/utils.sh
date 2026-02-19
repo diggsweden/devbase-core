@@ -546,7 +546,7 @@ run_mise_from_home_dir() {
 # Brief: Download file with optional caching support
 # Params: $1 - url, $2 - target_file, $3 - cache_filename, $4 - package_name (for messages)
 #         $5 - checksum_url (optional), $6 - expected_checksum (optional), $7 - timeout (default 30)
-# Uses: DEVBASE_DEB_CACHE (optional global), validate_optional_dir, download_file (functions)
+# Uses: DEVBASE_DEB_CACHE (optional global), validate_custom_dir, download_file (functions)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Downloads file, may cache it if DEVBASE_DEB_CACHE is set
 download_with_cache() {
@@ -587,7 +587,7 @@ download_with_cache() {
 		fi
 	fi
 
-	if validate_optional_dir "DEVBASE_DEB_CACHE" "Package cache"; then
+	if validate_custom_dir "DEVBASE_DEB_CACHE" "Package cache"; then
 		local cached_file="${DEVBASE_DEB_CACHE}/${cache_filename}"
 
 		if [[ -f "$cached_file" ]]; then

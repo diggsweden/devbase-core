@@ -197,33 +197,6 @@ validate_custom_file() {
   return 0
 }
 
-# Brief: Validate optional directory variable (set and exists, or empty)
-# Params: $1 - variable name containing directory path
-#         $2 - description (optional, default: "directory")
-# Uses: show_progress (from ui-helpers)
-# Returns: 0 if variable is set and directory exists, 1 if empty or doesn't exist
-# Notes: Returns 1 silently if variable is empty (optional directory)
-#        Shows error if variable is set but directory doesn't exist
-validate_optional_dir() {
-  local varname="$1"
-  local description="${2:-directory}"
-
-  local value="${!varname}"
-
-  # Not set or empty - silently return (optional directory)
-  if [[ -z "$value" ]]; then
-    return 1
-  fi
-
-  # Set but directory doesn't exist - this is an error
-  if [[ ! -d "$value" ]]; then
-    show_progress error "${description} does not exist: ${value}"
-    return 1
-  fi
-
-  return 0
-}
-
 # Brief: Validate hostname format (no spaces, no shell metacharacters)
 # Params: $1 - value to validate, $2 - variable name (for error messages)
 # Returns: 0 if valid, 1 if invalid
