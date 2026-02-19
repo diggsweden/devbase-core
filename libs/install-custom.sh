@@ -55,11 +55,13 @@ _install_pkg_file() {
 	if [[ "$pkg_format" == "deb" ]]; then
 		if sudo dpkg -i "$pkg_file"; then
 			return 0
-		else
-			add_install_warning "Package installation failed - trying to fix dependencies"
-			sudo apt-get install -f -y -q
-			return 0
 		fi
+		add_install_warning "Package installation failed - trying to fix dependencies"
+		if ! sudo apt-get install -f -y -q; then
+			add_install_warning "Dependency fix also failed — package not installed"
+			return 1
+		fi
+		return 0
 	else
 		# RPM installation (try dnf, then rpm directly)
 		if sudo dnf install -y "$pkg_file" 2>/dev/null ||

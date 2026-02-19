@@ -152,6 +152,10 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 | `DEVBASE_REGISTRY_PORT`
 | _(none)_
 | Internal package registry port
+
+| `DEVBASE_EXTRA_FORGES`
+| _(none)_
+| Comma-separated list of extra code-forge hostnames to create under `~/development/` (e.g. `gitlab.mycompany.com,gitea.example.org`). The built-in forges (`gitlab.com`, `github.com`, `bitbucket.org`, `codeberg.org`, `code.europa.eu`) are always created.
 |===
 
 These variables affect installation but are NOT exported to your shell.
