@@ -347,6 +347,11 @@ install_mise() {
 	show_progress success "Mise ready at $mise_path"
 }
 
+# Brief: Upgrade mise to the pinned version if it is installed and behind
+# Params: None
+# Uses: get_tool_version, get_mise_installed_version, _run_mise_installer, verify_mise_checksum (globals)
+# Returns: 0 always (non-fatal; warnings added for checksum failure or downgrade skips)
+# Side-effects: Runs mise installer, may update binary in PATH
 update_mise_if_needed() {
 	if ! command -v mise &>/dev/null; then
 		return 0
@@ -544,7 +549,7 @@ install_mise_tools() {
 	local missing=()
 
 	# Map pack to its primary runtime binary
-	for pack in $SELECTED_PACKS; do
+	for pack in $DEVBASE_SELECTED_PACKS; do
 		local tool=""
 		case "$pack" in
 		node) tool="node" ;;
