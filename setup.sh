@@ -280,7 +280,7 @@ print_version() {
 
 run_installation() {
 	# Run the main installation script
-	_INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
+	local _INSTALL_SCRIPT="${DEVBASE_LIBS}/install.sh"
 
 	if [[ -f "$_INSTALL_SCRIPT" ]]; then
 		# Only export what child processes actually need
@@ -305,7 +305,6 @@ main() {
 	apply_setup_defaults
 
 	if [[ "${SHOW_VERSION}" == "true" ]]; then
-
 		print_version
 		return 0
 	fi

@@ -53,8 +53,10 @@ if ! [[ -v DEVBASE_REQUIRED_TEMPLATE_VARS ]]; then
   )
 fi
 
-# Validate that a required parameter is not empty
-# Usage: validate_not_empty "$param" "parameter_name"
+# Brief: Validate that a required parameter is not empty
+# Params: $1 - value to check, $2 - parameter name (optional, default: "parameter")
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if non-empty, 1 if empty
 validate_not_empty() {
   local value="$1"
   local name="${2:-parameter}"
@@ -81,8 +83,10 @@ validate_file_exists() {
   return 0
 }
 
-# Validate that a directory exists
-# Usage: validate_dir_exists "$dirpath" "description"
+# Brief: Validate that a directory exists
+# Params: $1 - dirpath to check, $2 - description (optional, default: "directory")
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if directory exists, 1 if not found
 validate_dir_exists() {
   local dirpath="$1"
   local description="${2:-directory}"
@@ -127,19 +131,16 @@ validate_var_set() {
 # Uses: show_progress (from ui-helpers)
 # Returns: 0 if all variables are set, 1 if any are missing
 require_env() {
-  local missing=0
+  local all_present=true
 
   for varname in "$@"; do
     if [[ -z "${!varname:-}" ]]; then
       show_progress error "Required environment variable ${varname} is not set"
-      missing=1
+      all_present=false
     fi
   done
 
-  if [[ "$missing" -eq 1 ]]; then
-    return 1
-  fi
-  return 0
+  [[ "$all_present" == true ]]
 }
 
 # Brief: Validate custom directory path is set and exists

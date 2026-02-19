@@ -34,7 +34,6 @@ teardown() {
     show_progress step 'Test step message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test step message"
 }
@@ -53,7 +52,6 @@ teardown() {
     show_progress success 'Test success message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test success message"
 }
@@ -72,7 +70,6 @@ teardown() {
     show_phase 'Test Phase'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test Phase"
 }
@@ -86,7 +83,6 @@ teardown() {
     error_msg 'Test error message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test error message"
   assert_output --partial "✗"
@@ -101,7 +97,6 @@ teardown() {
     warn_msg 'Test warning message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test warning message"
   assert_output --partial "‼"
@@ -116,7 +111,6 @@ teardown() {
     success_msg 'Test success message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test success message"
   assert_output --partial "✓"
@@ -131,7 +125,6 @@ teardown() {
     info_msg 'Test info message'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test info message"
   assert_output --partial "ⓘ"
@@ -148,7 +141,6 @@ teardown() {
     printf '%s\n' \"\${_WT_LOG[@]}\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "✓ First message"
   assert_output --partial "✗ Second message"
@@ -169,7 +161,6 @@ teardown() {
     run_with_spinner 'Test command' true
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }
 
@@ -187,6 +178,5 @@ teardown() {
     run_with_spinner 'Failing command' false
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
 }

@@ -37,7 +37,6 @@ teardown() {
   stub jq '-r * : echo "abc123"'
   
   run --separate-stderr get_vscode_checksum "1.85.1"
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
   assert_output "abc123"
   

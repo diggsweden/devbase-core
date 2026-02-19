@@ -181,7 +181,6 @@ EOF
   stub snap 'list kubectl : true'
   
   run --separate-stderr snap_install "kubectl"
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
   assert_output --partial "already installed"
   

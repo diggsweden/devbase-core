@@ -127,7 +127,6 @@ setup() {
   source "${DEVBASE_ROOT}/libs/configure-theme.sh"
   
   run --separate-stderr apply_theme "unknown-theme"
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   
   assert_output --partial "Unknown theme"
   assert_output --partial "Supported themes"

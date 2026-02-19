@@ -52,7 +52,6 @@ teardown() {
     configure_fish_interactive
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Fish shell configured"
 }
@@ -107,7 +106,6 @@ SCRIPT
     configure_fish_interactive
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Fish shell not found"
 }

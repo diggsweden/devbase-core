@@ -44,7 +44,6 @@ SCRIPT
     cat '${XDG_CONFIG_HOME}/fish/completions/kubectl.fish'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "# kubectl completion"
 }
@@ -71,7 +70,6 @@ SCRIPT
     test -f '${XDG_CONFIG_HOME}/fish/completions/helm.fish' && echo 'EXISTS'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "EXISTS"
 }
@@ -88,7 +86,6 @@ SCRIPT
     configure_single_fish_completion ''
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
 }
 
@@ -105,7 +102,6 @@ SCRIPT
     echo 'COMPLETED'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "COMPLETED"
 }
@@ -141,7 +137,6 @@ SCRIPT
     test -f '${fish_dir}/completions/kubectl.fish' && echo 'KUBECTL_EXISTS'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "KUBECTL_EXISTS"
 }

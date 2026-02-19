@@ -44,7 +44,6 @@ EOF
     get_mise_packages
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "aqua:casey/just|1.44.0"
   assert_output --partial "aqua:junegunn/fzf|v0.67.0"
@@ -76,7 +75,6 @@ EOF
     get_mise_packages | wc -l
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "3"
 }
@@ -102,7 +100,6 @@ EOF
     get_tool_version 'mise'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "v2025.9.20"
 }
@@ -135,7 +132,6 @@ EOF
     cat '${TEST_DIR}/mise/config.toml'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial '[tools]'
   assert_output --partial 'aqua:casey/just'
@@ -179,7 +175,6 @@ EOF
       echo "OK"
     '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial 'OK'
 }
@@ -218,7 +213,6 @@ EOF
       [[ $missing -eq 0 ]]
     '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }
 
@@ -247,7 +241,6 @@ EOF
     get_core_runtimes
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "node"
   assert_output --partial "java"
@@ -267,7 +260,6 @@ EOF
     verify_mise_checksum && echo 'EXISTS' || echo 'NOT_EXISTS'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "NOT_EXISTS"
 }
@@ -332,7 +324,6 @@ SCRIPT
     "${HOME}/.local/bin/mise" --version
   '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "mise v2026.2.0"
 }
@@ -401,7 +392,6 @@ SCRIPT
     fi
   '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "no-install"
 }

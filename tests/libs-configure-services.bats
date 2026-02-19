@@ -40,7 +40,6 @@ SCRIPT
     enable_user_service 'test.service' 'Test Service'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test Service enabled and started"
 }
@@ -67,7 +66,6 @@ SCRIPT
     enable_user_service 'failing.service' 'Failing Service'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
   assert_output --partial "Failed to enable"
 }
@@ -84,7 +82,6 @@ SCRIPT
     enable_user_service ''
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
 }
 
@@ -117,7 +114,6 @@ SCRIPT
     set_system_limits
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "System limits configured"
   
@@ -163,7 +159,6 @@ SCRIPT
     configure_ufw
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "UFW firewall enabled"
 }
@@ -193,7 +188,6 @@ SCRIPT
     configure_podman_service
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Podman"
 }

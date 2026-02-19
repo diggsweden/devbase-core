@@ -220,11 +220,8 @@ create_mock_git_repo() {
 # Debug Helpers
 # =============================================================================
 
-# Standard debug output for failed tests
-# Usage: debug_output (call after 'run' command)
-debug_output() {
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
-}
+# Kept for backwards compatibility; use --print-output-on-failure instead
+debug_output() { :; }
 
 # =============================================================================
 # Mock Helpers

@@ -113,7 +113,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ecdsa_mycompany"
 }
@@ -158,7 +157,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ed25519_devbase"
 }
@@ -203,7 +201,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should return custom key from preferences, NOT the default
   assert_output "${TEST_HOME}/.ssh/id_ed25519_custom_org"
@@ -245,7 +242,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output ""
 }
@@ -288,7 +284,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should fall back to the default key when preferences key doesn't exist
   assert_output "${TEST_HOME}/.ssh/id_ed25519_devbase"
@@ -332,7 +327,6 @@ EOF
     echo \$devbase_key
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ecdsa_nistp521_devbase"
 }
@@ -366,7 +360,6 @@ SCRIPT
     echo \"exit_code: \$status\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   # Function should return 1 when agent is not running (warns user)
   assert_output --partial "Warning: SSH agent is not running"
 }
@@ -388,7 +381,6 @@ SCRIPT
     echo \"status: \$status\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "status: 0"
 }
