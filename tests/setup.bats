@@ -318,27 +318,29 @@ teardown() {
 
 @test "validate_custom_directory requires config dir" {
   mkdir -p "${TEST_DIR}/custom"
-  
+
   run bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
-    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh'
     validate_custom_directory '${TEST_DIR}/custom'
   "
-  
+
   assert_failure
 }
 
 @test "validate_custom_directory requires org.env file" {
   mkdir -p "${TEST_DIR}/custom/config"
-  
+
   run bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
     source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
-    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh'
     validate_custom_directory '${TEST_DIR}/custom'
   "
-  
+
   assert_failure
 }
 
