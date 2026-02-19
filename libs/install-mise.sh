@@ -98,7 +98,7 @@ _verify_mise_installer_checksum() {
 # Returns: tool@version string on stdout, or empty
 _parse_mise_tool_name() {
 	local line="$1"
-	echo "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1
+	printf '%s\n' "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1
 }
 
 # Brief: Check if a log file contains mise HTTP server errors (5xx)
@@ -155,7 +155,7 @@ get_mise_installed_version() {
 	local version
 	version=$($mise_path --version 2>/dev/null | grep -oE 'v?[0-9]+(\.[0-9]+)+' | head -1)
 	version="${version#v}"
-	[[ -n "$version" ]] && echo "$version"
+	[[ -n "$version" ]] && printf '%s\n' "$version"
 }
 
 # Brief: Download, verify checksum, and run the mise installer script
@@ -172,7 +172,13 @@ _run_mise_installer() {
 		die "Failed to download Mise installer"
 	fi
 
-	if [[ ! -s "$mise_installer" ]] || ! grep -q "mise" "$mise_installer"; then
+	# A valid installer must be non-empty, start with a shell shebang (rules out
+	# HTML error pages and truncated downloads), and mention "mise" somewhere in
+	# its body.  The checksum verification that follows is the real integrity
+	# check; this is a fast sanity gate for obviously wrong files.
+	if [[ ! -s "$mise_installer" ]] || \
+		! grep -qE '^#!/.*(ba)?sh' "$mise_installer" || \
+		! grep -q 'mise' "$mise_installer"; then
 		die "Downloaded file doesn't appear to be Mise installer"
 	fi
 

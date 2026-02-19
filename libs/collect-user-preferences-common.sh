@@ -157,7 +157,7 @@ _append_domain_if_needed() {
 # Params: $1 - "true" or "false"
 # Outputs: "✓" for true, "·" for false
 _bool_to_symbol() {
-	[[ "$1" == "true" ]] && echo "✓" || echo "·"
+	[[ "$1" == "true" ]] && printf '✓\n' || printf '·\n'
 }
 
 apply_preference_defaults() {

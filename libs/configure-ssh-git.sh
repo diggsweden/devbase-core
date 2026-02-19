@@ -19,8 +19,8 @@ setup_ssh_config_includes() {
 	validate_var_set "XDG_CONFIG_HOME" || return 1
 
 	local ssh_config_dir="${XDG_CONFIG_HOME}/ssh"
-	mkdir -p ~/.ssh "$ssh_config_dir"
-	chmod 700 ~/.ssh "$ssh_config_dir"
+	mkdir -p "${HOME}/.ssh" "$ssh_config_dir"
+	chmod 700 "${HOME}/.ssh" "$ssh_config_dir"
 
 	if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
 		require_env _DEVBASE_CUSTOM_SSH || return 1
@@ -55,8 +55,8 @@ setup_ssh_config_includes() {
 				show_progress warning "Refusing to overwrite sensitive SSH file from custom dir: $filename"
 				;;
 			*)
-				cp "$file" ~/.ssh/"$filename"
-				chmod 600 ~/.ssh/"$filename"
+				cp "$file" "${HOME}/.ssh/${filename}"
+				chmod 600 "${HOME}/.ssh/${filename}"
 				;;
 			esac
 		done
@@ -163,7 +163,7 @@ configure_ssh() {
 
 	if [[ "$key_generated" == true ]]; then
 		local key_type_upper
-		key_type_upper=$(echo "${DEVBASE_SSH_KEY_TYPE}" | tr '[:lower:]' '[:upper:]')
+		key_type_upper="${DEVBASE_SSH_KEY_TYPE^^}"
 		local msg="SSH configured (${key_type_upper} key at ${ssh_key_path}"
 		[[ "$passphrase_protected" == true ]] && msg="${msg}, passphrase protected"
 		[[ "$agent_enabled" == true ]] && msg="${msg}, agent enabled"
