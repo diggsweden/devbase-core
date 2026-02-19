@@ -389,6 +389,74 @@ update_mise_if_needed() {
 	fi
 }
 
+# Brief: Run full mise install with whiptail progress gauge
+# Params: $1-full_install_log $2-tools_to_install $3-nameref for mise_server_error
+_install_mise_tools_whiptail_gauge() {
+	local full_install_log="$1"
+	local tools_to_install="$2"
+	local -n _gauge_server_error="$3"
+
+	local count=0
+	local total="$tools_to_install"
+	local install_exit_code=0
+	local _ec_file
+	_ec_file=$(mktemp)
+
+	[[ $total -eq 0 ]] && total=1 # Avoid division by zero
+	_wt_update_gauge "Installing development tools (0/$total)..." 0
+
+	while IFS= read -r line; do
+		echo "$line" >>"$full_install_log"
+		if [[ "$line" =~ installed ]] || [[ "$line" =~ "install "[a-z] ]]; then
+			local tool
+			tool=$(_parse_mise_tool_name "$line")
+			if [[ -n "$tool" ]]; then
+				count=$((count + 1))
+				local percent=$(((count * 100) / total))
+				_wt_update_gauge "Installed: $tool ($count/$total)" "$percent"
+			fi
+		fi
+	done < <(
+		run_mise_from_home_dir install --yes 2>&1
+		printf '%s' "$?" >"$_ec_file"
+	)
+
+	install_exit_code=$(cat "$_ec_file" 2>/dev/null)
+	install_exit_code=${install_exit_code:-1}
+	rm -f "$_ec_file"
+
+	[[ $count -eq 0 ]] && [[ $tools_to_install -gt 0 ]] &&
+		add_install_warning "Could not parse mise progress output"
+	_check_mise_server_error "$full_install_log" && _gauge_server_error=true
+	[[ $install_exit_code -ne 0 ]] && add_install_warning "mise install returned non-zero exit code"
+}
+
+# Brief: Run full mise install with whiptail spinner (no persistent gauge)
+# Params: $1-full_install_log $2-nameref for mise_server_error
+_install_mise_tools_whiptail_spinner() {
+	local full_install_log="$1"
+	local -n _spinner_server_error="$2"
+
+	if ! run_with_spinner "Installing development tools (mise)" \
+		bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install --yes 2>&1 | tee '$full_install_log'"; then
+		_check_mise_server_error "$full_install_log" && _spinner_server_error=true
+		add_install_warning "mise install returned non-zero exit code"
+	fi
+}
+
+# Brief: Run full mise install with gum/interactive output
+# Params: $1-full_install_log $2-nameref for mise_server_error
+_install_mise_tools_gum() {
+	local full_install_log="$1"
+	local -n _gum_server_error="$2"
+
+	show_progress info "Installing development tools..."
+	if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
+		add_install_warning "mise install returned non-zero exit code"
+	fi
+	_check_mise_server_error "$full_install_log" && _gum_server_error=true
+}
+
 install_mise_tools() {
 	show_progress info "Installing development tools..."
 	tui_blank_line
@@ -400,7 +468,6 @@ install_mise_tools() {
 	# Install core runtimes FIRST (required by npm/cargo/gem backends)
 	# This MUST happen before any `mise list` commands, because mise tries to resolve
 	# all tools in config.toml (including npm:tree-sitter-cli) which requires node
-	# We filter the npm:tree-sitter-cli warning since node isn't installed yet
 	local -a core_runtimes=()
 	while IFS= read -r runtime; do
 		[[ -n "$runtime" ]] && core_runtimes+=("$runtime")
@@ -439,81 +506,15 @@ install_mise_tools() {
 	local tools_to_install
 	tools_to_install=$(( $(run_mise_from_home_dir list --not-installed 2>/dev/null | wc -l) ))
 
-	# Install all remaining tools
-	# Run mise install - use run_with_spinner for whiptail, tee for gum
-	# mise handles checksum verification internally and will fail if checksums don't match
+	# Install all remaining tools via the appropriate TUI path
 	local full_install_log="${_DEVBASE_TEMP}/mise-full-install.log"
 
 	if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && _wt_gauge_is_running; then
-		# Whiptail mode with persistent gauge - parse output for real progress
-		local count=0
-		local total="$tools_to_install"
-		local last_line=""
-		local install_exit_code=0
-
-		[[ $total -eq 0 ]] && total=1 # Avoid division by zero
-
-		_wt_update_gauge "Installing development tools (0/$total)..." 0
-
-		while IFS= read -r line; do
-			echo "$line" >>"$full_install_log" # Keep logging
-			last_line="$line"
-
-			# Parse mise output: "mise tool@version ✓ installed" or "tool@version ✓ installed"
-			if [[ "$line" =~ installed ]] || [[ "$line" =~ "install "[a-z] ]]; then
-				local tool
-				tool=$(_parse_mise_tool_name "$line")
-				if [[ -n "$tool" ]]; then
-					count=$((count + 1))
-					local percent=$(((count * 100) / total))
-					_wt_update_gauge "Installed: $tool ($count/$total)" "$percent"
-				fi
-			fi
-		done < <(
-			run_mise_from_home_dir install --yes 2>&1
-			echo "MISE_EXIT_CODE:$?"
-		)
-
-		# Extract exit code
-		if [[ "$last_line" =~ MISE_EXIT_CODE:([0-9]+) ]]; then
-			install_exit_code="${BASH_REMATCH[1]}"
-		fi
-
-		# Check if parsing worked
-		if [[ $count -eq 0 ]] && [[ $tools_to_install -gt 0 ]]; then
-			add_install_warning "Could not parse mise progress output"
-		fi
-
-		# Check for server errors in log
-		if _check_mise_server_error "$full_install_log"; then
-			mise_server_error=true
-		fi
-
-		if [[ $install_exit_code -ne 0 ]]; then
-			add_install_warning "mise install returned non-zero exit code"
-		fi
+		_install_mise_tools_whiptail_gauge "$full_install_log" "$tools_to_install" mise_server_error
 	elif [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-		# Whiptail mode without persistent gauge - use spinner fallback
-		if ! run_with_spinner "Installing development tools (mise)" \
-			bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install --yes 2>&1 | tee '$full_install_log'"; then
-			if _check_mise_server_error "$full_install_log"; then
-				mise_server_error=true
-			fi
-		fi
+		_install_mise_tools_whiptail_spinner "$full_install_log" mise_server_error
 	else
-		# Gum/other mode - let mise render its own TTY output
-		show_progress info "Installing development tools..."
-		if [[ -n "${DEVBASE_DEBUG:-}" ]]; then
-			if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
-				if _check_mise_server_error "$full_install_log"; then
-					mise_server_error=true
-				fi
-			fi
-		else
-			if ! run_mise_from_home_dir install --yes; then
-				add_install_warning "mise install returned non-zero exit code"
-			fi
-		fi
+		_install_mise_tools_gum "$full_install_log" mise_server_error
 	fi
 
 	# Verify critical tools are present (based on selected packs)

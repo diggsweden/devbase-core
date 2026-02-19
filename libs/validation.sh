@@ -9,6 +9,47 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+# Variables that must be set in the environment for templates to render correctly.
+readonly -a DEVBASE_REQUIRED_TEMPLATE_VARS=(
+  "HOME"
+  "EDITOR"
+  "VISUAL"
+  "XDG_CONFIG_HOME"
+  "DEVBASE_THEME"
+  "DEVBASE_ZELLIJ_AUTOSTART"
+  "BAT_THEME"
+  "BTOP_THEME"
+  "DELTA_SYNTAX_THEME"
+  "DELTA_FEATURES"
+  "DELTA_DARK"
+  "ZELLIJ_THEME"
+  "ZELLIJ_COPY_COMMAND"
+  "THEME_BACKGROUND"
+  "LAZYGIT_LIGHT_THEME"
+  "VIFM_COLORSCHEME"
+  "K9S_SKIN"
+)
+
+# Variables that enable optional features; a warning is emitted if unset but setup continues.
+readonly -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
+  "DEVBASE_CUSTOM_CERTS"
+  "DEVBASE_PROXY_HOST"
+  "DEVBASE_PROXY_PORT"
+  "DEVBASE_NO_PROXY_DOMAINS"
+  "DEVBASE_REGISTRY_HOST"
+  "DEVBASE_REGISTRY_PORT"
+  "DEVBASE_REGISTRY_URL"
+  "DEVBASE_REGISTRY_CONTAINER"
+  "DEVBASE_PYPI_REGISTRY"
+)
+
+# Variables that appear in templates but are evaluated at runtime by the shell,
+# not substituted by envsubst during setup.
+readonly -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
+  "XDG_RUNTIME_DIR"
+  "USER_UID"
+)
+
 # Validate that a required parameter is not empty
 # Usage: validate_not_empty "$param" "parameter_name"
 validate_not_empty() {
@@ -265,47 +306,6 @@ validate_safe_value() {
 validate_template_variables() {
   local template_file="$1"
   local vars_to_check="$2"
-
-  # Define required variables (must be set - these are actually used in templates)
-  local -a DEVBASE_REQUIRED_TEMPLATE_VARS=(
-    "HOME"
-    "EDITOR"
-    "VISUAL"
-    "XDG_CONFIG_HOME"
-    "DEVBASE_THEME"
-    "DEVBASE_ZELLIJ_AUTOSTART"
-    "BAT_THEME"
-    "BTOP_THEME"
-    "DELTA_SYNTAX_THEME"
-    "DELTA_FEATURES"
-    "DELTA_DARK"
-    "ZELLIJ_THEME"
-    "ZELLIJ_COPY_COMMAND"
-    "THEME_BACKGROUND"
-    "LAZYGIT_LIGHT_THEME"
-    "VIFM_COLORSCHEME"
-    "K9S_SKIN"
-  )
-
-  # Define optional variables (warnings only if missing - features are disabled if not set)
-  local -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
-    "DEVBASE_CUSTOM_CERTS"
-    "DEVBASE_PROXY_HOST"
-    "DEVBASE_PROXY_PORT"
-    "DEVBASE_NO_PROXY_DOMAINS"
-    "DEVBASE_REGISTRY_HOST"
-    "DEVBASE_REGISTRY_PORT"
-    "DEVBASE_REGISTRY_URL"
-    "DEVBASE_REGISTRY_CONTAINER"
-    "DEVBASE_PYPI_REGISTRY"
-  )
-
-  # Define runtime variables (not replaced by envsubst, evaluated at runtime by shell)
-  # These are variables that appear in templates but should remain as literal $VAR syntax
-  local -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
-    "XDG_RUNTIME_DIR"
-    "USER_UID"
-  )
 
   local missing_required=()
   local missing_optional=()

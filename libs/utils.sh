@@ -443,16 +443,21 @@ ensure_user_dirs() {
 	)
 
 	# ===== Development project directories =====
-	local project_dirs=(
-		"$HOME/development"
-		"$HOME/development/gitlab.com"
-		"$HOME/development/github.com"
-		"$HOME/development/bitbucket.org"
-		"$HOME/development/codeberg.org"
-		"$HOME/development/code.europa.eu"
-		"$HOME/development/devcerts"
-		"$HOME/notes"
-	)
+	local default_forges=("gitlab.com" "github.com" "bitbucket.org" "codeberg.org" "code.europa.eu")
+	local project_dirs=("$HOME/development" "$HOME/development/devcerts" "$HOME/notes")
+	local forge
+	for forge in "${default_forges[@]}"; do
+		project_dirs+=("$HOME/development/$forge")
+	done
+	if [[ -n "${DEVBASE_EXTRA_FORGES:-}" ]]; then
+		local -a extra_forges
+		IFS=',' read -ra extra_forges <<<"$DEVBASE_EXTRA_FORGES"
+		for forge in "${extra_forges[@]}"; do
+			forge="${forge#"${forge%%[![:space:]]*}"}"
+			forge="${forge%"${forge##*[![:space:]]}"}"
+			[[ -n "$forge" ]] && project_dirs+=("$HOME/development/$forge")
+		done
+	fi
 
 	# Combine all directories
 	local dirs=(
@@ -475,7 +480,7 @@ ensure_user_dirs() {
 
 	# ===== Set permissions on security-sensitive directories =====
 	[[ -d "$HOME/.ssh" ]] && chmod 700 "$HOME/.ssh"
-	[[ -d "$XDG_CONFIG_HOME/ssh" ]] && chmod 755 "$XDG_CONFIG_HOME/ssh"
+	[[ -d "$XDG_CONFIG_HOME/ssh" ]] && chmod 700 "$XDG_CONFIG_HOME/ssh"
 	[[ -d "${DEVBASE_CACHE_DIR}" ]] && chmod 700 "${DEVBASE_CACHE_DIR}"
 
 	# ===== Report results =====
