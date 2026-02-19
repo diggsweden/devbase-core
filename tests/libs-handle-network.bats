@@ -31,7 +31,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$expected_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_file_exists "$test_file"
 }
@@ -43,7 +42,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$wrong_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$output" == *"Checksum mismatch"* ]] || [[ "$stderr" == *"Checksum mismatch"* ]]
   assert_file_not_exists "$test_file"
@@ -53,9 +51,10 @@ teardown() {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"
   local wrong_checksum="0000000000000000000000000000000000000000000000000000000000000000"
-  
-  verify_checksum_value "$test_file" "$wrong_checksum" 2>/dev/null || true
-  
+
+  run --separate-stderr verify_checksum_value "$test_file" "$wrong_checksum"
+
+  assert_failure
   assert_file_not_exists "$test_file"
 }
 
@@ -67,7 +66,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$expected_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$output" == *"Expected: ${expected_checksum}"* ]] || [[ "$stderr" == *"Expected: ${expected_checksum}"* ]]
   [[ "$output" == *"Got:      ${actual_checksum}"* ]] || [[ "$stderr" == *"Got:      ${actual_checksum}"* ]]
@@ -85,7 +83,6 @@ teardown() {
     printf 'CURL_ARGS=%s\n' \"\${DEVBASE_CURL_PROXY_ARGS[*]}\"
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "CURL_ARGS=--no-keepalive --no-sessionid -H Connection: close"
 }
@@ -102,7 +99,6 @@ teardown() {
     printf 'WGET_ARGS=%s\n' \"\${DEVBASE_WGET_PROXY_ARGS[*]}\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "WGET_ARGS=--no-http-keep-alive"
 }
@@ -120,7 +116,6 @@ teardown() {
     download_file 'https://example.com/file' '${target}'
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"Checksum required"* ]]
 }
@@ -137,7 +132,6 @@ teardown() {
     printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "CURL_ARGS="
 }
@@ -145,7 +139,6 @@ teardown() {
 @test "_download_file_get_cache_name includes version when provided" {
   run --separate-stderr _download_file_get_cache_name '/tmp/package.tar.gz' '1.2.3'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "package.tar-v1.2.3.gz"
 }
@@ -153,7 +146,6 @@ teardown() {
 @test "_download_file_get_cache_name uses basename when no version" {
   run --separate-stderr _download_file_get_cache_name '/tmp/package.tar.gz' ''
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "package.tar.gz"
 }
@@ -164,14 +156,12 @@ teardown() {
   
   run --separate-stderr _download_file_should_skip "$test_file" true
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
 @test "_download_file_should_skip returns false when file missing" {
   run --separate-stderr _download_file_should_skip "${TEST_DIR}/nonexistent" 0
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
 }
 
@@ -182,7 +172,6 @@ teardown() {
   
   run --separate-stderr _download_file_try_cache "$cached" "$target" false
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_file_exists "$target"
   
@@ -201,7 +190,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_from_url "$test_file" "$checksum_url" 30
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   
   unstub curl
@@ -216,7 +204,6 @@ teardown() {
 
   run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "abcdef1234567890"
 
@@ -232,7 +219,6 @@ teardown() {
 
   run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
 
   unstub curl
@@ -246,7 +232,6 @@ teardown() {
 
   run --separate-stderr verify_checksum_from_url "$test_file" 'http://example.com/checksum' 30
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure 2
   [[ "$output" == *"Could not fetch checksum"* ]] || [[ "$stderr" == *"Could not fetch checksum"* ]]
 
@@ -260,7 +245,6 @@ teardown() {
   
   run --separate-stderr check_network_connectivity 3
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   [[ "$output" == *"Network connectivity verified"* ]] || [[ "$stderr" == *"Network connectivity verified"* ]]
   
@@ -276,7 +260,6 @@ teardown() {
   
   run --separate-stderr check_network_connectivity 3
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   
   unstub curl
@@ -290,7 +273,6 @@ teardown() {
   
   run --separate-stderr check_proxy_connectivity 5
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   [[ "$output" == *"Proxy works"* ]] || [[ "$stderr" == *"Proxy works"* ]]
   
@@ -306,6 +288,5 @@ teardown() {
     check_proxy_connectivity
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }

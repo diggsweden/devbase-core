@@ -45,7 +45,6 @@ teardown() {
     test -d '${XDG_CONFIG_HOME}/git/git-hooks' && echo 'OK'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "OK"
 }
@@ -71,7 +70,6 @@ teardown() {
     echo 'DISPATCHERS_COPIED'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "DISPATCHERS_COPIED"
 }
@@ -96,7 +94,6 @@ teardown() {
     test -x '${XDG_CONFIG_HOME}/git/git-hooks/prepare-commit-msg' && echo 'EXECUTABLE'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "EXECUTABLE"
 }
@@ -120,7 +117,6 @@ teardown() {
     configure_git_hooks
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "git config set"
   
@@ -153,7 +149,6 @@ teardown() {
     test -f '${DEVBASE_BACKUP_DIR}/git-hooks/existing-hook' && echo 'BACKED_UP'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "BACKED_UP"
   

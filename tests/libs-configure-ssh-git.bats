@@ -49,7 +49,6 @@ SCRIPT
     configure_git_user
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "true"
 }
@@ -81,7 +80,6 @@ SCRIPT
     configure_git_user
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "existing"
 }
@@ -103,7 +101,6 @@ SCRIPT
     configure_git_proxy
   " "proxy.example.com" "8080" "${TEST_DIR}/bin"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }
 
@@ -118,7 +115,6 @@ SCRIPT
     echo 'COMPLETED'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "COMPLETED"
 }
@@ -145,7 +141,6 @@ SCRIPT
     test -d '${test_home}/.ssh' && echo 'SSH_DIR_EXISTS'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "SSH_DIR_EXISTS"
 }
@@ -172,7 +167,6 @@ SCRIPT
   
   run stat -c '%a' "${test_home}/.ssh"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "700"
 }
@@ -207,7 +201,6 @@ EOF
     cat '${test_home}/.ssh/known_hosts'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "github.com ssh-ed25519"
   assert_output --partial "gitlab.com ssh-ed25519"
@@ -247,7 +240,6 @@ EOF
   # Count occurrences of github.com - should be exactly 1
   run grep -c "github.com" "${test_home}/.ssh/known_hosts"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "1"
 }
@@ -283,7 +275,6 @@ EOF
     cat '${test_home}/.ssh/known_hosts'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "example.com ssh-ed25519"
 }
@@ -316,7 +307,6 @@ EOF
     cat '${test_home}/.ssh/known_hosts'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should contain the host key even though file has no trailing newline
   assert_output --partial "example.com ssh-ed25519"
@@ -356,7 +346,6 @@ SCRIPT
     cat '${test_home}/.config/ssh/allowed_signers'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "FILE_EXISTS"
   assert_output --partial "test@example.com"
@@ -399,7 +388,6 @@ SCRIPT
     cat '${test_home}/.git-config-log'
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "gpg.format ssh"
   assert_output --partial "user.signingkey ${test_home}/.ssh/id_ed25519.pub"
@@ -429,7 +417,6 @@ SCRIPT
     configure_git_signing
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
 }
 
@@ -469,7 +456,6 @@ SCRIPT
   # Count lines - should still be 1
   run wc -l < "${test_home}/.config/ssh/allowed_signers"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "1"
 }

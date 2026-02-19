@@ -30,7 +30,6 @@ teardown() {
     parse_url 'http://example.com:8080/path' 'protocol'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "http"
 }
@@ -45,7 +44,6 @@ teardown() {
     parse_url 'https://registry.example.com/path' 'protocol'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "https"
 }
@@ -60,7 +58,6 @@ teardown() {
     parse_url 'http://example.com:8080/path' 'host'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "example.com"
 }
@@ -75,7 +72,6 @@ teardown() {
     parse_url 'http://user:pass@example.com:8080' 'host'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "example.com"
 }
@@ -90,7 +86,6 @@ teardown() {
     parse_url 'http://example.com:8080/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "8080"
 }
@@ -105,7 +100,6 @@ teardown() {
     parse_url 'http://example.com/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "80"
 }
@@ -120,7 +114,6 @@ teardown() {
     parse_url 'https://example.com/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "443"
 }
@@ -136,6 +129,5 @@ teardown() {
     detect_clipboard_utility
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }

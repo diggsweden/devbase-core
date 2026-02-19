@@ -31,7 +31,6 @@ teardown() {
     _generate_default_email_from_name 'John Doe' '@example.com'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "john.doe@example.com"
 }
@@ -47,7 +46,6 @@ teardown() {
     _generate_default_email_from_name 'JANE SMITH' '@example.com'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "jane.smith@example.com"
 }
@@ -63,7 +61,6 @@ teardown() {
     _generate_default_email_from_name 'Alice Bob Carol' '@example.com'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "alice.bob.carol@example.com"
 }
@@ -79,7 +76,6 @@ teardown() {
     _generate_default_email_from_name 'John Doe' ''
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output ""
 }
@@ -95,7 +91,6 @@ teardown() {
     _generate_default_email_from_name 'John-Doe#123' '@example.com'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should only have letters and dots
   assert_output "johndoe@example.com"
@@ -114,7 +109,6 @@ teardown() {
     echo \"\$email\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "john.doe@example.com"
 }
@@ -132,7 +126,6 @@ teardown() {
     echo \"\$email\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "john.doe@otherdomain.com"
 }
@@ -150,7 +143,6 @@ teardown() {
     echo \"\$email\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "john.doe"
 }
@@ -168,7 +160,6 @@ teardown() {
     echo \"\$email\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "john.doe"
 }

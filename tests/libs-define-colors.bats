@@ -66,7 +66,6 @@ setup() {
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     declare -p DEVBASE_COLORS | grep -q 'declare -.*A'
   "
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
   
   run --separate-stderr bash -c "
@@ -74,7 +73,6 @@ setup() {
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     declare -p DEVBASE_SYMBOLS | grep -q 'declare -.*A'
   "
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
 }
 

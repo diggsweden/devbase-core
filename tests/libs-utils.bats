@@ -26,7 +26,6 @@ teardown() {
 @test "generate_ssh_passphrase returns 24 character string" {
   run --separate-stderr generate_ssh_passphrase
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ ${#output} -eq 24 ]
 }
@@ -37,21 +36,18 @@ teardown() {
   pass1=$(generate_ssh_passphrase)
   pass2=$(generate_ssh_passphrase)
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "pass1: '$pass1', pass2: '$pass2'"
   assert [ "$pass1" != "$pass2" ]
 }
 
 @test "command_exists returns 0 for existing command" {
   run --separate-stderr command_exists bash
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
 @test "command_exists returns 1 for non-existing command" {
   run --separate-stderr command_exists nonexistentcommand123456
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
 }
 
@@ -60,7 +56,6 @@ teardown() {
   
   run --separate-stderr bash -c "[[ -n \"\${COMMAND_CACHE[bash]:-}\" ]] && echo 'cached'"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert [ -n "${COMMAND_CACHE[bash]:-}" ]
 }
 
@@ -77,7 +72,6 @@ teardown() {
   
   run --separate-stderr ensure_user_dirs
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_dir_exists "${test_home}/.config"
   assert_dir_exists "${test_home}/.local/share"
@@ -90,7 +84,6 @@ teardown() {
   
   run --separate-stderr backup_if_exists "$test_file" 'bak'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_file_exists "${test_file}-bak"
   run cat "${test_file}-bak"
   assert_output "test content"
@@ -102,7 +95,6 @@ teardown() {
   
   run --separate-stderr backup_if_exists "$test_file" 'backup'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_file_exists "${test_file}-backup"
   assert_file_not_exists "${test_file}"
   run cat "${test_file}-backup"
@@ -118,7 +110,6 @@ teardown() {
   echo "content2" > "$test_file"
   run --separate-stderr backup_if_exists "$test_file" 'bak'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_file_exists "${test_file}-bak"
   assert_file_exists "${test_file}-bak-1"
   run cat "${test_file}-bak"
@@ -132,7 +123,6 @@ teardown() {
   
   run --separate-stderr backup_if_exists "$test_file" 'nonexistent-backup'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -149,7 +139,6 @@ SCRIPT
   command_exists test_command
   command_exists test_command
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "COMMAND_CACHE[test_command]='${COMMAND_CACHE[test_command]:-}'"
   assert [ -n "${COMMAND_CACHE[test_command]:-}" ]
 }
 
@@ -178,7 +167,6 @@ SCRIPT
   
   run --separate-stderr retry_command --delay 0 -- flaky_command
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "Success on attempt 3"
 }

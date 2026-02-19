@@ -54,7 +54,6 @@ EOF
     get_apt_packages | wc -l
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "3"
 }
@@ -89,7 +88,6 @@ EOF
     get_apt_packages | wc -l
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "2"
 }
@@ -129,7 +127,6 @@ EOF
     get_apt_packages | wc -l
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "2"
 }
@@ -163,7 +160,6 @@ EOF
     get_apt_packages | wc -l
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "2"
 }
@@ -204,7 +200,6 @@ EOF
     get_apt_packages
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "custom-package"
 }
@@ -236,7 +231,6 @@ EOF
     get_apt_packages | head -1
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "curl"
 }
@@ -244,14 +238,12 @@ EOF
 @test "pkg_install validates package names are not empty" {
   run --separate-stderr pkg_install ''
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
 }
 
 @test "pkg_install handles empty package list" {
   run --separate-stderr pkg_install
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -272,7 +264,6 @@ SCRIPT
 
   run --separate-stderr configure_locale
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -289,7 +280,6 @@ SCRIPT
 
   run --separate-stderr configure_locale
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -298,7 +288,6 @@ SCRIPT
 
   run --separate-stderr configure_locale
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -325,7 +314,6 @@ SCRIPT
     _pkg_apt_configure_firefox_opensc
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "OpenSC PKCS#11 library not found"
 }
@@ -364,7 +352,6 @@ SCRIPT
     _pkg_apt_configure_firefox_opensc
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "No Firefox profile found"
 }
@@ -406,7 +393,6 @@ SCRIPT
     _pkg_apt_configure_firefox_opensc
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "Firefox configured for smart card support"
 
@@ -459,7 +445,6 @@ SCRIPT
     _pkg_apt_configure_firefox_opensc
   "
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "OpenSC already configured"
 }

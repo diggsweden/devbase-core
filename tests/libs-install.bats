@@ -68,7 +68,6 @@ teardown() {
   export _DEVBASE_TEMP="$(get_temp_root)/devbase.nonexistent"
 
   run --separate-stderr cleanup_temp_directory
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
 }
 

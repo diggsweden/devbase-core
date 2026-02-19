@@ -28,7 +28,6 @@ teardown() {
     get_os_type
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "ubuntu", "debian", etc.
   assert [ -n "$output" ]
@@ -42,7 +41,6 @@ teardown() {
     get_os_version
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "24.04", "22.04", etc.
   assert [ -n "$output" ]
@@ -56,7 +54,6 @@ teardown() {
     get_os_name
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "Ubuntu"
   assert [ -n "$output" ]
@@ -69,7 +66,6 @@ teardown() {
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
   " "Ubuntu-22.04"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "IS_WSL"
 }
@@ -81,7 +77,6 @@ teardown() {
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "IS_WSL"
 }
@@ -98,7 +93,6 @@ teardown() {
     fi
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "NOT_WSL"
 }
@@ -111,7 +105,6 @@ teardown() {
     is_ubuntu && echo 'IS_UBUNTU' || echo 'NOT_UBUNTU'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Will be IS_UBUNTU or NOT_UBUNTU depending on test environment
   assert [ -n "$output" ]
@@ -125,7 +118,6 @@ teardown() {
     echo \"result='\$result'\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "result=''"
 }
@@ -171,7 +163,6 @@ SCRIPT
     get_wsl_version
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "2.6.1"
 }
@@ -200,7 +191,6 @@ SCRIPT
     echo \"result='\$result' status=\$status\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_output "result='' status=1"
 }
 
@@ -215,7 +205,6 @@ SCRIPT
     echo \"name=\${_DEVBASE_OS_INFO[name]}\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "id="
   assert_output --partial "version_id="

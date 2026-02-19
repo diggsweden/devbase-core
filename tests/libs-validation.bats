@@ -24,7 +24,6 @@ teardown() {
 @test "validate_not_empty succeeds for non-empty string" {
   run --separate-stderr validate_not_empty 'test_value' 'test description'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -32,7 +31,6 @@ teardown() {
 @test "validate_not_empty fails for empty string" {
   run --separate-stderr validate_not_empty '' 'test description'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"required but was empty"* ]] || [[ "$output" == *"required but was empty"* ]]
 }
@@ -43,7 +41,6 @@ teardown() {
   
   run --separate-stderr validate_file_exists "$test_file" 'test file'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -51,7 +48,6 @@ teardown() {
 @test "validate_file_exists fails for non-existing file" {
   run --separate-stderr validate_file_exists "${TEST_DIR}/nonexistent" 'test file'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"not found"* ]] || [[ "$output" == *"not found"* ]]
 }
@@ -62,7 +58,6 @@ teardown() {
   
   run --separate-stderr validate_dir_exists "$test_dir" 'test directory'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -70,7 +65,6 @@ teardown() {
 @test "validate_dir_exists fails for non-existing directory" {
   run --separate-stderr validate_dir_exists "${TEST_DIR}/nonexistent" 'test directory'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"not found"* ]] || [[ "$output" == *"not found"* ]]
 }
@@ -78,7 +72,6 @@ teardown() {
 @test "validate_url succeeds for valid HTTP URL" {
   run --separate-stderr validate_url 'http://example.com' 'test url'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -86,7 +79,6 @@ teardown() {
 @test "validate_url succeeds for valid HTTPS URL" {
   run --separate-stderr validate_url 'https://example.com:8080/path' 'test url'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -94,7 +86,6 @@ teardown() {
 @test "validate_url fails for invalid URL" {
   run --separate-stderr validate_url 'not-a-url' 'test url'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"Invalid URL"* ]] || [[ "$output" == *"Invalid URL"* ]]
 }
@@ -104,7 +95,6 @@ teardown() {
   
   run --separate-stderr validate_var_set 'TEST_VAR'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert [ -z "$stderr" ]
 }
@@ -114,7 +104,6 @@ teardown() {
   
   run --separate-stderr validate_var_set 'NONEXISTENT_VAR'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"not set"* ]] || [[ "$output" == *"not set"* ]]
 }
@@ -125,7 +114,6 @@ teardown() {
 
   run --separate-stderr require_env REQUIRED_ONE REQUIRED_TWO
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
@@ -134,7 +122,6 @@ teardown() {
 
   run --separate-stderr require_env REQUIRED_MISSING
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$stderr" == *"Required environment variable"* ]] || [[ "$output" == *"Required environment variable"* ]]
 }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(bash -n /home/jos/devbase-core/libs/handle-network.sh)",
+      "Bash(bash -n /home/jos/devbase-core/libs/utils.sh)",
+      "Bash(bats:*)"
+    ]
+  }
+}
