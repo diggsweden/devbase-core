@@ -26,17 +26,24 @@ setup_non_interactive_mode() {
 	printf "\n%bRunning in non-interactive mode with defaults...%b\n" \
 		"${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
 
-	if [[ -z "$SSH_KEY_PASSPHRASE" ]]; then
+	# Determine passphrase: use the user-supplied value or generate one.
+	# Track whether we generated it so we know to write it to disk later —
+	# an explicit boolean flag makes this intent clear and is robust against
+	# any future code that might modify SSH_KEY_PASSPHRASE between these two
+	# decisions (the previous double-check of the same variable was fragile).
+	local passphrase_was_generated=false
+	if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
 		DEVBASE_SSH_PASSPHRASE="$(generate_ssh_passphrase)"
+		passphrase_was_generated=true
 	else
 		DEVBASE_SSH_PASSPHRASE="$SSH_KEY_PASSPHRASE"
 	fi
 	export DEVBASE_SSH_PASSPHRASE
 
-	if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
+	if [[ "$passphrase_was_generated" == true ]]; then
 		export GENERATED_SSH_PASSPHRASE="true"
 		mkdir -p "${DEVBASE_CONFIG_DIR}"
-		echo "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
+		printf '%s\n' "$DEVBASE_SSH_PASSPHRASE" >"${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
 		chmod 600 "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
 	fi
 

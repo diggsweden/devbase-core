@@ -11,9 +11,9 @@ fi
 
 # Brief: Setup SSH config includes (user.config and custom.config)
 # Params: None
-# Uses: _DEVBASE_CUSTOM_SSH (global, optional), HOME (global), validate_custom_file (function)
-# Returns: 0 always
-# Side-effects: Creates config files, sets permissions
+# Uses: _DEVBASE_CUSTOM_SSH (global, optional), HOME, XDG_CONFIG_HOME (globals)
+# Returns: 0 on success, 1 if HOME or XDG_CONFIG_HOME is not set
+# Side-effects: Creates ~/.ssh and XDG ssh config dir, sets permissions 700/600
 setup_ssh_config_includes() {
 	validate_var_set "HOME" || return 1
 	validate_var_set "XDG_CONFIG_HOME" || return 1
@@ -82,9 +82,9 @@ EOF
 # Brief: Configure SSH keys and config
 # Params: None
 # Uses: DEVBASE_SSH_KEY_ACTION, DEVBASE_SSH_PASSPHRASE, DEVBASE_GIT_EMAIL,
-#       HOME, XDG_CONFIG_HOME (globals)
+#       HOME, XDG_CONFIG_HOME, DEVBASE_SSH_KEY_TYPE, DEVBASE_SSH_KEY_NAME (globals)
 # Modifies: DEVBASE_NEW_SSH_KEY (exported if key generated)
-# Returns: 0 always
+# Returns: 0 on success, 1 if required variables are not set
 # Side-effects: Generates SSH keys, enables ssh-agent service
 configure_ssh() {
 	validate_var_set "HOME" || return 1
@@ -99,7 +99,7 @@ configure_ssh() {
 
 	# Always set up SSH config includes (known_hosts, custom configs, etc.)
 	# This must happen regardless of key generation action
-	setup_ssh_config_includes
+	setup_ssh_config_includes || return 1
 
 	if [[ -f "${HOME}/.ssh/config" ]]; then
 		chmod 600 "${HOME}/.ssh/config"

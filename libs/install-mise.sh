@@ -437,8 +437,16 @@ _install_mise_tools_whiptail_spinner() {
 	local full_install_log="$1"
 	local -n _spinner_server_error="$2"
 
+	# run_with_spinner/_wt_run_with_spinner backgrounds the command in a new
+	# process that does not inherit set -o pipefail from the parent shell.
+	# Without pipefail the pipeline exit code is tee's (always 0), silently
+	# masking a failing mise install. Explicitly setting pipefail in the
+	# subprocess makes the pipeline exit with mise's exit code, which
+	# _wt_run_with_spinner then captures correctly via wait().
 	if ! run_with_spinner "Installing development tools (mise)" \
-		bash -c "$(declare -f run_mise_from_home_dir); run_mise_from_home_dir install --yes 2>&1 | tee '$full_install_log'"; then
+		bash -c "set -o pipefail
+		         $(declare -f run_mise_from_home_dir)
+		         run_mise_from_home_dir install --yes 2>&1 | tee '${full_install_log}'"; then
 		_check_mise_server_error "$full_install_log" && _spinner_server_error=true
 		add_install_warning "mise install returned non-zero exit code"
 	fi
