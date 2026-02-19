@@ -43,7 +43,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     configure_git_certificate 'sub.example.com'
@@ -67,7 +67,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     configure_git_certificate 'git.internal.corp'
@@ -84,7 +84,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     configure_git_certificate ''
@@ -100,7 +100,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     configure_git_certificate 'localhost'
@@ -116,7 +116,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates
@@ -134,7 +134,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates
@@ -160,7 +160,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates
@@ -203,7 +203,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates
@@ -245,7 +245,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates
@@ -290,7 +290,7 @@ SCRIPT
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-certificates.sh'
     
     install_certificates

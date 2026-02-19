@@ -740,7 +740,11 @@ EOF
   run get_core_runtimes
   
   assert_success
-  assert_output "java maven gradle node python"
+  assert_output "java
+maven
+gradle
+node
+python"
 }
 
 @test "get_core_runtimes returns empty for unrecognized packs" {

@@ -13,6 +13,8 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
 	return 1
 fi
 
+source "${DEVBASE_ROOT}/libs/defaults.sh"
+
 # =============================================================================
 # NON-INTERACTIVE MODE
 # =============================================================================
@@ -172,6 +174,7 @@ apply_preference_defaults() {
 	[[ -z "$DEVBASE_ZELLIJ_AUTOSTART" ]] && DEVBASE_ZELLIJ_AUTOSTART="$(get_default_zellij_autostart)"
 	[[ -z "$DEVBASE_ENABLE_GIT_HOOKS" ]] && DEVBASE_ENABLE_GIT_HOOKS="$(get_default_enable_git_hooks)"
 	[[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="$(get_default_packs)"
+	return 0
 }
 
 # =============================================================================

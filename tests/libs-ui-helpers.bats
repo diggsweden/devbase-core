@@ -30,7 +30,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     show_progress step 'Test step message'
   "
   
@@ -49,7 +49,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     show_progress success 'Test success message'
   "
   
@@ -68,7 +68,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     show_phase 'Test Phase'
   "
   
@@ -82,7 +82,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     error_msg 'Test error message'
   "
   
@@ -97,7 +97,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     warn_msg 'Test warning message'
   "
   
@@ -112,7 +112,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     success_msg 'Test success message'
   "
   
@@ -127,7 +127,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='none'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     info_msg 'Test info message'
   "
   
@@ -141,7 +141,7 @@ teardown() {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     _wt_log ok 'First message'
     _wt_log fail 'Second message'
     _wt_log info 'Third message'
@@ -165,7 +165,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     run_with_spinner 'Test command' true
   "
   
@@ -183,7 +183,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_TUI_MODE='gum'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     run_with_spinner 'Failing command' false
   "
   

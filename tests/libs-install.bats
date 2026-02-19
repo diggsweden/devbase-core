@@ -28,7 +28,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
   local safe_temp="$(get_temp_root)/devbase.ABC123"
@@ -45,7 +45,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
   local unsafe_temp="${HOME}/important"
@@ -62,7 +62,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
   export _DEVBASE_TEMP="$(get_temp_root)/devbase.nonexistent"
@@ -184,7 +184,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source <(sed -n '/^validate_source_repository()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   run validate_source_repository
@@ -198,7 +198,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source <(sed -n '/^setup_installation_paths()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   run setup_installation_paths

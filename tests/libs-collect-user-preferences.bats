@@ -25,7 +25,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     _generate_default_email_from_name 'John Doe' '@example.com'
@@ -41,7 +41,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     _generate_default_email_from_name 'JANE SMITH' '@example.com'
@@ -57,7 +57,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     _generate_default_email_from_name 'Alice Bob Carol' '@example.com'
@@ -73,7 +73,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     _generate_default_email_from_name 'John Doe' ''
@@ -89,7 +89,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     _generate_default_email_from_name 'John-Doe#123' '@example.com'
@@ -106,7 +106,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     email='john.doe'
@@ -124,7 +124,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     email='john.doe@otherdomain.com'
@@ -142,7 +142,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     email='john.doe'
@@ -160,7 +160,7 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     email='john.doe'
@@ -218,7 +218,7 @@ EOF
     mkdir -p \"\$DEVBASE_CONFIG_DIR\"
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences
@@ -237,7 +237,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -258,7 +258,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -279,7 +279,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -300,7 +300,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -321,7 +321,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -342,7 +342,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -363,7 +363,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -396,7 +396,7 @@ EOF
     export DEVBASE_ENABLE_GIT_HOOKS='false'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     write_user_preferences >/dev/null 2>&1
@@ -436,7 +436,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     # Write preferences
@@ -503,7 +503,7 @@ EOF
     export NON_INTERACTIVE='true'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -528,7 +528,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -563,7 +563,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     write_user_preferences >/dev/null 2>&1
@@ -598,7 +598,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     # Write
@@ -640,7 +640,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     sleep 1
@@ -670,7 +670,7 @@ EOF
     export DEVBASE_CONFIG_DIR='${prefs_dir}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh' >/dev/null 2>&1
     
     load_saved_preferences >/dev/null 2>&1
@@ -856,7 +856,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh'
     
@@ -944,7 +944,7 @@ EOF
 
     source "${DEVBASE_ROOT}/libs/define-colors.sh"
     source "${DEVBASE_ROOT}/libs/validation.sh"
-    source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
     source "${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh"
 
     _gum_section() { :; }
@@ -1030,7 +1030,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-whiptail.sh'
     
@@ -1067,7 +1067,7 @@ EOF
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     
     # Get java pack contents

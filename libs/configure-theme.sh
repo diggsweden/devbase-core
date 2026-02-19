@@ -10,6 +10,7 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
 fi
 
 source "${DEVBASE_LIBS}/utils.sh"
+source "${DEVBASE_LIBS}/defaults.sh"
 
 # Theme presets: is_light|bat|btop|delta|zellij|nvim|vifm|k9s
 # Keys use underscores internally; user-facing names use hyphens (converted at lookup)

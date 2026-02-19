@@ -16,6 +16,7 @@ load "${BATS_TEST_DIRNAME}/test_helper.bash"
 setup() {
   common_setup
   source_core_libs
+  source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/handle-network.sh"
 }
 
@@ -78,12 +79,12 @@ teardown() {
   run --separate-stderr bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
+    printf 'CURL_ARGS=%s\n' \"\${DEVBASE_CURL_PROXY_ARGS[*]}\"
   "
-  
+
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output --partial "CURL_ARGS=--no-keepalive --no-sessionid -H Connection: close"
@@ -95,10 +96,10 @@ teardown() {
   run --separate-stderr bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    printf 'WGET_ARGS=%s\n' "${DEVBASE_WGET_PROXY_ARGS[*]}"
+    printf 'WGET_ARGS=%s\n' \"\${DEVBASE_WGET_PROXY_ARGS[*]}\"
   "
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
@@ -112,7 +113,7 @@ teardown() {
   run --separate-stderr bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     export XDG_CACHE_HOME='${TEST_DIR}'
     export DEVBASE_STRICT_CHECKSUMS=fail
@@ -121,7 +122,7 @@ teardown() {
 
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
-  assert_output --partial "Checksum required"
+  [[ "$stderr" == *"Checksum required"* ]]
 }
 
 
@@ -130,7 +131,7 @@ teardown() {
   run --separate-stderr run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
     printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
@@ -161,7 +162,7 @@ teardown() {
   local test_file="${TEST_DIR}/existing"
   touch "$test_file"
   
-  run --separate-stderr _download_file_should_skip "$test_file" 0
+  run --separate-stderr _download_file_should_skip "$test_file" true
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
@@ -179,7 +180,7 @@ teardown() {
   local target="${TEST_DIR}/target.tar.gz"
   echo "cached content" > "$cached"
   
-  run --separate-stderr _download_file_try_cache "$cached" "$target" 1
+  run --separate-stderr _download_file_try_cache "$cached" "$target" false
   
   [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
@@ -300,7 +301,7 @@ teardown() {
   run --separate-stderr run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     check_proxy_connectivity
   "
