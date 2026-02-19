@@ -4,6 +4,9 @@
 #
 # SPDX-License-Identifier: MIT
 
+source "${DEVBASE_ROOT}/libs/defaults.sh"
+source "${DEVBASE_ROOT}/libs/install-context.sh"
+
 # Global: Cached tool versions from packages.yaml (populated by _setup_custom_parser)
 declare -gA TOOL_VERSIONS 2>/dev/null || true
 

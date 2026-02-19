@@ -48,7 +48,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     get_apt_packages | wc -l
@@ -83,7 +83,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     get_apt_packages | wc -l
@@ -122,7 +122,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     # Should have curl (core) + default-jdk (java), not python3
@@ -157,7 +157,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     get_apt_packages | wc -l
@@ -198,7 +198,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES='${_DEVBASE_CUSTOM_PACKAGES}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     get_apt_packages
@@ -230,7 +230,7 @@ EOF
     export _DEVBASE_CUSTOM_PACKAGES=''
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/parse-packages.sh'
     get_apt_packages | head -1
@@ -310,7 +310,7 @@ SCRIPT
     export DEVBASE_DOT='${DEVBASE_DOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/pkg/pkg-apt.sh'
 
@@ -344,7 +344,7 @@ SCRIPT
     export HOME='${HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/pkg/pkg-apt.sh'
 
@@ -383,7 +383,7 @@ SCRIPT
     export HOME='${HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/pkg/pkg-apt.sh'
 
@@ -435,7 +435,7 @@ SCRIPT
     export HOME='${HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/check-requirements.sh'
     source '${DEVBASE_ROOT}/libs/pkg/pkg-apt.sh'
 

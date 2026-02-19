@@ -261,7 +261,7 @@ EOF
     source '${DEVBASE_ROOT}/libs/constants.sh'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
 
     verify_mise_checksum && echo 'EXISTS' || echo 'NOT_EXISTS'
@@ -323,7 +323,7 @@ SCRIPT
     source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
-    source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/parse-packages.sh"
     source "${DEVBASE_ROOT}/libs/install-mise.sh"
     source "${TEST_DIR}/mock-fns.sh"
@@ -388,7 +388,7 @@ SCRIPT
     source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
-    source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/parse-packages.sh"
     source "${DEVBASE_ROOT}/libs/install-mise.sh"
     source "${TEST_DIR}/mock-fns.sh"

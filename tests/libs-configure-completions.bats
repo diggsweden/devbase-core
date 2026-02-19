@@ -37,7 +37,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
     
     configure_single_fish_completion 'kubectl'
@@ -64,7 +64,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
     
     configure_single_fish_completion 'helm'
@@ -82,7 +82,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
     
     configure_single_fish_completion ''
@@ -98,7 +98,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
     
     configure_single_fish_completion 'unknown_tool_xyz'
@@ -134,7 +134,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${TEST_DIR}/.config2'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
     
     configure_fish_completions

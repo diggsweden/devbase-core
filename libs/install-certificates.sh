@@ -9,6 +9,8 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+source "${DEVBASE_ROOT}/libs/install-context.sh"
+
 # Brief: Install custom certificates to system trust store and configure Git
 # Params: None
 # Uses: _DEVBASE_CUSTOM_CERTS (global, optional), validate_custom_dir (function)

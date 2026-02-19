@@ -262,7 +262,7 @@ teardown() {
     export DEVBASE_THEME='catppuccin-mocha'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
 
@@ -287,7 +287,7 @@ teardown() {
     export DEVBASE_THEME='nord'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
 
@@ -309,7 +309,7 @@ teardown() {
     export DEVBASE_THEME='everforest-dark'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
 

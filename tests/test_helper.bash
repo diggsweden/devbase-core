@@ -100,7 +100,7 @@ source_core_libs() {
   source "${DEVBASE_ROOT}/libs/constants.sh"
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
 }
 
 # Source core UI libraries plus check-requirements

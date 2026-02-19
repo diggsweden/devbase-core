@@ -237,7 +237,7 @@ SCRIPT
   grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
     is_wsl() { return 1; }
@@ -254,7 +254,7 @@ SCRIPT
   grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
     get_wsl_version() { echo '2.6.0'; }
@@ -270,7 +270,7 @@ SCRIPT
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_critical_tools
   "
@@ -283,7 +283,7 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export PATH='/nonexistent'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_critical_tools
   "
@@ -297,7 +297,7 @@ SCRIPT
     unset DEVBASE_ENV
     export _DEVBASE_ENV='ubuntu'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -311,7 +311,7 @@ SCRIPT
     export DEVBASE_ENV='test'
     export _DEVBASE_ENV='invalid-env'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -325,7 +325,7 @@ SCRIPT
     export DEVBASE_ENV='test'
     export _DEVBASE_ENV='ubuntu'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -351,7 +351,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${TEST_DIR}/config'
     export XDG_CACHE_HOME='${TEST_DIR}/cache'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_path_writable
   "

@@ -17,7 +17,7 @@ setup() {
   source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/bootstrap-config.sh"
+  source "${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh"
 }
 
 teardown() {

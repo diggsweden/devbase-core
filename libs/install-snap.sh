@@ -17,6 +17,8 @@ if [[ -z "${DEVBASE_DOT:-}" ]]; then
   return 1
 fi
 
+source "${DEVBASE_ROOT}/libs/install-context.sh"
+
 # Detect app store type (cached)
 _APP_STORE_TYPE=""
 

@@ -52,7 +52,7 @@ teardown() {
 source_summary() {
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/distro.sh"
   source "${DEVBASE_ROOT}/libs/summary.sh"
 }
