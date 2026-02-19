@@ -118,6 +118,8 @@ load_saved_preferences() {
 	if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]]; then
 		show_progress success "Preferences loaded from ${prefs_file/#$HOME/~}"
 	fi
+	# _yq_read is not truly local (bash has no local functions); clean up after use
+	unset -f _yq_read
 	return 0
 }
 
@@ -192,41 +194,49 @@ write_user_preferences() {
 	local prefs_file="${DEVBASE_CONFIG_DIR}/preferences.yaml"
 	mkdir -p "${DEVBASE_CONFIG_DIR}"
 
-	cat >"$prefs_file" <<EOF
-# DevBase User Preferences
-# Generated during installation: $(date)
-# This file stores your installation choices for reference by scripts and tools
+	# Determine shell_bindings value based on editor choice
+	local shell_bindings
+	shell_bindings=$([[ "${EDITOR:-}" == "nvim" ]] && printf 'vim' || printf 'emacs')
 
-theme: ${DEVBASE_THEME}
-font: ${DEVBASE_FONT}
-
-git:
-  author: ${DEVBASE_GIT_AUTHOR}
-  email: ${DEVBASE_GIT_EMAIL}
-
-ssh:
-  key_action: ${DEVBASE_SSH_KEY_ACTION}
-  key_name: ${DEVBASE_SSH_KEY_NAME}
-
-editor:
-  default: ${EDITOR}
-  shell_bindings: $([ "${EDITOR}" == "nvim" ] && echo "vim" || echo "emacs")
-
-vscode:
-  install: ${DEVBASE_VSCODE_INSTALL}
-  extensions: ${DEVBASE_VSCODE_EXTENSIONS}
-
-ide:
-  lazyvim: ${DEVBASE_INSTALL_LAZYVIM}
-  intellij: ${DEVBASE_INSTALL_INTELLIJ}
-  jmc: ${DEVBASE_INSTALL_JMC}
-
-tools:
-  zellij_autostart: ${DEVBASE_ZELLIJ_AUTOSTART}
-  git_hooks: ${DEVBASE_ENABLE_GIT_HOOKS}
-
-packs: [${DEVBASE_SELECTED_PACKS:+${DEVBASE_SELECTED_PACKS// /, }}]
-EOF
+	# Write YAML using yq with env() to inject values safely.
+	# Direct heredoc interpolation would corrupt YAML when values contain
+	# special characters (`:`, `#`, `[`, `"`, leading `-`) — e.g. git author names.
+	# Boolean fields use (env(VAR) == "true") to write unquoted YAML booleans.
+	PREF_THEME="$DEVBASE_THEME" \
+		PREF_FONT="$DEVBASE_FONT" \
+		PREF_GIT_AUTHOR="${DEVBASE_GIT_AUTHOR:-}" \
+		PREF_GIT_EMAIL="${DEVBASE_GIT_EMAIL:-}" \
+		PREF_SSH_KEY_ACTION="${DEVBASE_SSH_KEY_ACTION:-}" \
+		PREF_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-}" \
+		PREF_EDITOR="${EDITOR:-}" \
+		PREF_SHELL_BINDINGS="$shell_bindings" \
+		PREF_VSCODE_INSTALL="$DEVBASE_VSCODE_INSTALL" \
+		PREF_VSCODE_EXTENSIONS="$DEVBASE_VSCODE_EXTENSIONS" \
+		PREF_LAZYVIM="$DEVBASE_INSTALL_LAZYVIM" \
+		PREF_INTELLIJ="$DEVBASE_INSTALL_INTELLIJ" \
+		PREF_JMC="$DEVBASE_INSTALL_JMC" \
+		PREF_ZELLIJ_AUTOSTART="$DEVBASE_ZELLIJ_AUTOSTART" \
+		PREF_GIT_HOOKS="$DEVBASE_ENABLE_GIT_HOOKS" \
+		PREF_PACKS="${DEVBASE_SELECTED_PACKS:-}" \
+		yq --null-input '
+		.theme                  = strenv(PREF_THEME) |
+		.font                   = strenv(PREF_FONT) |
+		.git.author             = strenv(PREF_GIT_AUTHOR) |
+		.git.email              = strenv(PREF_GIT_EMAIL) |
+		.ssh.key_action         = strenv(PREF_SSH_KEY_ACTION) |
+		.ssh.key_name           = strenv(PREF_SSH_KEY_NAME) |
+		.editor.default         = strenv(PREF_EDITOR) |
+		.editor.shell_bindings  = strenv(PREF_SHELL_BINDINGS) |
+		.vscode.install         = (strenv(PREF_VSCODE_INSTALL) == "true") |
+		.vscode.extensions      = (strenv(PREF_VSCODE_EXTENSIONS) == "true") |
+		.ide.lazyvim            = (strenv(PREF_LAZYVIM) == "true") |
+		.ide.intellij           = (strenv(PREF_INTELLIJ) == "true") |
+		.ide.jmc                = (strenv(PREF_JMC) == "true") |
+		.tools.zellij_autostart = (strenv(PREF_ZELLIJ_AUTOSTART) == "true") |
+		.tools.git_hooks        = (strenv(PREF_GIT_HOOKS) == "true") |
+		.packs                  = (strenv(PREF_PACKS) | split(" ") | map(select(length > 0))) |
+		.packs style            = "flow"
+	' >"$prefs_file"
 
 	# Call UI-specific success message if defined, otherwise use show_progress
 	if declare -f _ui_success &>/dev/null; then

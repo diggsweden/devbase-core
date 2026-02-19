@@ -223,14 +223,13 @@ envsubst_preserve_undefined() {
 		validate_template_variables "$template_file" "$vars_to_sub" || return 1
 	fi
 
-	# Filter out runtime variables (should not be replaced by envsubst)
-	# These variables are meant to be evaluated at runtime by the shell
-	local runtime_vars=("XDG_RUNTIME_DIR" "USER_UID")
+	# Filter out runtime variables using the canonical list from validation.sh
+	# (avoids duplicating DEVBASE_RUNTIME_TEMPLATE_VARS here)
 	local filtered_vars=""
 	for var in $vars_to_sub; do
 		local var_name="${var#\$}"
 		local is_runtime=false
-		for runtime_var in "${runtime_vars[@]}"; do
+		for runtime_var in "${DEVBASE_RUNTIME_TEMPLATE_VARS[@]}"; do
 			if [[ "$var_name" == "$runtime_var" ]]; then
 				is_runtime=true
 				break

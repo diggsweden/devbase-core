@@ -157,15 +157,23 @@ _download_file_get_cache_name() {
 	local target="$1"
 	local version="$2"
 
-	if [[ -n "$version" ]]; then
-		local base_name
-		base_name=$(basename "$target")
-		local extension="${base_name##*.}"
-		local name_without_ext="${base_name%.*}"
-		echo "${name_without_ext}-v${version}.${extension}"
-	else
-		basename "$target"
+	local base_name
+	base_name=$(basename "$target")
+
+	if [[ -z "$version" ]]; then
+		printf '%s\n' "$base_name"
+		return
 	fi
+
+	# Guard: no dot means no extension — avoids garbled names like "-v1.0.filename"
+	if [[ "$base_name" != *.* ]]; then
+		printf '%s-v%s\n' "$base_name" "$version"
+		return
+	fi
+
+	local extension="${base_name##*.}"
+	local name_without_ext="${base_name%.*}"
+	printf '%s-v%s.%s\n' "$name_without_ext" "$version" "$extension"
 }
 
 # Brief: Try to use cached file

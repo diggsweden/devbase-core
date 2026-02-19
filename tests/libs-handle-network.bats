@@ -145,9 +145,16 @@ teardown() {
 
 @test "_download_file_get_cache_name uses basename when no version" {
   run --separate-stderr _download_file_get_cache_name '/tmp/package.tar.gz' ''
-  
+
   assert_success
   assert_output "package.tar.gz"
+}
+
+@test "_download_file_get_cache_name handles extension-less filename" {
+  run --separate-stderr _download_file_get_cache_name '/tmp/mise_installer' '2.1.0'
+
+  assert_success
+  assert_output "mise_installer-v2.1.0"
 }
 
 @test "_download_file_should_skip returns true when file exists with checksum" {
