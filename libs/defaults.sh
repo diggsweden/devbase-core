@@ -62,46 +62,46 @@ get_default_enable_git_hooks() { printf '%s' "${DEVBASE_DEFAULT_ENABLE_GIT_HOOKS
 get_default_ssh_key_name() { printf '%s' "${DEVBASE_DEFAULT_SSH_KEY_NAME:-id_ed25519_devbase}"; }
 
 apply_setup_defaults() {
-	DEVBASE_THEME="${DEVBASE_THEME:-$(get_default_theme)}"
-	DEVBASE_FONT="${DEVBASE_FONT:-$(get_default_font)}"
-	DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-$(get_default_install_devtools)}"
-	DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-$(get_default_install_lazyvim)}"
-	DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-$(get_default_install_intellij)}"
-	DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-$(get_default_install_jmc)}"
-	DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-$(get_default_zellij_autostart)}"
-	DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-$(get_default_enable_git_hooks)}"
-	DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
-	EDITOR="${EDITOR:-$(get_default_editor)}"
-	VISUAL="${VISUAL:-$EDITOR}"
-	export EDITOR VISUAL
+  DEVBASE_THEME="${DEVBASE_THEME:-$(get_default_theme)}"
+  DEVBASE_FONT="${DEVBASE_FONT:-$(get_default_font)}"
+  DEVBASE_INSTALL_DEVTOOLS="${DEVBASE_INSTALL_DEVTOOLS:-$(get_default_install_devtools)}"
+  DEVBASE_INSTALL_LAZYVIM="${DEVBASE_INSTALL_LAZYVIM:-$(get_default_install_lazyvim)}"
+  DEVBASE_INSTALL_INTELLIJ="${DEVBASE_INSTALL_INTELLIJ:-$(get_default_install_intellij)}"
+  DEVBASE_INSTALL_JMC="${DEVBASE_INSTALL_JMC:-$(get_default_install_jmc)}"
+  DEVBASE_ZELLIJ_AUTOSTART="${DEVBASE_ZELLIJ_AUTOSTART:-$(get_default_zellij_autostart)}"
+  DEVBASE_ENABLE_GIT_HOOKS="${DEVBASE_ENABLE_GIT_HOOKS:-$(get_default_enable_git_hooks)}"
+  DEVBASE_SSH_KEY_NAME="${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
+  EDITOR="${EDITOR:-$(get_default_editor)}"
+  VISUAL="${VISUAL:-$EDITOR}"
+  export EDITOR VISUAL
 }
 
 # Brief: Return the default git author name
 # Params: None
 # Returns: $DEVBASE_DEFAULT_GIT_AUTHOR, then global git config user.name, or empty
 get_default_git_author() {
-	if [[ -n "${DEVBASE_DEFAULT_GIT_AUTHOR:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_GIT_AUTHOR"
-		return 0
-	fi
-	if command -v git &>/dev/null; then
-		local author
-		author=$(git config --global user.name 2>/dev/null || true)
-		[[ -n "$author" ]] && printf "%s" "$author"
-	fi
+  if [[ -n "${DEVBASE_DEFAULT_GIT_AUTHOR:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_GIT_AUTHOR"
+    return 0
+  fi
+  if command -v git &>/dev/null; then
+    local author
+    author=$(git config --global user.name 2>/dev/null || true)
+    [[ -n "$author" ]] && printf "%s" "$author"
+  fi
 }
 
 # Brief: Return the default git author email
 # Params: None
 # Returns: $DEVBASE_DEFAULT_GIT_EMAIL, then global git config user.email, or empty
 get_default_git_email() {
-	if [[ -n "${DEVBASE_DEFAULT_GIT_EMAIL:-}" ]]; then
-		printf "%s" "$DEVBASE_DEFAULT_GIT_EMAIL"
-		return 0
-	fi
-	if command -v git &>/dev/null; then
-		local email
-		email=$(git config --global user.email 2>/dev/null || true)
-		[[ -n "$email" ]] && printf "%s" "$email"
-	fi
+  if [[ -n "${DEVBASE_DEFAULT_GIT_EMAIL:-}" ]]; then
+    printf "%s" "$DEVBASE_DEFAULT_GIT_EMAIL"
+    return 0
+  fi
+  if command -v git &>/dev/null; then
+    local email
+    email=$(git config --global user.email 2>/dev/null || true)
+    [[ -n "$email" ]] && printf "%s" "$email"
+  fi
 }

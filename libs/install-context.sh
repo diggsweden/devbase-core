@@ -39,4 +39,3 @@ show_installation_warnings() {
 
   return 0
 }
-

@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
-	echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
-	return 1
+  echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
+  return 1
 fi
 
 # Brief: Setup SSH config includes (user.config and custom.config)
@@ -15,58 +15,58 @@ fi
 # Returns: 0 on success, 1 if HOME or XDG_CONFIG_HOME is not set
 # Side-effects: Creates ~/.ssh and XDG ssh config dir, sets permissions 700/600
 setup_ssh_config_includes() {
-	validate_var_set "HOME" || return 1
-	validate_var_set "XDG_CONFIG_HOME" || return 1
+  validate_var_set "HOME" || return 1
+  validate_var_set "XDG_CONFIG_HOME" || return 1
 
-	local ssh_config_dir="${XDG_CONFIG_HOME}/ssh"
-	mkdir -p "${HOME}/.ssh" "$ssh_config_dir"
-	chmod 700 "${HOME}/.ssh" "$ssh_config_dir"
+  local ssh_config_dir="${XDG_CONFIG_HOME}/ssh"
+  mkdir -p "${HOME}/.ssh" "$ssh_config_dir"
+  chmod 700 "${HOME}/.ssh" "$ssh_config_dir"
 
-	if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
-		require_env _DEVBASE_CUSTOM_SSH || return 1
-		for file in "${_DEVBASE_CUSTOM_SSH}"/*; do
-			[[ -f "$file" ]] || continue
+  if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
+    require_env _DEVBASE_CUSTOM_SSH || return 1
+    for file in "${_DEVBASE_CUSTOM_SSH}"/*; do
+      [[ -f "$file" ]] || continue
 
-			local filename
-			filename=$(basename "$file")
+      local filename
+      filename=$(basename "$file")
 
-			case "$filename" in
-			README.md | README*)
-				continue
-				;;
-			*.config)
-				cp "$file" "${ssh_config_dir}/${filename}"
-				chmod 600 "${ssh_config_dir}/${filename}"
-				;;
-			*.append)
-				local target_name="${filename%.append}"
-				local target_file="${HOME}/.ssh/${target_name}"
-				touch "$target_file"
+      case "$filename" in
+      README.md | README*)
+        continue
+        ;;
+      *.config)
+        cp "$file" "${ssh_config_dir}/${filename}"
+        chmod 600 "${ssh_config_dir}/${filename}"
+        ;;
+      *.append)
+        local target_name="${filename%.append}"
+        local target_file="${HOME}/.ssh/${target_name}"
+        touch "$target_file"
 
-				# Note: 'read' returns non-zero at EOF even if it read data, so we check
-				# for content with '|| [[ -n "$line" ]]' to handle files without trailing newline
-				while IFS= read -r line || [[ -n "$line" ]]; do
-					if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
-						printf '%s\n' "$line" >>"$target_file"
-					fi
-				done <"$file"
-				;;
-			*.pub | *.pem | id_*)
-				# Allowlisted: public keys, PEM keys, standard OpenSSH key files
-				cp "$file" "${HOME}/.ssh/${filename}"
-				chmod 600 "${HOME}/.ssh/${filename}"
-				;;
-			*)
-				# Blocklist is inherently incomplete (e.g. authorized_keys2, environment,
-				# rc all have special SSH meaning). Skip anything not in the allowlist.
-				show_progress warning "Skipping unrecognised SSH file from custom dir (not in allowlist): $filename"
-				;;
-			esac
-		done
-	fi
+        # Note: 'read' returns non-zero at EOF even if it read data, so we check
+        # for content with '|| [[ -n "$line" ]]' to handle files without trailing newline
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ -n "$line" ]] && ! grep -qF "$line" "$target_file" 2>/dev/null; then
+            printf '%s\n' "$line" >>"$target_file"
+          fi
+        done <"$file"
+        ;;
+      *.pub | *.pem | id_*)
+        # Allowlisted: public keys, PEM keys, standard OpenSSH key files
+        cp "$file" "${HOME}/.ssh/${filename}"
+        chmod 600 "${HOME}/.ssh/${filename}"
+        ;;
+      *)
+        # Blocklist is inherently incomplete (e.g. authorized_keys2, environment,
+        # rc all have special SSH meaning). Skip anything not in the allowlist.
+        show_progress warning "Skipping unrecognised SSH file from custom dir (not in allowlist): $filename"
+        ;;
+      esac
+    done
+  fi
 
-	if [[ ! -f "${ssh_config_dir}/user.config" ]]; then
-		cat >"${ssh_config_dir}/user.config" <<'EOF'
+  if [[ ! -f "${ssh_config_dir}/user.config" ]]; then
+    cat >"${ssh_config_dir}/user.config" <<'EOF'
 # Personal SSH Configuration
 # This file is NEVER modified by DevBase - safe to edit
 #
@@ -78,8 +78,8 @@ setup_ssh_config_includes() {
 #   User myuser
 #   IdentityFile ~/.ssh/id_ed25519_personal
 EOF
-		chmod 600 "${ssh_config_dir}/user.config"
-	fi
+    chmod 600 "${ssh_config_dir}/user.config"
+  fi
 }
 
 # Brief: Configure SSH keys and config
@@ -90,91 +90,91 @@ EOF
 # Returns: 0 on success, 1 if required variables are not set
 # Side-effects: Generates SSH keys, enables ssh-agent service
 configure_ssh() {
-	validate_var_set "HOME" || return 1
-	validate_var_set "XDG_CONFIG_HOME" || return 1
-	validate_var_set "DEVBASE_SSH_KEY_TYPE" || return 1
-	validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
+  validate_var_set "HOME" || return 1
+  validate_var_set "XDG_CONFIG_HOME" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_TYPE" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
 
-	local ssh_key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}"
-	local key_generated=false
-	local agent_enabled=false
-	local passphrase_protected=false
+  local ssh_key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}"
+  local key_generated=false
+  local agent_enabled=false
+  local passphrase_protected=false
 
-	# Always set up SSH config includes (known_hosts, custom configs, etc.)
-	# This must happen regardless of key generation action
-	setup_ssh_config_includes || return 1
+  # Always set up SSH config includes (known_hosts, custom configs, etc.)
+  # This must happen regardless of key generation action
+  setup_ssh_config_includes || return 1
 
-	if [[ -f "${HOME}/.ssh/config" ]]; then
-		chmod 600 "${HOME}/.ssh/config"
-	else
-		show_progress warning "SSH config not found - template may not have been copied from dot/.ssh/config"
-	fi
+  if [[ -f "${HOME}/.ssh/config" ]]; then
+    chmod 600 "${HOME}/.ssh/config"
+  else
+    show_progress warning "SSH config not found - template may not have been copied from dot/.ssh/config"
+  fi
 
-	# Handle key generation based on action
-	if [[ "$DEVBASE_SSH_KEY_ACTION" == "new" ]]; then
-		validate_var_set "DEVBASE_GIT_EMAIL" || return 1
-		show_progress info "Configuring SSH..."
+  # Handle key generation based on action
+  if [[ "$DEVBASE_SSH_KEY_ACTION" == "new" ]]; then
+    validate_var_set "DEVBASE_GIT_EMAIL" || return 1
+    show_progress info "Configuring SSH..."
 
-		if [[ -f "$ssh_key_path" ]]; then
-			local backup_name
-			backup_name="${ssh_key_path}.backup.$(date +%Y%m%d_%H%M%S)"
-			mv "$ssh_key_path" "$backup_name" || die "Failed to backup SSH key: $ssh_key_path"
-			if [[ -f "${ssh_key_path}.pub" ]]; then
-				mv "${ssh_key_path}.pub" "${backup_name}.pub" || die "Failed to backup SSH public key"
-			fi
-		fi
+    if [[ -f "$ssh_key_path" ]]; then
+      local backup_name
+      backup_name="${ssh_key_path}.backup.$(date +%Y%m%d_%H%M%S)"
+      mv "$ssh_key_path" "$backup_name" || die "Failed to backup SSH key: $ssh_key_path"
+      if [[ -f "${ssh_key_path}.pub" ]]; then
+        mv "${ssh_key_path}.pub" "${backup_name}.pub" || die "Failed to backup SSH public key"
+      fi
+    fi
 
-		# Generate SSH key based on type
-		case "${DEVBASE_SSH_KEY_TYPE}" in
-		ecdsa)
-			# Generate ECDSA key with P-521 curve
-			if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
-				ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
-				passphrase_protected=true
-			else
-				ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
-			fi
-			;;
+    # Generate SSH key based on type
+    case "${DEVBASE_SSH_KEY_TYPE}" in
+    ecdsa)
+      # Generate ECDSA key with P-521 curve
+      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
+        ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
+        passphrase_protected=true
+      else
+        ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
+      fi
+      ;;
 
-		ed25519 | ed25519-sk | ecdsa-sk)
-			# Generate key without bit size parameter
-			if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
-				ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
-				passphrase_protected=true
-			else
-				ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
-			fi
-			;;
+    ed25519 | ed25519-sk | ecdsa-sk)
+      # Generate key without bit size parameter
+      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
+        ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
+        passphrase_protected=true
+      else
+        ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
+      fi
+      ;;
 
-		*)
-			show_progress error "Unknown SSH key type '${DEVBASE_SSH_KEY_TYPE}'"
-			show_progress info "Supported types: ed25519, ecdsa, ed25519-sk, ecdsa-sk"
-			return 1
-			;;
-		esac
+    *)
+      show_progress error "Unknown SSH key type '${DEVBASE_SSH_KEY_TYPE}'"
+      show_progress info "Supported types: ed25519, ecdsa, ed25519-sk, ecdsa-sk"
+      return 1
+      ;;
+    esac
 
-		key_generated=true
-		export DEVBASE_NEW_SSH_KEY="${ssh_key_path}.pub"
-	fi
+    key_generated=true
+    export DEVBASE_NEW_SSH_KEY="${ssh_key_path}.pub"
+  fi
 
-	# Enable ssh-agent service if available
-	if [[ -f "${XDG_CONFIG_HOME}/systemd/user/ssh-agent.service" ]]; then
-		if enable_user_service "ssh-agent.service" &>/dev/null; then
-			agent_enabled=true
-		fi
-	fi
+  # Enable ssh-agent service if available
+  if [[ -f "${XDG_CONFIG_HOME}/systemd/user/ssh-agent.service" ]]; then
+    if enable_user_service "ssh-agent.service" &>/dev/null; then
+      agent_enabled=true
+    fi
+  fi
 
-	if [[ "$key_generated" == true ]]; then
-		local key_type_upper
-		key_type_upper="${DEVBASE_SSH_KEY_TYPE^^}"
-		local msg="SSH configured (${key_type_upper} key at ${ssh_key_path}"
-		[[ "$passphrase_protected" == true ]] && msg="${msg}, passphrase protected"
-		[[ "$agent_enabled" == true ]] && msg="${msg}, agent enabled"
-		msg="${msg})"
-		show_progress success "$msg"
-	fi
+  if [[ "$key_generated" == true ]]; then
+    local key_type_upper
+    key_type_upper="${DEVBASE_SSH_KEY_TYPE^^}"
+    local msg="SSH configured (${key_type_upper} key at ${ssh_key_path}"
+    [[ "$passphrase_protected" == true ]] && msg="${msg}, passphrase protected"
+    [[ "$agent_enabled" == true ]] && msg="${msg}, agent enabled"
+    msg="${msg})"
+    show_progress success "$msg"
+  fi
 
-	return 0
+  return 0
 }
 
 # Brief: Configure Git user name and email
@@ -183,22 +183,22 @@ configure_ssh() {
 # Returns: Echoes "true" if configured, "existing" if unchanged
 # Side-effects: Sets global git config
 configure_git_user() {
-	validate_var_set "USER" || return 1
+  validate_var_set "USER" || return 1
 
-	local existing_name
-	existing_name=$(git config --global user.name 2>/dev/null)
-	local existing_email
-	existing_email=$(git config --global user.email 2>/dev/null)
+  local existing_name
+  existing_name=$(git config --global user.name 2>/dev/null)
+  local existing_email
+  existing_email=$(git config --global user.email 2>/dev/null)
 
-	# DEVBASE_GIT_AUTHOR and DEVBASE_GIT_EMAIL are always set from GIT_NAME/GIT_EMAIL
-	# (which have defaults in setup.sh IMPORT section)
-	if [[ "${DEVBASE_GIT_AUTHOR}" != "$existing_name" ]] || [[ "${DEVBASE_GIT_EMAIL}" != "$existing_email" ]]; then
-		git config --global user.name "${DEVBASE_GIT_AUTHOR}"
-		git config --global user.email "${DEVBASE_GIT_EMAIL}"
-		echo "true"
-	else
-		echo "existing"
-	fi
+  # DEVBASE_GIT_AUTHOR and DEVBASE_GIT_EMAIL are always set from GIT_NAME/GIT_EMAIL
+  # (which have defaults in setup.sh IMPORT section)
+  if [[ "${DEVBASE_GIT_AUTHOR}" != "$existing_name" ]] || [[ "${DEVBASE_GIT_EMAIL}" != "$existing_email" ]]; then
+    git config --global user.name "${DEVBASE_GIT_AUTHOR}"
+    git config --global user.email "${DEVBASE_GIT_EMAIL}"
+    echo "true"
+  else
+    echo "existing"
+  fi
 }
 
 # Brief: Configure Git to use proxy for HTTP(S) operations
@@ -207,35 +207,35 @@ configure_git_user() {
 # Returns: 0 if configured, 1 if no proxy set
 # Side-effects: Sets global git config for proxy
 configure_git_proxy() {
-	[[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 1
+  [[ -z "${DEVBASE_PROXY_HOST:-}" || -z "${DEVBASE_PROXY_PORT:-}" ]] && return 1
 
-	local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+  local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
 
-	git config --global --unset-all http.proxy 2>/dev/null || true
-	git config --global --unset-all https.proxy 2>/dev/null || true
+  git config --global --unset-all http.proxy 2>/dev/null || true
+  git config --global --unset-all https.proxy 2>/dev/null || true
 
-	git config --global http.proxy "${proxy_url}"
-	git config --global https.proxy "${proxy_url}"
+  git config --global http.proxy "${proxy_url}"
+  git config --global https.proxy "${proxy_url}"
 
-	if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
-		IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"
-		for domain in "${NO_PROXY_ARRAY[@]}"; do
-			# Trim leading and trailing whitespace
-			domain="${domain#"${domain%%[![:space:]]*}"}"
-			domain="${domain%"${domain##*[![:space:]]}"}"
-			[[ -z "$domain" ]] && continue
+  if [[ -n "${DEVBASE_NO_PROXY_DOMAINS:-}" ]]; then
+    IFS=',' read -ra NO_PROXY_ARRAY <<<"${DEVBASE_NO_PROXY_DOMAINS}"
+    for domain in "${NO_PROXY_ARRAY[@]}"; do
+      # Trim leading and trailing whitespace
+      domain="${domain#"${domain%%[![:space:]]*}"}"
+      domain="${domain%"${domain##*[![:space:]]}"}"
+      [[ -z "$domain" ]] && continue
 
-			# Convert .domain.com to *.domain.com for git config
-			if [[ "$domain" == .* ]] && [[ "$domain" != *"*"* ]]; then
-				domain="*${domain}"
-			fi
+      # Convert .domain.com to *.domain.com for git config
+      if [[ "$domain" == .* ]] && [[ "$domain" != *"*"* ]]; then
+        domain="*${domain}"
+      fi
 
-			# Set empty proxy for this domain pattern
-			git config --global "http.https://${domain}/.proxy" ""
-		done
-	fi
+      # Set empty proxy for this domain pattern
+      git config --global "http.https://${domain}/.proxy" ""
+    done
+  fi
 
-	return 0
+  return 0
 }
 
 # Brief: Configure Git commit signing with SSH key
@@ -244,39 +244,39 @@ configure_git_proxy() {
 # Returns: 0 if configured, 1 if SSH key doesn't exist
 # Side-effects: Sets global git config, creates/updates allowed_signers file
 configure_git_signing() {
-	validate_var_set "HOME" || return 1
-	validate_var_set "DEVBASE_GIT_EMAIL" || return 1
-	validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
+  validate_var_set "HOME" || return 1
+  validate_var_set "DEVBASE_GIT_EMAIL" || return 1
+  validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
 
-	local git_signing_key="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}.pub"
+  local git_signing_key="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}.pub"
 
-	[[ ! -f "$git_signing_key" ]] && return 1
+  [[ ! -f "$git_signing_key" ]] && return 1
 
-	git config --global gpg.format ssh
-	git config --global user.signingkey "$git_signing_key"
+  git config --global gpg.format ssh
+  git config --global user.signingkey "$git_signing_key"
 
-	local allowed_signers="${XDG_CONFIG_HOME:-$HOME/.config}/ssh/allowed_signers"
-	mkdir -p "$(dirname "$allowed_signers")"
+  local allowed_signers="${XDG_CONFIG_HOME:-$HOME/.config}/ssh/allowed_signers"
+  mkdir -p "$(dirname "$allowed_signers")"
 
-	local git_pub_signingkey
-	git_pub_signingkey=$(cat "$git_signing_key")
+  local git_pub_signingkey
+  git_pub_signingkey=$(cat "$git_signing_key")
 
-	# Create file with header if it doesn't exist
-	if [[ ! -f "$allowed_signers" ]]; then
-		cat >"$allowed_signers" <<'EOF'
+  # Create file with header if it doesn't exist
+  if [[ ! -f "$allowed_signers" ]]; then
+    cat >"$allowed_signers" <<'EOF'
 # SSH allowed signers for Git commit verification
 # Add trusted signers: email ssh-key-type key-data [comment]
 EOF
-	fi
+  fi
 
-	# Append key if not already in allowed_signers
-	if ! grep -qF "$git_pub_signingkey" "$allowed_signers"; then
-		echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >>"$allowed_signers"
-	fi
+  # Append key if not already in allowed_signers
+  if ! grep -qF "$git_pub_signingkey" "$allowed_signers"; then
+    echo "${DEVBASE_GIT_EMAIL} ${git_pub_signingkey}" >>"$allowed_signers"
+  fi
 
-	git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
+  git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
 
-	return 0
+  return 0
 }
 
 # Brief: Configure Git (user, proxy, signing)
@@ -285,30 +285,30 @@ EOF
 # Returns: 0 always
 # Side-effects: Calls configure_git_user, configure_git_proxy, configure_git_signing
 configure_git() {
-	validate_var_set "HOME" || return 1
+  validate_var_set "HOME" || return 1
 
-	show_progress info "Configuring Git..."
+  show_progress info "Configuring Git..."
 
-	[[ ! -f "${HOME}/.gitconfig" ]] && touch "${HOME}/.gitconfig"
+  [[ ! -f "${HOME}/.gitconfig" ]] && touch "${HOME}/.gitconfig"
 
-	local user_status
-	user_status=$(configure_git_user)
+  local user_status
+  user_status=$(configure_git_user)
 
-	local proxy_configured=false
-	configure_git_proxy && proxy_configured=true
+  local proxy_configured=false
+  configure_git_proxy && proxy_configured=true
 
-	local signing_configured=false
-	configure_git_signing && signing_configured=true
+  local signing_configured=false
+  configure_git_signing && signing_configured=true
 
-	local msg="Git configured ("
-	local details=()
-	[[ "$user_status" == "true" ]] && details+=("user: ${DEVBASE_GIT_EMAIL}")
-	[[ "$proxy_configured" == true ]] && details+=("proxy: enabled")
-	[[ "$signing_configured" == true ]] && details+=("SSH signing: enabled")
+  local msg="Git configured ("
+  local details=()
+  [[ "$user_status" == "true" ]] && details+=("user: ${DEVBASE_GIT_EMAIL}")
+  [[ "$proxy_configured" == true ]] && details+=("proxy: enabled")
+  [[ "$signing_configured" == true ]] && details+=("SSH signing: enabled")
 
-	local IFS=", "
-	msg="${msg}${details[*]})"
+  local IFS=", "
+  msg="${msg}${details[*]})"
 
-	show_progress success "$msg"
-	return 0
+  show_progress success "$msg"
+  return 0
 }
