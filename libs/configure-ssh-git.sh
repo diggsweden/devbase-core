@@ -51,6 +51,9 @@ setup_ssh_config_includes() {
 					fi
 				done <"$file"
 				;;
+			authorized_keys | known_hosts | known_hosts.old)
+				show_progress warning "Refusing to overwrite sensitive SSH file from custom dir: $filename"
+				;;
 			*)
 				cp "$file" ~/.ssh/"$filename"
 				chmod 600 ~/.ssh/"$filename"
