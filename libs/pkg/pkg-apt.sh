@@ -235,11 +235,20 @@ _pkg_apt_install_firefox_deb() {
   # Create keyrings directory
   sudo install -d -m 0755 /etc/apt/keyrings
 
-  # Download and install Mozilla's GPG key
+  # Download and verify Mozilla's GPG signing key.
+  # We verify the key fingerprint (not a file hash) because the fingerprint
+  # identifies the cryptographic key itself — stable across re-exports and
+  # encoding changes — while a file hash would break on any such change.
   local mozilla_key="${_DEVBASE_TEMP:-/tmp}/mozilla-repo-signing-key.gpg"
   mkdir -p "$(dirname "$mozilla_key")"
-  if ! download_file "${DEVBASE_URL_MOZILLA_GPG_KEY}" "$mozilla_key"; then
+  if ! devbase_curl -fsSL "${DEVBASE_URL_MOZILLA_GPG_KEY}" -o "$mozilla_key"; then
     show_progress error "Failed to download Mozilla GPG key"
+    return 1
+  fi
+  local actual_fingerprint
+  actual_fingerprint=$(gpg --show-keys "$mozilla_key" 2>/dev/null | tr -d ' \t' | grep -F "${DEVBASE_MOZILLA_GPG_FINGERPRINT}")
+  if [[ -z "$actual_fingerprint" ]]; then
+    show_progress error "Mozilla GPG key fingerprint mismatch (expected ${DEVBASE_MOZILLA_GPG_FINGERPRINT})"
     return 1
   fi
   if ! sudo install -m 0644 "$mozilla_key" /etc/apt/keyrings/packages.mozilla.org.asc; then

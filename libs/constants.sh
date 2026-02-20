@@ -18,6 +18,9 @@ readonly DEVBASE_URL_MISE_RELEASES="https://github.com/jdx/mise/releases/downloa
 # =============================================================================
 readonly DEVBASE_URL_MOZILLA_GPG_KEY="https://packages.mozilla.org/apt/repo-signing-key.gpg"
 readonly DEVBASE_URL_MOZILLA_APT_REPO="https://packages.mozilla.org/apt"
+# Fingerprint of Mozilla's APT signing key (published at https://support.mozilla.org/kb/install-firefox-linux)
+# Update this when Mozilla rotates their signing key.
+readonly DEVBASE_MOZILLA_GPG_FINGERPRINT="35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3"
 
 # =============================================================================
 # DEVELOPMENT TOOLS
