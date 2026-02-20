@@ -633,6 +633,38 @@ download_with_cache() {
   download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"
 }
 
+# Brief: Remove a directory tree only if it resolves under a trusted anchor
+# Params: $1 - anchor directory (target must be a strict descendant of this)
+#         $2 - target path to remove
+# Returns: 0 if removed (or target absent), 1 if path is outside anchor
+# Side-effects: Removes target directory tree
+safe_rm_rf() {
+	local anchor="$1"
+	local target="$2"
+
+	if [[ -z "$anchor" || -z "$target" ]]; then
+		show_progress error "safe_rm_rf: anchor and target must be non-empty"
+		return 1
+	fi
+
+	local real_anchor real_target
+	real_anchor=$(realpath -m "$anchor" 2>/dev/null) || {
+		show_progress error "safe_rm_rf: cannot resolve anchor: $anchor"
+		return 1
+	}
+	real_target=$(realpath -m "$target" 2>/dev/null) || {
+		show_progress error "safe_rm_rf: cannot resolve target: $target"
+		return 1
+	}
+
+	if [[ -z "$real_target" || "$real_target" == "$real_anchor" || "$real_target" != "${real_anchor}/"* ]]; then
+		show_progress error "safe_rm_rf: refusing unsafe path (not under ${real_anchor}): ${target}"
+		return 1
+	fi
+
+	rm -rf "$real_target"
+}
+
 # Brief: Safely remove temporary directory with path validation
 # Params: None
 # Uses: _DEVBASE_TEMP (global)
@@ -656,7 +688,7 @@ cleanup_temp_directory() {
 
   case "$real_path" in
   "${temp_root%/}/devbase."*)
-    rm -rf "$real_path" 2>/dev/null || true
+    safe_rm_rf "$temp_root" "$real_path" || true
     ;;
   esac
 

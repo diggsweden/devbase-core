@@ -166,12 +166,7 @@ rotate_backup_directories() {
   # Rotate old backup if it exists (keep only one previous backup)
   if [[ -d "${DEVBASE_BACKUP_DIR:-}" ]]; then
     if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
-      # Safety check: ensure path is within user home
-      if [[ -n "${DEVBASE_BACKUP_DIR:-}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
-        rm -rf "${DEVBASE_BACKUP_DIR}.old"
-      else
-        show_progress warning "Refusing to remove unsafe backup path: ${DEVBASE_BACKUP_DIR}.old"
-      fi
+      safe_rm_rf "$HOME" "${DEVBASE_BACKUP_DIR}.old" || true
     fi
     mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
   fi
@@ -180,7 +175,7 @@ rotate_backup_directories() {
   for old_backup in "${HOME}"/.devbase_backup_*; do
     if [[ -d "$old_backup" ]]; then
       if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
-        rm -rf "$old_backup"
+        safe_rm_rf "$HOME" "$old_backup" || true
       else
         show_progress warning "Skipping unexpected backup path: $old_backup"
       fi
