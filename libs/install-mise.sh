@@ -113,24 +113,25 @@ _check_mise_server_error() {
   grep -qE "HTTP status server error \(50[0-9]" "$log_file" 2>/dev/null
 }
 
-# Brief: Apply mise activation PATH without eval
-# Params: $1 = mise path, $2 = filter warn (true/false)
+# Brief: Apply mise tool PATH without eval by reading hook-env output
+# Params: $1 = mise path, $2 = unused (kept for call-site compatibility)
 # Returns: 0 on success, 1 on failure
+# Notes: Uses `mise hook-env -s bash` which outputs the full tool PATH as its
+#        last `export PATH=` line. `mise activate bash` only sets up shell hooks
+#        and does not include installed tool paths — wrong for script use.
 _mise_apply_path_from_activate() {
   local mise_path="$1"
-  local filter_warn="${2:-false}"
   local activation_output
 
-  if [[ "$filter_warn" == "true" ]]; then
-    activation_output=$("$mise_path" activate bash 2> >(grep -v "WARN  missing:" >&2 || true))
-  else
-    activation_output=$("$mise_path" activate bash)
-  fi
+  # hook-env outputs the current env diff including all installed tool paths;
+  # suppress stderr (WARN: missing tool messages for not-yet-installed tools)
+  activation_output=$("$mise_path" hook-env -s bash 2>/dev/null)
 
   local path_line
-  path_line=$(printf '%s\n' "$activation_output" | grep -E '^export PATH=' | head -1)
+  # hook-env emits multiple export PATH= lines; the last one has all tool paths prepended
+  path_line=$(printf '%s\n' "$activation_output" | grep -E '^export PATH=' | tail -1)
   if [[ -z "$path_line" ]]; then
-    show_progress error "Failed to read mise PATH activation output"
+    show_progress error "Failed to read mise PATH from hook-env output"
     return 1
   fi
 
