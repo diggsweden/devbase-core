@@ -102,30 +102,12 @@ sudo_refresh() {
   sudo -vn 2>/dev/null || true
 }
 
-# Brief: Determine writable temp root directory
-# Params: None
-# Returns: Path to temp directory
-get_temp_root() {
-  local candidate
-  for candidate in "${TMPDIR:-}" "${XDG_RUNTIME_DIR:-}" "/tmp"; do
-    [[ -n "$candidate" ]] || continue
-    if [[ -d "$candidate" ]] && [[ -w "$candidate" ]]; then
-      printf "%s" "$candidate"
-      return 0
-    fi
-  done
-
-  printf "%s" "/tmp"
-}
-
 # Brief: Create temp directory with prefix
 # Params: $1 - prefix (optional, default: devbase)
 # Returns: Created temp directory path
 make_temp_dir() {
   local prefix="${1:-devbase}"
-  local temp_root
-  temp_root=$(get_temp_root)
-  mktemp -d "${temp_root%/}/${prefix}.XXXXXX"
+  mktemp -d --tmpdir "${prefix}.XXXXXX"
 }
 
 # Brief: Validate path for security (traversal, system dirs, whitelisting)
@@ -171,6 +153,7 @@ validate_path() {
     /tmp/* | /var/tmp/*)
       [[ "$real_path" != "/tmp" ]] && [[ "$real_path" != "/var/tmp" ]] || die "Cannot operate on temp directory root"
       ;;
+    /run/user/*/*) ;; # User runtime subdirectories (XDG_RUNTIME_DIR — valid for user-owned files)
     "${user_home}") ;;
     "${user_home}"/.devbase_backup* | "${user_home}"/.config/* | "${user_home}"/.local/* | "${user_home}"/.cache/*) ;;
     "${user_home}"/development/* | "${user_home}"/devbase-*) ;;
@@ -668,10 +651,10 @@ cleanup_temp_directory() {
   real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
 
   local temp_root
-  temp_root=$(realpath -m "$(get_temp_root)" 2>/dev/null) || temp_root="/tmp"
+  temp_root=$(dirname "$real_path")
 
   case "$real_path" in
-  "${temp_root%/}/devbase."*)
+  "${temp_root}/devbase."*)
     safe_rm_rf "$temp_root" "$real_path" || true
     ;;
   esac

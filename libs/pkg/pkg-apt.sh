@@ -239,7 +239,7 @@ _pkg_apt_install_firefox_deb() {
   # We verify the key fingerprint (not a file hash) because the fingerprint
   # identifies the cryptographic key itself — stable across re-exports and
   # encoding changes — while a file hash would break on any such change.
-  local mozilla_key="${_DEVBASE_TEMP:-/tmp}/mozilla-repo-signing-key.gpg"
+  local mozilla_key="${_DEVBASE_TEMP}/mozilla-repo-signing-key.gpg"
   mkdir -p "$(dirname "$mozilla_key")"
   if ! devbase_curl -fsSL "${DEVBASE_URL_MOZILLA_GPG_KEY}" -o "$mozilla_key"; then
     show_progress error "Failed to download Mozilla GPG key"
