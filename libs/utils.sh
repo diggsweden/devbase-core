@@ -351,8 +351,7 @@ _calculate_safe_relative_path() {
   [[ "$rel_path" == *..* ]] && return 1
   [[ "$rel_path" == /* ]] && return 1
 
-  echo "$rel_path"
-  return 0
+  printf '%s\n' "$rel_path"
 }
 
 # Brief: Merge source dotfiles into target with backup of existing files

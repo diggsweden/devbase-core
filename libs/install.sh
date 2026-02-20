@@ -211,21 +211,19 @@ setup_sudo_and_system() {
     local sudoers_dst="/etc/sudoers.d/sudokeepenv"
     local sudoers_tmp
     sudoers_tmp=$(mktemp) || return 1
+    # shellcheck disable=SC2064
+    trap "rm -f '$sudoers_tmp'" RETURN
 
     cp "$sudoers_src" "$sudoers_tmp"
     if ! sudo visudo -c -f "$sudoers_tmp" &>/dev/null; then
-      rm -f "$sudoers_tmp"
       show_progress error "Invalid sudoers proxy config (refusing to install)"
       return 1
     fi
 
     if ! sudo install -m 0440 "$sudoers_tmp" "$sudoers_dst"; then
-      rm -f "$sudoers_tmp"
       show_progress error "Failed to install sudoers proxy config"
       return 1
     fi
-
-    rm -f "$sudoers_tmp"
 
     if ! sudo visudo -c -f "$sudoers_dst" &>/dev/null; then
       sudo rm -f "$sudoers_dst"

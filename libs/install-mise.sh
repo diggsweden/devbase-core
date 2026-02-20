@@ -62,21 +62,18 @@ verify_mise_checksum() {
   actual_checksum=$(sha256sum "$mise_bin" | cut -d' ' -f1)
 
   local binary_pattern="mise-v${version}-linux-${mise_arch}"
-  if grep -q "$binary_pattern" "$checksums_file" 2>/dev/null; then
-    local expected_checksum
-    expected_checksum=$(grep "$binary_pattern" "$checksums_file" | head -1 | cut -d' ' -f1)
-
-    if [[ "$actual_checksum" == "$expected_checksum" ]]; then
-      return 0
-    else
-      show_progress error "Mise binary checksum mismatch!"
-      show_progress info "Expected: $expected_checksum"
-      show_progress info "Actual:   $actual_checksum"
-      return 1
-    fi
-  else
+  local expected_checksum
+  expected_checksum=$(grep "$binary_pattern" "$checksums_file" 2>/dev/null | head -1 | cut -d' ' -f1)
+  if [[ -z "$expected_checksum" ]]; then
     add_install_warning "Could not find checksum for $binary_pattern"
     return 0
+  fi
+
+  if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+    show_progress error "Mise binary checksum mismatch!"
+    show_progress info "Expected: $expected_checksum"
+    show_progress info "Actual:   $actual_checksum"
+    return 1
   fi
 }
 
@@ -336,16 +333,14 @@ update_mise_if_needed() {
   current_version=$(get_mise_installed_version "$(command -v mise)")
 
   if [[ -n "$current_version" ]]; then
-    if [[ "$current_version" == "$desired_normalized" ]]; then
-      return 0
-    fi
+    [[ "$current_version" == "$desired_normalized" ]] && return 0
 
     local newest
     newest=$(printf '%s\n%s\n' "$current_version" "$desired_normalized" | sort -V | tail -1)
-    if [[ "$newest" == "$current_version" ]]; then
+    [[ "$newest" == "$current_version" ]] && {
       add_install_warning "Installed mise (${current_version}) is newer than pinned (${desired_normalized}) - skipping downgrade"
       return 0
-    fi
+    }
   fi
 
   show_progress info "Updating mise to v${desired_normalized}..."
