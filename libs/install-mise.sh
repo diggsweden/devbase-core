@@ -62,47 +62,19 @@ verify_mise_checksum() {
   actual_checksum=$(sha256sum "$mise_bin" | cut -d' ' -f1)
 
   local binary_pattern="mise-v${version}-linux-${mise_arch}"
-  if grep -q "$binary_pattern" "$checksums_file" 2>/dev/null; then
-    local expected_checksum
-    expected_checksum=$(grep "$binary_pattern" "$checksums_file" | head -1 | cut -d' ' -f1)
-
-    if [[ "$actual_checksum" == "$expected_checksum" ]]; then
-      return 0
-    else
-      show_progress error "Mise binary checksum mismatch!"
-      show_progress info "Expected: $expected_checksum"
-      show_progress info "Actual:   $actual_checksum"
-      return 1
-    fi
-  else
+  local expected_checksum
+  expected_checksum=$(grep "$binary_pattern" "$checksums_file" 2>/dev/null | head -1 | cut -d' ' -f1)
+  if [[ -z "$expected_checksum" ]]; then
     add_install_warning "Could not find checksum for $binary_pattern"
     return 0
   fi
-}
 
-# Brief: Verify mise installer checksum
-# Params: $1 = installer path
-# Returns: 0 if verified, 1 on failure
-_verify_mise_installer_checksum() {
-  local installer="$1"
-  local expected_checksum="${DEVBASE_MISE_INSTALLER_SHA256:-}"
-
-  if [[ -z "$expected_checksum" ]]; then
-
-    show_progress error "DEVBASE_MISE_INSTALLER_SHA256 not set; refusing to run mise installer"
+  if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+    show_progress error "Mise binary checksum mismatch!"
+    show_progress info "Expected: $expected_checksum"
+    show_progress info "Actual:   $actual_checksum"
     return 1
   fi
-
-  show_progress info "Verifying mise installer checksum"
-  verify_checksum_value "$installer" "$expected_checksum"
-}
-
-# Brief: Extract tool@version from a mise output line
-# Params: $1 = mise output line
-# Returns: tool@version string on stdout, or empty
-_parse_mise_tool_name() {
-  local line="$1"
-  printf '%s\n' "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1
 }
 
 # Brief: Check if a log file contains mise HTTP server errors (5xx)
@@ -114,7 +86,7 @@ _check_mise_server_error() {
 }
 
 # Brief: Apply mise tool PATH without eval by reading hook-env output
-# Params: $1 = mise path, $2 = unused (kept for call-site compatibility)
+# Params: $1 = mise path
 # Returns: 0 on success, 1 on failure
 # Notes: Uses `mise hook-env -s bash` which outputs the full tool PATH as its
 #        last `export PATH=` line. `mise activate bash` only sets up shell hooks
@@ -187,7 +159,12 @@ _run_mise_installer() {
     die "Downloaded file doesn't appear to be Mise installer"
   fi
 
-  if ! _verify_mise_installer_checksum "$mise_installer"; then
+  if [[ -z "${DEVBASE_MISE_INSTALLER_SHA256:-}" ]]; then
+    show_progress error "DEVBASE_MISE_INSTALLER_SHA256 not set; refusing to run mise installer"
+    die "Mise installer checksum verification failed"
+  fi
+  show_progress info "Verifying mise installer checksum"
+  if ! verify_checksum_value "$mise_installer" "${DEVBASE_MISE_INSTALLER_SHA256}"; then
     die "Mise installer checksum verification failed"
   fi
 
@@ -260,9 +237,7 @@ install_mise() {
 
     # Find where mise was actually installed
     if ! mise_path=$(command -v mise 2>/dev/null); then
-      local version_info=""
-      [[ -n "${MISE_VERSION:-}" ]] && version_info=" (requested version: ${MISE_VERSION})"
-      die "Mise installation failed - binary not found in PATH after installation${version_info}"
+      die "Mise installation failed - binary not found in PATH after installation${MISE_VERSION:+ (requested version: ${MISE_VERSION})}"
     fi
 
     if ! verify_mise_checksum; then
@@ -271,9 +246,7 @@ install_mise() {
   fi
 
   # Add mise binary directory to PATH first
-  local mise_bin_dir
-  mise_bin_dir="$(dirname "$mise_path")"
-  export PATH="${mise_bin_dir}:${PATH}"
+  export PATH="$(dirname "$mise_path"):${PATH}"
 
   # Trust devbase-core .mise.toml BEFORE activation (prevents trust warning)
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
@@ -286,23 +259,12 @@ install_mise() {
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
     local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
-    if ! "$mise_path" install "$yq_tool" --yes 2> >(
-      grep -v "WARN  missing:" >&2 || true
-    ); then
+    if ! "$mise_path" install "$yq_tool" --yes 2>/dev/null; then
       die "Failed to bootstrap yq via mise"
     fi
-    show_progress info "Checking yq availability after bootstrap..."
 
     # Activate mise so yq is available on PATH
-    _mise_apply_path_from_activate "$mise_path" true || die "Failed to activate mise PATH"
-
-    if ! command -v yq &>/dev/null; then
-      local yq_path
-      yq_path=$($mise_path which yq 2>/dev/null || true)
-      if [[ -n "$yq_path" ]]; then
-        export PATH="$(dirname "$yq_path"):${PATH}"
-      fi
-    fi
+    _mise_apply_path_from_activate "$mise_path" || die "Failed to activate mise PATH"
 
     if ! command -v yq &>/dev/null; then
       die "yq not found after mise bootstrap"
@@ -335,7 +297,7 @@ install_mise() {
   # Activate mise for current shell session
   # This sets up PATH and environment properly
   if [[ -x "$mise_path" ]]; then
-    _mise_apply_path_from_activate "$mise_path" false || die "Failed to activate mise PATH"
+    _mise_apply_path_from_activate "$mise_path" || die "Failed to activate mise PATH"
   else
     die "Mise binary exists but is not executable at $mise_path (permissions: $(ls -l "$mise_path" 2>&1))"
   fi
@@ -371,16 +333,14 @@ update_mise_if_needed() {
   current_version=$(get_mise_installed_version "$(command -v mise)")
 
   if [[ -n "$current_version" ]]; then
-    if [[ "$current_version" == "$desired_normalized" ]]; then
-      return 0
-    fi
+    [[ "$current_version" == "$desired_normalized" ]] && return 0
 
     local newest
     newest=$(printf '%s\n%s\n' "$current_version" "$desired_normalized" | sort -V | tail -1)
-    if [[ "$newest" == "$current_version" ]]; then
+    [[ "$newest" == "$current_version" ]] && {
       add_install_warning "Installed mise (${current_version}) is newer than pinned (${desired_normalized}) - skipping downgrade"
       return 0
-    fi
+    }
   fi
 
   show_progress info "Updating mise to v${desired_normalized}..."
@@ -413,7 +373,7 @@ _install_mise_tools_whiptail_gauge() {
     echo "$line" >>"$full_install_log"
     if [[ "$line" =~ installed ]] || [[ "$line" =~ "install "[a-z] ]]; then
       local tool
-      tool=$(_parse_mise_tool_name "$line")
+      tool=$(printf '%s\n' "$line" | grep -oE '[a-z][a-z0-9_-]*@[^ ]+' | head -1)
       if [[ -n "$tool" ]]; then
         count=$((count + 1))
         local percent=$(((count * 100) / total))
