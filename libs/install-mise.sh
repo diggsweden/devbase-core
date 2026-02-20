@@ -256,10 +256,15 @@ install_mise() {
   # Bootstrap essential tools early - required before full tool installation
   # yq: needed by parse-packages.sh for YAML parsing
   # just: task runner used by devbase
-  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]]; then
+  # Skip if already on PATH (idempotent — avoids re-running mise install against
+  # the full config.toml on a second call, which triggers spurious warnings for
+  # tools whose backends aren't available yet e.g. npm:tree-sitter-cli).
+  if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
     local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
-    if ! "$mise_path" install "$yq_tool" --yes 2>/dev/null; then
+    local _bootstrap_err
+    if ! _bootstrap_err=$("$mise_path" install "$yq_tool" --yes 2>&1 >/dev/null); then
+      [[ -n "$_bootstrap_err" ]] && show_progress error "$_bootstrap_err"
       die "Failed to bootstrap yq via mise"
     fi
 
@@ -272,7 +277,8 @@ install_mise() {
 
     if ! command -v just &>/dev/null; then
       show_progress info "Bootstrapping essential tools (just)..."
-      if ! "$mise_path" install just --yes 2>/dev/null; then
+      if ! _bootstrap_err=$("$mise_path" install just --yes 2>&1 >/dev/null); then
+        [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
         add_install_warning "Failed to bootstrap just (continuing)"
       fi
     fi
@@ -286,11 +292,11 @@ install_mise() {
 
   _setup_package_yaml_env || true
 
-  if [[ -f "$PACKAGES_YAML" ]]; then
-
+  if [[ -f "$PACKAGES_YAML" ]] && [[ -z "${_DEVBASE_MISE_CONFIG_GENERATED:-}" ]]; then
     local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
     mkdir -p "$(dirname "$mise_config")"
     generate_mise_config "$mise_config"
+    _DEVBASE_MISE_CONFIG_GENERATED=1
     show_progress info "Generated mise config from packages.yaml"
   fi
 

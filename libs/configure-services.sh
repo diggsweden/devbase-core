@@ -20,6 +20,14 @@ enable_user_service() {
 
   validate_not_empty "$service_name" "Service name" || return 1
 
+  # No session bus means systemctl --user will fail with "No medium found".
+  # Skip gracefully — the service can be enabled after a proper login.
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [[ ! -S "${runtime_dir}/bus" ]]; then
+    show_progress info "${service_desc}: no user session bus — run 'systemctl --user enable ${service_name}' after next login"
+    return 0
+  fi
+
   systemctl --user daemon-reload || show_progress warning "Failed to reload systemd user daemon"
 
   if systemctl --user enable "$service_name"; then
