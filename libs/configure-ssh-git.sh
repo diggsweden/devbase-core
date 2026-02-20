@@ -51,8 +51,8 @@ setup_ssh_config_includes() {
           fi
         done <"$file"
         ;;
-      *.pub | *.pem | id_*)
-        # Allowlisted: public keys, PEM keys, standard OpenSSH key files
+      *.pub | *.pem | id_* | identity)
+        # Allowlisted: public keys, PEM keys, standard OpenSSH key files (incl. legacy 'identity')
         cp "$file" "${HOME}/.ssh/${filename}"
         chmod 600 "${HOME}/.ssh/${filename}"
         ;;

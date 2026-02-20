@@ -229,6 +229,21 @@ EOF
   assert_file_exists "${HOME}/.ssh/id_ed25519_corp.pub"
 }
 
+@test "setup_ssh_config_includes copies legacy 'identity' key to .ssh" {
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${HOME}/.ssh"
+  mkdir -p "${custom_ssh}"
+
+  echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDTest" >"${custom_ssh}/identity"
+
+  export _DEVBASE_CUSTOM_SSH="${custom_ssh}"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_file_exists "${HOME}/.ssh/identity"
+}
+
 @test "setup_ssh_config_includes blocks unrecognised files with warning" {
   local custom_ssh="${TEST_DIR}/custom_ssh"
   mkdir -p "${HOME}/.ssh"
