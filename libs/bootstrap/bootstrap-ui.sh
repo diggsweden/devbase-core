@@ -130,8 +130,7 @@ bootstrap_gum() {
   gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
   local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
 
-  # Create temp directory if not set
-  local temp_dir="${_DEVBASE_TEMP:-$(mktemp -d)}"
+  local temp_dir="${_DEVBASE_TEMP}"
   local gum_pkg="${temp_dir}/${package_name}"
 
   # Check cache first (support both DEB and RPM cache paths)

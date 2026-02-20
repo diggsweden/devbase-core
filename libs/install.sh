@@ -130,8 +130,7 @@ source "${DEVBASE_ROOT}/libs/install-mise.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/summary.sh"
 
-DEVBASE_TEMP_ROOT="${DEVBASE_TEMP_ROOT:-$(get_temp_root)}"
-_DEVBASE_TEMP=$(mktemp -d "${DEVBASE_TEMP_ROOT%/}/devbase.XXXXXX") || {
+_DEVBASE_TEMP=$(mktemp -d --tmpdir devbase.XXXXXX) || {
   # Early error before TUI is fully initialized - use basic output
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
     whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
@@ -142,7 +141,7 @@ _DEVBASE_TEMP=$(mktemp -d "${DEVBASE_TEMP_ROOT%/}/devbase.XXXXXX") || {
   exit 1
 }
 
-readonly _DEVBASE_TEMP DEVBASE_TEMP_ROOT
+readonly _DEVBASE_TEMP
 
 if [[ -z "${DEVBASE_ROOT:-}" ]] || [[ -z "${DEVBASE_LIBS:-}" ]]; then
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
