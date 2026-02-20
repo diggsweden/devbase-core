@@ -122,7 +122,7 @@ _mise_apply_path_from_activate() {
   local activation_output
 
   if [[ "$filter_warn" == "true" ]]; then
-    activation_output=$("$mise_path" activate bash 2> >(grep -v "WARN  missing:" >&2))
+    activation_output=$("$mise_path" activate bash 2> >(grep -v "WARN  missing:" >&2 || true))
   else
     activation_output=$("$mise_path" activate bash)
   fi
@@ -286,7 +286,7 @@ install_mise() {
     local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
     if ! "$mise_path" install "$yq_tool" --yes 2> >(
-      grep -v "WARN  missing:" >&2
+      grep -v "WARN  missing:" >&2 || true
     ); then
       die "Failed to bootstrap yq via mise"
     fi
@@ -297,7 +297,7 @@ install_mise() {
 
     if ! command -v yq &>/dev/null; then
       local yq_path
-      yq_path=$($mise_path which "$yq_tool" 2>/dev/null || true)
+      yq_path=$($mise_path which yq 2>/dev/null || true)
       if [[ -n "$yq_path" ]]; then
         export PATH="$(dirname "$yq_path"):${PATH}"
       fi
