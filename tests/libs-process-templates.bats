@@ -25,12 +25,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'http://example.com:8080/path' 'protocol'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "http"
 }
@@ -40,12 +39,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'https://registry.example.com/path' 'protocol'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "https"
 }
@@ -55,12 +53,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'http://example.com:8080/path' 'host'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "example.com"
 }
@@ -70,12 +67,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'http://user:pass@example.com:8080' 'host'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "example.com"
 }
@@ -85,12 +81,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'http://example.com:8080/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "8080"
 }
@@ -100,12 +95,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'http://example.com/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "80"
 }
@@ -115,12 +109,11 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     parse_url 'https://example.com/path' 'port'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "443"
 }
@@ -131,11 +124,10 @@ teardown() {
     export PATH='/usr/bin:/bin'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
     detect_clipboard_utility
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }

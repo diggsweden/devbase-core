@@ -12,7 +12,11 @@
 #   apt:     - Ubuntu/Debian specific packages
 #   dnf:     - Fedora/RHEL specific packages (experimental)
 
-set -uo pipefail
+# Re-source guard: skip top-level init if already loaded
+if [[ -n "${_DEVBASE_PARSE_PACKAGES_SOURCED:-}" ]]; then
+  return 0
+fi
+_DEVBASE_PARSE_PACKAGES_SOURCED=1
 
 # CRITICAL: yq is required for YAML parsing - fail fast if not available
 if ! command -v yq &>/dev/null; then
@@ -25,6 +29,7 @@ if ! command -v yq &>/dev/null; then
   echo "To fix: Install yq manually or check mise installation:" >&2
   echo "  mise install aqua:mikefarah/yq" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  _DEVBASE_PARSE_PACKAGES_SOURCED=""
   return 1
 fi
 
@@ -33,7 +38,37 @@ PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"
 
 # Selected packs (set by caller, space-separated)
-SELECTED_PACKS="${SELECTED_PACKS:-java node python go ruby}"
+SELECTED_PACKS="${SELECTED_PACKS:-}"
+
+# Brief: Set up package YAML environment (shared by all package loaders)
+# Params: None
+# Uses: DEVBASE_DOT, DEVBASE_DEFAULT_PACKS, DEVBASE_SELECTED_PACKS, _DEVBASE_CUSTOM_PACKAGES (globals)
+# Returns: 0 on success, 1 if packages.yaml not found
+# Side-effects: Exports PACKAGES_YAML, SELECTED_PACKS, PACKAGES_CUSTOM_YAML; resets merge cache
+_setup_package_yaml_env() {
+  require_env DEVBASE_DOT || return 1
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  if [[ -z "${DEVBASE_SELECTED_PACKS:-}" ]]; then
+    export DEVBASE_SELECTED_PACKS="$(get_default_packs)"
+  fi
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS}"
+
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]]; then
+    require_env _DEVBASE_CUSTOM_PACKAGES || return 1
+    if [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+      export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    fi
+  fi
+
+  if [[ ! -f "$PACKAGES_YAML" ]]; then
+    show_progress error "Package configuration not found: $PACKAGES_YAML"
+    return 1
+  fi
+
+  # Reset merge cache so new env is picked up
+  _MERGED_YAML=""
+  return 0
+}
 
 # Cache for merged packages (avoids re-reading yaml repeatedly)
 _MERGED_YAML=""
@@ -383,20 +418,20 @@ get_tool_version() {
 }
 
 # Brief: Get core language runtimes from selected packs
-# Output: Space-separated list of runtime names
+# Output: One runtime name per line
 get_core_runtimes() {
-  local runtimes=""
+  local -a runtimes=()
   for pack in $SELECTED_PACKS; do
     case "$pack" in
-    java) runtimes+=" java maven gradle" ;;
-    node) runtimes+=" node" ;;
-    python) runtimes+=" python" ;;
-    go) runtimes+=" go" ;;
-    ruby) runtimes+=" ruby" ;;
-    rust) runtimes+=" rust" ;;
+    java) runtimes+=(java maven gradle) ;;
+    node) runtimes+=(node) ;;
+    python) runtimes+=(python) ;;
+    go) runtimes+=(go) ;;
+    ruby) runtimes+=(ruby) ;;
+    rust) runtimes+=(rust) ;;
     esac
   done
-  echo "${runtimes# }"
+  printf '%s\n' "${runtimes[@]}"
 }
 
 # Brief: Generate mise config.toml from packages.yaml

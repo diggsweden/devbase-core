@@ -97,9 +97,10 @@ setup_isolated_home() {
 # Usage: source_core_libs
 # Requires: DEVBASE_ROOT to be set
 source_core_libs() {
+  source "${DEVBASE_ROOT}/libs/constants.sh"
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
 }
 
 # Source core UI libraries plus check-requirements
@@ -219,11 +220,8 @@ create_mock_git_repo() {
 # Debug Helpers
 # =============================================================================
 
-# Standard debug output for failed tests
-# Usage: debug_output (call after 'run' command)
-debug_output() {
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
-}
+# Kept for backwards compatibility; use --print-output-on-failure instead
+debug_output() { :; }
 
 # =============================================================================
 # Mock Helpers

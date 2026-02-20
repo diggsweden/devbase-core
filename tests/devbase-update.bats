@@ -470,6 +470,10 @@ if [[ "\$*" == *"ls-remote --tags"* ]]; then
   echo "def456	refs/tags/v2.0.0"
   exit 0
 fi
+if [[ "\$*" == *"describe"* ]]; then
+  echo "v1.0.0"
+  exit 0
+fi
 if [[ "\$*" == *"checkout"* ]]; then
   exit 0
 fi

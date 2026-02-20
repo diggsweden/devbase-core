@@ -4,14 +4,13 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
 fi
 
 source "${DEVBASE_LIBS}/utils.sh"
+source "${DEVBASE_LIBS}/defaults.sh"
 
 # Theme presets: is_light|bat|btop|delta|zellij|nvim|vifm|k9s
 # Keys use underscores internally; user-facing names use hyphens (converted at lookup)
@@ -81,10 +80,10 @@ _apply_theme_get_fzf_colors() {
 # Returns: 0 always
 # Side-effects: Exports theme variables for all tools
 apply_theme() {
-  local theme="${1:-everforest-dark}"
+  local theme="${1:-$(get_default_theme)}"
   local key
 
-  [[ -z "$theme" ]] && theme="everforest-dark"
+  [[ -z "$theme" ]] && theme="$(get_default_theme)"
   key=$(_theme_key "$theme")
 
   # Check if theme exists in config, use default if not

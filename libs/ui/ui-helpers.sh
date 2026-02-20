@@ -7,8 +7,6 @@
 # UI Helpers - Dispatcher and TUI-agnostic functions
 # Backend implementations are in ui-helpers-gum.sh and ui-helpers-whiptail.sh
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
@@ -20,9 +18,9 @@ fi
 
 # Source backend implementations
 # shellcheck source=./ui-helpers-gum.sh
-source "${DEVBASE_ROOT}/libs/ui-helpers-gum.sh"
+source "${DEVBASE_ROOT}/libs/ui/ui-helpers-gum.sh"
 # shellcheck source=./ui-helpers-whiptail.sh
-source "${DEVBASE_ROOT}/libs/ui-helpers-whiptail.sh"
+source "${DEVBASE_ROOT}/libs/ui/ui-helpers-whiptail.sh"
 
 # =============================================================================
 # DISPATCHER FUNCTIONS
@@ -45,6 +43,25 @@ _use_whiptail() {
   [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null && return 0
   # Fallback to whiptail if gum not available
   ! command -v gum &>/dev/null && command -v whiptail &>/dev/null
+}
+
+if ! declare -f ui_message >/dev/null 2>&1 && [[ -n "${DEVBASE_LIBS:-}" ]]; then
+  # shellcheck disable=SC1091 # Loaded via DEVBASE_LIBS at runtime
+  source "${DEVBASE_LIBS}/ui/ui-messages.sh"
+fi
+
+show_dry_run_plan() {
+  show_progress info "$(ui_message dry_run_plan_header)"
+  show_progress info "  - $(ui_message dry_run_plan_preflight)"
+  show_progress info "  - $(ui_message dry_run_plan_configuration)"
+  show_progress info "  - $(ui_message dry_run_plan_installation)"
+  show_progress info "  - $(ui_message dry_run_plan_finalize)"
+  show_progress info "  - $(ui_message dry_run_plan_actions): apt/snap/mise installs, shell + editor setup"
+
+  local packages="${DEVBASE_SELECTED_PACKS:-${DEVBASE_DEFAULT_PACKS:-}}"
+  if [[ -n "$packages" ]]; then
+    show_progress info "  - $(ui_message dry_run_plan_packages): $packages"
+  fi
 }
 
 # Brief: Display formatted progress messages with color and symbols
@@ -146,12 +163,33 @@ _fallback_run_with_spinner() {
 }
 
 _fallback_ask_yes_no() {
+  local question="$1"
   local default="${2:-N}"
-  if [[ "$default" == "Y" || "$default" == "y" ]]; then
-    return 0
-  else
+  local reply=""
+
+  if [[ ! -t 0 ]]; then
+    [[ "$default" == "Y" || "$default" == "y" ]] && return 0
     return 1
   fi
+
+  while true; do
+    read -r -p "$question " reply
+    case "$reply" in
+    [Yy])
+      return 0
+      ;;
+    [Nn])
+      return 1
+      ;;
+    "")
+      [[ "$default" == "Y" || "$default" == "y" ]] && return 0
+      return 1
+      ;;
+    *)
+      printf "Please answer y or n.\n"
+      ;;
+    esac
+  done
 }
 
 # =============================================================================

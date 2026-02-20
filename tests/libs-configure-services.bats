@@ -33,14 +33,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     enable_user_service 'test.service' 'Test Service'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Test Service enabled and started"
 }
@@ -60,14 +59,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     enable_user_service 'failing.service' 'Failing Service'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
   assert_output --partial "Failed to enable"
 }
@@ -77,14 +75,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     enable_user_service ''
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_failure
 }
 
@@ -110,14 +107,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     set_system_limits
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "System limits configured"
   
@@ -156,14 +152,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     configure_ufw
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "UFW firewall enabled"
 }
@@ -186,14 +181,13 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-services.sh' >/dev/null 2>&1
     
     configure_podman_service
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "Podman"
 }

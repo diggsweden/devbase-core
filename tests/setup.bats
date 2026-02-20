@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2155,SC2218
+# shellcheck disable=SC1078,SC1079,SC1090,SC2016,SC2027,SC2030,SC2031,SC2046,SC2123,SC2140,SC2155,SC2218
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -78,6 +78,18 @@ teardown() {
   assert_output "gum"
 }
 
+@test "parse_arguments sets DEVBASE_DRY_RUN for --dry-run" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    DEVBASE_DRY_RUN=false
+    parse_arguments --dry-run
+    echo \"\$DEVBASE_DRY_RUN\"
+  "
+
+  assert_success
+  assert_output "true"
+}
+
 @test "parse_arguments rejects --tui=none (not a valid user option)" {
   run bash -c "
     eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
@@ -111,11 +123,181 @@ teardown() {
   assert_output --partial "Invalid TUI mode"
 }
 
+@test "parse_arguments rejects unknown options" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --not-a-real-flag
+  "
+
+  assert_failure
+  assert_output --partial "Unknown option"
+}
+
 @test "setup.sh help shows --tui option" {
   run bash "${DEVBASE_ROOT}/setup.sh" --help
   
   assert_success
   assert_output --partial "--tui=<mode>"
+}
+
+@test "setup.sh --version prints version string" {
+  run bash "${DEVBASE_ROOT}/setup.sh" --version
+
+  assert_success
+  assert_output --partial "devbase-core"
+}
+
+@test "bootstrap module exposes run_bootstrap" {
+  run bash -c "grep -q '^run_bootstrap()' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap.sh'"
+
+  assert_success
+}
+
+@test "setup.sh calls initialize_devbase_paths" {
+  run bash -c "grep -q 'initialize_devbase_paths' '${DEVBASE_ROOT}/setup.sh'"
+
+  assert_success
+}
+
+@test "main runs bootstrap, install, and migrations" {
+  run bash -c "
+    parse_arguments() { :; }
+    initialize_devbase_paths() { :; }
+    load_devbase_libraries() { :; }
+    apply_setup_defaults() { :; }
+    show_global_warnings() { :; }
+    run_bootstrap() { echo bootstrap; }
+    run_installation() { echo install; }
+    run_migrations() { echo migrate; }
+    eval \"\$(sed -n '/^main()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    SHOW_VERSION=false
+    DEVBASE_DRY_RUN=false
+    main
+  "
+
+  assert_success
+  assert_output --partial "bootstrap"
+  assert_output --partial "install"
+  assert_output --partial "migrate"
+}
+
+@test "main skips installation in dry-run" {
+  run bash -c "
+    parse_arguments() { :; }
+    initialize_devbase_paths() { :; }
+    load_devbase_libraries() { :; }
+    apply_setup_defaults() { :; }
+    run_bootstrap() { echo bootstrap; }
+    run_installation() { echo INSTALLATION_RAN; }
+    run_migrations() { echo migrate; }
+    show_global_warnings() { :; }
+    ui_message() {
+      case \"\$1\" in
+        dry_run_install_skip) echo \"Dry run enabled - skipping installation\" ;;
+        *) echo \"\$1\" ;;
+      esac
+    }
+    show_progress() { echo \"\$2\"; }
+    show_dry_run_plan() {
+      echo \"Dry run plan:\"
+      echo \"- Preflight checks\"
+      echo \"- Configuration prompts\"
+      echo \"- Installation steps\"
+      echo \"- Finalize steps\"
+    }
+    eval \"\$(sed -n '/^main()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    SHOW_VERSION=false
+    DEVBASE_DRY_RUN=true
+    main
+  "
+
+  assert_success
+  assert_output --partial "bootstrap"
+  assert_output --partial "Dry run plan:"
+  assert_output --partial "Dry run enabled - skipping installation"
+  refute_output --partial "INSTALLATION_RAN"
+}
+
+@test "show_dry_run_plan lists packages when set" {
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/constants.sh'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    ui_message() {
+      case \"\$1\" in
+        dry_run_plan_header) echo \"Dry run plan:\" ;;
+        dry_run_plan_preflight) echo \"Preflight checks\" ;;
+        dry_run_plan_configuration) echo \"Configuration prompts\" ;;
+        dry_run_plan_installation) echo \"Installation steps\" ;;
+        dry_run_plan_finalize) echo \"Finalize steps\" ;;
+        dry_run_plan_actions) echo \"Actions\" ;;
+        dry_run_plan_packages) echo \"Packages\" ;;
+        *) echo \"\$1\" ;;
+      esac
+    }
+    show_progress() { echo \"\$2\"; }
+    DEVBASE_SELECTED_PACKS=\"go python\"
+    show_dry_run_plan
+  "
+
+  assert_success
+  assert_output --partial "Actions:"
+  assert_output --partial "Packages: go python"
+}
+
+@test "run_bootstrap fails when required tools missing" {
+  run bash -c "
+    require_env() { return 0; }
+    detect_environment() { return 0; }
+    find_custom_directory() { return 0; }
+    load_environment_configuration() { return 0; }
+    configure_proxy_settings() { return 0; }
+    install_certificates() { return 0; }
+    select_tui_mode() { return 0; }
+    show_welcome_banner() { :; }
+    show_os_info() { :; }
+    check_required_tools() { return 1; }
+    show_repository_info() { :; }
+    test_generic_network_connectivity() { :; }
+    validate_custom_config() { :; }
+    run_pre_install_hook() { :; }
+    set_default_values() { :; }
+    ui_message() { echo \"\$1\"; }
+    show_progress() { :; }
+    eval \"\$(sed -n '/^run_bootstrap()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap.sh')\"
+    DEVBASE_DRY_RUN=false
+    run_bootstrap
+  "
+
+  assert_failure
+}
+
+@test "run_bootstrap fails when custom config invalid" {
+  run bash -c "
+    require_env() { return 0; }
+    detect_environment() { return 0; }
+    find_custom_directory() { return 0; }
+    load_environment_configuration() { return 0; }
+    configure_proxy_settings() { return 0; }
+    install_certificates() { return 0; }
+    select_tui_mode() { return 0; }
+    show_welcome_banner() { :; }
+    show_os_info() { :; }
+    check_required_tools() { return 0; }
+    show_repository_info() { :; }
+    test_generic_network_connectivity() { :; }
+    validate_custom_config() { return 1; }
+    run_pre_install_hook() { :; }
+    set_default_values() { :; }
+    ui_message() { echo \"\$1\"; }
+    show_progress() { :; }
+    eval \"\$(sed -n '/^run_bootstrap()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap.sh')\"
+    DEVBASE_DRY_RUN=false
+    run_bootstrap
+  "
+
+  assert_failure
 }
 
 @test "initialize_devbase_paths sets required paths" {
@@ -136,47 +318,47 @@ teardown() {
 
 @test "validate_custom_directory requires config dir" {
   mkdir -p "${TEST_DIR}/custom"
-  
+
   run bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh'
     validate_custom_directory '${TEST_DIR}/custom'
   "
-  
+
   assert_failure
 }
 
 @test "validate_custom_directory requires org.env file" {
   mkdir -p "${TEST_DIR}/custom/config"
-  
+
   run bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh'
     validate_custom_directory '${TEST_DIR}/custom'
   "
-  
+
   assert_failure
 }
 
 @test "validate_custom_directory succeeds with valid structure" {
   mkdir -p "${TEST_DIR}/custom/config"
   touch "${TEST_DIR}/custom/config/org.env"
-  
+
   run bash -c "
-    source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^validate_custom_directory()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-config.sh')\"
     validate_custom_directory '${TEST_DIR}/custom'
   "
-  
+
   assert_success
 }
 
 @test "mask_url_credentials masks user:pass in URL" {
   run bash -c "
-    eval \"\$(sed -n '/^mask_url_credentials()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^mask_url_credentials()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh')\"
     echo 'http://user:secret@proxy.example.com:8080' | mask_url_credentials
   "
   
@@ -186,7 +368,7 @@ teardown() {
 
 @test "mask_url_credentials preserves URL without credentials" {
   run bash -c "
-    eval \"\$(sed -n '/^mask_url_credentials()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^mask_url_credentials()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh')\"
     echo 'http://proxy.example.com:8080' | mask_url_credentials
   "
   
@@ -199,9 +381,9 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
-    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh')\"
 
     # Stub sudo/snap so tests never touch the host
     sudo() { :; }
@@ -228,9 +410,9 @@ teardown() {
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
-    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh')\"
 
     # Stub sudo/snap so tests never touch the host
     sudo() { :; }
@@ -254,9 +436,9 @@ teardown() {
   run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
-    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^configure_proxy_settings()/,/^}/p' '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh')\"
     
     DEVBASE_PROXY_HOST=''
     DEVBASE_PROXY_PORT=''
@@ -278,17 +460,15 @@ teardown() {
   run bash -c "
     export HOME='${HOME}'
     export XDG_DATA_HOME='${XDG_DATA_HOME}'
-    export DEVBASE_ROOT='${source_repo}'
     export _DEVBASE_FROM_GIT='true'
     export DEVBASE_CUSTOM_DIR=''
-    
-    source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    
-    # Extract and run persist_devbase_repos
-    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+
+    require_env() { :; }
+    show_progress() { :; }
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/libs/persist.sh')\"
+    DEVBASE_ROOT='${source_repo}'
     persist_devbase_repos
-    
+
     # Check if core dir was created
     if [[ -d '${XDG_DATA_HOME}/devbase/core/.git' ]]; then
       echo 'core_created=yes'
@@ -314,14 +494,15 @@ teardown() {
   run bash -c "
     export HOME='${HOME}'
     export XDG_DATA_HOME='${XDG_DATA_HOME}'
-    export DEVBASE_ROOT='${source_repo}'
     export _DEVBASE_FROM_GIT='true'
     export DEVBASE_CUSTOM_DIR=''
     export DEVBASE_CORE_REF='test-ref'
 
+    require_env() { :; }
     show_progress() { :; }
 
-    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/libs/persist.sh')\"
+    DEVBASE_ROOT='${source_repo}'
     persist_devbase_repos
 
     git -C '${XDG_DATA_HOME}/devbase/core' describe --tags --exact-match
@@ -335,14 +516,13 @@ teardown() {
   run bash -c "
     export HOME='${HOME}'
     export XDG_DATA_HOME='${XDG_DATA_HOME}'
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export _DEVBASE_FROM_GIT='false'
     export DEVBASE_CUSTOM_DIR=''
-    
-    source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    
-    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+
+    show_progress() { :; }
+
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/libs/persist.sh')\"
+    DEVBASE_ROOT='${DEVBASE_ROOT}'
     persist_devbase_repos
     
     # Core dir should not be created as a git repo
@@ -367,14 +547,14 @@ teardown() {
   run bash -c "
     export HOME='${HOME}'
     export XDG_DATA_HOME='${XDG_DATA_HOME}'
-    export DEVBASE_ROOT='${source_repo}'
     export _DEVBASE_FROM_GIT='true'
     export DEVBASE_CUSTOM_DIR='${custom_repo}'
-    
-    source '${DEVBASE_ROOT}/libs/define-colors.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
-    
-    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+
+    require_env() { :; }
+    show_progress() { :; }
+
+    eval \"\$(sed -n '/^persist_devbase_repos()/,/^}/p' '${DEVBASE_ROOT}/libs/persist.sh')\"
+    DEVBASE_ROOT='${source_repo}'
     persist_devbase_repos
     
     if [[ -d '${XDG_DATA_HOME}/devbase/custom/.git' ]]; then

@@ -7,8 +7,6 @@
 # APT package manager implementation for Debian/Ubuntu
 # This file is sourced by pkg-manager.sh - do not source directly
 
-set -uo pipefail
-
 # =============================================================================
 # CORE PACKAGE OPERATIONS
 # =============================================================================
@@ -18,15 +16,7 @@ set -uo pipefail
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 _pkg_apt_update() {
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
-      sudo apt-get -qq update
-    return $?
-  fi
-
-  # Whiptail mode (default)
   run_with_spinner "Updating package lists" sudo apt-get -qq update
-  return $?
 }
 
 # Brief: Install APT packages with real-time progress (whiptail only)
@@ -199,16 +189,6 @@ _pkg_apt_install_fonts() {
     fonts-dejavu-extra
   )
 
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
-      sudo apt-get install -y -q "${font_packages[@]}"; then
-      command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
-      return 0
-    fi
-    return 1
-  fi
-
-  # Whiptail mode (default)
   if run_with_spinner "Installing Liberation & DejaVu fonts" \
     sudo apt-get install -y -q "${font_packages[@]}"; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
@@ -255,11 +235,20 @@ _pkg_apt_install_firefox_deb() {
   # Create keyrings directory
   sudo install -d -m 0755 /etc/apt/keyrings
 
-  # Download and install Mozilla's GPG key
-  local mozilla_key="${_DEVBASE_TEMP:-/tmp}/mozilla-repo-signing-key.gpg"
+  # Download and verify Mozilla's GPG signing key.
+  # We verify the key fingerprint (not a file hash) because the fingerprint
+  # identifies the cryptographic key itself — stable across re-exports and
+  # encoding changes — while a file hash would break on any such change.
+  local mozilla_key="${_DEVBASE_TEMP}/mozilla-repo-signing-key.gpg"
   mkdir -p "$(dirname "$mozilla_key")"
-  if ! download_file "https://packages.mozilla.org/apt/repo-signing-key.gpg" "$mozilla_key"; then
+  if ! devbase_curl -fsSL "${DEVBASE_URL_MOZILLA_GPG_KEY}" -o "$mozilla_key"; then
     show_progress error "Failed to download Mozilla GPG key"
+    return 1
+  fi
+  local actual_fingerprint
+  actual_fingerprint=$(gpg --show-keys "$mozilla_key" 2>/dev/null | tr -d ' \t' | grep -F "${DEVBASE_MOZILLA_GPG_FINGERPRINT}")
+  if [[ -z "$actual_fingerprint" ]]; then
+    show_progress error "Mozilla GPG key fingerprint mismatch (expected ${DEVBASE_MOZILLA_GPG_FINGERPRINT})"
     return 1
   fi
   if ! sudo install -m 0644 "$mozilla_key" /etc/apt/keyrings/packages.mozilla.org.asc; then
@@ -268,7 +257,7 @@ _pkg_apt_install_firefox_deb() {
   fi
 
   # Add Mozilla APT repository
-  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
+  echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] ${DEVBASE_URL_MOZILLA_APT_REPO} mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list >/dev/null
 
   # Set package priority to prefer Mozilla's Firefox and block Ubuntu's snap transitional package
   cat <<'EOF' | sudo tee /etc/apt/preferences.d/mozilla >/dev/null
@@ -282,29 +271,14 @@ Pin-Priority: -1
 EOF
 
   # Update and install
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if ! gum spin --spinner dot --show-error --title "Updating Mozilla repository..." -- \
-      sudo apt-get -qq update; then
-      show_progress error "Failed to update package cache after adding Mozilla repo"
-      return 1
-    fi
+  if ! run_with_spinner "Updating Mozilla repository" sudo apt-get -qq update; then
+    show_progress error "Failed to update package cache after adding Mozilla repo"
+    return 1
+  fi
 
-    if ! gum spin --spinner dot --show-error --title "Installing Firefox..." -- \
-      sudo apt-get -y -qq install firefox; then
-      show_progress error "Failed to install Firefox from Mozilla repository"
-      return 1
-    fi
-  else
-    # Whiptail mode (default)
-    if ! run_with_spinner "Updating Mozilla repository" sudo apt-get -qq update; then
-      show_progress error "Failed to update package cache after adding Mozilla repo"
-      return 1
-    fi
-
-    if ! run_with_spinner "Installing Firefox" sudo apt-get -y -qq install firefox; then
-      show_progress error "Failed to install Firefox from Mozilla repository"
-      return 1
-    fi
+  if ! run_with_spinner "Installing Firefox" sudo apt-get -y -qq install firefox; then
+    show_progress error "Failed to install Firefox from Mozilla repository"
+    return 1
   fi
 
   show_progress success "Firefox installed from Mozilla APT repository"
@@ -315,40 +289,18 @@ EOF
   return 0
 }
 
-# Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
-# Params: None
-# Uses: HOME, show_progress (globals/functions)
-# Returns: 0 on success, 1 if no Firefox profile found
-# Side-effects: Adds OpenSC module to Firefox pkcs11.txt
+# Brief: Configure Firefox OpenSC for Debian/Ubuntu
+# Side-effects: Delegates to shared _configure_firefox_opensc with multiarch path
 _pkg_apt_configure_firefox_opensc() {
-  local opensc_lib="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
-
-  # Skip if OpenSC library not installed
-  if [[ ! -f "$opensc_lib" ]]; then
-    show_progress info "OpenSC PKCS#11 library not found, skipping Firefox smart card configuration"
-    return 0
-  fi
-
-  # Find Firefox profile directory
-  local profile_dir
-  profile_dir=$(find "${HOME}/.mozilla/firefox" -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
-
-  if [[ -z "$profile_dir" ]]; then
-    show_progress info "No Firefox profile found, skipping OpenSC configuration (will be configured on first Firefox launch)"
-    return 0
-  fi
-
-  local pkcs11_file="${profile_dir}/pkcs11.txt"
-
-  # Skip if OpenSC already configured
-  if [[ -f "$pkcs11_file" ]] && grep -q "opensc-pkcs11.so" "$pkcs11_file" 2>/dev/null; then
-    show_progress info "OpenSC already configured in Firefox"
-    return 0
-  fi
-
-  # Add OpenSC module to pkcs11.txt
-  printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
-
-  show_progress success "Firefox configured for smart card support (OpenSC)"
-  return 0
+  local arch
+  arch=$(dpkg --print-architecture 2>/dev/null || echo "x86_64")
+  local multiarch
+  case "$arch" in
+  amd64) multiarch="x86_64-linux-gnu" ;;
+  arm64) multiarch="aarch64-linux-gnu" ;;
+  armhf) multiarch="arm-linux-gnueabihf" ;;
+  i386) multiarch="i386-linux-gnu" ;;
+  *) multiarch="x86_64-linux-gnu" ;;
+  esac
+  _configure_firefox_opensc "/usr/lib/${multiarch}/opensc-pkcs11.so"
 }

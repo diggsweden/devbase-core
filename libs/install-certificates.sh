@@ -4,12 +4,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
 fi
+
+source "${DEVBASE_ROOT}/libs/install-context.sh"
 
 # Brief: Install custom certificates to system trust store and configure Git
 # Params: None
@@ -18,6 +18,7 @@ fi
 # Side-effects: Copies certs to system, updates trust store, configures Git
 install_certificates() {
   validate_custom_dir "_DEVBASE_CUSTOM_CERTS" "Custom certificates directory" || return 0
+  require_env _DEVBASE_CUSTOM_CERTS || return 1
 
   local cert_src="${_DEVBASE_CUSTOM_CERTS}"
 
@@ -45,9 +46,9 @@ install_certificates() {
 
   if [[ ${#valid_certs[@]} -eq 0 ]]; then
     if [[ ${#invalid_certs[@]} -gt 0 ]]; then
-      show_progress warning "Invalid certificates skipped: ${invalid_certs[*]}"
+      add_install_warning "Invalid certificates skipped: ${invalid_certs[*]}"
     fi
-    show_progress warning "No valid certificates to install"
+    add_install_warning "No valid certificates to install"
     return 0
   fi
 
@@ -125,7 +126,7 @@ install_certificates() {
   elif [[ $already_exists -gt 0 ]]; then
     show_progress success "All $already_exists certificate(s) already installed (no changes needed)"
   else
-    show_progress warning "No valid certificates to install"
+    add_install_warning "No valid certificates to install"
   fi
 }
 

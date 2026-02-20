@@ -7,8 +7,6 @@
 # Whiptail-based TUI for DevBase setup
 # Alternative to collect-user-preferences.sh using dialog boxes
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -174,7 +172,7 @@ collect_git_configuration() {
 
   # Get defaults
   local default_name default_email
-  default_name="${DEVBASE_GIT_AUTHOR:-$(git config --global user.name 2>/dev/null || echo "")}"
+  default_name="${DEVBASE_GIT_AUTHOR:-$(get_default_git_author)}"
   [[ ! "$default_name" =~ $name_pattern ]] && default_name=""
 
   # Prompt for name with validation
@@ -194,7 +192,7 @@ collect_git_configuration() {
   export DEVBASE_GIT_AUTHOR="$git_name"
 
   # Derive default email
-  default_email="${DEVBASE_GIT_EMAIL:-$(git config --global user.email 2>/dev/null || echo "")}"
+  default_email="${DEVBASE_GIT_EMAIL:-$(get_default_git_email)}"
   if [[ ! "$default_email" =~ $email_pattern ]]; then
     default_email=$(_generate_default_email_from_name "$DEVBASE_GIT_AUTHOR" "${DEVBASE_EMAIL_DOMAIN:-}")
   fi
@@ -221,7 +219,7 @@ collect_git_configuration() {
 }
 
 collect_theme_preference() {
-  local current="${DEVBASE_THEME:-everforest-dark}"
+  local current="${DEVBASE_THEME:-$(get_default_theme)}"
 
   # Build radiolist items - mark current as selected
   local items=()
@@ -264,7 +262,8 @@ collect_theme_preference() {
     return
   fi
 
-  export DEVBASE_THEME="${choice:-everforest-dark}"
+  export DEVBASE_THEME="${choice:-$(get_default_theme)}"
+
 }
 
 collect_font_preference() {
@@ -274,7 +273,7 @@ collect_font_preference() {
     return 0
   fi
 
-  local current="${DEVBASE_FONT:-monaspace}"
+  local current="${DEVBASE_FONT:-$(get_default_font)}"
   local items=()
   local fonts=(
     "monaspace:Superfamily, multiple styles"
@@ -308,12 +307,13 @@ collect_font_preference() {
     return
   fi
 
-  export DEVBASE_FONT="${choice:-monaspace}"
+  export DEVBASE_FONT="${choice:-$(get_default_font)}"
+
 }
 
 collect_ssh_configuration() {
   validate_var_set "HOME" || return 1
-  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
 
   if [[ -f "$ssh_key_path" ]]; then
     # Existing key
@@ -419,7 +419,8 @@ collect_editor_preferences() {
 
 collect_tool_preferences() {
   # Shell bindings - radiolist
-  local current_editor="${EDITOR:-nvim}"
+  local current_editor="${EDITOR:-$(get_default_editor)}"
+
   local vim_status="ON" emacs_status="OFF"
   [[ "$current_editor" != "nvim" ]] && vim_status="OFF" && emacs_status="ON"
 
@@ -510,7 +511,7 @@ collect_pack_preferences() {
   # Source parser if needed
   if ! declare -f get_available_packs &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
 
   # Get available packs
@@ -519,6 +520,8 @@ collect_pack_preferences() {
     packs+=("$pack")
     descriptions+=("$desc")
   done < <(get_available_packs)
+
+  require_env DEVBASE_DEFAULT_PACKS || return 1
 
   # Current selection (space-separated) - default to all except rust
   local default_packs=()

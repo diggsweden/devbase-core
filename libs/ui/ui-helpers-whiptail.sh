@@ -7,8 +7,6 @@
 # Whiptail TUI backend for ui-helpers
 # These functions are called by the dispatchers in ui-helpers.sh
 
-set -uo pipefail
-
 # =============================================================================
 # TERMINAL REQUIREMENTS
 # =============================================================================
@@ -64,9 +62,10 @@ _wt_start_persistent_gauge() {
   # Clean up any existing gauge
   _wt_stop_persistent_gauge
 
-  # Create named pipe for gauge communication
-  # Use mktemp -u + mkfifo with restricted permissions to minimize race window
-  _WT_GAUGE_FIFO=$(mktemp -u /tmp/devbase-gauge.XXXXXX)
+  # Create named pipe for gauge communication inside a private temp directory
+  local fifo_dir
+  fifo_dir=$(make_temp_dir "devbase-gauge")
+  _WT_GAUGE_FIFO="${fifo_dir}/fifo"
   mkfifo -m 600 "$_WT_GAUGE_FIFO"
 
   # Start gauge in background, reading from FIFO
@@ -106,7 +105,10 @@ _wt_stop_persistent_gauge() {
     _WT_GAUGE_PID=""
   fi
   if [[ -n "$_WT_GAUGE_FIFO" ]] && [[ -p "$_WT_GAUGE_FIFO" ]]; then
+    local fifo_dir
+    fifo_dir=$(dirname "$_WT_GAUGE_FIFO")
     rm -f "$_WT_GAUGE_FIFO"
+    [[ -d "$fifo_dir" ]] && rmdir "$fifo_dir" 2>/dev/null || true
     _WT_GAUGE_FIFO=""
   fi
 

@@ -4,23 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
-# Brief: Generate a random 12-character SSH passphrase (NIST minimum)
-# Params: None
-# Returns: Echoes passphrase to stdout
-# Side-effects: None
-generate_ssh_passphrase() {
-  local pass
-  if command -v openssl >/dev/null 2>&1; then
-    pass=$(openssl rand -base64 12 2>/dev/null)
-  else
-    pass=$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 16)
-  fi
-  # Use bash string slicing to avoid SIGPIPE from head closing early
-  printf '%s' "${pass:0:12}"
-}
-
 # Verify devbase environment is set
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
@@ -31,6 +14,20 @@ fi
 # Guard against multiple sourcing
 [[ -n "${_DEVBASE_UTILS_SOURCED:-}" ]] && return 0
 _DEVBASE_UTILS_SOURCED=1
+
+# Brief: Generate a random SSH passphrase (18 bytes / 24 base64 chars)
+# Params: None
+# Returns: Echoes passphrase to stdout
+# Side-effects: None
+generate_ssh_passphrase() {
+  local pass
+  if command -v openssl >/dev/null 2>&1; then
+    pass=$(openssl rand -base64 18 2>/dev/null)
+  else
+    pass=$(tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 24)
+  fi
+  printf '%s' "$pass"
+}
 
 # Internal configuration constants (not exported)
 readonly _SLEEP_DURATION=2
@@ -60,18 +57,18 @@ declare -gA COMMAND_CACHE
 # Params: $1 - command name
 # Uses: COMMAND_CACHE (global associative array)
 # Returns: 0 if exists, 1 if not
-# Side-effects: Updates COMMAND_CACHE
+# Side-effects: Updates COMMAND_CACHE (only caches positive results)
+# Note: Negative results are not cached since commands may be installed mid-session
 command_exists() {
   local cmd="$1"
   validate_not_empty "$cmd" "command name" || return 1
 
-  [[ -n "${COMMAND_CACHE[$cmd]:-}" ]] && return "${COMMAND_CACHE[$cmd]}"
+  [[ "${COMMAND_CACHE[$cmd]:-}" == "0" ]] && return 0
 
   if command -v "$cmd" &>/dev/null; then
     COMMAND_CACHE[$cmd]=0
     return 0
   else
-    COMMAND_CACHE[$cmd]=1
     return 1
   fi
 }
@@ -98,10 +95,19 @@ die() {
 
 # Brief: Refresh sudo credentials to prevent timeout during long operations
 # Params: None
-# Returns: 0 on success, 1 on failure
-# Side-effects: Extends sudo timeout
+# Returns: 0 always (failure to refresh is non-fatal; install continues without sudo cache)
+# Side-effects: Extends sudo timestamp if already authenticated; never prompts
 sudo_refresh() {
-  sudo -v
+  command -v sudo &>/dev/null || return 0
+  sudo -vn 2>/dev/null || true
+}
+
+# Brief: Create temp directory with prefix
+# Params: $1 - prefix (optional, default: devbase)
+# Returns: Created temp directory path
+make_temp_dir() {
+  local prefix="${1:-devbase}"
+  mktemp -d --tmpdir "${prefix}.XXXXXX"
 }
 
 # Brief: Validate path for security (traversal, system dirs, whitelisting)
@@ -126,7 +132,6 @@ validate_path() {
 
   # ===== SECURITY CHECKS (always applied) =====
   [[ "$real_path" = /* ]] || die "Path must be absolute: $real_path"
-  [[ "$real_path" != *".."* ]] || die "Path traversal detected: $real_path"
 
   # ===== STRICT MODE WHITELIST =====
   if [[ "$strict_mode" == "true" ]]; then
@@ -148,6 +153,7 @@ validate_path() {
     /tmp/* | /var/tmp/*)
       [[ "$real_path" != "/tmp" ]] && [[ "$real_path" != "/var/tmp" ]] || die "Cannot operate on temp directory root"
       ;;
+    /run/user/*/*) ;; # User runtime subdirectories (XDG_RUNTIME_DIR — valid for user-owned files)
     "${user_home}") ;;
     "${user_home}"/.devbase_backup* | "${user_home}"/.config/* | "${user_home}"/.local/* | "${user_home}"/.cache/*) ;;
     "${user_home}"/development/* | "${user_home}"/devbase-*) ;;
@@ -170,7 +176,7 @@ validate_path() {
 _extract_uppercase_vars() {
   local content="$1"
   # shellcheck disable=SC2016 # Single quotes intentional - we're searching for literal $ patterns
-  echo "$content" |
+  printf '%s\n' "$content" |
     grep -o '\${\?[A-Z_][A-Z0-9_]*}\?' | # Extract ${VAR} or $VAR patterns
     sed 's/[{}$]//g' |                   # Remove $ { } characters
     sort -u |                            # Get unique variable names only
@@ -193,29 +199,20 @@ envsubst_preserve_undefined() {
 
   # Extract variables using pure logic function
   local vars_to_sub
-  vars_to_sub=$(_extract_uppercase_vars "$(cat "$template_file")")
+  vars_to_sub=$(_extract_uppercase_vars "$(<"$template_file")")
 
   # Validate that required template variables are set before processing
   if [[ -n "$vars_to_sub" ]]; then
     validate_template_variables "$template_file" "$vars_to_sub" || return 1
   fi
 
-  # Filter out runtime variables (should not be replaced by envsubst)
-  # These variables are meant to be evaluated at runtime by the shell
-  local runtime_vars=("XDG_RUNTIME_DIR" "USER_UID")
+  # Filter out runtime variables using the canonical list from validation.sh
+  # (avoids duplicating DEVBASE_RUNTIME_TEMPLATE_VARS here)
   local filtered_vars=""
   for var in $vars_to_sub; do
-    local var_name="${var#\$}"
-    local is_runtime=false
-    for runtime_var in "${runtime_vars[@]}"; do
-      if [[ "$var_name" == "$runtime_var" ]]; then
-        is_runtime=true
-        break
-      fi
-    done
-    if [[ "$is_runtime" == false ]]; then
-      filtered_vars="$filtered_vars $var"
-    fi
+    # Skip variables populated at render time, not install time
+    [[ " ${DEVBASE_RUNTIME_TEMPLATE_VARS[*]} " == *" ${var#\$} "* ]] && continue
+    filtered_vars="$filtered_vars $var"
   done
 
   # Proceed with substitution (using filtered list)
@@ -226,9 +223,45 @@ envsubst_preserve_undefined() {
     # No variables to substitute, just copy
     cp "$template_file" "$output_file"
   fi
-
-  return $?
 }
+
+# =============================================================================
+# GLOBAL WARNING ACCUMULATOR
+# Collects non-fatal warnings that occur during setup and replays them in the
+# final summary. Use add_install_warning (install-context.sh) for install-phase
+# warnings; add_global_warning is the lower-level primitive used by that alias.
+# =============================================================================
+
+declare -ag DEVBASE_GLOBAL_WARNINGS=()
+
+# Brief: Append a warning to the global accumulator and display it immediately
+# Params: $1 - warning message
+# Uses: DEVBASE_GLOBAL_WARNINGS (global array), show_progress (function)
+# Returns: 0 always
+add_global_warning() {
+  local message="$1"
+  DEVBASE_GLOBAL_WARNINGS+=("$message")
+  show_progress warning "$message"
+}
+
+# Brief: Display all accumulated warnings and clear the accumulator
+# Params: None
+# Uses: DEVBASE_GLOBAL_WARNINGS (global array), show_progress (function)
+# Returns: 0 always
+show_global_warnings() {
+  if [[ ${#DEVBASE_GLOBAL_WARNINGS[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  show_progress warning "Warnings during setup:"
+  for warning in "${DEVBASE_GLOBAL_WARNINGS[@]}"; do
+    show_progress warning "  - $warning"
+  done
+
+  DEVBASE_GLOBAL_WARNINGS=()
+}
+
+# =============================================================================
 
 # Brief: Retry command with exponential backoff and jitter
 # Params: [--attempts N] [--delay N] -- command args...
@@ -301,23 +334,12 @@ _calculate_safe_relative_path() {
   [[ "$rel_path" == *..* ]] && return 1
   [[ "$rel_path" == /* ]] && return 1
 
-  echo "$rel_path"
-  return 0
-}
-
-# Brief: Determine backup path for a file (pure logic)
-# Params: $1 - rel_path, $2 - backup_base_dir
-# Returns: Echoes full backup path to stdout
-# Side-effects: None (pure function)
-_get_backup_path() {
-  local rel_path="$1"
-  local backup_base="$2"
-  echo "$backup_base/$rel_path"
+  printf '%s\n' "$rel_path"
 }
 
 # Brief: Merge source dotfiles into target with backup of existing files
 # Params: $1 - src_dir, $2 - target_dir (default: $HOME)
-# Uses: DEVBASE_BACKUP_DIR, _FIND_DEPTH, _calculate_safe_relative_path, _get_backup_path (globals/functions)
+# Uses: DEVBASE_BACKUP_DIR, _FIND_DEPTH, _calculate_safe_relative_path (globals/functions)
 # Returns: 0 on success, 1 on error
 # Side-effects: Creates backups, copies files
 merge_dotfiles_with_backup() {
@@ -339,9 +361,7 @@ merge_dotfiles_with_backup() {
 
     local target_file="$target_dir/$rel_path"
     [[ -e "$target_file" ]] && {
-      # Use pure logic function to determine backup path
-      local backup_path
-      backup_path=$(_get_backup_path "$rel_path" "$dotfiles_backup")
+      local backup_path="${dotfiles_backup}/${rel_path}"
       mkdir -p "$(dirname "$backup_path")"
       # Symlink protection
       cp --no-dereference -r "$target_file" "$backup_path"
@@ -349,7 +369,10 @@ merge_dotfiles_with_backup() {
   done < <(find "$src_dir" -maxdepth "$_FIND_DEPTH" -type f -print0)
 
   # Now copy new dotfiles (NOTE: still uses cp -r which follows symlinks in src)
-  cp -r "$src_dir"/. "$target_dir/"
+  cp -r "$src_dir"/. "$target_dir/" || {
+    show_progress error "Failed to copy dotfiles from $src_dir to $target_dir"
+    return 1
+  }
   return 0
 }
 
@@ -407,16 +430,21 @@ ensure_user_dirs() {
   )
 
   # ===== Development project directories =====
-  local project_dirs=(
-    "$HOME/development"
-    "$HOME/development/gitlab.com"
-    "$HOME/development/github.com"
-    "$HOME/development/bitbucket.org"
-    "$HOME/development/codeberg.org"
-    "$HOME/development/code.europa.eu"
-    "$HOME/development/devcerts"
-    "$HOME/notes"
-  )
+  local default_forges=("gitlab.com" "github.com" "bitbucket.org" "codeberg.org" "code.europa.eu")
+  local project_dirs=("$HOME/development" "$HOME/development/devcerts" "$HOME/notes")
+  local forge
+  for forge in "${default_forges[@]}"; do
+    project_dirs+=("$HOME/development/$forge")
+  done
+  if [[ -n "${DEVBASE_EXTRA_FORGES:-}" ]]; then
+    local -a extra_forges
+    IFS=',' read -ra extra_forges <<<"$DEVBASE_EXTRA_FORGES"
+    for forge in "${extra_forges[@]}"; do
+      forge="${forge#"${forge%%[![:space:]]*}"}"
+      forge="${forge%"${forge##*[![:space:]]}"}"
+      [[ -n "$forge" ]] && project_dirs+=("$HOME/development/$forge")
+    done
+  fi
 
   # Combine all directories
   local dirs=(
@@ -439,7 +467,7 @@ ensure_user_dirs() {
 
   # ===== Set permissions on security-sensitive directories =====
   [[ -d "$HOME/.ssh" ]] && chmod 700 "$HOME/.ssh"
-  [[ -d "$XDG_CONFIG_HOME/ssh" ]] && chmod 755 "$XDG_CONFIG_HOME/ssh"
+  [[ -d "$XDG_CONFIG_HOME/ssh" ]] && chmod 700 "$XDG_CONFIG_HOME/ssh"
   [[ -d "${DEVBASE_CACHE_DIR}" ]] && chmod 700 "${DEVBASE_CACHE_DIR}"
 
   # ===== Report results =====
@@ -489,7 +517,8 @@ run_mise_from_home_dir() {
 
 # Brief: Download file with optional caching support
 # Params: $1 - url, $2 - target_file, $3 - cache_filename, $4 - package_name (for messages)
-# Uses: DEVBASE_DEB_CACHE (optional global), validate_optional_dir, retry_command, download_file (functions)
+#         $5 - checksum_url (optional), $6 - expected_checksum (optional), $7 - timeout (default 30)
+# Uses: DEVBASE_DEB_CACHE (optional global), validate_custom_dir, download_file (functions)
 # Returns: 0 on success, 1 on failure
 # Side-effects: Downloads file, may cache it if DEVBASE_DEB_CACHE is set
 download_with_cache() {
@@ -497,21 +526,77 @@ download_with_cache() {
   local target="$2"
   local cache_filename="$3"
   local package_name="${4:-package}"
+  local checksum_url="${5:-}"
+  local expected_checksum="${6:-}"
+  local timeout="${7:-30}"
 
   validate_not_empty "$url" "Download URL" || return 1
   validate_not_empty "$target" "Target file" || return 1
   validate_not_empty "$cache_filename" "Cache filename" || return 1
 
-  if validate_optional_dir "DEVBASE_DEB_CACHE" "Package cache"; then
+  local has_checksum=false
+  [[ -n "$checksum_url" || -n "$expected_checksum" ]] && has_checksum=true
+
+  local strict_mode
+  strict_mode=$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")
+
+  local allowlisted=false
+  _checksum_allowlisted "$url" && allowlisted=true
+
+  if [[ "$has_checksum" == false ]]; then
+    if [[ "$allowlisted" == "true" ]]; then
+      add_global_warning "Checksum allowlisted for download: $url"
+    else
+      case "$strict_mode" in
+      fail)
+        show_progress error "Checksum required for download: $url"
+        return 1
+        ;;
+      warn)
+        add_global_warning "No checksum available for download: $url"
+        ;;
+      esac
+    fi
+  fi
+
+  if validate_custom_dir "DEVBASE_DEB_CACHE" "Package cache"; then
     local cached_file="${DEVBASE_DEB_CACHE}/${cache_filename}"
 
     if [[ -f "$cached_file" ]]; then
-      show_progress info "Using cached ${package_name}"
-      cp "$cached_file" "$target" && return 0
-      show_progress warning "Failed to copy from cache, will download"
+      local cached_ok=false
+      if [[ "$has_checksum" == true ]]; then
+        local rc=0
+        show_progress info "Verifying cached ${package_name}"
+        if [[ -n "$expected_checksum" ]]; then
+          verify_checksum_value "$cached_file" "$expected_checksum" || rc=1
+        else
+          verify_checksum_from_url "$cached_file" "$checksum_url" "$timeout" || rc=$?
+        fi
+
+        if [[ $rc -eq 0 ]]; then
+          cached_ok=true
+        elif [[ $rc -eq 2 ]]; then
+          if [[ "$strict_mode" == "fail" ]]; then
+            show_progress error "Checksum required but unavailable for cached ${package_name}"
+            return 1
+          fi
+          show_progress warning "Could not verify cached ${package_name}; re-downloading"
+        else
+          show_progress warning "Cached ${package_name} checksum mismatch - re-downloading"
+          rm -f "$cached_file"
+        fi
+      else
+        cached_ok=true
+      fi
+
+      if [[ "$cached_ok" == "true" ]]; then
+        show_progress info "Using cached ${package_name}"
+        cp "$cached_file" "$target" && return 0
+        show_progress warning "Failed to copy from cache, will download"
+      fi
     fi
 
-    if retry_command download_file "$url" "$target"; then
+    if download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"; then
       mkdir -p "${DEVBASE_DEB_CACHE}"
       cp "$target" "$cached_file" 2>/dev/null || true
       return 0
@@ -519,7 +604,39 @@ download_with_cache() {
     return 1
   fi
 
-  retry_command download_file "$url" "$target"
+  download_file "$url" "$target" "$checksum_url" "$expected_checksum" "" "$timeout"
+}
+
+# Brief: Remove a directory tree only if it resolves under a trusted anchor
+# Params: $1 - anchor directory (target must be a strict descendant of this)
+#         $2 - target path to remove
+# Returns: 0 if removed (or target absent), 1 if path is outside anchor
+# Side-effects: Removes target directory tree
+safe_rm_rf() {
+  local anchor="$1"
+  local target="$2"
+
+  if [[ -z "$anchor" || -z "$target" ]]; then
+    show_progress error "safe_rm_rf: anchor and target must be non-empty"
+    return 1
+  fi
+
+  local real_anchor real_target
+  real_anchor=$(realpath -m "$anchor" 2>/dev/null) || {
+    show_progress error "safe_rm_rf: cannot resolve anchor: $anchor"
+    return 1
+  }
+  real_target=$(realpath -m "$target" 2>/dev/null) || {
+    show_progress error "safe_rm_rf: cannot resolve target: $target"
+    return 1
+  }
+
+  if [[ -z "$real_target" || "$real_target" == "$real_anchor" || "$real_target" != "${real_anchor}/"* ]]; then
+    show_progress error "safe_rm_rf: refusing unsafe path (not under ${real_anchor}): ${target}"
+    return 1
+  fi
+
+  rm -rf "$real_target"
 }
 
 # Brief: Safely remove temporary directory with path validation
@@ -528,20 +645,19 @@ download_with_cache() {
 # Returns: 0 always
 # Side-effects: Removes _DEVBASE_TEMP directory if path matches expected pattern
 cleanup_temp_directory() {
-  if [[ -z "${_DEVBASE_TEMP:-}" ]]; then
-    return 0
-  fi
-
-  if [[ ! -d "${_DEVBASE_TEMP}" ]]; then
-    return 0
-  fi
+  [[ -n "${_DEVBASE_TEMP:-}" && -d "${_DEVBASE_TEMP}" ]] || return 0
 
   local real_path
   real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
 
-  if [[ "$real_path" =~ ^/tmp/devbase\.[A-Za-z0-9]+$ ]]; then
-    rm -rf "$real_path" 2>/dev/null || true
-  fi
+  local temp_root
+  temp_root=$(dirname "$real_path")
+
+  case "$real_path" in
+  "${temp_root}/devbase."*)
+    safe_rm_rf "$temp_root" "$real_path" || true
+    ;;
+  esac
 
   return 0
 }

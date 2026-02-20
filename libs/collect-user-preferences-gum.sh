@@ -7,8 +7,6 @@
 # Gum-based TUI for DevBase setup
 # Beautiful, modern interactive prompts using charmbracelet/gum
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -267,7 +265,7 @@ collect_git_configuration() {
 
   # Get defaults
   local default_name default_email
-  default_name="${DEVBASE_GIT_AUTHOR:-$(git config --global user.name 2>/dev/null || echo "")}"
+  default_name="${DEVBASE_GIT_AUTHOR:-$(get_default_git_author)}"
   [[ ! "$default_name" =~ $name_pattern ]] && default_name=""
 
   # Prompt for name with validation
@@ -283,7 +281,7 @@ collect_git_configuration() {
   _gum_success "Name: $git_name"
 
   # Derive default email
-  default_email="${DEVBASE_GIT_EMAIL:-$(git config --global user.email 2>/dev/null || echo "")}"
+  default_email="${DEVBASE_GIT_EMAIL:-$(get_default_git_email)}"
   if [[ ! "$default_email" =~ $email_pattern ]]; then
     default_email=$(_generate_default_email_from_name "$DEVBASE_GIT_AUTHOR" "${DEVBASE_EMAIL_DOMAIN:-}")
   fi
@@ -308,7 +306,7 @@ collect_git_configuration() {
 collect_theme_preference() {
   _gum_section "Theme Selection"
 
-  local current="${DEVBASE_THEME:-everforest-dark}"
+  local current="${DEVBASE_THEME:-$(get_default_theme)}"
 
   # Theme data: "bg,fg,keyword,function,string,comment"
   local -A theme_colors=(
@@ -379,7 +377,8 @@ collect_theme_preference() {
 
   # Theme name is the first field
   DEVBASE_THEME="${choice%% *}"
-  [[ -z "${DEVBASE_THEME:-}" ]] && DEVBASE_THEME="everforest-dark"
+  [[ -z "${DEVBASE_THEME:-}" ]] && DEVBASE_THEME="$(get_default_theme)"
+
   export DEVBASE_THEME
 
   _gum_success "Theme: $DEVBASE_THEME"
@@ -394,7 +393,7 @@ collect_font_preference() {
 
   _gum_section "Font Selection"
 
-  local current="${DEVBASE_FONT:-monaspace}"
+  local current="${DEVBASE_FONT:-$(get_default_font)}"
 
   local -A font_info=(
     ["monaspace"]="Superfamily, multiple styles"
@@ -424,7 +423,7 @@ collect_font_preference() {
 
   # Font name is the first field
   DEVBASE_FONT="${choice%% *}"
-  [[ -z "${DEVBASE_FONT:-}" ]] && DEVBASE_FONT="monaspace"
+  [[ -z "${DEVBASE_FONT:-}" ]] && DEVBASE_FONT="$(get_default_font)"
   export DEVBASE_FONT
 
   _gum_success "Font: $DEVBASE_FONT"
@@ -436,7 +435,7 @@ collect_ssh_configuration() {
   _gum_section "SSH Key Setup"
   _gum_help "Secure authentication for Git and remote servers"
 
-  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+  local ssh_key_path="$HOME/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
 
   if [[ -f "$ssh_key_path" ]]; then
     _gum_success "SSH key exists: ${ssh_key_path/#$HOME/~}"
@@ -623,7 +622,7 @@ collect_pack_preferences() {
   # Source parser if needed
   if ! declare -f get_available_packs &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
 
   # Get available packs
@@ -633,6 +632,8 @@ collect_pack_preferences() {
     descriptions+=("$desc")
     items+=("$pack - $desc")
   done < <(get_available_packs)
+
+  require_env DEVBASE_DEFAULT_PACKS || return 1
 
   # Pre-select based on saved preferences, or all packs (except rust) if none saved
   local default_packs=()
@@ -714,12 +715,12 @@ _show_configuration_summary() {
   gum style --foreground "$_GUM_SUBTLE" "SSH Key"
   if [[ "${DEVBASE_SSH_KEY_ACTION}" == "new" ]]; then
     echo "  Action:   Generate new key"
-    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
   elif [[ "${DEVBASE_SSH_KEY_ACTION}" == "skip" ]]; then
     echo "  Action:   Skip (no SSH key)"
   else
     echo "  Action:   Keep existing key"
-    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+    echo "  Location: ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
   fi
   echo
 

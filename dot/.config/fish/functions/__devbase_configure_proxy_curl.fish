@@ -10,11 +10,7 @@ function __devbase_configure_proxy_curl --description "Internal: Configure curl 
     # Check if any proxy is configured
     if set -q HTTP_PROXY; or set -q HTTPS_PROXY; or set -q http_proxy; or set -q https_proxy
         
-        # Set environment variables for libcurl-based tools
-        set -gx CURLOPT_FORBID_REUSE 1
-        set -gx CURLOPT_FRESH_CONNECT 1
-        
-        # For wget compatibility
+        # For wget compatibility (GNU wget reads WGET_OPTIONS)
         set -gx WGET_OPTIONS "--no-http-keep-alive"
         
         # Create an alias for curl with proxy-friendly options

@@ -48,6 +48,13 @@ git clone https://github.com/diggsweden/devbase-core
 # Run setup
 cd devbase-core
 ./setup.sh
+
+# Optional: review available flags
+./setup.sh --help
+
+# Optional: check version or run a dry run
+./setup.sh --version
+./setup.sh --dry-run
 ----
 
 == Verify Installation

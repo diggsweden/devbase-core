@@ -407,7 +407,8 @@ test_download() {
   
   printf "\n  ${BOLD}%-35s${NC} %s\n" "${domain:0:35}" "$file_desc"
   
-  local temp_file="/tmp/devbase-test-$(basename "$download_url")"
+  local temp_file
+  temp_file=$(mktemp --tmpdir "devbase-test-XXXXXX")
   local start_time=$(($(date +%s%N) / 1000000))
   
   # Use curl with progress bar if available

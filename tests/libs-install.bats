@@ -28,10 +28,10 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
-  local safe_temp="/tmp/devbase.ABC123"
+  local safe_temp="${BATS_TEST_TMPDIR}/devbase.ABC123"
   mkdir -p "$safe_temp"
   export _DEVBASE_TEMP="$safe_temp"
 
@@ -45,7 +45,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
   local unsafe_temp="${HOME}/important"
@@ -62,13 +62,12 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/utils.sh"
 
-  export _DEVBASE_TEMP="/tmp/devbase.nonexistent"
+  export _DEVBASE_TEMP="${BATS_TEST_TMPDIR}/devbase.nonexistent"
 
   run --separate-stderr cleanup_temp_directory
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
 }
 
@@ -119,6 +118,64 @@ teardown() {
   [[ "$result" == "unknown-font" ]]
 }
 
+@test "install.sh avoids duplicate library sourcing" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "grep -q 'process-templates.sh' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_failure
+
+  run bash -c "grep -q 'configure-shell.sh' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_failure
+}
+
+@test "install.sh defines phase helpers" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "grep -q 'run_preflight_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_configuration_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_installation_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+
+  run bash -c "grep -q 'run_finalize_phase' '${DEVBASE_ROOT}/libs/install.sh'"
+  assert_success
+}
+
+@test "run_configuration_phase fails on step error" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "
+    bootstrap_for_configuration() { return 1; }
+    collect_user_configuration() { return 0; }
+    display_configuration_summary() { return 0; }
+    eval \"\$(sed -n '/^run_configuration_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
+    run_configuration_phase
+  "
+
+  assert_failure
+}
+
+@test "run_installation_phase stops progress on failure" {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+
+  run bash -c "
+    start_installation_progress() { :; }
+    stop_installation_progress() { echo stopped; }
+    show_phase() { :; }
+    prepare_system() { return 1; }
+    perform_installation() { return 0; }
+    write_installation_summary() { return 0; }
+    eval \"\$(sed -n '/^run_installation_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
+    run_installation_phase
+  "
+
+  assert_failure
+  assert_output --partial "stopped"
+}
+
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 
@@ -126,7 +183,7 @@ teardown() {
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source <(sed -n '/^validate_source_repository()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   run validate_source_repository
@@ -136,11 +193,11 @@ teardown() {
 @test "setup_installation_paths validates required variables" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
-  export _DEVBASE_TEMP="/tmp/devbase.test123"
+  export _DEVBASE_TEMP="${BATS_TEST_TMPDIR}/devbase.test123"
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"
-  source "${DEVBASE_ROOT}/libs/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source <(sed -n '/^setup_installation_paths()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   run setup_installation_paths

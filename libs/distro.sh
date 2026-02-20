@@ -7,8 +7,6 @@
 # Distro detection and helper functions for multi-distribution support
 # Supported distros: ubuntu, ubuntu-wsl, fedora (experimental)
 
-set -uo pipefail
-
 # =============================================================================
 # DISTRO DETECTION
 # =============================================================================
@@ -134,6 +132,36 @@ get_pkg_format() {
   redhat)
     echo "rpm"
     ;;
+  *)
+    echo "unknown"
+    return 1
+    ;;
+  esac
+}
+
+# Brief: Get the Debian-style architecture name for the current machine
+# Returns: amd64, arm64, armhf, i386, or exits with error
+get_deb_arch() {
+  case "$(uname -m)" in
+  x86_64) echo "amd64" ;;
+  aarch64) echo "arm64" ;;
+  armv7l) echo "armhf" ;;
+  i686) echo "i386" ;;
+  *)
+    echo "unknown"
+    return 1
+    ;;
+  esac
+}
+
+# Brief: Get the RPM-style architecture name for the current machine
+# Returns: x86_64, aarch64, armv7hl, i686, or exits with error
+get_rpm_arch() {
+  case "$(uname -m)" in
+  x86_64) echo "x86_64" ;;
+  aarch64) echo "aarch64" ;;
+  armv7l) echo "armv7hl" ;;
+  i686) echo "i686" ;;
   *)
     echo "unknown"
     return 1

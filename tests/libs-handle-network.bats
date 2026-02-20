@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2155,SC2218
+# shellcheck disable=SC1090,SC2016,SC2027,SC2030,SC2031,SC2086,SC2123,SC2155,SC2218
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -16,6 +16,7 @@ load "${BATS_TEST_DIRNAME}/test_helper.bash"
 setup() {
   common_setup
   source_core_libs
+  source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/handle-network.sh"
 }
 
@@ -30,7 +31,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$expected_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_file_exists "$test_file"
 }
@@ -42,7 +42,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$wrong_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$output" == *"Checksum mismatch"* ]] || [[ "$stderr" == *"Checksum mismatch"* ]]
   assert_file_not_exists "$test_file"
@@ -52,9 +51,10 @@ teardown() {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"
   local wrong_checksum="0000000000000000000000000000000000000000000000000000000000000000"
-  
-  verify_checksum_value "$test_file" "$wrong_checksum" 2>/dev/null || true
-  
+
+  run --separate-stderr verify_checksum_value "$test_file" "$wrong_checksum"
+
+  assert_failure
   assert_file_not_exists "$test_file"
 }
 
@@ -66,7 +66,6 @@ teardown() {
   
   run --separate-stderr verify_checksum_value "$test_file" "$expected_checksum"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
   [[ "$output" == *"Expected: ${expected_checksum}"* ]] || [[ "$stderr" == *"Expected: ${expected_checksum}"* ]]
   [[ "$output" == *"Got:      ${actual_checksum}"* ]] || [[ "$stderr" == *"Got:      ${actual_checksum}"* ]]
@@ -78,17 +77,14 @@ teardown() {
   run --separate-stderr bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"CURLOPT_FORBID_REUSE=\${CURLOPT_FORBID_REUSE}\"
-    echo \"CURLOPT_FRESH_CONNECT=\${CURLOPT_FRESH_CONNECT}\"
+    printf 'CURL_ARGS=%s\n' \"\${DEVBASE_CURL_PROXY_ARGS[*]}\"
   "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+
   assert_success
-  assert_output --partial "CURLOPT_FORBID_REUSE=1"
-  assert_output --partial "CURLOPT_FRESH_CONNECT=1"
+  assert_output --partial "CURL_ARGS=--no-keepalive --no-sessionid -H Connection: close"
 }
 
 @test "configure_curl_for_proxy sets wget options when proxy exists" {
@@ -97,63 +93,82 @@ teardown() {
   run --separate-stderr bash -c "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"WGET_OPTIONS=\${WGET_OPTIONS}\"
+    printf 'WGET_ARGS=%s\n' \"\${DEVBASE_WGET_PROXY_ARGS[*]}\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert_output --partial "WGET_OPTIONS=--no-http-keep-alive"
+  assert_output --partial "WGET_ARGS=--no-http-keep-alive"
 }
+
+@test "download_file fails without checksum in strict mode" {
+  local target="${TEST_DIR}/file"
+
+  run --separate-stderr bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}'
+    export DEVBASE_STRICT_CHECKSUMS=fail
+    download_file 'https://example.com/file' '${target}'
+  "
+
+  assert_failure
+  [[ "$stderr" == *"Checksum required"* ]]
+}
+
 
 @test "configure_curl_for_proxy does nothing when no proxy configured" {
   # Use run_isolated helper for clean environment
   run --separate-stderr run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     configure_curl_for_proxy
-    echo \"CURLOPT_FORBID_REUSE=\${CURLOPT_FORBID_REUSE:-unset}\"
+    printf 'CURL_ARGS=%s\n' "${DEVBASE_CURL_PROXY_ARGS[*]}"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
-  assert_output --partial "CURLOPT_FORBID_REUSE=unset"
+  assert_output --partial "CURL_ARGS="
 }
 
 @test "_download_file_get_cache_name includes version when provided" {
   run --separate-stderr _download_file_get_cache_name '/tmp/package.tar.gz' '1.2.3'
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_output "package.tar-v1.2.3.gz"
 }
 
 @test "_download_file_get_cache_name uses basename when no version" {
   run --separate-stderr _download_file_get_cache_name '/tmp/package.tar.gz' ''
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
+
   assert_success
   assert_output "package.tar.gz"
+}
+
+@test "_download_file_get_cache_name handles extension-less filename" {
+  run --separate-stderr _download_file_get_cache_name '/tmp/mise_installer' '2.1.0'
+
+  assert_success
+  assert_output "mise_installer-v2.1.0"
 }
 
 @test "_download_file_should_skip returns true when file exists with checksum" {
   local test_file="${TEST_DIR}/existing"
   touch "$test_file"
   
-  run --separate-stderr _download_file_should_skip "$test_file" 0
+  run --separate-stderr _download_file_should_skip "$test_file" true
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }
 
 @test "_download_file_should_skip returns false when file missing" {
   run --separate-stderr _download_file_should_skip "${TEST_DIR}/nonexistent" 0
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_failure
 }
 
@@ -162,9 +177,8 @@ teardown() {
   local target="${TEST_DIR}/target.tar.gz"
   echo "cached content" > "$cached"
   
-  run --separate-stderr _download_file_try_cache "$cached" "$target" 1
+  run --separate-stderr _download_file_try_cache "$cached" "$target" false
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   assert_file_exists "$target"
   
@@ -183,35 +197,61 @@ teardown() {
   
   run --separate-stderr verify_checksum_from_url "$test_file" "$checksum_url" 30
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   
   unstub curl
 }
 
-@test "verify_checksum_from_url continues without verification when checksum unavailable" {
+@test "get_checksum_from_manifest returns checksum for filename" {
+  local manifest="${TEST_DIR}/checksums.txt"
+  local manifest_url="file://${manifest}"
+  echo "abcdef1234567890  gum_0.17.0_linux_amd64.deb" > "$manifest"
+
+  stub curl "-fsSL --connect-timeout 30 --max-time 30 ${manifest_url} -o * : cp '${manifest}' \"\$8\""
+
+  run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
+
+  assert_success
+  assert_output "abcdef1234567890"
+
+  unstub curl
+}
+
+@test "get_checksum_from_manifest fails when filename missing" {
+  local manifest="${TEST_DIR}/checksums.txt"
+  local manifest_url="file://${manifest}"
+  echo "abcdef1234567890  other-file.deb" > "$manifest"
+
+  stub curl "-fsSL --connect-timeout 30 --max-time 30 ${manifest_url} -o * : cp '${manifest}' \"\$8\""
+
+  run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
+
+  assert_failure
+
+  unstub curl
+}
+
+@test "verify_checksum_from_url returns 2 when checksum unavailable" {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"
-  
+
   stub curl "-fsSL --connect-timeout 30 http://example.com/checksum -o * : exit 1"
-  
+
   run --separate-stderr verify_checksum_from_url "$test_file" 'http://example.com/checksum' 30
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
-  assert_success
+
+  assert_failure 2
   [[ "$output" == *"Could not fetch checksum"* ]] || [[ "$stderr" == *"Could not fetch checksum"* ]]
-  
+
   unstub curl
 }
 
 @test "check_network_connectivity succeeds when sites are reachable" {
   source "${DEVBASE_ROOT}/libs/utils.sh"
   
-  stub curl '-sk --connect-timeout 3 --max-time 6 https://github.com : exit 0'
+  stub curl '-s --connect-timeout 3 --max-time 6 https://github.com : exit 0'
   
   run --separate-stderr check_network_connectivity 3
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   [[ "$output" == *"Network connectivity verified"* ]] || [[ "$stderr" == *"Network connectivity verified"* ]]
   
@@ -222,12 +262,11 @@ teardown() {
   source "${DEVBASE_ROOT}/libs/utils.sh"
   
   stub curl \
-    '-sk --connect-timeout 3 --max-time 6 https://github.com : exit 1' \
-    '-sk --connect-timeout 3 --max-time 6 https://google.com : exit 0'
+    '-s --connect-timeout 3 --max-time 6 https://github.com : exit 1' \
+    '-s --connect-timeout 3 --max-time 6 https://google.com : exit 0'
   
   run --separate-stderr check_network_connectivity 3
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   
   unstub curl
@@ -241,7 +280,6 @@ teardown() {
   
   run --separate-stderr check_proxy_connectivity 5
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
   [[ "$output" == *"Proxy works"* ]] || [[ "$stderr" == *"Proxy works"* ]]
   
@@ -252,11 +290,10 @@ teardown() {
   run --separate-stderr run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/handle-network.sh'
     check_proxy_connectivity
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "o:'${output}' e:'${stderr}'"
   assert_success
 }

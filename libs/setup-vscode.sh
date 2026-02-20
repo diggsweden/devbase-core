@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -202,7 +200,7 @@ _get_vscode_settings_dir() {
 }
 
 _get_vscode_theme_name() {
-  local theme="${1:-everforest-dark}"
+  local theme="${1:-$(get_default_theme)}"
   case "$theme" in
   everforest-dark) echo "Everforest Dark" ;;
   everforest-light) echo "Everforest Light" ;;
@@ -318,20 +316,24 @@ get_extension_description() {
 # Returns: 0 on success
 _setup_vscode_parser() {
   validate_var_set "DEVBASE_DOT" || return 1
+  require_env DEVBASE_LIBS || return 1
   # shellcheck disable=SC2153 # DEVBASE_DOT validated above, exported in setup.sh
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
+  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-$(get_default_packs)}"
 
   # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-    show_progress info "Using custom package overrides"
+  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]]; then
+    require_env _DEVBASE_CUSTOM_PACKAGES || return 1
+    if [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
+      export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+      show_progress info "Using custom package overrides"
+    fi
   fi
 
   # Source parser if not already loaded
   if ! declare -f get_vscode_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
 
   return 0

@@ -44,7 +44,6 @@ EOF
     get_mise_packages
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "aqua:casey/just|1.44.0"
   assert_output --partial "aqua:junegunn/fzf|v0.67.0"
@@ -76,7 +75,6 @@ EOF
     get_mise_packages | wc -l
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "3"
 }
@@ -102,7 +100,6 @@ EOF
     get_tool_version 'mise'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "v2025.9.20"
 }
@@ -135,7 +132,6 @@ EOF
     cat '${TEST_DIR}/mise/config.toml'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial '[tools]'
   assert_output --partial 'aqua:casey/just'
@@ -179,7 +175,6 @@ EOF
       echo "OK"
     '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial 'OK'
 }
@@ -218,7 +213,6 @@ EOF
       [[ $missing -eq 0 ]]
     '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
 }
 
@@ -247,7 +241,6 @@ EOF
     get_core_runtimes
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "node"
   assert_output --partial "java"
@@ -258,15 +251,15 @@ EOF
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export XDG_BIN_HOME='${XDG_BIN_HOME}'
+    source '${DEVBASE_ROOT}/libs/constants.sh'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
-    
+
     verify_mise_checksum && echo 'EXISTS' || echo 'NOT_EXISTS'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "NOT_EXISTS"
 }
@@ -319,9 +312,10 @@ download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
 verify_mise_checksum() { return 0; }
 SCRIPT
 
+    source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
-    source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/parse-packages.sh"
     source "${DEVBASE_ROOT}/libs/install-mise.sh"
     source "${TEST_DIR}/mock-fns.sh"
@@ -330,7 +324,6 @@ SCRIPT
     "${HOME}/.local/bin/mise" --version
   '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "mise v2026.2.0"
 }
@@ -383,9 +376,10 @@ download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
 verify_mise_checksum() { return 0; }
 SCRIPT
 
+    source "${DEVBASE_ROOT}/libs/constants.sh"
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
-    source "${DEVBASE_ROOT}/libs/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/parse-packages.sh"
     source "${DEVBASE_ROOT}/libs/install-mise.sh"
     source "${TEST_DIR}/mock-fns.sh"
@@ -398,7 +392,6 @@ SCRIPT
     fi
   '
 
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "no-install"
 }

@@ -38,14 +38,13 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
     test -d '${XDG_CONFIG_HOME}/git/git-hooks' && echo 'OK'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "OK"
 }
@@ -61,7 +60,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -71,7 +70,6 @@ teardown() {
     echo 'DISPATCHERS_COPIED'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "DISPATCHERS_COPIED"
 }
@@ -87,7 +85,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -96,7 +94,6 @@ teardown() {
     test -x '${XDG_CONFIG_HOME}/git/git-hooks/prepare-commit-msg' && echo 'EXECUTABLE'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "EXECUTABLE"
 }
@@ -114,13 +111,12 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "git config set"
   
@@ -144,7 +140,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -153,7 +149,6 @@ teardown() {
     test -f '${DEVBASE_BACKUP_DIR}/git-hooks/existing-hook' && echo 'BACKED_UP'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "BACKED_UP"
   
@@ -172,7 +167,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -195,7 +190,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -226,7 +221,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -256,7 +251,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks
@@ -279,7 +274,7 @@ teardown() {
     
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
     
     configure_git_hooks

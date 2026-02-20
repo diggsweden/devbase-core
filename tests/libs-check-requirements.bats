@@ -28,7 +28,6 @@ teardown() {
     get_os_type
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "ubuntu", "debian", etc.
   assert [ -n "$output" ]
@@ -42,7 +41,6 @@ teardown() {
     get_os_version
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "24.04", "22.04", etc.
   assert [ -n "$output" ]
@@ -56,7 +54,6 @@ teardown() {
     get_os_name
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Should output something like "Ubuntu"
   assert [ -n "$output" ]
@@ -69,7 +66,6 @@ teardown() {
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
   " "Ubuntu-22.04"
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "IS_WSL"
 }
@@ -81,7 +77,6 @@ teardown() {
     is_wsl && echo 'IS_WSL' || echo 'NOT_WSL'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "IS_WSL"
 }
@@ -98,7 +93,6 @@ teardown() {
     fi
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "NOT_WSL"
 }
@@ -111,7 +105,6 @@ teardown() {
     is_ubuntu && echo 'IS_UBUNTU' || echo 'NOT_UBUNTU'
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   # Will be IS_UBUNTU or NOT_UBUNTU depending on test environment
   assert [ -n "$output" ]
@@ -125,7 +118,6 @@ teardown() {
     echo \"result='\$result'\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "result=''"
 }
@@ -171,7 +163,6 @@ SCRIPT
     get_wsl_version
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output "2.6.1"
 }
@@ -200,7 +191,6 @@ SCRIPT
     echo \"result='\$result' status=\$status\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_output "result='' status=1"
 }
 
@@ -215,7 +205,6 @@ SCRIPT
     echo \"name=\${_DEVBASE_OS_INFO[name]}\"
   "
   
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
   assert_success
   assert_output --partial "id="
   assert_output --partial "version_id="
@@ -237,7 +226,7 @@ SCRIPT
   grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_isolated "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
     is_wsl() { return 1; }
@@ -254,7 +243,7 @@ SCRIPT
   grep -q 'ID=ubuntu' /etc/os-release 2>/dev/null || skip "Ubuntu-specific test"
   run run_as_wsl "
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
     get_wsl_version() { echo '2.6.0'; }
@@ -270,7 +259,7 @@ SCRIPT
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_critical_tools
   "
@@ -283,7 +272,7 @@ SCRIPT
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export PATH='/nonexistent'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_critical_tools
   "
@@ -297,7 +286,7 @@ SCRIPT
     unset DEVBASE_ENV
     export _DEVBASE_ENV='ubuntu'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -311,7 +300,7 @@ SCRIPT
     export DEVBASE_ENV='test'
     export _DEVBASE_ENV='invalid-env'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -325,7 +314,7 @@ SCRIPT
     export DEVBASE_ENV='test'
     export _DEVBASE_ENV='ubuntu'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     validate_required_vars
   "
@@ -351,7 +340,7 @@ SCRIPT
     export XDG_CONFIG_HOME='${TEST_DIR}/config'
     export XDG_CACHE_HOME='${TEST_DIR}/cache'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     check_path_writable
   "

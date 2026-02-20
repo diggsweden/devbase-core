@@ -7,8 +7,6 @@
 # App store package installation (snap/flatpak)
 # Automatically detects distro and uses appropriate app store
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -18,6 +16,8 @@ if [[ -z "${DEVBASE_DOT:-}" ]]; then
   echo "ERROR: DEVBASE_DOT not set. This script must be sourced from setup.sh" >&2
   return 1
 fi
+
+source "${DEVBASE_ROOT}/libs/install-context.sh"
 
 # Detect app store type (cached)
 _APP_STORE_TYPE=""
@@ -61,25 +61,14 @@ _get_app_store_type() {
 # Outputs: Arrays of package names and options to global SNAP_PACKAGES and SNAP_OPTIONS
 # Side-effects: Populates SNAP_PACKAGES and SNAP_OPTIONS arrays
 load_snap_packages() {
-  # Set up for parse-packages.sh
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
+  require_env DEVBASE_DOT DEVBASE_DEFAULT_PACKS || return 1
   # Source parser if not already loaded
   if ! declare -f get_snap_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
+
+  _setup_package_yaml_env || return 1
 
   # Get packages from parser (format: "name|options")
   local packages=()
@@ -92,7 +81,7 @@ load_snap_packages() {
   done < <(get_snap_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress warning "No snap packages found in configuration"
+    add_install_warning "No snap packages found in configuration"
     return 0
   fi
 
@@ -113,7 +102,7 @@ snap_install() {
   local snap_options="${2:-}"
 
   if ! command -v snap &>/dev/null; then
-    show_progress warning "snapd not installed, skipping snap: $snap_name"
+    add_install_warning "snapd not installed, skipping snap: $snap_name"
     return 0
   fi
 
@@ -162,7 +151,7 @@ snap_install() {
   if [[ $install_result -eq 0 ]]; then
     show_progress success "Snap installed: $snap_name"
   else
-    show_progress warning "Failed to install snap: $snap_name"
+    add_install_warning "Failed to install snap: $snap_name"
     return 1
   fi
 
@@ -243,25 +232,13 @@ _install_snap_packages() {
 # Returns: 0 on success
 # Outputs: Arrays to FLATPAK_PACKAGES and FLATPAK_REMOTES
 load_flatpak_packages() {
-  # Set up for parse-packages.sh
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export SELECTED_PACKS="${DEVBASE_SELECTED_PACKS:-java node python go ruby}"
-
-  # Check for custom packages override
-  if [[ -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]] && [[ -f "${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml" ]]; then
-    export PACKAGES_CUSTOM_YAML="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
-  fi
-
-  if [[ ! -f "$PACKAGES_YAML" ]]; then
-    show_progress error "Package configuration not found: $PACKAGES_YAML"
-    return 1
-  fi
-
   # Source parser if not already loaded
   if ! declare -f get_flatpak_packages &>/dev/null; then
     # shellcheck source=parse-packages.sh
-    source "${DEVBASE_LIBS}/parse-packages.sh"
+    source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser"
   fi
+
+  _setup_package_yaml_env || return 1
 
   # Get packages from parser (format: "app_id|remote")
   local packages=()
@@ -274,7 +251,7 @@ load_flatpak_packages() {
   done < <(get_flatpak_packages)
 
   if [[ ${#packages[@]} -eq 0 ]]; then
-    show_progress warning "No flatpak packages found in configuration"
+    add_install_warning "No flatpak packages found in configuration"
     return 0
   fi
 
@@ -290,7 +267,7 @@ load_flatpak_packages() {
 # Returns: 0 on success, 1 on failure
 configure_flathub() {
   if ! command -v flatpak &>/dev/null; then
-    show_progress warning "flatpak not installed"
+    add_install_warning "flatpak not installed"
     return 1
   fi
 
@@ -304,11 +281,11 @@ configure_flathub() {
 
   # Add flathub for user
   show_progress info "Adding Flathub repository..."
-  if flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo; then
+  if flatpak remote-add --user --if-not-exists flathub "$DEVBASE_URL_FLATHUB_REPO"; then
     show_progress success "Flathub repository added"
     return 0
   else
-    show_progress warning "Failed to add Flathub repository"
+    add_install_warning "Failed to add Flathub repository"
     return 1
   fi
 }
@@ -321,7 +298,7 @@ flatpak_install() {
   local remote="${2:-flathub}"
 
   if ! command -v flatpak &>/dev/null; then
-    show_progress warning "flatpak not installed, skipping: $app_id"
+    add_install_warning "flatpak not installed, skipping: $app_id"
     return 0
   fi
 
@@ -345,7 +322,7 @@ flatpak_install() {
   if [[ $install_result -eq 0 ]]; then
     show_progress success "Flatpak installed: $app_id"
   else
-    show_progress warning "Failed to install flatpak: $app_id"
+    add_install_warning "Failed to install flatpak: $app_id"
     return 1
   fi
 
@@ -407,7 +384,7 @@ install_app_store_packages() {
     return 0
     ;;
   *)
-    show_progress warning "Unknown app store type: $app_store"
+    add_install_warning "Unknown app store type: $app_store"
     return 1
     ;;
   esac

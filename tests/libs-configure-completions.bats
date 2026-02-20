@@ -16,6 +16,10 @@ setup() {
   common_setup_isolated
   mkdir -p "${XDG_CONFIG_HOME}/fish/completions"
   mkdir -p "${TEST_DIR}/bin"
+
+  export PATH="${TEST_DIR}/bin:/usr/bin:/bin"
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/configure-completions.sh"
 }
 
 teardown() {
@@ -30,22 +34,11 @@ if [[ "$1" == "completion" && "$2" == "fish" ]]; then
 fi
 SCRIPT
   chmod +x "${TEST_DIR}/bin/kubectl"
-  
-  run bash -c "
-    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
-    
-    configure_single_fish_completion 'kubectl'
-    cat '${XDG_CONFIG_HOME}/fish/completions/kubectl.fish'
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+
+  run --separate-stderr configure_single_fish_completion 'kubectl'
+
   assert_success
+  run cat "${XDG_CONFIG_HOME}/fish/completions/kubectl.fish"
   assert_output "# kubectl completion"
 }
 
@@ -57,69 +50,35 @@ if [[ "$1" == "completion" && "$2" == "fish" ]]; then
 fi
 SCRIPT
   chmod +x "${TEST_DIR}/bin/helm"
-  
-  run bash -c "
-    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
-    
-    configure_single_fish_completion 'helm'
-    test -f '${XDG_CONFIG_HOME}/fish/completions/helm.fish' && echo 'EXISTS'
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
-  assert_success
-  assert_output "EXISTS"
+
+  configure_single_fish_completion 'helm' >/dev/null 2>&1
+
+  assert_file_exists "${XDG_CONFIG_HOME}/fish/completions/helm.fish"
 }
 
 @test "configure_single_fish_completion requires tool name" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
-    
-    configure_single_fish_completion ''
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  run --separate-stderr configure_single_fish_completion ''
+
   assert_failure
 }
 
 @test "configure_single_fish_completion handles unknown tool" {
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
-    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
-    
-    configure_single_fish_completion 'unknown_tool_xyz'
-    echo 'COMPLETED'
-  "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+  run --separate-stderr configure_single_fish_completion 'unknown_tool_xyz'
+
+  # Should complete without error even for unknown tools
   assert_success
-  assert_output "COMPLETED"
 }
 
 @test "configure_fish_completions creates completions for installed tools" {
   local fish_dir="${TEST_DIR}/.config2/fish"
   mkdir -p "${fish_dir}/completions"
-  
+
   cat > "${TEST_DIR}/bin/fish" << 'SCRIPT'
 #!/usr/bin/env bash
 exit 0
 SCRIPT
   chmod +x "${TEST_DIR}/bin/fish"
-  
+
   cat > "${TEST_DIR}/bin/kubectl" << 'SCRIPT'
 #!/usr/bin/env bash
 if [[ "$1" == "completion" && "$2" == "fish" ]]; then
@@ -127,21 +86,20 @@ if [[ "$1" == "completion" && "$2" == "fish" ]]; then
 fi
 SCRIPT
   chmod +x "${TEST_DIR}/bin/kubectl"
-  
+
   run bash -c "
     export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export XDG_CONFIG_HOME='${TEST_DIR}/.config2'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-completions.sh' >/dev/null 2>&1
-    
+
     configure_fish_completions
     test -f '${fish_dir}/completions/kubectl.fish' && echo 'KUBECTL_EXISTS'
   "
-  
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}'"
+
   assert_success
   assert_output --partial "KUBECTL_EXISTS"
 }

@@ -94,6 +94,18 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | `DEBUG`
 | _(unset)_
 | Show verbose debug output during installation: `DEBUG=1 ./setup.sh`
+
+| `DEVBASE_STRICT_CHECKSUMS`
+| `fail`
+| Checksum strictness: `off`, `warn`, or `fail`
+
+| `DEVBASE_STRICT_CHECKSUMS_ALLOWLIST`
+| _(unset)_
+| Comma-separated URL patterns allowed without checksums
+
+| `DEVBASE_MISE_INSTALLER_SHA256`
+| _(unset)_
+| SHA256 checksum required to verify the mise installer script
 |===
 
 NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.
@@ -140,6 +152,10 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 | `DEVBASE_REGISTRY_PORT`
 | _(none)_
 | Internal package registry port
+
+| `DEVBASE_EXTRA_FORGES`
+| _(none)_
+| Comma-separated list of extra code-forge hostnames to create under `~/development/` (e.g. `gitlab.mycompany.com,gitea.example.org`). The built-in forges (`gitlab.com`, `github.com`, `bitbucket.org`, `codeberg.org`, `code.europa.eu`) are always created.
 |===
 
 These variables affect installation but are NOT exported to your shell.
@@ -158,17 +174,14 @@ DevBase sets the following when a proxy is detected:
 |===
 | Configuration | Purpose
 
-| `CURLOPT_FORBID_REUSE=1`
-| Prevents connection reuse issues with proxy authentication
+| `DEVBASE_CURL_PROXY_ARGS`
+| Adds `--no-keepalive --no-sessionid -H "Connection: close"` for the internal curl wrapper
 
-| `CURLOPT_FRESH_CONNECT=1`
-| Forces fresh connections for each request
+| `DEVBASE_WGET_PROXY_ARGS`
+| Adds `--no-http-keep-alive` for the internal wget wrapper
 
-| `WGET_OPTIONS="--no-http-keep-alive"`
-| Disables HTTP keep-alive for wget
-
-| curl wrapper function
-| Adds `--no-keepalive --no-sessionid -H "Connection: close"` to all curl commands
+| `devbase_curl` wrapper
+| Uses configured proxy-safe curl options
 |===
 
 This configuration happens automatically:

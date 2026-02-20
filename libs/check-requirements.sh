@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -17,6 +15,8 @@ fi
 # Returns: 0 always
 # Side-effects: Sources /etc/os-release if it exists
 get_os_info() {
+  # Populate once; re-sourcing /etc/os-release on every call pollutes the namespace
+  [[ -v _DEVBASE_OS_INFO ]] && return 0
   declare -gA _DEVBASE_OS_INFO
 
   if [[ -f /etc/os-release ]]; then
@@ -76,26 +76,10 @@ get_os_version_full() {
   return 0
 }
 
-# Brief: Check if running under Windows Subsystem for Linux
-# Params: None
-# Uses: WSL_DISTRO_NAME, WSL_INTEROP (environment variables)
-# Returns: 0 if WSL, 1 if not WSL
-# Side-effects: Reads /proc/sys/fs/binfmt_misc/WSLInterop and /proc/version
-is_wsl() {
-  if [[ -n "${WSL_DISTRO_NAME:-}" ]] || [[ -n "${WSL_INTEROP:-}" ]]; then
-    return 0
-  fi
-
-  if [[ -f /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
-    return 0
-  fi
-
-  if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-    return 0
-  fi
-
-  return 1
-}
+# is_wsl() is defined in distro.sh - source it if not already available
+if ! declare -f is_wsl &>/dev/null; then
+  source "${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}/distro.sh"
+fi
 
 # Brief: Get WSL version if running on WSL
 # Params: None
@@ -133,36 +117,6 @@ get_wsl_version() {
 # Returns: 0 if Ubuntu, 1 if not Ubuntu
 is_ubuntu() {
   [[ "$(get_os_type)" == "ubuntu" ]]
-  return 0
-}
-
-# Brief: Display OS and environment information to user
-# Params: None
-# Uses: get_os_info, is_wsl, _DEVBASE_FROM_GIT, USER, HOME (globals)
-# Returns: 0 always
-# Side-effects: Prints OS info to stdout
-display_os_info() {
-  get_os_info
-  local os_name="${_DEVBASE_OS_INFO[name]}"
-  local os_version="${_DEVBASE_OS_INFO[version]}"
-
-  printf "  • OS: %s %s\n" "$os_name" "$os_version"
-
-  if is_wsl; then
-    printf "  • Environment: WSL\n"
-  else
-    printf "  • Environment: Native Linux\n"
-  fi
-
-  if [[ "${_DEVBASE_FROM_GIT}" == "true" ]]; then
-    printf "  • Installation: Git repository\n"
-  elif [[ "${_DEVBASE_FROM_GIT}" == "false" ]]; then
-    printf "  • Installation: Archive/ZIP\n"
-  fi
-
-  printf "  • User: %s\n" "$USER"
-  printf "  • Home: %s\n" "$HOME"
-  return 0
 }
 
 # Brief: Check that required system tools are installed
@@ -209,7 +163,7 @@ check_required_tools() {
 # Side-effects: Displays Nerd Font warning and installation instructions
 _check_wsl_nerd_font_prereq() {
   tui_blank_line
-  show_progress warning "WSL: Nerd Font needed (install on Windows side)"
+  add_global_warning "WSL: Nerd Font needed (install on Windows side)"
   show_progress info "If you see strange chars (boxes/?), install a Nerd Font on Windows"
   tui_blank_line
 
@@ -223,26 +177,7 @@ _check_wsl_nerd_font_prereq() {
 # Returns: 0 always
 # Side-effects: Prints warning if unsupported distro, prints newline
 detect_environment() {
-  # Source distro detection if not already available
-  if ! declare -f get_distro &>/dev/null; then
-    local distro_script="${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}/distro.sh"
-    if [[ -f "$distro_script" ]]; then
-      # shellcheck source=distro.sh
-      source "$distro_script"
-    else
-      # Fallback: define minimal get_distro inline
-      get_distro() {
-        if [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-          echo "ubuntu-wsl"
-        elif [[ -f /etc/os-release ]]; then
-          grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"'
-        else
-          echo "unknown"
-        fi
-      }
-    fi
-  fi
-
+  # get_distro() is defined in distro.sh (sourced in load_devbase_libraries)
   local distro
   distro=$(get_distro)
 
@@ -280,7 +215,7 @@ detect_environment() {
     export _DEVBASE_ENV="fedora"
     ;;
   *)
-    show_progress warning "Unsupported distribution: ${distro}. Proceeding with best effort."
+    add_global_warning "Unsupported distribution: ${distro}. Proceeding with best effort."
     export _DEVBASE_ENV="$distro"
     ;;
   esac
@@ -306,18 +241,18 @@ check_ubuntu_version() {
   current_version=$(get_os_version)
 
   if ! command -v dpkg &>/dev/null; then
-    show_progress warning "Cannot verify Ubuntu version (dpkg not found)"
+    add_global_warning "Cannot verify Ubuntu version (dpkg not found)"
     return 0
   fi
 
   if [[ "$current_version" != "unknown" ]]; then
     if dpkg --compare-versions "$current_version" "lt" "$min_version" 2>/dev/null; then
-      show_progress warning "Ubuntu $min_version or later recommended (found: $current_version)"
+      add_global_warning "Ubuntu $min_version or later recommended (found: $current_version)"
     else
       show_progress success "Ubuntu version $current_version"
     fi
   else
-    show_progress warning "Cannot determine Ubuntu version"
+    add_global_warning "Cannot determine Ubuntu version"
   fi
 
   return 0
@@ -335,7 +270,7 @@ check_disk_space() {
   available_gb=$(df -BG "$HOME" | awk 'NR==2 {print $4}' | sed 's/G//')
 
   if [[ "$available_gb" -lt "$required_gb" ]]; then
-    show_progress warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
+    add_global_warning "Low disk space: ${available_gb}GB available, ${required_gb}GB recommended"
     if ! ask_yes_no "Disk space may be insufficient, continue anyway?" "N"; then
       exit 1
     fi
@@ -430,7 +365,7 @@ check_mise_github_token() {
     return 0
   fi
 
-  show_progress warning "MISE_GITHUB_TOKEN not set"
+  add_global_warning "MISE_GITHUB_TOKEN not set"
   show_progress info "Without this token, mise downloads MAY be rate limited or stalled"
   show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
 
@@ -558,15 +493,15 @@ check_secure_boot() {
     return 0
     ;;
   setup)
-    show_progress warning "Secure Boot is in Setup Mode (key provisioning state)"
-    show_progress warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
-    show_progress warning "Sign modules or disable Secure Boot before exiting Setup Mode"
+    add_global_warning "Secure Boot is in Setup Mode (key provisioning state)"
+    add_global_warning "Unsigned kernel modules can load now but will be blocked after enrolling keys"
+    add_global_warning "Sign modules or disable Secure Boot before exiting Setup Mode"
     return 0
     ;;
   audit)
-    show_progress warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
-    show_progress warning "Unsigned kernel modules currently allowed but violations are logged"
-    show_progress warning "Sign modules or disable Secure Boot before transitioning to User Mode"
+    add_global_warning "Secure Boot is in Audit Mode (logging violations only, not blocking)"
+    add_global_warning "Unsigned kernel modules currently allowed but violations are logged"
+    add_global_warning "Sign modules or disable Secure Boot before transitioning to User Mode"
     return 0
     ;;
   disabled)
@@ -590,12 +525,12 @@ check_fedora_version() {
 
   if [[ "$current_version" != "unknown" ]]; then
     if [[ "$current_version" -lt "$min_version" ]] 2>/dev/null; then
-      show_progress warning "Fedora $min_version or later recommended (found: $current_version)"
+      add_global_warning "Fedora $min_version or later recommended (found: $current_version)"
     else
       show_progress success "Fedora version $current_version"
     fi
   else
-    show_progress warning "Cannot determine Fedora version"
+    add_global_warning "Cannot determine Fedora version"
   fi
 
   return 0
@@ -703,10 +638,8 @@ export -f get_os_type
 export -f get_os_version
 export -f get_os_name
 export -f get_os_version_full
-export -f is_wsl
 export -f get_wsl_version
 export -f is_ubuntu
-export -f display_os_info
 export -f check_required_tools
 export -f check_critical_tools
 export -f detect_environment

@@ -7,8 +7,6 @@
 # DNF package manager implementation for Fedora/RHEL
 # This file is sourced by pkg-manager.sh - do not source directly
 
-set -uo pipefail
-
 # =============================================================================
 # CORE PACKAGE OPERATIONS
 # =============================================================================
@@ -18,13 +16,6 @@ set -uo pipefail
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates DNF cache
 _pkg_dnf_update() {
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --show-error --title "Updating package lists..." -- \
-      sudo dnf check-update --quiet || true # dnf check-update returns 100 if updates available
-    return 0
-  fi
-
-  # Whiptail mode (default)
   run_with_spinner "Updating package lists" sudo dnf check-update --quiet || true
   return 0
 }
@@ -39,13 +30,6 @@ _pkg_dnf_install() {
 
   [[ $pkg_count -eq 0 ]] && return 0
 
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    gum spin --spinner dot --show-error --title "Installing ${pkg_count} packages..." -- \
-      sudo dnf install -y --quiet "${packages[@]}"
-    return $?
-  fi
-
-  # Whiptail mode (default)
   run_with_spinner "Installing ${pkg_count} packages" sudo dnf install -y --quiet "${packages[@]}"
   return $?
 }
@@ -127,16 +111,6 @@ _pkg_dnf_install_fonts() {
     dejavu-fonts-all
   )
 
-  if [[ "${DEVBASE_TUI_MODE:-}" == "gum" ]] && command -v gum &>/dev/null; then
-    if gum spin --spinner dot --show-error --title "Installing Liberation & DejaVu fonts..." -- \
-      sudo dnf install -y --quiet "${font_packages[@]}"; then
-      command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
-      return 0
-    fi
-    return 1
-  fi
-
-  # Whiptail mode (default)
   if run_with_spinner "Installing Liberation & DejaVu fonts" \
     sudo dnf install -y --quiet "${font_packages[@]}"; then
     command -v fc-cache &>/dev/null && fc-cache -f >/dev/null 2>&1
@@ -167,41 +141,8 @@ _pkg_dnf_install_firefox() {
   return 1
 }
 
-# Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
-# Params: None
-# Uses: HOME, show_progress (globals/functions)
-# Returns: 0 on success
-# Side-effects: Adds OpenSC module to Firefox pkcs11.txt
+# Brief: Configure Firefox OpenSC for Fedora
+# Side-effects: Delegates to shared _configure_firefox_opensc
 _pkg_dnf_configure_firefox_opensc() {
-  # OpenSC library path on Fedora
-  local opensc_lib="/usr/lib64/opensc-pkcs11.so"
-
-  # Skip if OpenSC library not installed
-  if [[ ! -f "$opensc_lib" ]]; then
-    show_progress info "OpenSC PKCS#11 library not found, skipping Firefox smart card configuration"
-    return 0
-  fi
-
-  # Find Firefox profile directory
-  local profile_dir
-  profile_dir=$(find "${HOME}/.mozilla/firefox" -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
-
-  if [[ -z "$profile_dir" ]]; then
-    show_progress info "No Firefox profile found, skipping OpenSC configuration"
-    return 0
-  fi
-
-  local pkcs11_file="${profile_dir}/pkcs11.txt"
-
-  # Skip if OpenSC already configured
-  if [[ -f "$pkcs11_file" ]] && grep -q "opensc-pkcs11.so" "$pkcs11_file" 2>/dev/null; then
-    show_progress info "OpenSC already configured in Firefox"
-    return 0
-  fi
-
-  # Add OpenSC module to pkcs11.txt
-  printf '%s\n' "library=${opensc_lib}" "name=OpenSC" >>"$pkcs11_file"
-
-  show_progress success "Firefox configured for smart card support (OpenSC)"
-  return 0
+  _configure_firefox_opensc "/usr/lib64/opensc-pkcs11.so"
 }

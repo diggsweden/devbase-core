@@ -12,8 +12,23 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
-set -uo pipefail
-# Error trap - log to whiptail in that mode, otherwise print to terminal
+# shellcheck disable=SC1091 # Loaded via DEVBASE_ROOT at runtime
+source "${DEVBASE_ROOT}/libs/install-context.sh"
+
+set -Euo pipefail
+
+# =============================================================================
+# ERROR HANDLING POLICY
+# =============================================================================
+# Fatal (die):  Missing prerequisites, corrupted config, security violations.
+# Soft (return 1):  Optional features, network glitches, missing extras.
+# The ERR trap below logs failures but does not abort - callers decide severity.
+# =============================================================================
+
+# Error trap - log command failures to whiptail or terminal.
+# Note: Without `set -e`, the ERR trap only fires for commands whose failure
+# propagates (i.e., not inside `if`/`while`/`&&`/`||` guards). The `-E` flag
+# ensures the trap inherits into functions and subshells.
 trap '_handle_error_trap "$LINENO" "$BASH_COMMAND"' ERR
 
 _handle_error_trap() {
@@ -26,12 +41,50 @@ _handle_error_trap() {
   fi
 }
 
+_get_trap_command() {
+  local trap_line="$1"
+  local signal="$2"
+  local cmd=""
+
+  if [[ "$trap_line" =~ ^trap\ --\ \'(.*)\'\ "$signal"$ ]]; then
+    cmd="${BASH_REMATCH[1]}"
+  fi
+
+  printf "%s" "$cmd"
+}
+
+_DEVBASE_PREV_TRAP_INT="$(_get_trap_command "$(trap -p INT)" "INT")"
+_DEVBASE_PREV_TRAP_TERM="$(_get_trap_command "$(trap -p TERM)" "TERM")"
+
+_run_prev_trap() {
+  local signal="$1"
+  local prev_cmd=""
+
+  case "$signal" in
+  INT)
+    prev_cmd="${_DEVBASE_PREV_TRAP_INT:-}"
+    ;;
+  TERM)
+    prev_cmd="${_DEVBASE_PREV_TRAP_TERM:-}"
+    ;;
+  esac
+
+  if [[ -n "$prev_cmd" && "$prev_cmd" != "handle_interrupt" ]]; then
+    if [[ "$prev_cmd" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && declare -f "$prev_cmd" &>/dev/null; then
+      "$prev_cmd"
+    else
+      printf "Skipping unsafe prior trap for %s\n" "$signal" >&2
+    fi
+  fi
+}
+
 # Brief: Handle SIGINT/SIGTERM by cleaning up and exiting with code 130
-# Params: None
+# Params: $1 - signal name (INT or TERM)
 # Uses: cleanup_temp_directory, stop_installation_progress (functions)
 # Returns: exits with 130
 # Side-effects: Cleans temp directory, stops progress display, prints cancellation message, exits
 handle_interrupt() {
+  local signal="${1:-INT}"
   cleanup_temp_directory
   # Stop persistent gauge first (if running)
   stop_installation_progress 2>/dev/null || true
@@ -46,11 +99,13 @@ handle_interrupt() {
   else
     printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
   fi
+  _run_prev_trap "$signal"
   exit 130
 }
 
 trap cleanup_temp_directory EXIT
-trap handle_interrupt INT TERM
+trap 'handle_interrupt INT' INT
+trap 'handle_interrupt TERM' TERM
 
 # Source user preferences collector based on TUI mode
 # DEVBASE_TUI_MODE is set by select_tui_mode() in setup.sh before sourcing this file
@@ -67,31 +122,15 @@ gum)
   ;;
 esac
 # shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/process-templates.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/distro.sh"
-# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/pkg/pkg-manager.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/install-apt.sh" # Keep for backward compat (install_firefox_deb)
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-snap.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/install-mise.sh"
 # shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/install-custom.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/configure-completions.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/configure-shell.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/configure-services.sh"
-# shellcheck disable=SC1091 # File exists at runtime
-source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
-# shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/summary.sh"
 
-_DEVBASE_TEMP=$(mktemp -d /tmp/devbase.XXXXXX) || {
+_DEVBASE_TEMP=$(mktemp -d --tmpdir devbase.XXXXXX) || {
   # Early error before TUI is fully initialized - use basic output
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
     whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
@@ -114,8 +153,8 @@ if [[ -z "${DEVBASE_ROOT:-}" ]] || [[ -z "${DEVBASE_LIBS:-}" ]]; then
   exit 1
 fi
 
-# All required libraries are now sourced in setup.sh before this script
-# This prevents duplicate sourcing and readonly variable conflicts
+# Common libraries are sourced in setup.sh before this script
+# This avoids duplicate sourcing and readonly variable conflicts
 
 # Brief: Rotate backup directories to keep only one previous backup
 # Params: None
@@ -126,12 +165,7 @@ rotate_backup_directories() {
   # Rotate old backup if it exists (keep only one previous backup)
   if [[ -d "${DEVBASE_BACKUP_DIR:-}" ]]; then
     if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
-      # Safety check: ensure path is within user home
-      if [[ -n "${DEVBASE_BACKUP_DIR:-}" ]] && [[ "${DEVBASE_BACKUP_DIR}.old" =~ ^${HOME}/ ]] && [[ ! "${DEVBASE_BACKUP_DIR}.old" =~ \.\. ]]; then
-        rm -rf "${DEVBASE_BACKUP_DIR}.old"
-      else
-        show_progress warning "Refusing to remove unsafe backup path: ${DEVBASE_BACKUP_DIR}.old"
-      fi
+      safe_rm_rf "$HOME" "${DEVBASE_BACKUP_DIR}.old" || true
     fi
     mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
   fi
@@ -140,7 +174,7 @@ rotate_backup_directories() {
   for old_backup in "${HOME}"/.devbase_backup_*; do
     if [[ -d "$old_backup" ]]; then
       if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
-        rm -rf "$old_backup"
+        safe_rm_rf "$HOME" "$old_backup" || true
       else
         show_progress warning "Skipping unexpected backup path: $old_backup"
       fi
@@ -172,14 +206,31 @@ setup_sudo_and_system() {
 
   if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]] && [[ -f "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" ]]; then
     show_progress info "Configuring sudo proxy preservation..."
-    sudo cp "${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv" /etc/sudoers.d/
-    sudo chmod 0440 /etc/sudoers.d/sudokeepenv
+    local sudoers_src="${DEVBASE_FILES}/sudo-keep-proxyenv/sudokeepenv"
+    local sudoers_dst="/etc/sudoers.d/sudokeepenv"
+    local sudoers_tmp
+    sudoers_tmp=$(mktemp) || return 1
+    # shellcheck disable=SC2064
+    trap "rm -f '$sudoers_tmp'" RETURN
 
-    if sudo visudo -c &>/dev/null; then
-      show_progress success "Sudo proxy preservation configured"
-    else
-      show_progress warning "Could not validate sudoers proxy config - continuing anyway"
+    cp "$sudoers_src" "$sudoers_tmp"
+    if ! sudo visudo -c -f "$sudoers_tmp" &>/dev/null; then
+      show_progress error "Invalid sudoers proxy config (refusing to install)"
+      return 1
     fi
+
+    if ! sudo install -m 0440 "$sudoers_tmp" "$sudoers_dst"; then
+      show_progress error "Failed to install sudoers proxy config"
+      return 1
+    fi
+
+    if ! sudo visudo -c -f "$sudoers_dst" &>/dev/null; then
+      sudo rm -f "$sudoers_dst"
+      show_progress error "Sudoers proxy config failed validation and was removed"
+      return 1
+    fi
+
+    show_progress success "Sudo proxy preservation configured"
   fi
 
   return 0
@@ -239,8 +290,10 @@ cleanup() {
     if [[ -d "${XDG_DATA_HOME}/containers/storage" ]]; then
       local podman_size
       podman_size=$(du -sm "${XDG_DATA_HOME}/containers/storage" 2>/dev/null | cut -f1)
+      show_progress warning "Removing all Podman containers, images, and volumes"
       podman system reset --force || true
       files_cleaned=$((files_cleaned + ${podman_size:-0}))
+
     fi
   fi
 
@@ -278,7 +331,7 @@ _show_completion_message_gum() {
       echo "  $passphrase"
       echo
       gum style --foreground 240 "To change:"
-      echo "  ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+      echo "  ssh-keygen -p -f ~/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
       echo
     fi
     rm -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp"
@@ -756,11 +809,12 @@ prepare_system() {
 
   # Persist devbase repos to ~/.local/share/devbase/ for update support
   # Certificates are installed earlier to allow trusted cloning
-  persist_devbase_repos || show_progress warning "Could not persist devbase repos (continuing)"
+  persist_devbase_repos || add_install_warning "Could not persist devbase repos (continuing)"
 
   ensure_user_dirs
 
-  setup_sudo_and_system
+  setup_sudo_and_system || die "Failed to configure sudo proxy preservation"
+
 }
 
 # Brief: Perform complete DevBase installation (tools, configs, services, hooks)
@@ -786,25 +840,55 @@ perform_installation() {
   show_phase "Configuring system services..."
   configure_system_and_shell
 
-  if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
-    run_custom_hook "post-configuration" || show_progress warning "Post-configuration hook failed"
+  local hooks_dir
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -n "$hooks_dir" && -d "$hooks_dir" ]]; then
+    run_custom_hook "post-configuration" || add_install_warning "Post-configuration hook failed"
   fi
 
   sudo_refresh
   show_phase "Finalizing installation..."
   finalize_installation
 
-  if validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
-    run_custom_hook "post-install" || show_progress warning "Post-install hook failed, continuing..."
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -n "$hooks_dir" && -d "$hooks_dir" ]]; then
+    run_custom_hook "post-install" || add_install_warning "Post-install hook failed"
+  fi
+
+}
+
+set_default_values() {
+  # Export variables that were initialized in IMPORT section with defaults
+  export DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT DEVBASE_NO_PROXY_DOMAINS
+  export DEVBASE_REGISTRY_HOST DEVBASE_REGISTRY_PORT
+  export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_BIN_HOME
+  export DEVBASE_THEME DEVBASE_FONT
+
+  # Define DevBase directories using XDG variables
+  export DEVBASE_CACHE_DIR="${XDG_CACHE_HOME}/devbase"
+  export DEVBASE_CONFIG_DIR="${XDG_CONFIG_HOME}/devbase"
+  export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
+
+  # Debug output if DEVBASE_DEBUG environment variable is set
+  if [[ "${DEVBASE_DEBUG}" == "1" ]]; then
+    show_progress info "Debug mode enabled"
+    show_progress info "DEVBASE_ROOT=${DEVBASE_ROOT}"
+    # shellcheck disable=SC2153 # _DEVBASE_FROM_GIT set during bootstrap
+    show_progress info "_DEVBASE_FROM_GIT=${_DEVBASE_FROM_GIT}"
+    if require_env _DEVBASE_ENV_FILE; then
+      show_progress info "_DEVBASE_ENV_FILE=${_DEVBASE_ENV_FILE}"
+    fi
+    # shellcheck disable=SC2153 # _DEVBASE_ENV set by detect_environment() during bootstrap
+    show_progress info "_DEVBASE_ENV=${_DEVBASE_ENV}"
+    if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
+      show_progress info "Proxy configured: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+    fi
   fi
 }
 
-# Brief: Main installation orchestration function
-# Params: None
-# Uses: DEVBASE_COLORS, rotate_backup_directories, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
-# Returns: 0 always
-# Side-effects: Orchestrates entire DevBase installation process
-main() {
+run_preflight_phase() {
+  set_default_values
+  init_install_context
   rotate_backup_directories
   validate_environment
   validate_source_repository
@@ -814,29 +898,57 @@ main() {
   # Note: Sudo access is acquired in run_preflight_checks
   tui_blank_line
   run_preflight_checks || return 1
+}
 
-  bootstrap_for_configuration
-  collect_user_configuration
-  display_configuration_summary
+run_configuration_phase() {
+  bootstrap_for_configuration || return 1
+  collect_user_configuration || return 1
+  display_configuration_summary || return 1
+}
 
+run_installation_phase() {
   # Start persistent progress display for whiptail mode
   # This keeps a gauge on screen throughout installation to prevent terminal flicker
   start_installation_progress
 
   show_phase "Preparing system..."
-  prepare_system
+  if ! prepare_system; then
+    stop_installation_progress
+    return 1
+  fi
 
-  perform_installation
+  if ! perform_installation; then
+    stop_installation_progress
+    return 1
+  fi
 
-  write_installation_summary
+  if ! write_installation_summary; then
+    stop_installation_progress
+    return 1
+  fi
 
   # Stop persistent progress display before showing completion
   stop_installation_progress
+}
 
+run_finalize_phase() {
   tui_blank_line
   show_completion_message
+  show_installation_warnings
   configure_fonts_post_install
   handle_wsl_restart
+}
+
+# Brief: Main installation orchestration function
+# Params: None
+# Uses: DEVBASE_COLORS, rotate_backup_directories, validate_environment, validate_source_repository, setup_installation_paths, run_preflight_checks, collect_user_configuration, display_configuration_summary, prepare_system, perform_installation, write_installation_summary, show_completion_message, handle_wsl_restart (globals/functions)
+# Returns: 0 always
+# Side-effects: Orchestrates entire DevBase installation process
+main() {
+  run_preflight_phase || return 1
+  run_configuration_phase || return 1
+  run_installation_phase || return 1
+  run_finalize_phase
   return 0
 }
 
@@ -847,11 +959,13 @@ run_custom_hook() {
   validate_not_empty "$hook_name" "Hook name" || return 1
 
   # Check if custom hooks directory is configured
-  if ! validate_custom_dir "_DEVBASE_CUSTOM_HOOKS" "Custom hooks directory"; then
+  local hooks_dir
+  hooks_dir=$(get_custom_hooks_dir)
+  if [[ -z "$hooks_dir" || ! -d "$hooks_dir" ]]; then
     return 0 # No custom hooks directory configured
   fi
 
-  local hook_file="${_DEVBASE_CUSTOM_HOOKS}/${hook_name}.sh"
+  local hook_file="${hooks_dir}/${hook_name}.sh"
 
   if [[ -f "$hook_file" ]] && [[ -x "$hook_file" ]]; then
     show_progress info "Running $hook_name hook"

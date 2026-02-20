@@ -4,15 +4,59 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
 fi
 
-# Validate that a required parameter is not empty
-# Usage: validate_not_empty "$param" "parameter_name"
+# Variables that must be set in the environment for templates to render correctly.
+# Guard prevents re-declaration errors when this file is sourced more than once.
+if ! [[ -v DEVBASE_REQUIRED_TEMPLATE_VARS ]]; then
+  readonly -a DEVBASE_REQUIRED_TEMPLATE_VARS=(
+    "HOME"
+    "EDITOR"
+    "VISUAL"
+    "XDG_CONFIG_HOME"
+    "DEVBASE_THEME"
+    "DEVBASE_ZELLIJ_AUTOSTART"
+    "BAT_THEME"
+    "BTOP_THEME"
+    "DELTA_SYNTAX_THEME"
+    "DELTA_FEATURES"
+    "DELTA_DARK"
+    "ZELLIJ_THEME"
+    "ZELLIJ_COPY_COMMAND"
+    "THEME_BACKGROUND"
+    "LAZYGIT_LIGHT_THEME"
+    "VIFM_COLORSCHEME"
+    "K9S_SKIN"
+  )
+
+  # Variables that enable optional features; a warning is emitted if unset but setup continues.
+  readonly -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
+    "DEVBASE_CUSTOM_CERTS"
+    "DEVBASE_PROXY_HOST"
+    "DEVBASE_PROXY_PORT"
+    "DEVBASE_NO_PROXY_DOMAINS"
+    "DEVBASE_REGISTRY_HOST"
+    "DEVBASE_REGISTRY_PORT"
+    "DEVBASE_REGISTRY_URL"
+    "DEVBASE_REGISTRY_CONTAINER"
+    "DEVBASE_PYPI_REGISTRY"
+  )
+
+  # Variables that appear in templates but are evaluated at runtime by the shell,
+  # not substituted by envsubst during setup.
+  readonly -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
+    "XDG_RUNTIME_DIR"
+    "USER_UID"
+  )
+fi
+
+# Brief: Validate that a required parameter is not empty
+# Params: $1 - value to check, $2 - parameter name (optional, default: "parameter")
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if non-empty, 1 if empty
 validate_not_empty() {
   local value="$1"
   local name="${2:-parameter}"
@@ -39,8 +83,10 @@ validate_file_exists() {
   return 0
 }
 
-# Validate that a directory exists
-# Usage: validate_dir_exists "$dirpath" "description"
+# Brief: Validate that a directory exists
+# Params: $1 - dirpath to check, $2 - description (optional, default: "directory")
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if directory exists, 1 if not found
 validate_dir_exists() {
   local dirpath="$1"
   local description="${2:-directory}"
@@ -78,6 +124,23 @@ validate_var_set() {
     return 1
   fi
   return 0
+}
+
+# Brief: Require one or more environment variables to be set
+# Params: $@ - variable names to check
+# Uses: show_progress (from ui-helpers)
+# Returns: 0 if all variables are set, 1 if any are missing
+require_env() {
+  local all_present=true
+
+  for varname in "$@"; do
+    if [[ -z "${!varname:-}" ]]; then
+      show_progress error "Required environment variable ${varname} is not set"
+      all_present=false
+    fi
+  done
+
+  [[ "$all_present" == true ]]
 }
 
 # Brief: Validate custom directory path is set and exists
@@ -134,30 +197,80 @@ validate_custom_file() {
   return 0
 }
 
-# Brief: Validate optional directory variable (set and exists, or empty)
-# Params: $1 - variable name containing directory path
-#         $2 - description (optional, default: "directory")
-# Uses: show_progress (from ui-helpers)
-# Returns: 0 if variable is set and directory exists, 1 if empty or doesn't exist
-# Notes: Returns 1 silently if variable is empty (optional directory)
-#        Shows error if variable is set but directory doesn't exist
-validate_optional_dir() {
-  local varname="$1"
-  local description="${2:-directory}"
+# Brief: Validate hostname format (no spaces, no shell metacharacters)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_hostname() {
+  local value="$1"
+  local name="${2:-hostname}"
 
-  local value="${!varname}"
-
-  # Not set or empty - silently return (optional directory)
   if [[ -z "$value" ]]; then
+    return 0 # Empty is OK (optional)
+  fi
+
+  # Reject shell metacharacters and whitespace
+  if [[ "$value" =~ [[:space:]\;\|\&\$\`\(\)\{\}\<\>\!\#] ]]; then
+    show_progress error "${name} contains invalid characters: ${value}"
+    return 1
+  fi
+  return 0
+}
+
+# Brief: Validate port number (1-65535, digits only)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_port() {
+  local value="$1"
+  local name="${2:-port}"
+
+  if [[ -z "$value" ]]; then
+    return 0 # Empty is OK (optional)
+  fi
+
+  if ! [[ "$value" =~ ^[0-9]+$ ]] || [[ "$value" -lt 1 ]] || [[ "$value" -gt 65535 ]]; then
+    show_progress error "${name} must be a number between 1-65535, got: ${value}"
+    return 1
+  fi
+  return 0
+}
+
+# Brief: Validate email format (basic: must contain @, no shell metacharacters)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_email() {
+  local value="$1"
+  local name="${2:-email}"
+
+  if [[ -z "$value" ]]; then
+    return 0
+  fi
+
+  if [[ "$value" =~ [[:space:]\;\|\&\$\`\(\)\{\}\<\>\!] ]]; then
+    show_progress error "${name} contains invalid characters: ${value}"
     return 1
   fi
 
-  # Set but directory doesn't exist - this is an error
-  if [[ ! -d "$value" ]]; then
-    show_progress error "${description} does not exist: ${value}"
-    return 1
+  if [[ ! "$value" =~ @ ]]; then
+    show_progress warning "${name} does not contain @: ${value}"
+  fi
+  return 0
+}
+
+# Brief: Validate value contains no shell metacharacters (safe for use in config files)
+# Params: $1 - value to validate, $2 - variable name (for error messages)
+# Returns: 0 if valid, 1 if invalid
+validate_safe_value() {
+  local value="$1"
+  local name="${2:-value}"
+
+  if [[ -z "$value" ]]; then
+    return 0
   fi
 
+  if [[ "$value" =~ [\;\|\&\$\`\<\>] ]]; then
+    show_progress error "${name} contains shell metacharacters: ${value}"
+    return 1
+  fi
   return 0
 }
 
@@ -170,47 +283,6 @@ validate_optional_dir() {
 validate_template_variables() {
   local template_file="$1"
   local vars_to_check="$2"
-
-  # Define required variables (must be set - these are actually used in templates)
-  local -a DEVBASE_REQUIRED_TEMPLATE_VARS=(
-    "HOME"
-    "EDITOR"
-    "VISUAL"
-    "XDG_CONFIG_HOME"
-    "DEVBASE_THEME"
-    "DEVBASE_ZELLIJ_AUTOSTART"
-    "BAT_THEME"
-    "BTOP_THEME"
-    "DELTA_SYNTAX_THEME"
-    "DELTA_FEATURES"
-    "DELTA_DARK"
-    "ZELLIJ_THEME"
-    "ZELLIJ_COPY_COMMAND"
-    "THEME_BACKGROUND"
-    "LAZYGIT_LIGHT_THEME"
-    "VIFM_COLORSCHEME"
-    "K9S_SKIN"
-  )
-
-  # Define optional variables (warnings only if missing - features are disabled if not set)
-  local -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
-    "DEVBASE_CUSTOM_CERTS"
-    "DEVBASE_PROXY_HOST"
-    "DEVBASE_PROXY_PORT"
-    "DEVBASE_NO_PROXY_DOMAINS"
-    "DEVBASE_REGISTRY_HOST"
-    "DEVBASE_REGISTRY_PORT"
-    "DEVBASE_REGISTRY_URL"
-    "DEVBASE_REGISTRY_CONTAINER"
-    "DEVBASE_PYPI_REGISTRY"
-  )
-
-  # Define runtime variables (not replaced by envsubst, evaluated at runtime by shell)
-  # These are variables that appear in templates but should remain as literal $VAR syntax
-  local -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
-    "XDG_RUNTIME_DIR"
-    "USER_UID"
-  )
 
   local missing_required=()
   local missing_optional=()

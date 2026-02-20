@@ -4,8 +4,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -uo pipefail
-
 if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   echo "ERROR: DEVBASE_ROOT not set. This script must be sourced from setup.sh" >&2
   return 1
@@ -23,7 +21,10 @@ prepare_temp_dotfiles_directory() {
   validate_dir_exists "${DEVBASE_DOT}" "Dotfiles directory" || return 1
 
   local temp_dotfiles="${_DEVBASE_TEMP}/dotfiles"
-  cp -r "${DEVBASE_DOT}" "${temp_dotfiles}"
+  cp -r "${DEVBASE_DOT}" "${temp_dotfiles}" || {
+    show_progress error "Failed to copy dotfiles to temp directory"
+    return 1
+  }
   rm -f "${temp_dotfiles}/.config/mise/config.toml"
   echo "$temp_dotfiles"
 }
@@ -62,6 +63,7 @@ count_custom_overlays() {
     echo 0
     return 0
   fi
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   find "${_DEVBASE_CUSTOM_TEMPLATES}" -name "*.template" -type f | wc -l
 }
@@ -77,7 +79,10 @@ apply_customizations() {
   validate_dir_exists "$temp_dotfiles" "Temp dotfiles directory" || return 1
 
   if validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory"; then
-    copy_custom_templates_to_temp "${temp_dotfiles}"
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+    local custom_count
+    custom_count=$(count_custom_overlays)
+    show_progress info "Custom overlay templates: $custom_count"
   fi
 
   apply_theme "$DEVBASE_THEME"
@@ -107,6 +112,7 @@ process_templates_and_tools() {
 # Side-effects: Processes custom config files, prints count
 apply_custom_configs() {
   validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   show_progress info "Applying custom organization configs..."
   local custom_configs
@@ -228,6 +234,9 @@ validate_custom_template() {
 copy_custom_templates_to_temp() {
   local temp_dir="$1"
 
+  validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+
   for template in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.template; do
     [[ -f "$template" ]] || continue
 
@@ -255,6 +264,7 @@ copy_custom_templates_to_temp() {
   done
 
   # Also handle non-template overlay files (e.g., .fish files that override vanilla versions)
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
   for custom_file in "${_DEVBASE_CUSTOM_TEMPLATES}"/*.fish; do
     [[ -f "$custom_file" ]] || continue
 
@@ -472,7 +482,8 @@ EOF
 # Extract hostname from URL (strip protocol, path, and port)
 # Example: "https://registry.company.com:8080/path" -> "registry.company.com"
 extract_hostname() {
-  local url="$1"
+  local url="${1:-}"
+  [[ -z "$url" ]] && return 1
   echo "$url" |
     sed -E 's|^[^:]+://||' | # Remove protocol (https://)
     sed -E 's|/.*$||' |      # Remove path (/path)
@@ -769,6 +780,7 @@ _process_maven_yaml_add_custom() {
   local -n desc=$3
 
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "maven-repos.yaml" "Custom Maven repos"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     local custom_processed="${temp_dir}/maven-repos.yaml"
     envsubst_preserve_undefined "${_DEVBASE_CUSTOM_TEMPLATES}/maven-repos.yaml" "$custom_processed"
     fragments+=("$custom_processed")
@@ -868,9 +880,11 @@ process_gradle_templates() {
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "init.gradle.template" "Custom Gradle template"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template"
     show_progress info "Configuring Gradle with custom repository settings"
   elif [[ -f "${gradle_templates_dir}/init.gradle.template" ]]; then
+
     template_to_use="${gradle_templates_dir}/init.gradle.template"
     show_progress info "Configuring Gradle with repository mirror"
   fi
@@ -899,9 +913,11 @@ process_container_templates() {
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "registries.conf.template" "Custom registry template"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template"
     show_progress info "Configuring container registry with custom settings"
   elif [[ -f "${container_templates_dir}/registries.conf.template" ]]; then
+
     template_to_use="${container_templates_dir}/registries.conf.template"
     show_progress info "Configuring container registry mirror"
   fi
@@ -914,15 +930,17 @@ process_container_templates() {
 
 process_testcontainers_properties() {
   local core_file="${DEVBASE_FILES}/.testcontainers.properties"
-  local custom_file="${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties"
   local target_file="${HOME}/.testcontainers.properties"
   local source_file=""
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" ".testcontainers.properties" "Custom Testcontainers properties"; then
+    require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
+    local custom_file="${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties"
     source_file="$custom_file"
     show_progress info "Configuring Testcontainers with custom settings"
   elif [[ -f "$core_file" ]]; then
+
     source_file="$core_file"
     show_progress info "Configuring Testcontainers"
   fi
@@ -935,6 +953,7 @@ process_testcontainers_properties() {
 
 process_custom_templates() {
   validate_custom_dir "_DEVBASE_CUSTOM_TEMPLATES" "Custom templates directory" || return 0
+  require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
 
   local file_count
   file_count=$(find "${_DEVBASE_CUSTOM_TEMPLATES}" -type f -name "*" ! -name "README*" 2>/dev/null | wc -l)

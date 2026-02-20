@@ -181,7 +181,6 @@ EOF
   stub snap 'list kubectl : true'
   
   run --separate-stderr snap_install "kubectl"
-  [ "x$BATS_TEST_COMPLETED" = "x" ] && echo "output: '${output}' stderr: '${stderr}'"
   assert_success
   assert_output --partial "already installed"
   
@@ -222,17 +221,17 @@ EOF
   source "${DEVBASE_ROOT}/libs/install-snap.sh"
   
   # Create a subshell where snap command doesn't exist
+  mkdir -p "${TEST_DIR}/bin"
   run bash -c "
     # Remove snap from PATH by creating empty PATH with only essential commands
     export PATH='${TEST_DIR}/bin'
-    mkdir -p '${TEST_DIR}/bin'
-    
+
     # Source required libs
     source '${DEVBASE_ROOT}/libs/define-colors.sh'
     source '${DEVBASE_ROOT}/libs/validation.sh'
-    source '${DEVBASE_ROOT}/libs/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
     source '${DEVBASE_ROOT}/libs/install-snap.sh'
-    
+
     snap_install 'kubectl'
   "
   

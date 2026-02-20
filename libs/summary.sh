@@ -12,8 +12,6 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
-set -uo pipefail
-
 _summary_header() {
   cat <<EOF
 DEVBASE INSTALLATION SUMMARY
@@ -158,7 +156,7 @@ EOF
 _summary_ssh_config() {
   local key_type_upper
   key_type_upper=$(echo "${DEVBASE_SSH_KEY_TYPE:-ed25519}" | tr '[:lower:]' '[:upper:]')
-  local key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME:-id_ed25519_devbase}"
+  local key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME:-$(get_default_ssh_key_name)}"
 
   cat <<EOF
 

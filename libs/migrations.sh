@@ -7,8 +7,6 @@
 # Migration scripts for DevBase upgrades
 # Handles cleanup of legacy files and configuration changes between versions
 
-set -uo pipefail
-
 # Brief: Remove legacy package files replaced by unified packages.yaml
 # Context: Prior to unified package management, packages were defined in separate files.
 #          These are now consolidated into packages.yaml and the old files are orphaned.
@@ -122,7 +120,7 @@ migrate_deployed_hooks_templates() {
   local deployed_templates="${config_dir}/git/hooks-templates"
 
   if [[ -d "$deployed_templates" ]]; then
-    rm -rf "$deployed_templates"
+    safe_rm_rf "$config_dir" "$deployed_templates"
     if declare -f show_progress &>/dev/null; then
       show_progress info "Removed stale deployed hooks-templates directory"
     fi
@@ -141,7 +139,7 @@ migrate_deployed_vscode_settings() {
   local deployed_vscode="${config_dir}/vscode"
 
   if [[ -d "$deployed_vscode" ]]; then
-    rm -rf "$deployed_vscode"
+    safe_rm_rf "$config_dir" "$deployed_vscode"
     if declare -f show_progress &>/dev/null; then
       show_progress info "Removed stale deployed vscode settings directory"
     fi
