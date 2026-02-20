@@ -96,9 +96,6 @@ configure_ssh() {
   validate_var_set "DEVBASE_SSH_KEY_NAME" || return 1
 
   local ssh_key_path="${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}"
-  local key_generated=false
-  local agent_enabled=false
-  local passphrase_protected=false
 
   # Always set up SSH config includes (known_hosts, custom configs, etc.)
   # This must happen regardless of key generation action
@@ -116,36 +113,21 @@ configure_ssh() {
     show_progress info "Configuring SSH..."
 
     if [[ -f "$ssh_key_path" ]]; then
-      local backup_name
-      backup_name="${ssh_key_path}.backup.$(date +%Y%m%d_%H%M%S)"
+      local backup_name="${ssh_key_path}.backup.$(date +%Y%m%d_%H%M%S)"
       mv "$ssh_key_path" "$backup_name" || die "Failed to backup SSH key: $ssh_key_path"
       if [[ -f "${ssh_key_path}.pub" ]]; then
         mv "${ssh_key_path}.pub" "${backup_name}.pub" || die "Failed to backup SSH public key"
       fi
     fi
 
-    # Generate SSH key based on type
+    local passphrase="${DEVBASE_SSH_PASSPHRASE:-}"
     case "${DEVBASE_SSH_KEY_TYPE}" in
     ecdsa)
-      # Generate ECDSA key with P-521 curve
-      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
-        ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
-        passphrase_protected=true
-      else
-        ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
-      fi
+      ssh-keygen -t ecdsa -b 521 -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "$passphrase" -q
       ;;
-
     ed25519 | ed25519-sk | ecdsa-sk)
-      # Generate key without bit size parameter
-      if [[ -n "${DEVBASE_SSH_PASSPHRASE:-}" ]]; then
-        ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "${DEVBASE_SSH_PASSPHRASE}" -q
-        passphrase_protected=true
-      else
-        ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "" -q
-      fi
+      ssh-keygen -t "${DEVBASE_SSH_KEY_TYPE}" -C "${DEVBASE_GIT_EMAIL}" -f "$ssh_key_path" -N "$passphrase" -q
       ;;
-
     *)
       show_progress error "Unknown SSH key type '${DEVBASE_SSH_KEY_TYPE}'"
       show_progress info "Supported types: ed25519, ecdsa, ed25519-sk, ecdsa-sk"
@@ -153,25 +135,18 @@ configure_ssh() {
       ;;
     esac
 
-    key_generated=true
     export DEVBASE_NEW_SSH_KEY="${ssh_key_path}.pub"
-  fi
 
-  # Enable ssh-agent service if available
-  if [[ -f "${XDG_CONFIG_HOME}/systemd/user/ssh-agent.service" ]]; then
-    if enable_user_service "ssh-agent.service" &>/dev/null; then
-      agent_enabled=true
+    # Enable ssh-agent service if available
+    local agent_enabled=false
+    if [[ -f "${XDG_CONFIG_HOME}/systemd/user/ssh-agent.service" ]]; then
+      enable_user_service "ssh-agent.service" &>/dev/null && agent_enabled=true
     fi
-  fi
 
-  if [[ "$key_generated" == true ]]; then
-    local key_type_upper
-    key_type_upper="${DEVBASE_SSH_KEY_TYPE^^}"
-    local msg="SSH configured (${key_type_upper} key at ${ssh_key_path}"
-    [[ "$passphrase_protected" == true ]] && msg="${msg}, passphrase protected"
+    local msg="SSH configured (${DEVBASE_SSH_KEY_TYPE^^} key at ${ssh_key_path}"
+    [[ -n "$passphrase" ]] && msg="${msg}, passphrase protected"
     [[ "$agent_enabled" == true ]] && msg="${msg}, agent enabled"
-    msg="${msg})"
-    show_progress success "$msg"
+    show_progress success "${msg})"
   fi
 
   return 0

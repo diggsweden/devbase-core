@@ -853,7 +853,6 @@ perform_installation() {
   show_phase "Finalizing installation..."
   finalize_installation
 
-  local hooks_dir
   hooks_dir=$(get_custom_hooks_dir)
   if [[ -n "$hooks_dir" && -d "$hooks_dir" ]]; then
     run_custom_hook "post-install" || add_install_warning "Post-install hook failed"

@@ -227,17 +227,9 @@ envsubst_preserve_undefined() {
   # (avoids duplicating DEVBASE_RUNTIME_TEMPLATE_VARS here)
   local filtered_vars=""
   for var in $vars_to_sub; do
-    local var_name="${var#\$}"
-    local is_runtime=false
-    for runtime_var in "${DEVBASE_RUNTIME_TEMPLATE_VARS[@]}"; do
-      if [[ "$var_name" == "$runtime_var" ]]; then
-        is_runtime=true
-        break
-      fi
-    done
-    if [[ "$is_runtime" == false ]]; then
-      filtered_vars="$filtered_vars $var"
-    fi
+    # Skip variables populated at render time, not install time
+    [[ " ${DEVBASE_RUNTIME_TEMPLATE_VARS[*]} " == *" ${var#\$} "* ]] && continue
+    filtered_vars="$filtered_vars $var"
   done
 
   # Proceed with substitution (using filtered list)
@@ -671,20 +663,13 @@ safe_rm_rf() {
 # Returns: 0 always
 # Side-effects: Removes _DEVBASE_TEMP directory if path matches expected pattern
 cleanup_temp_directory() {
-  if [[ -z "${_DEVBASE_TEMP:-}" ]]; then
-    return 0
-  fi
-
-  if [[ ! -d "${_DEVBASE_TEMP}" ]]; then
-    return 0
-  fi
+  [[ -n "${_DEVBASE_TEMP:-}" && -d "${_DEVBASE_TEMP}" ]] || return 0
 
   local real_path
   real_path=$(realpath -m "${_DEVBASE_TEMP}" 2>/dev/null) || return 0
 
   local temp_root
-  temp_root=$(get_temp_root)
-  temp_root=$(realpath -m "$temp_root" 2>/dev/null || printf "%s" "/tmp")
+  temp_root=$(realpath -m "$(get_temp_root)" 2>/dev/null) || temp_root="/tmp"
 
   case "$real_path" in
   "${temp_root%/}/devbase."*)
