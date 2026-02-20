@@ -216,7 +216,7 @@ install_lazyvim() {
         }
       fi
 
-      rm -rf .git
+      safe_rm_rf "$nvim_config" "$nvim_config/.git"
     )
     show_progress success "LazyVim starter installed ($lazyvim_version)"
   else
