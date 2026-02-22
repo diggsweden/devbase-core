@@ -178,7 +178,7 @@ devbase-proxy status  # Show current proxy status
 - Automatically configures APT and Snap proxies
 - Uses proxy settings from Fish config (set during installation from DEVBASE_PROXY_HOST/PORT)
 
-**devbase-theme** - Set consistent themes across CLI tools:
+**devbase-theme** - Set consistent themes across CLI tools (authoritative list in `libs/theme-registry.sh`):
 
 ```bash
 # Everforest (default)
@@ -237,7 +237,7 @@ Note: when `--ref` is used, the persisted core repo at `~/.local/share/devbase/c
 
 **Note:** All custom themes reference official color palettes from their respective projects (Nord, Dracula, Solarized, Everforest, Catppuccin, Tokyo Night, Gruvbox) to ensure visual consistency.
 
-**devbase-font** - Set fonts for terminals and editors:
+**devbase-font** - Set fonts for terminals and editors (authoritative list in `libs/font-registry.sh`):
 
 ```bash
 # Available fonts
@@ -332,7 +332,7 @@ Nerd Fonts are patched fonts that include 3,600+ glyphs from popular icon sets:
 2. **Installation**: Your chosen font (set via `DEVBASE_FONT` variable) is installed to `~/.local/share/fonts/`
 3. **Switching**: Use `devbase-font` command to switch fonts without re-downloading
 
-**Switching Fonts:**
+**Switching Fonts:** (authoritative list in `libs/font-registry.sh`)
 
 ```fish
 # Switch to a different font (auto-installs from cache)

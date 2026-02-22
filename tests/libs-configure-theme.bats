@@ -40,19 +40,11 @@ setup() {
 
 @test "THEME_CONFIGS contains all supported themes" {
   source "${DEVBASE_ROOT}/libs/configure-theme.sh"
-  
-  [[ -n "${THEME_CONFIGS[everforest_dark]}" ]]
-  [[ -n "${THEME_CONFIGS[everforest_light]}" ]]
-  [[ -n "${THEME_CONFIGS[catppuccin_mocha]}" ]]
-  [[ -n "${THEME_CONFIGS[catppuccin_latte]}" ]]
-  [[ -n "${THEME_CONFIGS[tokyonight_night]}" ]]
-  [[ -n "${THEME_CONFIGS[tokyonight_day]}" ]]
-  [[ -n "${THEME_CONFIGS[gruvbox_dark]}" ]]
-  [[ -n "${THEME_CONFIGS[gruvbox_light]}" ]]
-  [[ -n "${THEME_CONFIGS[nord]}" ]]
-  [[ -n "${THEME_CONFIGS[dracula]}" ]]
-  [[ -n "${THEME_CONFIGS[solarized_dark]}" ]]
-  [[ -n "${THEME_CONFIGS[solarized_light]}" ]]
+
+  for theme in "${THEME_ORDER[@]}"; do
+    key="${theme//-/_}"
+    [[ -n "${THEME_CONFIGS[$key]}" ]]
+  done
 }
 
 @test "FZF_COLORS contains color schemes for all themes" {

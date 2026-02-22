@@ -7,11 +7,11 @@
 # Test all themes with all programs - improved version
 
 # === Configuration ===
-set -g ALL_THEMES everforest-dark everforest-light catppuccin-mocha catppuccin-latte \
-                  tokyonight-night tokyonight-day gruvbox-dark gruvbox-light \
-                  nord dracula solarized-dark solarized-light
+set -g script_dir (dirname (status --current-filename))
+set -g devbase_root (realpath "$script_dir/..")
 
-set -g LIGHT_THEMES solarized-light everforest-light catppuccin-latte tokyonight-day gruvbox-light
+set -g ALL_THEMES (bash -lc "source \"$devbase_root/libs/theme-registry.sh\"; get_theme_ids")
+set -g LIGHT_THEMES (bash -lc "source \"$devbase_root/libs/theme-registry.sh\"; get_light_theme_ids")
 
 # === Helper Functions ===
 function handle_sigint --on-signal INT
@@ -69,21 +69,8 @@ function get_mapped_value
             __devbase_theme_get_k9s_skin $theme
         
         case "vscode"
-            # VS Code theme names
-            switch $theme
-                case "everforest-dark"; echo "Everforest Dark"
-                case "everforest-light"; echo "Everforest Light"
-                case "catppuccin-mocha"; echo "Catppuccin Mocha"
-                case "catppuccin-latte"; echo "Catppuccin Latte"
-                case "tokyonight-night"; echo "Tokyo Night"
-                case "tokyonight-day"; echo "Tokyo Night Light"
-                case "gruvbox-dark"; echo "Gruvbox Dark Medium"
-                case "gruvbox-light"; echo "Gruvbox Light Medium"
-                case "nord"; echo "Nord"
-                case "dracula"; echo "Dracula"
-                case "solarized-dark"; echo "Solarized Dark"
-                case "solarized-light"; echo "Solarized Light"
-            end
+            # VS Code theme names (from registry)
+            bash -lc "source \"$devbase_root/libs/theme-registry.sh\"; get_vscode_theme_name \"$theme\""
     end
 end
 

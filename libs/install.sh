@@ -14,98 +14,15 @@ fi
 
 # shellcheck disable=SC1091 # Loaded via DEVBASE_ROOT at runtime
 source "${DEVBASE_ROOT}/libs/install-context.sh"
+source "${DEVBASE_ROOT}/libs/theme-registry.sh"
+source "${DEVBASE_ROOT}/libs/font-registry.sh"
 
 set -Euo pipefail
 
-# =============================================================================
-# ERROR HANDLING POLICY
-# =============================================================================
-# Fatal (die):  Missing prerequisites, corrupted config, security violations.
-# Soft (return 1):  Optional features, network glitches, missing extras.
-# The ERR trap below logs failures but does not abort - callers decide severity.
-# =============================================================================
-
-# Error trap - log command failures to whiptail or terminal.
-# Note: Without `set -e`, the ERR trap only fires for commands whose failure
-# propagates (i.e., not inside `if`/`while`/`&&`/`||` guards). The `-E` flag
-# ensures the trap inherits into functions and subshells.
-trap '_handle_error_trap "$LINENO" "$BASH_COMMAND"' ERR
-
-_handle_error_trap() {
-  local line="$1"
-  local cmd="$2"
-  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-    _wt_log "fail" "Error on line $line: $cmd"
-  else
-    printf "Error on line %d, command: %s\n" "$line" "$cmd"
-  fi
-}
-
-_get_trap_command() {
-  local trap_line="$1"
-  local signal="$2"
-  local cmd=""
-
-  if [[ "$trap_line" =~ ^trap\ --\ \'(.*)\'\ "$signal"$ ]]; then
-    cmd="${BASH_REMATCH[1]}"
-  fi
-
-  printf "%s" "$cmd"
-}
-
-_DEVBASE_PREV_TRAP_INT="$(_get_trap_command "$(trap -p INT)" "INT")"
-_DEVBASE_PREV_TRAP_TERM="$(_get_trap_command "$(trap -p TERM)" "TERM")"
-
-_run_prev_trap() {
-  local signal="$1"
-  local prev_cmd=""
-
-  case "$signal" in
-  INT)
-    prev_cmd="${_DEVBASE_PREV_TRAP_INT:-}"
-    ;;
-  TERM)
-    prev_cmd="${_DEVBASE_PREV_TRAP_TERM:-}"
-    ;;
-  esac
-
-  if [[ -n "$prev_cmd" && "$prev_cmd" != "handle_interrupt" ]]; then
-    if [[ "$prev_cmd" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && declare -f "$prev_cmd" &>/dev/null; then
-      "$prev_cmd"
-    else
-      printf "Skipping unsafe prior trap for %s\n" "$signal" >&2
-    fi
-  fi
-}
-
-# Brief: Handle SIGINT/SIGTERM by cleaning up and exiting with code 130
-# Params: $1 - signal name (INT or TERM)
-# Uses: cleanup_temp_directory, stop_installation_progress (functions)
-# Returns: exits with 130
-# Side-effects: Cleans temp directory, stops progress display, prints cancellation message, exits
-handle_interrupt() {
-  local signal="${1:-INT}"
-  cleanup_temp_directory
-  # Stop persistent gauge first (if running)
-  stop_installation_progress 2>/dev/null || true
-  # In whiptail mode, show progress log then cancellation dialog
-  if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
-    # Show what was completed before cancellation (if any progress was made)
-    if [[ ${#_WT_LOG[@]} -gt 0 ]]; then
-      _wt_show_log "Progress Before Cancellation"
-    fi
-    whiptail --backtitle "$WT_BACKTITLE" --title "Cancelled" \
-      --msgbox "Installation cancelled by user (Ctrl+C)$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
-  else
-    printf "\n\nInstallation cancelled by user (Ctrl+C)\n" >&2
-  fi
-  _run_prev_trap "$signal"
-  exit 130
-}
-
-trap cleanup_temp_directory EXIT
-trap 'handle_interrupt INT' INT
-trap 'handle_interrupt TERM' TERM
+# shellcheck disable=SC1091 # Loaded via DEVBASE_ROOT at runtime
+source "${DEVBASE_ROOT}/libs/install-errors.sh"
+# shellcheck disable=SC1091 # Loaded via DEVBASE_ROOT at runtime
+source "${DEVBASE_ROOT}/libs/install-phases.sh"
 
 # Source user preferences collector based on TUI mode
 # DEVBASE_TUI_MODE is set by select_tui_mode() in setup.sh before sourcing this file
@@ -732,32 +649,12 @@ finalize_installation() {
 
 _get_theme_display_name() {
   local theme="$1"
-  case "$theme" in
-  everforest-dark) echo "Everforest Dark" ;;
-  everforest-light) echo "Everforest Light" ;;
-  catppuccin-mocha) echo "Catppuccin Mocha" ;;
-  catppuccin-latte) echo "Catppuccin Latte" ;;
-  tokyonight-night) echo "Tokyo Night" ;;
-  tokyonight-day) echo "Tokyo Night Day" ;;
-  gruvbox-dark) echo "Gruvbox Dark" ;;
-  gruvbox-light) echo "Gruvbox Light" ;;
-  nord) echo "Nord" ;;
-  dracula) echo "Dracula" ;;
-  solarized-dark) echo "Solarized Dark" ;;
-  solarized-light) echo "Solarized Light" ;;
-  *) echo "$theme" ;;
-  esac
+  get_theme_display_name "$theme"
 }
 
 _get_font_display_name() {
   local font="$1"
-  case "$font" in
-  jetbrains-mono) echo "JetBrains Mono Nerd Font" ;;
-  firacode) echo "Fira Code Nerd Font" ;;
-  cascadia-code) echo "Cascadia Code Nerd Font" ;;
-  monaspace) echo "Monaspace Nerd Font" ;;
-  *) echo "$font" ;;
-  esac
+  get_font_display_name "$font"
 }
 
 display_configuration_summary() {
@@ -884,59 +781,6 @@ set_default_values() {
       show_progress info "Proxy configured: ${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
     fi
   fi
-}
-
-run_preflight_phase() {
-  set_default_values
-  init_install_context
-  rotate_backup_directories
-  validate_environment
-  validate_source_repository
-  setup_installation_paths
-
-  # Run all pre-flight checks (Ubuntu version, disk space, paths, GitHub token)
-  # Note: Sudo access is acquired in run_preflight_checks
-  tui_blank_line
-  run_preflight_checks || return 1
-}
-
-run_configuration_phase() {
-  bootstrap_for_configuration || return 1
-  collect_user_configuration || return 1
-  display_configuration_summary || return 1
-}
-
-run_installation_phase() {
-  # Start persistent progress display for whiptail mode
-  # This keeps a gauge on screen throughout installation to prevent terminal flicker
-  start_installation_progress
-
-  show_phase "Preparing system..."
-  if ! prepare_system; then
-    stop_installation_progress
-    return 1
-  fi
-
-  if ! perform_installation; then
-    stop_installation_progress
-    return 1
-  fi
-
-  if ! write_installation_summary; then
-    stop_installation_progress
-    return 1
-  fi
-
-  # Stop persistent progress display before showing completion
-  stop_installation_progress
-}
-
-run_finalize_phase() {
-  tui_blank_line
-  show_completion_message
-  show_installation_warnings
-  configure_fonts_post_install
-  handle_wsl_restart
 }
 
 # Brief: Main installation orchestration function

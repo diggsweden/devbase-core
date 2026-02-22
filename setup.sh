@@ -229,6 +229,15 @@ initialize_devbase_paths() {
 }
 
 load_devbase_libraries() {
+  local defaults_file="${DEVBASE_ROOT}/config/defaults.env"
+  if [[ -f "$defaults_file" ]]; then
+    # shellcheck disable=SC1090 # File path resolved at runtime
+    source "$defaults_file"
+  else
+    echo "ERROR: Defaults file not found: $defaults_file" >&2
+    return 1
+  fi
+
   source "${DEVBASE_LIBS}/constants.sh"
   source "${DEVBASE_LIBS}/define-colors.sh"
   source "${DEVBASE_LIBS}/utils.sh"
@@ -307,7 +316,8 @@ run_installation() {
 main() {
   parse_arguments "$@"
   initialize_devbase_paths
-  load_devbase_libraries
+  load_devbase_libraries || return 1
+
   apply_setup_defaults
 
   if [[ "${SHOW_VERSION}" == "true" ]]; then

@@ -97,29 +97,13 @@ _get_merged_packages() {
 # Returns: apt, dnf
 _get_pkg_manager() {
   if [[ -n "$_PARSE_PKG_MANAGER" ]]; then
-    echo "$_PARSE_PKG_MANAGER"
+    printf '%s' "$_PARSE_PKG_MANAGER"
     return
   fi
 
-  # Try to use distro.sh if available
-  if declare -f get_pkg_manager &>/dev/null; then
-    _PARSE_PKG_MANAGER=$(get_pkg_manager)
-  elif [[ -f "${DEVBASE_ROOT:-}/libs/distro.sh" ]]; then
-    # shellcheck source=distro.sh
-    source "${DEVBASE_ROOT}/libs/distro.sh"
-    _PARSE_PKG_MANAGER=$(get_pkg_manager)
-  else
-    # Fallback: detect by available command
-    if command -v apt &>/dev/null; then
-      _PARSE_PKG_MANAGER="apt"
-    elif command -v dnf &>/dev/null; then
-      _PARSE_PKG_MANAGER="dnf"
-    else
-      _PARSE_PKG_MANAGER="apt" # Default fallback
-    fi
-  fi
-
-  echo "$_PARSE_PKG_MANAGER"
+  declare -f get_pkg_manager &>/dev/null || source "${DEVBASE_ROOT:?}/libs/distro.sh"
+  _PARSE_PKG_MANAGER=$(get_pkg_manager)
+  printf '%s' "$_PARSE_PKG_MANAGER"
 }
 
 # Brief: Check if package should be skipped based on tags

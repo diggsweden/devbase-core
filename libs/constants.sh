@@ -7,6 +7,21 @@
 # Centralized external URLs and constants
 # All hardcoded download/API URLs in one place for easy auditing and updates
 
+[[ -n "${_DEVBASE_CONSTANTS_LOADED:-}" ]] && return 0
+readonly _DEVBASE_CONSTANTS_LOADED=1
+
+# =============================================================================
+# DEFAULTS (sourced if available)
+# =============================================================================
+if [[ -z "${DEVBASE_DEFAULT_THEME:-}" ]]; then
+  default_env_root="${DEVBASE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+  default_env_file="${default_env_root}/config/defaults.env"
+  if [[ -f "$default_env_file" ]]; then
+    # shellcheck disable=SC1090 # Path resolved at runtime
+    source "$default_env_file"
+  fi
+fi
+
 # =============================================================================
 # MISE (TOOL VERSION MANAGER)
 # =============================================================================
@@ -50,11 +65,6 @@ readonly DEVBASE_URL_FISHER_REPO="https://github.com/jorgebucaran/fisher.git"
 # FLATPAK
 # =============================================================================
 readonly DEVBASE_URL_FLATHUB_REPO="https://dl.flathub.org/repo/flathub.flatpakrepo"
-
-# =============================================================================
-# DEFAULTS
-# =============================================================================
-readonly DEVBASE_DEFAULT_PACKS="java node python go ruby"
 
 # =============================================================================
 # NETWORK CONNECTIVITY TEST SITES

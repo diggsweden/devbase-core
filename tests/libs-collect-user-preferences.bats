@@ -301,7 +301,7 @@ EOF
 
   load_saved_preferences >/dev/null 2>&1
 
-  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby"
+  assert_equal "$DEVBASE_SELECTED_PACKS" "$DEVBASE_DEFAULT_PACKS"
 }
 
 @test "load_saved_preferences reads comma-separated packs" {
@@ -411,7 +411,7 @@ EOF
 
   load_saved_preferences >/dev/null 2>&1
 
-  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby"
+  assert_equal "$DEVBASE_SELECTED_PACKS" "$DEVBASE_DEFAULT_PACKS"
 }
 
 @test "write_user_preferences creates file with all current fields" {
@@ -467,7 +467,7 @@ EOF
   assert_equal "$DEVBASE_THEME" "gruvbox-dark"
   assert_equal "$DEVBASE_GIT_AUTHOR" "Original User"
   # Packs should default since missing
-  assert_equal "$DEVBASE_SELECTED_PACKS" "java node python go ruby"
+  assert_equal "$DEVBASE_SELECTED_PACKS" "$DEVBASE_DEFAULT_PACKS"
 
   # Now write - should include packs
   write_user_preferences >/dev/null 2>&1

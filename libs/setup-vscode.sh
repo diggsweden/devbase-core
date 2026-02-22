@@ -9,6 +9,8 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+source "${DEVBASE_ROOT}/libs/theme-registry.sh"
+
 # Brief: Detect WSL distro name using multiple methods
 # Returns: Echoes distro name to stdout
 _detect_wsl_distro() {
@@ -201,21 +203,7 @@ _get_vscode_settings_dir() {
 
 _get_vscode_theme_name() {
   local theme="${1:-$(get_default_theme)}"
-  case "$theme" in
-  everforest-dark) echo "Everforest Dark" ;;
-  everforest-light) echo "Everforest Light" ;;
-  catppuccin-mocha) echo "Catppuccin Mocha" ;;
-  catppuccin-latte) echo "Catppuccin Latte" ;;
-  tokyonight-night) echo "Tokyo Night" ;;
-  tokyonight-day) echo "Tokyo Night Light" ;;
-  gruvbox-dark) echo "Gruvbox Dark Medium" ;;
-  gruvbox-light) echo "Gruvbox Light Medium" ;;
-  nord) echo "Nord" ;;
-  dracula) echo "Dracula Theme" ;;
-  solarized-dark) echo "Solarized Dark+" ;;
-  solarized-light) echo "Solarized Light+" ;;
-  *) echo "Everforest Dark" ;;
-  esac
+  get_vscode_theme_name "$theme"
 }
 
 _backup_vscode_settings() {

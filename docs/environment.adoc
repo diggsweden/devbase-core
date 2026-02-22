@@ -13,6 +13,8 @@ This document covers:
 
 For interactive installation, the installer prompts for required values (Git, theme, editor).
 
+Defaults are defined in `config/defaults.env` and referenced throughout the installer.
+
 == A) Post-Installation Variables (Persistent)
 
 These are exported in your Fish shell after installation:
@@ -73,7 +75,7 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 
 | `DEVBASE_THEME`
 | `everforest-dark`
-| Theme: `everforest-dark`, `everforest-light`, `catppuccin-mocha`, `catppuccin-latte`, `tokyonight-night`, `tokyonight-day`, `gruvbox-dark`, `gruvbox-light`, `nord`, `dracula`, `solarized-dark`, or `solarized-light`
+| Theme: `everforest-dark`, `everforest-light`, `catppuccin-mocha`, `catppuccin-latte`, `tokyonight-night`, `tokyonight-day`, `gruvbox-dark`, `gruvbox-light`, `nord`, `dracula`, `solarized-dark`, or `solarized-light` (authoritative list in `libs/theme-registry.sh`)
 
 | `EDITOR`
 | `nvim`

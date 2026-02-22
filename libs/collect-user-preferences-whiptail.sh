@@ -15,6 +15,8 @@ fi
 # Source common functions shared with gum implementation
 # shellcheck source=collect-user-preferences-common.sh
 source "${DEVBASE_ROOT}/libs/collect-user-preferences-common.sh"
+source "${DEVBASE_ROOT}/libs/theme-registry.sh"
+source "${DEVBASE_ROOT}/libs/font-registry.sh"
 
 # =============================================================================
 # WHIPTAIL CONFIGURATION
@@ -223,27 +225,14 @@ collect_theme_preference() {
 
   # Build radiolist items - mark current as selected
   local items=()
-  local themes=(
-    "everforest-dark:◐ Soft warm greens, easy on eyes"
-    "catppuccin-mocha:◐ Pastel colors, cozy modern feel"
-    "tokyonight-night:◐ Vibrant neon blues and purples"
-    "gruvbox-dark:◐ Retro warm oranges and yellows"
-    "nord:◐ Arctic blues, cool and elegant"
-    "dracula:◐ Purple and pink, popular choice"
-    "solarized-dark:◐ Precision engineered colors"
-    "everforest-light:◑ Soft warm greens, comfortable"
-    "catppuccin-latte:◑ Pastel colors, gentle on eyes"
-    "tokyonight-day:◑ Clean bright blues"
-    "gruvbox-light:◑ Retro warm, high readability"
-    "solarized-light:◑ Precision engineered colors"
-  )
 
-  for entry in "${themes[@]}"; do
-    local tag="${entry%%:*}"
-    local desc="${entry#*:}"
+  for theme in "${THEME_ORDER[@]}"; do
+    local key
+    key=$(theme_registry_key "$theme")
+    local desc="${THEME_DESCRIPTIONS[$key]}"
     local status="OFF"
-    [[ "$tag" == "$current" ]] && status="ON"
-    items+=("$tag" "$desc" "$status")
+    [[ "$theme" == "$current" ]] && status="ON"
+    items+=("$theme" "$desc" "$status")
   done
 
   local choice
@@ -275,19 +264,13 @@ collect_font_preference() {
 
   local current="${DEVBASE_FONT:-$(get_default_font)}"
   local items=()
-  local fonts=(
-    "monaspace:Superfamily, multiple styles"
-    "jetbrains-mono:Clear, excellent readability"
-    "firacode:Popular, extensive ligatures"
-    "cascadia-code:Microsoft, Powerline glyphs"
-  )
 
-  for entry in "${fonts[@]}"; do
-    local tag="${entry%%:*}"
-    local desc="${entry#*:}"
+  for font in "${FONT_ORDER[@]}"; do
+    local desc
+    desc=$(get_font_description "$font")
     local status="OFF"
-    [[ "$tag" == "$current" ]] && status="ON"
-    items+=("$tag" "$desc" "$status")
+    [[ "$font" == "$current" ]] && status="ON"
+    items+=("$font" "$desc" "$status")
   done
 
   local choice

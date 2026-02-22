@@ -7,6 +7,7 @@
 
 source "${DEVBASE_ROOT}/libs/defaults.sh"
 source "${DEVBASE_ROOT}/libs/install-context.sh"
+source "${DEVBASE_ROOT}/libs/font-registry.sh"
 
 # Global: Cached tool versions from packages.yaml (populated by _setup_custom_parser)
 declare -gA TOOL_VERSIONS 2>/dev/null || true
@@ -18,29 +19,13 @@ _CUSTOM_PKG_FORMAT=""
 # Returns: deb or rpm
 _get_custom_pkg_format() {
   if [[ -n "$_CUSTOM_PKG_FORMAT" ]]; then
-    echo "$_CUSTOM_PKG_FORMAT"
+    printf '%s' "$_CUSTOM_PKG_FORMAT"
     return
   fi
 
-  # Try to use distro.sh if available
-  if declare -f get_pkg_format &>/dev/null; then
-    _CUSTOM_PKG_FORMAT=$(get_pkg_format)
-  elif [[ -f "${DEVBASE_ROOT:-}/libs/distro.sh" ]]; then
-    # shellcheck source=distro.sh
-    source "${DEVBASE_ROOT}/libs/distro.sh"
-    _CUSTOM_PKG_FORMAT=$(get_pkg_format)
-  else
-    # Fallback: detect by available command
-    if command -v dpkg &>/dev/null; then
-      _CUSTOM_PKG_FORMAT="deb"
-    elif command -v rpm &>/dev/null; then
-      _CUSTOM_PKG_FORMAT="rpm"
-    else
-      _CUSTOM_PKG_FORMAT="deb" # Default fallback
-    fi
-  fi
-
-  echo "$_CUSTOM_PKG_FORMAT"
+  declare -f get_pkg_format &>/dev/null || source "${DEVBASE_ROOT:?}/libs/distro.sh"
+  _CUSTOM_PKG_FORMAT=$(get_pkg_format)
+  printf '%s' "$_CUSTOM_PKG_FORMAT"
 }
 
 # Brief: Install a package based on format (deb or rpm)
@@ -306,8 +291,8 @@ install_jmc() {
           jmc_icon="java"
         fi
 
-        mkdir -p "$HOME/.local/share/applications"
-        cat >"$HOME/.local/share/applications/jmc.desktop" <<DESKTOP_EOF
+        mkdir -p "${XDG_DATA_HOME}/applications"
+        cat >"${XDG_DATA_HOME}/applications/jmc.desktop" <<DESKTOP_EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -605,52 +590,21 @@ install_fisher() {
 # Returns: Echoes "font_name|font_zip_name|font_dir_name|font_display_name|timeout|font_family_name" to stdout
 _determine_font_details() {
   local font_choice="$1"
-  local font_name=""
-  local font_zip_name=""
-  local font_dir_name=""
-  local font_display_name=""
-  local timeout="300"
-  local font_family_name=""
+  local timeout=120
 
-  case "$font_choice" in
-  jetbrains-mono)
-    font_name="JetBrainsMono"
-    font_zip_name="JetBrainsMono.zip"
-    font_dir_name="JetBrainsMonoNerdFont"
-    font_display_name="JetBrains Mono Nerd Font"
-    font_family_name="JetBrainsMono Nerd Font Mono"
-    ;;
-  firacode)
-    font_name="FiraCode"
-    font_zip_name="FiraCode.zip"
-    font_dir_name="FiraCodeNerdFont"
-    font_display_name="Fira Code Nerd Font"
-    font_family_name="FiraCode Nerd Font Mono"
-    timeout="180"
-    ;;
-  cascadia-code)
-    font_name="CascadiaCode"
-    font_zip_name="CascadiaCode.zip"
-    font_dir_name="CascadiaCodeNerdFont"
-    font_display_name="Cascadia Code Nerd Font"
-    font_family_name="CaskaydiaCove Nerd Font Mono"
-    ;;
-  monaspace)
-    font_name="Monaspace"
-    font_zip_name="Monaspace.zip"
-    font_dir_name="MonaspaceNerdFont"
-    font_display_name="Monaspace Nerd Font"
-    font_family_name="MonaspiceNe Nerd Font Mono"
-    ;;
-  *)
+  local font_details
+  font_details=$(get_font_install_details "$font_choice")
+  if [[ -z "$font_details" ]]; then
     add_install_warning "Unknown font choice: $font_choice, defaulting to JetBrains Mono"
-    font_name="JetBrainsMono"
-    font_zip_name="JetBrainsMono.zip"
-    font_dir_name="JetBrainsMonoNerdFont"
-    font_display_name="JetBrains Mono Nerd Font"
-    font_family_name="JetBrainsMono Nerd Font Mono"
-    ;;
-  esac
+    font_choice="jetbrains-mono"
+    font_details=$(get_font_install_details "$font_choice")
+  fi
+
+  local font_name font_zip_name font_dir_name font_family_name
+  IFS='|' read -r font_name font_zip_name font_dir_name font_family_name <<<"$font_details"
+
+  local font_display_name
+  font_display_name=$(get_font_display_name "$font_choice")
 
   echo "$font_name|$font_zip_name|$font_dir_name|$font_display_name|$timeout|$font_family_name"
 }
@@ -757,12 +711,14 @@ _extract_font_from_cache() {
 _download_all_fonts_to_cache() {
   local cache_dir="$1"
   local nf_version="$2"
-  local all_fonts="jetbrains-mono firacode cascadia-code monaspace"
   local failed_count=0
+  local -a all_fonts
+
+  mapfile -t all_fonts < <(get_font_ids)
 
   show_progress info "Downloading all Nerd Fonts ($nf_version) to cache..."
 
-  for font in $all_fonts; do
+  for font in "${all_fonts[@]}"; do
     local font_details
     font_details=$(_determine_font_details "$font")
     local font_name font_zip_name font_dir_name font_display_name timeout
@@ -1219,8 +1175,8 @@ _configure_intellij_vmoptions() {
 _create_intellij_desktop_file() {
   local install_dir="$1"
 
-  mkdir -p "$HOME/.local/share/applications"
-  cat >"$HOME/.local/share/applications/jetbrains-idea.desktop" <<EOF
+  mkdir -p "${XDG_DATA_HOME}/applications"
+  cat >"${XDG_DATA_HOME}/applications/jetbrains-idea.desktop" <<EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -1256,7 +1212,7 @@ install_intellij_idea() {
   fi
 
   local version="${TOOL_VERSIONS[intellij_idea]}"
-  local extract_dir="$HOME/.local/share/JetBrains"
+  local extract_dir="${XDG_DATA_HOME}/JetBrains"
   local install_root="$extract_dir/IntelliJIdea"
 
   if [[ -d "$install_root" ]]; then

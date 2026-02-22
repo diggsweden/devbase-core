@@ -15,6 +15,8 @@ fi
 # Source common functions shared with whiptail implementation
 # shellcheck source=collect-user-preferences-common.sh
 source "${DEVBASE_ROOT}/libs/collect-user-preferences-common.sh"
+source "${DEVBASE_ROOT}/libs/theme-registry.sh"
+source "${DEVBASE_ROOT}/libs/font-registry.sh"
 
 # =============================================================================
 # GUM STYLING CONFIGURATION (Everforest-dark theme)
@@ -308,49 +310,16 @@ collect_theme_preference() {
 
   local current="${DEVBASE_THEME:-$(get_default_theme)}"
 
-  # Theme data: "bg,fg,keyword,function,string,comment"
-  local -A theme_colors=(
-    ["everforest-dark"]="236,223,167,108,142,245"
-    ["catppuccin-mocha"]="236,223,203,139,166,245"
-    ["tokyonight-night"]="234,223,203,116,158,243"
-    ["gruvbox-dark"]="235,223,167,108,142,245"
-    ["nord"]="236,223,168,136,150,243"
-    ["dracula"]="236,223,212,117,84,243"
-    ["solarized-dark"]="235,223,168,37,106,241"
-    ["everforest-light"]="230,235,124,66,107,245"
-    ["catppuccin-latte"]="231,235,127,37,71,245"
-    ["tokyonight-day"]="231,235,128,37,71,245"
-    ["gruvbox-light"]="230,235,124,66,106,245"
-    ["solarized-light"]="230,235,168,37,106,245"
-  )
-
-  # Brief descriptions
-  local -A theme_desc=(
-    ["everforest-dark"]="◐ Warm, soft"
-    ["catppuccin-mocha"]="◐ Soothing pastel"
-    ["tokyonight-night"]="◐ Clean, dark"
-    ["gruvbox-dark"]="◐ Retro groove"
-    ["nord"]="◐ Arctic, bluish"
-    ["dracula"]="◐ Dark, vivid"
-    ["solarized-dark"]="◐ Precision colors"
-    ["everforest-light"]="◑ Warm, soft"
-    ["catppuccin-latte"]="◑ Soothing pastel"
-    ["tokyonight-day"]="◑ Clean, bright"
-    ["gruvbox-light"]="◑ Retro groove"
-    ["solarized-light"]="◑ Precision colors"
-  )
-
-  local -a themes=(
-    everforest-dark catppuccin-mocha tokyonight-night gruvbox-dark
-    nord dracula solarized-dark
-    everforest-light catppuccin-latte tokyonight-day gruvbox-light solarized-light
-  )
+  local -a themes=("${THEME_ORDER[@]}")
 
   # Build display options with theme name as prefix for extraction
   local -a options=()
   for theme in "${themes[@]}"; do
-    local colors="${theme_colors[$theme]}"
-    local desc="${theme_desc[$theme]}"
+    local key
+    key=$(theme_registry_key "$theme")
+    local colors="${THEME_PREVIEW_COLORS[$key]}"
+    local desc="${THEME_DESCRIPTIONS[$key]}"
+
     IFS=',' read -r bg fg kw fn str cm <<<"$colors"
 
     # Build colorized code snippet with background (Go syntax)
@@ -395,22 +364,15 @@ collect_font_preference() {
 
   local current="${DEVBASE_FONT:-$(get_default_font)}"
 
-  local -A font_info=(
-    ["monaspace"]="Superfamily, multiple styles"
-    ["jetbrains-mono"]="Clear, excellent readability"
-    ["firacode"]="Popular, extensive ligatures"
-    ["cascadia-code"]="Microsoft, Powerline glyphs"
-  )
-
-  local -a fonts=(monaspace jetbrains-mono firacode cascadia-code)
-
   # Build display options with font name as prefix for extraction
   local -a options=()
-  for font in "${fonts[@]}"; do
+  for font in "${FONT_ORDER[@]}"; do
     local check=" "
     [[ "$font" == "$current" ]] && check="✓"
     # Font name is first, making extraction easy
-    options+=("$(printf '%-15s %s %s' "$font" "$check" "${font_info[$font]}")")
+    local desc
+    desc=$(get_font_description "$font")
+    options+=("$(printf '%-15s %s %s' "$font" "$check" "$desc")")
   done
 
   local choice

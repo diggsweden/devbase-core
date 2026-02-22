@@ -758,7 +758,7 @@ python"
 }
 
 @test "get_core_runtimes includes all runtime types" {
-	export SELECTED_PACKS="java node python go ruby"
+	export SELECTED_PACKS="$DEVBASE_DEFAULT_PACKS"
   source "${DEVBASE_LIBS}/parse-packages.sh"
   
   run get_core_runtimes

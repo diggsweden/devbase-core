@@ -23,6 +23,7 @@ common_setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
   export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
   export DEVBASE_TUI_MODE='none' # Disable whiptail for predictable test output
+  source "${DEVBASE_ROOT}/libs/constants.sh"
 }
 
 # Standard test teardown - cleans up temp dir safely

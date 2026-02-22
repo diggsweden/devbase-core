@@ -198,8 +198,8 @@ install_mise() {
 
     # Clean up fish hooks that hardcode /usr/bin/mise (from apt package)
     local fish_user_hooks=(
-      "$HOME/.config/fish/functions/fish_command_not_found.fish"
-      "$HOME/.config/fish/conf.d/mise.fish"
+      "${XDG_CONFIG_HOME}/fish/functions/fish_command_not_found.fish"
+      "${XDG_CONFIG_HOME}/fish/conf.d/mise.fish"
     )
     for file in "${fish_user_hooks[@]}"; do
       if [[ -f "$file" ]] && grep -q "/usr/bin/mise" "$file" 2>/dev/null; then

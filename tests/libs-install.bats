@@ -73,6 +73,7 @@ teardown() {
 
 @test "_get_theme_display_name returns correct display names" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  source "${DEVBASE_ROOT}/libs/theme-registry.sh"
   source <(sed -n '/^_get_theme_display_name()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   result=$(_get_theme_display_name "everforest-dark")
@@ -90,6 +91,7 @@ teardown() {
 
 @test "_get_theme_display_name returns original for unknown themes" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  source "${DEVBASE_ROOT}/libs/theme-registry.sh"
   source <(sed -n '/^_get_theme_display_name()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   result=$(_get_theme_display_name "unknown-theme")
@@ -98,6 +100,7 @@ teardown() {
 
 @test "_get_font_display_name returns correct font names" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  source "${DEVBASE_ROOT}/libs/font-registry.sh"
   source <(sed -n '/^_get_font_display_name()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   result=$(_get_font_display_name "jetbrains-mono")
@@ -112,6 +115,7 @@ teardown() {
 
 @test "_get_font_display_name returns original for unknown fonts" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  source "${DEVBASE_ROOT}/libs/font-registry.sh"
   source <(sed -n '/^_get_font_display_name()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
 
   result=$(_get_font_display_name "unknown-font")
@@ -148,10 +152,10 @@ teardown() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 
   run bash -c "
+    source '${DEVBASE_ROOT}/libs/install-phases.sh'
     bootstrap_for_configuration() { return 1; }
     collect_user_configuration() { return 0; }
     display_configuration_summary() { return 0; }
-    eval \"\$(sed -n '/^run_configuration_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
     run_configuration_phase
   "
 
@@ -162,13 +166,13 @@ teardown() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 
   run bash -c "
+    source '${DEVBASE_ROOT}/libs/install-phases.sh'
     start_installation_progress() { :; }
     stop_installation_progress() { echo stopped; }
     show_phase() { :; }
     prepare_system() { return 1; }
     perform_installation() { return 0; }
     write_installation_summary() { return 0; }
-    eval \"\$(sed -n '/^run_installation_phase()/,/^}/p' '${DEVBASE_ROOT}/libs/install.sh')\"
     run_installation_phase
   "
 

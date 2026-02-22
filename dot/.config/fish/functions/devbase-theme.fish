@@ -540,11 +540,7 @@ function devbase-theme --description "Set theme for multiple CLI tools"
     if not __devbase_theme_validate $theme_name
         return 1
     end
-    
-    if not __devbase_theme_validate $theme_name
-        return 1
-    end
-    
+
     # Set environment variables
     __devbase_theme_set_environment_vars $theme_name
     

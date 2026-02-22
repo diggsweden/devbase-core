@@ -177,7 +177,7 @@ NOTE: Language packs and translated manpages are only installed when a specific 
 
 == Theme Switching
 
-Use the `devbase-theme` command to switch themes:
+Use the `devbase-theme` command to switch themes (authoritative list in `libs/theme-registry.sh`):
 
 [source,bash]
 ----
