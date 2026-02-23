@@ -495,6 +495,34 @@ install_mise_tools() {
     _install_mise_tools_gum "$full_install_log" mise_server_error
   fi
 
+  # Ensure core runtimes are activated in mise config
+  # This avoids "installed but not activated" warnings for selected packs.
+  local core_runtime_activation_log="${_DEVBASE_TEMP}/mise-core-activate.log"
+  for pack in $DEVBASE_SELECTED_PACKS; do
+    local tool=""
+    case "$pack" in
+    node) tool="node" ;;
+    python) tool="python" ;;
+    go) tool="go" ;;
+    java) tool="java" ;;
+    ruby) tool="ruby" ;;
+    rust) tool="rust" ;;
+    esac
+    [[ -z "$tool" ]] && continue
+
+    local version
+    version=$(get_tool_version "$tool")
+    [[ -z "$version" ]] && continue
+
+    if ! run_mise_from_home_dir which "$tool" &>/dev/null; then
+      show_progress info "Activating ${tool}@${version} in mise config"
+      if ! run_mise_from_home_dir use -g "${tool}@${version}" &>>"$core_runtime_activation_log"; then
+        add_install_warning "Failed to activate ${tool}@${version} in mise config"
+        add_install_warning "See log: $core_runtime_activation_log"
+      fi
+    fi
+  done
+
   # Verify critical tools are present (based on selected packs)
   # Only verify the core runtime for each selected pack
   # Second pass to catch transient install failures (quiet unless it fails)
@@ -540,9 +568,11 @@ install_mise_tools() {
       show_progress error "Missing tools (${missing[*]}) due to mise server errors (HTTP 5xx)"
       add_install_warning "This is a temporary issue with mise infrastructure. Please try again later:"
       show_progress info "  mise install ${missing[*]}"
-      die "Setup cannot continue without critical development tools"
+    else
+      show_progress warning "Missing critical development tools: ${missing[*]}"
     fi
-    die "Missing critical development tools: ${missing[*]}"
+    add_install_warning "Missing critical development tools: ${missing[*]}"
+    add_install_warning "Install manually with: mise install ${missing[*]}"
   fi
 
   # Warn if starship is missing (shell prompt depends on it)

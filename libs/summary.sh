@@ -25,6 +25,36 @@ $(if is_wsl; then echo "WSL Version: $(get_wsl_version 2>/dev/null || echo "unkn
 EOF
 }
 
+_summary_installation_status() {
+  local warning_count=${#INSTALL_WARNINGS[@]}
+  if [[ $warning_count -gt 0 ]]; then
+    cat <<EOF
+
+INSTALLATION STATUS
+===================
+Status: Completed with warnings (install incomplete)
+Warnings: $warning_count
+EOF
+  else
+    cat <<EOF
+
+INSTALLATION STATUS
+===================
+Status: Completed successfully
+EOF
+  fi
+}
+
+_summary_installation_warnings() {
+  local warning_count=${#INSTALL_WARNINGS[@]}
+  [[ $warning_count -eq 0 ]] && return 0
+
+  printf "\nINSTALLATION WARNINGS\n=====================\n"
+  for warning in "${INSTALL_WARNINGS[@]}"; do
+    printf "  • %s\n" "$warning"
+  done
+}
+
 _summary_system_config() {
   cat <<EOF
 
@@ -223,7 +253,10 @@ write_installation_summary() {
 
   {
     _summary_header
+    _summary_installation_status
+    _summary_installation_warnings
     _summary_system_config
+
     _summary_development_languages
     _summary_shell_terminal
     _summary_development_tools

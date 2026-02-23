@@ -236,6 +236,11 @@ _show_completion_message_gum() {
   echo
   gum style --foreground 240 "Summary"
   echo "  Environment: ${_DEVBASE_ENV:-unknown}"
+  if [[ ${#INSTALL_WARNINGS[@]} -gt 0 ]]; then
+    echo "  Status:      Completed with warnings"
+  else
+    echo "  Status:      Completed successfully"
+  fi
   echo "  Summary:     ${DEVBASE_CONFIG_DIR}/install-summary.txt"
   echo "  Verify:      ./verify/verify-install-check.sh"
   echo
@@ -290,8 +295,14 @@ _show_completion_message_whiptail() {
   local message=""
 
   message+="Environment: ${_DEVBASE_ENV:-unknown}\n"
+  if [[ ${#INSTALL_WARNINGS[@]} -gt 0 ]]; then
+    message+="Status: Completed with warnings\n"
+  else
+    message+="Status: Completed successfully\n"
+  fi
   message+="Summary: ${DEVBASE_CONFIG_DIR}/install-summary.txt\n"
   message+="Verify: ./verify/verify-install-check.sh\n"
+
   message+="\n"
 
   if [[ "${GENERATED_SSH_PASSPHRASE:-}" == "true" ]] && [[ -f "${DEVBASE_CONFIG_DIR}/.ssh_passphrase.tmp" ]]; then
