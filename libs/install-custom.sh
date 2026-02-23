@@ -1067,7 +1067,7 @@ _download_intellij_archive() {
   show_progress_stderr info "Downloading IntelliJ IDEA ${version} (~900MB, this may take a few minutes)..."
   # Use 600 second (10 minute) timeout for large file download
   if ! download_with_cache "$idea_url" "$idea_tar" "intellij-${version}.tar.gz" "IntelliJ IDEA" \
-    "$idea_checksum_url" "" 600; then
+    "$idea_checksum_url" "" 600 1>&2; then
     add_install_warning "IntelliJ IDEA download failed - skipping"
     return 1
   fi

@@ -222,12 +222,18 @@ EOF
 
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
 
-  download_with_cache() { return 0; }
+  download_with_cache() {
+    echo "download output"
+    echo "download error" >&2
+    return 0
+  }
 
   run --separate-stderr _download_intellij_archive "2025.3.3" "${TEST_DIR}"
   assert_success
   assert_output "${TEST_DIR}/intellij-idea.tar.gz"
   [[ "$stderr" == *"Downloading IntelliJ IDEA 2025.3.3"* ]]
+  [[ "$stderr" == *"download output"* ]]
+  [[ "$stderr" == *"download error"* ]]
 }
 
 @test "install_intellij_idea updates when version differs" {
