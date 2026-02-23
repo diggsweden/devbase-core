@@ -209,6 +209,27 @@ EOF
   assert_success
 }
 
+@test "_download_intellij_archive only echoes tar path" {
+  export DEVBASE_DOT="${TEST_DIR}/dot"
+  export DEVBASE_SELECTED_PACKS=""
+
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom: {}
+packs: {}
+EOF
+
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  download_with_cache() { return 0; }
+
+  run --separate-stderr _download_intellij_archive "2025.3.3" "${TEST_DIR}"
+  assert_success
+  assert_output "${TEST_DIR}/intellij-idea.tar.gz"
+  [[ "$stderr" == *"Downloading IntelliJ IDEA 2025.3.3"* ]]
+}
+
 @test "install_intellij_idea updates when version differs" {
   export DEVBASE_INSTALL_INTELLIJ="true"
   export DEVBASE_DOT="${TEST_DIR}/dot"

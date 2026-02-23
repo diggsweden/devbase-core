@@ -1064,7 +1064,7 @@ _download_intellij_archive() {
   local idea_checksum_url="${idea_url}.sha256"
   local idea_tar="${temp_dir}/intellij-idea.tar.gz"
 
-  show_progress info "Downloading IntelliJ IDEA ${version} (~900MB, this may take a few minutes)..."
+  show_progress_stderr info "Downloading IntelliJ IDEA ${version} (~900MB, this may take a few minutes)..."
   # Use 600 second (10 minute) timeout for large file download
   if ! download_with_cache "$idea_url" "$idea_tar" "intellij-${version}.tar.gz" "IntelliJ IDEA" \
     "$idea_checksum_url" "" 600; then
@@ -1084,7 +1084,7 @@ _extract_and_install_intellij() {
   local extract_dir="$2"
 
   mkdir -p "$extract_dir"
-  show_progress info "Extracting IntelliJ IDEA (this may take a few minutes)..." >&2
+  show_progress_stderr info "Extracting IntelliJ IDEA (this may take a few minutes)..."
 
   if ! tar -xzf "$idea_tar" -C "$extract_dir"; then
     add_install_warning "Failed to extract IntelliJ IDEA"

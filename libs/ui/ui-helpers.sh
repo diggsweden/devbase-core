@@ -78,6 +78,13 @@ show_progress() {
   fi
 }
 
+# Brief: Display progress messages to stderr
+# Params: $1 - level, $@ - message text
+# Returns: 0 always
+show_progress_stderr() {
+  show_progress "$@" >&2
+}
+
 # Brief: Display a major installation phase header
 # Params: $1 - phase name
 # Uses: DEVBASE_TUI_MODE (global)
