@@ -106,7 +106,7 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | Comma-separated URL patterns allowed without checksums
 
 | `DEVBASE_MISE_INSTALLER_SHA256`
-| _(unset)_
+| `41955e91c5b9d9f0b27dff80632c9752dfb3866979bfc50cbc22963ec0ba82d3`
 | SHA256 checksum required to verify the mise installer script
 |===
 
