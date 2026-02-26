@@ -159,10 +159,15 @@ setup_sudo_and_system() {
 # Returns: 0 on success (dies on failure)
 # Side-effects: Checks for required directories, exits if missing
 validate_source_repository() {
-  local required_dirs=("devbase_files" "dot" "environments" "libs")
+  local required_dirs=(
+    "${DEVBASE_ROOT}/devbase_files"
+    "${DEVBASE_ROOT}/dot"
+    "${DEVBASE_ROOT}/environments"
+    "${DEVBASE_ROOT}/libs"
+  )
 
   for dir in "${required_dirs[@]}"; do
-    validate_dir_exists "$dir" "Required directory" || die "Directory missing: $dir (not running from devbase-core?)"
+    validate_dir_exists "$dir" "Required directory" || die "Directory missing: $dir (invalid DEVBASE_ROOT?)"
   done
 
   return 0

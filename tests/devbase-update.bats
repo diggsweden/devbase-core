@@ -488,6 +488,8 @@ SCRIPT
   run fish -c "
     set -gx HOME '$HOME'
     set -gx PATH '${TEST_DIR}/bin' \$PATH
+    mkdir -p '${TEST_DIR}/unrelated-cwd'
+    cd '${TEST_DIR}/unrelated-cwd'
     source '$DEVBASE_UPDATE_FISH'
     devbase-update
   " </dev/null

@@ -5,7 +5,10 @@
 # SPDX-License-Identifier: MIT
 
 if [[ "${_DEVBASE_DEFINE_COLORS_LOADED:-}" == "1" ]]; then
-  return 0 2>/dev/null || exit 0
+  if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0
+  fi
+  exit 0
 fi
 _DEVBASE_DEFINE_COLORS_LOADED=1
 

@@ -183,7 +183,8 @@ teardown() {
 @test "validate_source_repository checks required directories" {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 
-  cd "${DEVBASE_ROOT}"
+  mkdir -p "${BATS_TEST_TMPDIR}/unrelated-cwd"
+  cd "${BATS_TEST_TMPDIR}/unrelated-cwd"
 
   source "${DEVBASE_ROOT}/libs/define-colors.sh"
   source "${DEVBASE_ROOT}/libs/validation.sh"

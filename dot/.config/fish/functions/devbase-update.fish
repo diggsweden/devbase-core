@@ -415,7 +415,13 @@ function __devbase_update_do_update --description "Perform the update"
     echo ""
 
     if test -f "$__devbase_core_dir/setup.sh"
-        bash "$__devbase_core_dir/setup.sh"
+        pushd "$__devbase_core_dir" >/dev/null
+        bash setup.sh
+        set -l setup_status $status
+        popd >/dev/null
+        if test $setup_status -ne 0
+            return $setup_status
+        end
     else
         __devbase_update_print_error "setup.sh not found in $__devbase_core_dir"
         return 1

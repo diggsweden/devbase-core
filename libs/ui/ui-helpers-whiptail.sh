@@ -5,7 +5,10 @@
 # SPDX-License-Identifier: MIT
 
 if [[ "${_DEVBASE_UI_HELPERS_WHIPTAIL_LOADED:-}" == "1" ]]; then
-  return 0 2>/dev/null || exit 0
+  if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0
+  fi
+  exit 0
 fi
 _DEVBASE_UI_HELPERS_WHIPTAIL_LOADED=1
 
@@ -24,10 +27,12 @@ fi
 # =============================================================================
 # WHIPTAIL DIMENSIONS - Standardized for consistent UI
 # =============================================================================
+# shellcheck disable=SC2034 # WT_* constants are consumed across sourced UI scripts
 readonly WT_WIDTH=70
 readonly WT_HEIGHT_SMALL=8   # Simple messages, infoboxes
 readonly WT_HEIGHT_MEDIUM=12 # Yes/no dialogs, short forms
 readonly WT_HEIGHT_LARGE=18  # Error displays, summaries
+# shellcheck disable=SC2034 # Used by setup/install completion dialogs
 readonly WT_HEIGHT_XLARGE=22 # Long content, completion messages
 readonly WT_GAUGE_HEIGHT=7   # Progress gauge
 
@@ -76,7 +81,7 @@ _wt_start_persistent_gauge() {
   # Start gauge in background, reading from FIFO
   # The gauge expects lines of: "XXX\n<percent>\n<message>\nXXX\n"
   tail -f "$_WT_GAUGE_FIFO" 2>/dev/null | TERM=xterm whiptail --backtitle "$WT_BACKTITLE" \
-    --title "$title" --gauge "Initializing..." $WT_GAUGE_HEIGHT $WT_WIDTH 0 &
+    --title "$title" --gauge "Initializing..." "$WT_GAUGE_HEIGHT" "$WT_WIDTH" 0 &
   _WT_GAUGE_PID=$!
 
   # Give gauge time to initialize (0.2s for reliability on slower systems)
@@ -152,7 +157,7 @@ _wt() {
 _wt_infobox() {
   local title="$1"
   local message="$2"
-  _wt --backtitle "$WT_BACKTITLE" --title "$title" --infobox "$message" $WT_HEIGHT $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --infobox "$message" "$WT_HEIGHT" "$WT_WIDTH"
 }
 
 # Brief: Show a whiptail message box (blocking, requires OK)
@@ -160,7 +165,7 @@ _wt_infobox() {
 _wt_msgbox() {
   local title="$1"
   local message="$2"
-  _wt --backtitle "$WT_BACKTITLE" --title "$title" --msgbox "$message$WT_NAV_HINTS" $WT_HEIGHT $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --msgbox "$message$WT_NAV_HINTS" "$WT_HEIGHT" "$WT_WIDTH"
 }
 
 # Brief: Run command with whiptail gauge progress
@@ -176,7 +181,7 @@ _wt_gauge_cmd() {
     echo "0"
     "$@" >/dev/null 2>&1
     echo "100"
-  ) | _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "$message" $WT_GAUGE_HEIGHT $WT_WIDTH 0
+  ) | _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "$message" "$WT_GAUGE_HEIGHT" "$WT_WIDTH" 0
 
   return "${PIPESTATUS[0]}"
 }
@@ -199,7 +204,7 @@ _wt_run() {
   fi
 
   if [[ $exit_code -ne 0 ]] && [[ -n "$output" ]]; then
-    _wt --backtitle "$WT_BACKTITLE" --title "Error" --msgbox "Command failed:\n\n${output:0:500}$WT_NAV_HINTS" 15 $WT_WIDTH
+    _wt --backtitle "$WT_BACKTITLE" --title "Error" --msgbox "Command failed:\n\n${output:0:500}$WT_NAV_HINTS" 15 "$WT_WIDTH"
   fi
 
   return $exit_code
@@ -209,7 +214,7 @@ _wt_run() {
 # Params: $1 - title, stdin - lines of "percent message"
 _wt_progress() {
   local title="$1"
-  _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "Starting..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --gauge "Starting..." "$WT_GAUGE_HEIGHT" "$WT_WIDTH" 0
 }
 
 # Brief: Add entry to whiptail log
@@ -232,7 +237,7 @@ _wt_show_log() {
   local title="${1:-Installation Log}"
   local log_text
   log_text=$(printf '%s\n' "${_WT_LOG[@]}")
-  _wt --backtitle "$WT_BACKTITLE" --title "$title" --scrolltext --msgbox "$log_text$WT_NAV_HINTS" 20 $WT_WIDTH
+  _wt --backtitle "$WT_BACKTITLE" --title "$title" --scrolltext --msgbox "$log_text$WT_NAV_HINTS" 20 "$WT_WIDTH"
   _WT_LOG=() # Clear log
 }
 
@@ -370,7 +375,7 @@ _wt_run_with_spinner() {
     # No persistent gauge - create temporary one with slow crawl
     (
       local progress=5
-      while kill -0 $cmd_pid 2>/dev/null; do
+      while kill -0 "$cmd_pid" 2>/dev/null; do
         echo "$progress"
         # Slow crawl - cap at 95% until command completes
         if [[ $progress -lt 95 ]]; then
@@ -380,7 +385,7 @@ _wt_run_with_spinner() {
       done
       echo "100"
     ) | TERM=xterm whiptail --backtitle "$WT_BACKTITLE" --title "Installing" \
-      --gauge "$description..." $WT_GAUGE_HEIGHT $WT_WIDTH 0
+      --gauge "$description..." "$WT_GAUGE_HEIGHT" "$WT_WIDTH" 0
   fi
 
   # Wait for command and get exit code
@@ -406,7 +411,7 @@ _wt_run_with_spinner() {
       local clean_output
       clean_output=$(printf '%s' "${output:0:1000}" | sed 's/\x1b\[[0-9;]*m//g')
       _wt --backtitle "$WT_BACKTITLE" --title "Error" \
-        --scrolltext --msgbox "Failed: $description\n\n$clean_output$WT_NAV_HINTS" $WT_HEIGHT_LARGE $WT_WIDTH
+        --scrolltext --msgbox "Failed: $description\n\n$clean_output$WT_NAV_HINTS" "$WT_HEIGHT_LARGE" "$WT_WIDTH"
       # Restart gauge with preserved title
       if [[ "$gauge_was_running" == true ]]; then
         _wt_start_persistent_gauge "${_WT_GAUGE_TITLE:-Installing}"
@@ -423,11 +428,11 @@ _wt_ask_yes_no() {
   local question="$1"
   local default="${2:-N}"
 
-  local wt_default="--defaultno"
-  [[ "$default" == "Y" || "$default" == "y" ]] && wt_default=""
+  local -a wt_default=(--defaultno)
+  [[ "$default" == "Y" || "$default" == "y" ]] && wt_default=()
 
   if _wt --backtitle "$WT_BACKTITLE" --title "Confirm" \
-    $wt_default --yesno "$question$WT_NAV_HINTS" $WT_HEIGHT_MEDIUM $WT_WIDTH; then
+    "${wt_default[@]}" --yesno "$question$WT_NAV_HINTS" "$WT_HEIGHT_MEDIUM" "$WT_WIDTH"; then
     return 0
   else
     return 1
