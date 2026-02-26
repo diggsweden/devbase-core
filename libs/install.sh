@@ -682,8 +682,33 @@ bootstrap_for_configuration() {
   show_progress step "Bootstrapping configuration tooling"
   install_mise || die "Failed to install mise for configuration"
 
-  if ! command -v yq &>/dev/null; then
-    die "yq not available after mise bootstrap"
+  if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
+    show_progress warning "yq missing after mise bootstrap, attempting recovery"
+
+    local mise_path=""
+    if command -v mise &>/dev/null; then
+      mise_path="$(command -v mise)"
+    elif [[ -x "${HOME}/.local/bin/mise" ]]; then
+      mise_path="${HOME}/.local/bin/mise"
+    fi
+
+    # Ensure common mise paths are available in this shell session.
+    local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
+    [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
+    [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
+
+    if [[ -n "$mise_path" ]]; then
+      [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && "$mise_path" trust "${DEVBASE_ROOT}/.mise.toml" >/dev/null 2>&1 || true
+      "$mise_path" use -g "aqua:mikefarah/yq@v4.52.4" --yes >/dev/null 2>&1 || true
+
+      if declare -f _mise_apply_path_from_activate &>/dev/null; then
+        _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+
+  if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
+    die "yq not available after mise bootstrap (tried auto-recovery)"
   fi
 }
 
