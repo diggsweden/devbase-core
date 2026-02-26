@@ -4,6 +4,11 @@
 #
 # SPDX-License-Identifier: MIT
 
+if [[ "${_DEVBASE_UI_MESSAGES_LOADED:-}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
+_DEVBASE_UI_MESSAGES_LOADED=1
+
 # Brief: Central message catalog for shared UI strings
 # Params: $1 - message key
 # Returns: Message string

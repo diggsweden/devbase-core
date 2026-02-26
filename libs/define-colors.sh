@@ -4,6 +4,11 @@
 #
 # SPDX-License-Identifier: MIT
 
+if [[ "${_DEVBASE_DEFINE_COLORS_LOADED:-}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
+_DEVBASE_DEFINE_COLORS_LOADED=1
+
 # Brief: Define global color codes and UI symbols for DevBase output formatting
 # Usage: Source this file to access DEVBASE_COLORS and DEVBASE_SYMBOLS associative arrays
 # NOTE: These arrays are available to all sourced scripts but cannot be

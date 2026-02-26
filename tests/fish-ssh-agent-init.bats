@@ -169,8 +169,7 @@ exit 2
 SCRIPT
   chmod +x "${TEST_DIR}/bin/ssh-add"
 
-  run fish -c "
-    set -x HOME '$TEST_HOME'
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_HOME}/.config" fish --no-config -c "
     set -x PATH '${TEST_DIR}/bin:' \$PATH
     source '$FISH_FUNC'
     __ssh_agent_init
@@ -181,8 +180,7 @@ SCRIPT
 }
 
 @test "__ssh_agent_init silently returns 0 when no key exists" {
-  run fish -c "
-    set -x HOME '$TEST_HOME'
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_HOME}/.config" fish --no-config -c "
     source '$FISH_FUNC'
     __ssh_agent_init
     echo \"status: \$status\"

@@ -4,6 +4,11 @@
 #
 # SPDX-License-Identifier: MIT
 
+if [[ "${_DEVBASE_UI_HELPERS_WHIPTAIL_LOADED:-}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
+_DEVBASE_UI_HELPERS_WHIPTAIL_LOADED=1
+
 # Whiptail TUI backend for ui-helpers
 # These functions are called by the dispatchers in ui-helpers.sh
 

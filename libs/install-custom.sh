@@ -1205,6 +1205,12 @@ install_intellij_idea() {
     return 0
   fi
 
+  # Ensure tool versions are loaded for direct-call contexts (tests/hooks)
+  # while remaining idempotent in normal setup flow.
+  if [[ -z "${TOOL_VERSIONS[intellij_idea]:-}" ]]; then
+    _setup_custom_parser || return 1
+  fi
+
   if [[ -z "${TOOL_VERSIONS[intellij_idea]:-}" ]]; then
     show_progress info "IntelliJ IDEA not configured - skipping"
     return 0

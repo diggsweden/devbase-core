@@ -4,6 +4,11 @@
 #
 # SPDX-License-Identifier: MIT
 
+if [[ "${_DEVBASE_UI_HELPERS_LOADED:-}" == "1" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
+_DEVBASE_UI_HELPERS_LOADED=1
+
 # UI Helpers - Dispatcher and TUI-agnostic functions
 # Backend implementations are in ui-helpers-gum.sh and ui-helpers-whiptail.sh
 

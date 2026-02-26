@@ -9,6 +9,47 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+_ensure_progress_logger() {
+  declare -f show_progress &>/dev/null && return 0
+
+  local libs_dir="${DEVBASE_LIBS:-${DEVBASE_ROOT}/libs}"
+
+  if [[ ! -v DEVBASE_COLORS ]] || [[ ! -v DEVBASE_SYMBOLS ]]; then
+    # shellcheck disable=SC1091
+    source "${libs_dir}/define-colors.sh" || true
+  fi
+
+  if ! declare -f ui_message &>/dev/null; then
+    # shellcheck disable=SC1091
+    source "${libs_dir}/ui/ui-messages.sh" || true
+  fi
+
+  if ! declare -f show_progress &>/dev/null; then
+    # shellcheck disable=SC1091
+    source "${libs_dir}/ui/ui-helpers.sh" || true
+  fi
+
+  if ! declare -f show_progress &>/dev/null; then
+    show_progress() {
+      local level="$1"
+      local message="$2"
+      case "$level" in
+      error) printf "ERROR: %s\n" "$message" >&2 ;;
+      warning) printf "WARNING: %s\n" "$message" >&2 ;;
+      *) printf "%s\n" "$message" ;;
+      esac
+    }
+  fi
+
+  if ! declare -f add_global_warning &>/dev/null; then
+    add_global_warning() {
+      printf "WARNING: %s\n" "$1" >&2
+    }
+  fi
+}
+
+_ensure_progress_logger
+
 declare -ag DEVBASE_CURL_PROXY_ARGS=()
 declare -ag DEVBASE_WGET_PROXY_ARGS=()
 
