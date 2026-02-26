@@ -145,7 +145,7 @@ _run_mise_installer() {
   local label="${1:-Installing mise}"
   local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
 
-  if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer"; then
+  if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer" "" "${DEVBASE_MISE_INSTALLER_SHA256:-}"; then
     die "Failed to download Mise installer"
   fi
 
@@ -159,13 +159,8 @@ _run_mise_installer() {
     die "Downloaded file doesn't appear to be Mise installer"
   fi
 
-  if [[ -z "${DEVBASE_MISE_INSTALLER_SHA256:-}" ]]; then
-    show_progress error "DEVBASE_MISE_INSTALLER_SHA256 not set; refusing to run mise installer"
-    die "Mise installer checksum verification failed"
-  fi
-  show_progress info "Verifying mise installer checksum"
-  if ! verify_checksum_value "$mise_installer" "${DEVBASE_MISE_INSTALLER_SHA256}"; then
-    die "Mise installer checksum verification failed"
+  if [[ -n "${DEVBASE_MISE_INSTALLER_SHA256:-}" ]]; then
+    show_progress info "Verifying mise installer checksum"
   fi
 
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
