@@ -100,7 +100,6 @@ _setup_custom_parser() {
 
   return 0
 }
-_setup_custom_parser || true
 
 # Brief: Fetch VS Code package SHA256 checksum from official API
 # Params: $1 - version (e.g. "1.85.1"), $2 - platform (default: "linux-deb-x64")

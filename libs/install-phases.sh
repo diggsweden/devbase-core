@@ -20,6 +20,13 @@ run_preflight_phase() {
 
 run_configuration_phase() {
   bootstrap_for_configuration || return 1
+
+  # install-custom.sh parser setup must run after bootstrap_for_configuration,
+  # because parse-packages.sh hard-fails when yq is unavailable.
+  if declare -f _setup_custom_parser &>/dev/null; then
+    _setup_custom_parser || return 1
+  fi
+
   collect_user_configuration || return 1
   display_configuration_summary || return 1
 }
