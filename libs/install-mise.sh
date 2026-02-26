@@ -285,6 +285,25 @@ install_mise() {
   fi
 
   # Generate mise config before activation to avoid stale tool warnings
+  # parse-packages.sh performs a hard fail-fast on missing yq, so ensure yq is
+  # runnable here as well (the earlier bootstrap can still miss PATH edge cases
+  # in non-interactive update/setup flows).
+  if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
+    show_progress warning "yq unavailable before package parser, attempting recovery"
+
+    local yq_recovery_spec="aqua:mikefarah/yq@v4.52.4"
+    local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
+    [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
+    [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
+
+    "$mise_path" use -g "$yq_recovery_spec" --yes >/dev/null 2>&1 || true
+    _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
+  fi
+
+  if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
+    die "yq not found after bootstrap/recovery"
+  fi
+
   if ! declare -f generate_mise_config &>/dev/null; then
     # shellcheck source=parse-packages.sh
     source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
