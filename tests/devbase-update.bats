@@ -735,6 +735,10 @@ if [[ "$*" == *"ls-remote --tags"* ]]; then
   echo "def456	refs/tags/v2.0.0"
   exit 0
 fi
+if [[ "$*" == *"describe --tags --abbrev=0"* ]]; then
+  echo "v1.0.0"
+  exit 0
+fi
 if [[ "$*" == *"rev-parse --short origin/HEAD"* ]] || [[ "$*" == *"rev-parse --short origin/main"* ]]; then
   echo "newsha1"
   exit 0
