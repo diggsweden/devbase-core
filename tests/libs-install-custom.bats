@@ -33,7 +33,7 @@ teardown() {
 @test "get_vscode_checksum fetches checksum from API" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
-  stub curl '-fsSL * : echo "{\"products\":[{\"productVersion\":\"1.85.1\",\"platform\":{\"os\":\"linux-deb-x64\"},\"build\":\"stable\",\"sha256hash\":\"abc123\"}]}"'
+  stub curl '-fsSL --connect-timeout 10 --max-time 30 * : echo "{\"products\":[{\"productVersion\":\"1.85.1\",\"platform\":{\"os\":\"linux-deb-x64\"},\"build\":\"stable\",\"sha256hash\":\"abc123\"}]}"'
   stub jq '-r * : echo "abc123"'
   
   run --separate-stderr get_vscode_checksum "1.85.1"
