@@ -296,6 +296,11 @@ check_git_proxy() {
 
 check_snap_proxy() {
   if command -v snap &>/dev/null; then
+    if ! sudo -n true >/dev/null 2>&1; then
+      print_check "info" "Snap proxy check skipped (sudo auth required: sudo -v)"
+      return 0
+    fi
+
     local snap_http_proxy=$(sudo -n snap get system proxy.http 2>/dev/null || echo "")
     local snap_https_proxy=$(sudo -n snap get system proxy.https 2>/dev/null || echo "")
 
@@ -304,7 +309,11 @@ check_snap_proxy() {
       snap_http_proxy=$(echo "$snap_http_proxy" | mask_url_credentials)
       print_check "pass" "Snap proxy configured: ${snap_http_proxy:0:$MAX_PROXY_DISPLAY_LENGTH}"
     else
-      print_check "warn" "Snap proxy not configured (refresh sudo: sudo -v)"
+      if [[ -n "${HTTP_PROXY:-}${HTTPS_PROXY:-}${DEVBASE_PROXY_HOST:-}" ]]; then
+        print_check "warn" "Snap proxy not configured"
+      else
+        print_check "info" "Snap proxy not configured"
+      fi
     fi
   fi
 }

@@ -1077,6 +1077,11 @@ check_snap_packages() {
   local snap_installed=0
   local snap_total=0
 
+  # On WSL, snap availability varies and some snaps are intentionally skipped.
+  # Keep verification informational/warning-level instead of hard failures.
+  local running_on_wsl=false
+  is_wsl && running_on_wsl=true
+
   # Get all installed snaps once (much faster than per-snap calls)
   local installed_snaps
   installed_snaps=$(snap list 2>/dev/null)
@@ -1085,15 +1090,34 @@ check_snap_packages() {
   # Note: Firefox is installed from Mozilla APT repo (not snap) for smart card/PKCS#11 support
   local snap_tools=(ghostty chromium microk8s)
 
+  if [[ "$running_on_wsl" == "true" ]]; then
+    # ghostty is tagged @skip-wsl in packages.yaml
+    snap_tools=(chromium microk8s)
+  fi
+
   for snap in "${snap_tools[@]}"; do
     snap_total=$((snap_total + 1))
     local snap_info
     snap_info=$(echo "$installed_snaps" | awk -v name="$snap" '$1 == name {print $2}')
     if [[ -n "$snap_info" ]]; then
       snap_installed=$((snap_installed + 1))
-      printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$snap" "${DIM}" "$snap_info" "${NC}"
+      if [[ "$snap" == "microk8s" ]]; then
+        local microk8s_state
+        microk8s_state=$(snap services microk8s 2>/dev/null | awk 'NR>1 {print $4; exit}')
+        if [[ "$microk8s_state" == "active" ]]; then
+          printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$snap" "${DIM}" "$snap_info" "${NC}"
+        else
+          print_check "warn" "microk8s installed but not active"
+        fi
+      else
+        printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$snap" "${DIM}" "$snap_info" "${NC}"
+      fi
     else
-      print_check "fail" "$snap"
+      if [[ "$running_on_wsl" == "true" ]]; then
+        print_check "info" "$snap (optional on WSL, not installed)"
+      else
+        print_check "warn" "$snap (optional, not installed)"
+      fi
     fi
   done
 

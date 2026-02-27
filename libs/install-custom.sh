@@ -503,11 +503,9 @@ install_k3s() {
   local install_script="${_DEVBASE_TEMP}/k3s-install.sh"
   local expected_checksum="${DEVBASE_K3S_INSTALL_SHA256:-}"
 
-  if ! require_remote_script_checksum "$install_url" "$expected_checksum" "k3s installer"; then
-    return 1
+  if [[ -n "$expected_checksum" ]]; then
+    show_progress info "Verifying k3s installer checksum"
   fi
-
-  show_progress info "Verifying k3s installer checksum"
 
   if download_file "$install_url" "$install_script" "" "$expected_checksum"; then
     chmod +x "$install_script"

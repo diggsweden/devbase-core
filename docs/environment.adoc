@@ -98,7 +98,7 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | Show verbose debug output during installation: `DEBUG=1 ./setup.sh`
 
 | `DEVBASE_STRICT_CHECKSUMS`
-| `fail`
+| `warn`
 | Checksum strictness: `off`, `warn`, or `fail`
 
 | `DEVBASE_STRICT_CHECKSUMS_ALLOWLIST`
