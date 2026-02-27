@@ -159,12 +159,29 @@ teardown() {
   assert_success
 }
 
+@test "init_temp_directory creates a devbase temp dir" {
+  run bash -c "
+    eval \"\$(sed -n '/^init_temp_directory()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    unset _DEVBASE_TEMP
+    init_temp_directory
+    temp_dir=\"\$_DEVBASE_TEMP\"
+    [[ -d \"\$temp_dir\" ]] || exit 1
+    case \"\$(basename \"\$temp_dir\")\" in
+      devbase.*) ;;
+      *) exit 1 ;;
+    esac
+  "
+
+  assert_success
+}
+
 @test "main runs bootstrap, install, and migrations" {
   run bash -c "
     parse_arguments() { :; }
     initialize_devbase_paths() { :; }
     load_devbase_libraries() { :; }
     apply_setup_defaults() { :; }
+    init_temp_directory() { :; }
     show_global_warnings() { :; }
     run_bootstrap() { echo bootstrap; }
     run_installation() { echo install; }
@@ -187,6 +204,7 @@ teardown() {
     initialize_devbase_paths() { :; }
     load_devbase_libraries() { :; }
     apply_setup_defaults() { :; }
+    init_temp_directory() { :; }
     run_bootstrap() { echo bootstrap; }
     run_installation() { echo INSTALLATION_RAN; }
     run_migrations() { echo migrate; }

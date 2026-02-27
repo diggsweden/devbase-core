@@ -119,6 +119,9 @@ DEVBASE_MISE_INSTALLER_SHA256="${DEVBASE_MISE_INSTALLER_SHA256:-}"
 # Internal flag: show version and exit
 SHOW_VERSION="${SHOW_VERSION:-false}"
 
+# Internal temp directory path (initialized by init_temp_directory)
+_DEVBASE_TEMP="${_DEVBASE_TEMP:-}"
+
 # TUI mode flag (default: gum, can be overridden with --tui=whiptail)
 # Values: "gum", "whiptail" (or "none" for non-interactive mode)
 DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
@@ -313,6 +316,28 @@ run_installation() {
   fi
 }
 
+init_temp_directory() {
+  if [[ -n "${_DEVBASE_TEMP:-}" ]]; then
+    if [[ -d "${_DEVBASE_TEMP}" ]] && [[ -w "${_DEVBASE_TEMP}" ]]; then
+      export _DEVBASE_TEMP
+      readonly _DEVBASE_TEMP
+      return 0
+    fi
+
+    printf "ERROR: _DEVBASE_TEMP is set but not a writable directory: %s\n" "${_DEVBASE_TEMP}" >&2
+    return 1
+  fi
+
+  _DEVBASE_TEMP=$(mktemp -d --tmpdir devbase.XXXXXX) || {
+    printf "ERROR: Failed to create temp directory\n" >&2
+    return 1
+  }
+
+  export _DEVBASE_TEMP
+  readonly _DEVBASE_TEMP
+  return 0
+}
+
 main() {
   parse_arguments "$@"
   initialize_devbase_paths
@@ -324,6 +349,8 @@ main() {
     print_version
     return 0
   fi
+
+  init_temp_directory || return 1
 
   run_bootstrap || return 1
   show_global_warnings

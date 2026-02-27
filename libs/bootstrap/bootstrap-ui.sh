@@ -130,6 +130,11 @@ bootstrap_gum() {
   gum_url="https://github.com/charmbracelet/gum/releases/download/v${version}/${package_name}"
   local checksums_url="https://github.com/charmbracelet/gum/releases/download/v${version}/checksums.txt"
 
+  if [[ -z "${_DEVBASE_TEMP:-}" ]] || [[ ! -d "${_DEVBASE_TEMP}" ]] || [[ ! -w "${_DEVBASE_TEMP}" ]]; then
+    show_progress warning "Could not find TUI component gum (temp dir unavailable), using whiptail as backup"
+    return 1
+  fi
+
   local temp_dir="${_DEVBASE_TEMP}"
   local gum_pkg="${temp_dir}/${package_name}"
 

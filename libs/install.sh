@@ -47,18 +47,15 @@ source "${DEVBASE_ROOT}/libs/install-mise.sh"
 # shellcheck disable=SC1091 # File exists at runtime
 source "${DEVBASE_ROOT}/libs/summary.sh"
 
-_DEVBASE_TEMP=$(mktemp -d --tmpdir devbase.XXXXXX) || {
-  # Early error before TUI is fully initialized - use basic output
+if [[ -z "${_DEVBASE_TEMP:-}" ]] || [[ ! -d "${_DEVBASE_TEMP}" ]] || [[ ! -w "${_DEVBASE_TEMP}" ]]; then
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
     whiptail --backtitle "$WT_BACKTITLE" --title "Error" \
-      --msgbox "Failed to create temp directory$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
+      --msgbox "Temp directory not initialized correctly$WT_NAV_HINTS" "$WT_HEIGHT_SMALL" "$WT_WIDTH" 2>/dev/null || true
   else
-    echo "ERROR: Failed to create temp directory" >&2
+    echo "ERROR: Temp directory not initialized correctly (_DEVBASE_TEMP)" >&2
   fi
   exit 1
-}
-
-readonly _DEVBASE_TEMP
+fi
 
 if [[ -z "${DEVBASE_ROOT:-}" ]] || [[ -z "${DEVBASE_LIBS:-}" ]]; then
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
