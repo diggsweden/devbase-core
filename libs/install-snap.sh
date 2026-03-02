@@ -162,6 +162,51 @@ snap_install() {
 # Params: None
 # Returns: 0 always
 # Side-effects: None (informational only)
+configure_snap_proxy() {
+  command -v snap &>/dev/null || return 0
+
+  local proxy_http="${HTTP_PROXY:-${http_proxy:-}}"
+  local proxy_https="${HTTPS_PROXY:-${https_proxy:-}}"
+
+  if [[ -z "$proxy_http" && -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
+    proxy_http="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
+  fi
+
+  if [[ -z "$proxy_https" && -n "$proxy_http" ]]; then
+    proxy_https="$proxy_http"
+  fi
+
+  [[ -z "$proxy_http" && -z "$proxy_https" ]] && return 0
+
+  show_progress info "Configuring snap proxy settings..."
+
+  local has_error=false
+
+  if [[ -n "$proxy_http" ]]; then
+    if ! sudo snap set system proxy.http="$proxy_http"; then
+      has_error=true
+    fi
+  fi
+
+  if [[ -n "$proxy_https" ]]; then
+    if ! sudo snap set system proxy.https="$proxy_https"; then
+      has_error=true
+    fi
+  fi
+
+  if [[ "$has_error" == true ]]; then
+    add_install_warning "Failed to set snap proxy settings"
+    return 1
+  fi
+
+  show_progress success "Snap proxy settings configured"
+  return 0
+}
+
+# Brief: Configure snap to use system certificates
+# Params: None
+# Returns: 0 always
+# Side-effects: None (informational only)
 configure_snap_certificates() {
   command -v snap &>/dev/null || return 0
   systemctl is-active snapd &>/dev/null || return 0
@@ -181,6 +226,11 @@ configure_snap_certificates() {
 # Side-effects: Loads package list, installs snaps
 _install_snap_packages() {
   show_progress info "Installing snap packages..."
+
+  if ! configure_snap_proxy; then
+    show_progress error "Failed to configure snap proxy settings"
+    return 1
+  fi
 
   # Load package list from file
   if ! load_snap_packages; then

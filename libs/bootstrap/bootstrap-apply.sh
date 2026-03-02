@@ -33,7 +33,7 @@ apply_environment_settings() {
 # Modifies: http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
 #           (all exported)
 # Returns: 0 always
-# Side-effects: Sets proxy for all subsequent network operations, persists snap proxy
+# Side-effects: Sets proxy for all subsequent network operations
 configure_proxy_settings() {
   if [[ -n "${DEVBASE_PROXY_HOST}" && -n "${DEVBASE_PROXY_PORT}" ]]; then
     local proxy_url="http://${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"
@@ -53,12 +53,6 @@ configure_proxy_settings() {
 
     # Configure curl/wget for proxy after exporting proxy vars
     configure_curl_for_proxy
-
-    # Persist snap proxy so it survives reboots (snap ignores env vars)
-    if command -v snap &>/dev/null; then
-      sudo snap set system proxy.http="${proxy_url}" 2>/dev/null || true
-      sudo snap set system proxy.https="${proxy_url}" 2>/dev/null || true
-    fi
   fi
 }
 

@@ -238,3 +238,33 @@ EOF
   assert_success
   assert_output --partial "snapd not installed"
 }
+
+@test "configure_snap_proxy sets snap system proxy from DEVBASE proxy settings" {
+  source "${DEVBASE_ROOT}/libs/install-snap.sh"
+
+  export DEVBASE_PROXY_HOST="proxy.example.com"
+  export DEVBASE_PROXY_PORT="8080"
+  unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+
+  stub snap 'help : true'
+  stub sudo \
+    'snap set system proxy.http=http://proxy.example.com:8080 : true' \
+    'snap set system proxy.https=http://proxy.example.com:8080 : true'
+
+  run configure_snap_proxy
+  assert_success
+  assert_output --partial "Snap proxy settings configured"
+}
+
+@test "configure_snap_proxy is no-op when no proxy is configured" {
+  source "${DEVBASE_ROOT}/libs/install-snap.sh"
+
+  unset DEVBASE_PROXY_HOST DEVBASE_PROXY_PORT
+  unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+
+  stub snap 'help : true'
+
+  run configure_snap_proxy
+  assert_success
+  assert_output ""
+}
