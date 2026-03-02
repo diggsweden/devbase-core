@@ -258,7 +258,7 @@ install_mise() {
     local yq_tool="aqua:mikefarah/yq"
     show_progress info "Bootstrapping essential tools (yq)..."
     local _bootstrap_err
-    if ! _bootstrap_err=$("$mise_path" install "$yq_tool" --yes 2>&1 >/dev/null); then
+    if ! _bootstrap_err=$("$mise_path" --no-config install "$yq_tool" --yes 2>&1 >/dev/null); then
       [[ -n "$_bootstrap_err" ]] && show_progress error "$_bootstrap_err"
       die "Failed to bootstrap yq via mise"
     fi
@@ -271,8 +271,9 @@ install_mise() {
     fi
 
     if ! command -v just &>/dev/null; then
+      local just_tool="aqua:casey/just"
       show_progress info "Bootstrapping essential tools (just)..."
-      if ! _bootstrap_err=$("$mise_path" install just --yes 2>&1 >/dev/null); then
+      if ! _bootstrap_err=$("$mise_path" --no-config install "$just_tool" --yes 2>&1 >/dev/null); then
         [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
         add_install_warning "Failed to bootstrap just (continuing)"
       fi
@@ -291,7 +292,7 @@ install_mise() {
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
 
-    "$mise_path" use -g "$yq_recovery_spec" --yes >/dev/null 2>&1 || true
+    "$mise_path" --no-config use -g "$yq_recovery_spec" --yes >/dev/null 2>&1 || true
     _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
   fi
 
