@@ -180,7 +180,7 @@ get_app_store() {
     echo "snap"
     ;;
   ubuntu-wsl)
-    echo "snap"
+    echo "none"
     ;;
   fedora)
     echo "flatpak"

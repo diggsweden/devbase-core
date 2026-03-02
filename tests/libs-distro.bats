@@ -178,13 +178,13 @@ setup() {
   assert_output "snap"
 }
 
-@test "get_app_store returns snap for ubuntu-wsl" {
+@test "get_app_store returns none for ubuntu-wsl" {
   get_distro() { echo "ubuntu-wsl"; }
   export -f get_distro
   
   run get_app_store
   assert_success
-  assert_output "snap"
+  assert_output "none"
 }
 
 @test "get_app_store returns flatpak for fedora" {

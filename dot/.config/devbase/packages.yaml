@@ -62,7 +62,6 @@ core:
     apt-utils: {}
     locales: {}
     software-properties-common: {}
-    snapd: {}
     build-essential: {}
     containernetworking-plugins: {}
     clamav-daemon: {}
