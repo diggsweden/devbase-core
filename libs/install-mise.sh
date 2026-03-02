@@ -255,10 +255,10 @@ install_mise() {
   # the full config.toml on a second call, which triggers spurious warnings for
   # tools whose backends aren't available yet e.g. npm:tree-sitter-cli).
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
-    local yq_tool="aqua:mikefarah/yq"
+    local yq_tool="aqua:mikefarah/yq@v4.52.4"
     show_progress info "Bootstrapping essential tools (yq)..."
     local _bootstrap_err
-    if ! _bootstrap_err=$("$mise_path" --no-config install "$yq_tool" --yes 2>&1 >/dev/null); then
+    if ! _bootstrap_err=$("$mise_path" --no-config use -g "$yq_tool" --yes 2>&1 >/dev/null); then
       [[ -n "$_bootstrap_err" ]] && show_progress error "$_bootstrap_err"
       die "Failed to bootstrap yq via mise"
     fi
@@ -271,9 +271,9 @@ install_mise() {
     fi
 
     if ! command -v just &>/dev/null; then
-      local just_tool="aqua:casey/just"
+      local just_tool="aqua:casey/just@1.46.0"
       show_progress info "Bootstrapping essential tools (just)..."
-      if ! _bootstrap_err=$("$mise_path" --no-config install "$just_tool" --yes 2>&1 >/dev/null); then
+      if ! _bootstrap_err=$("$mise_path" --no-config use -g "$just_tool" --yes 2>&1 >/dev/null); then
         [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
         add_install_warning "Failed to bootstrap just (continuing)"
       fi
