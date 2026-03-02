@@ -40,8 +40,6 @@ teardown() {
   assert_success
   assert_output "abc123"
   
-  unstub jq
-  unstub curl
 }
 
 @test "get_vscode_checksum fails when jq not available" {

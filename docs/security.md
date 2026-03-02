@@ -41,7 +41,7 @@ SPDX-License-Identifier: CC0-1.0
 | | Process limits | ✅ 32,768 | PAM limits | Parallel builds |
 | | Memory locking | ✅ Unlimited | Container support | VM/container ready |
 
-**Legend**: ✅ Implemented | ⚠️ Known Issue | ❌ Not Implemented
+**Legend**: ✅ Implemented, ⚠️ Known Issue, ❌ Not Implemented
 
 ## Summary
 

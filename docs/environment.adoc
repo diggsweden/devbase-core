@@ -108,6 +108,14 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | `DEVBASE_MISE_INSTALLER_SHA256`
 | `41955e91c5b9d9f0b27dff80632c9752dfb3866979bfc50cbc22963ec0ba82d3`
 | SHA256 checksum required to verify the mise installer script
+
+| `MISE_HTTP_TIMEOUT`
+| `150s`
+| Timeout for HTTP requests made by mise
+
+| `MISE_FETCH_REMOTE_VERSIONS_TIMEOUT`
+| `75s`
+| Timeout for remote version lookups in mise
 |===
 
 NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.
