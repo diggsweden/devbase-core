@@ -217,6 +217,24 @@ teardown() {
   unstub curl
 }
 
+@test "get_checksum_from_manifest matches exact filename, not substring" {
+  local manifest="${TEST_DIR}/checksums.txt"
+  local manifest_url="file://${manifest}"
+  cat > "$manifest" << 'EOF'
+1111111111111111111111111111111111111111111111111111111111111111  other-gum_0.17.0_linux_amd64.deb
+abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890  gum_0.17.0_linux_amd64.deb
+EOF
+
+  stub curl "-fsSL --connect-timeout 30 --max-time 30 ${manifest_url} -o * : cp '${manifest}' \"\$8\""
+
+  run --separate-stderr get_checksum_from_manifest "$manifest_url" "gum_0.17.0_linux_amd64.deb" 30
+
+  assert_success
+  assert_output "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+
+  unstub curl
+}
+
 @test "get_checksum_from_manifest fails when filename missing" {
   local manifest="${TEST_DIR}/checksums.txt"
   local manifest_url="file://${manifest}"
@@ -229,6 +247,43 @@ teardown() {
   assert_failure
 
   unstub curl
+}
+
+@test "_checksum_allowlisted matches url against glob patterns" {
+  export DEVBASE_STRICT_CHECKSUMS_ALLOWLIST="https://example.com/*, https://mirror.example.org/releases/*"
+
+  run --separate-stderr _checksum_allowlisted "https://mirror.example.org/releases/tool.tar.gz"
+
+  assert_success
+}
+
+@test "download_file allows checksumless URL when allowlisted in fail mode" {
+  local target="${TEST_DIR}/allowlisted-download.bin"
+
+  run --separate-stderr bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}'
+    export DEVBASE_STRICT_CHECKSUMS='fail'
+    export DEVBASE_STRICT_CHECKSUMS_ALLOWLIST='https://example.com/*'
+
+    _download_file_attempt() {
+      local _url=\"\$1\"
+      local _target=\"\$2\"
+      local _timeout=\"\$3\"
+      local _skip=\"\$4\"
+      [[ \"\$_skip\" == \"true\" ]] && return 0
+      printf 'ok' > \"\$_target\"
+      return 0
+    }
+
+    download_file 'https://example.com/file.bin' '${target}'
+  "
+
+  assert_success
+  assert_file_exists "$target"
 }
 
 @test "verify_checksum_from_url returns 2 when checksum unavailable" {

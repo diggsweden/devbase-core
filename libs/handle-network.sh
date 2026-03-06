@@ -142,7 +142,16 @@ get_checksum_from_manifest() {
   fi
 
   local checksum
-  checksum=$(grep -F "${filename}" "$checksum_file" | head -1 | awk '{print $1}')
+  checksum=$(awk -v filename="$filename" '
+    {
+      candidate = $2
+      sub(/^\*/, "", candidate)
+      if (candidate == filename) {
+        print $1
+        exit
+      }
+    }
+  ' "$checksum_file")
   rm -f "$checksum_file"
 
   if [[ -z "$checksum" ]]; then
