@@ -120,6 +120,63 @@ teardown() {
   [[ "$stderr" == *"Checksum required"* ]]
 }
 
+@test "_normalize_download_timeout keeps valid timeout" {
+  run --separate-stderr _normalize_download_timeout "45"
+
+  assert_success
+  assert_output "45"
+}
+
+@test "_normalize_download_timeout falls back for non-numeric timeout" {
+  run --separate-stderr _normalize_download_timeout "MonaspiceNe"
+
+  assert_success
+  [[ "$output" == *"Invalid download timeout"* ]]
+  [[ "$output" == *$'\n30' ]]
+}
+
+@test "_normalize_download_timeout falls back for out-of-range timeout" {
+  run --separate-stderr _normalize_download_timeout "601"
+
+  assert_success
+  [[ "$output" == *"Invalid download timeout"* ]]
+  [[ "$output" == *$'\n30' ]]
+}
+
+@test "download_file normalizes timeout before download attempt" {
+  local target="${TEST_DIR}/timeout-normalized.bin"
+
+  run --separate-stderr bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}'
+    export DEVBASE_STRICT_CHECKSUMS='off'
+
+    _download_file_attempt() {
+      local _url=\"\$1\"
+      local _target=\"\$2\"
+      local _timeout=\"\$3\"
+      local _skip=\"\$4\"
+      printf '%s' \"\$_timeout\" > '${TEST_DIR}/timeout-captured.txt'
+      [[ \"\$_skip\" == \"true\" ]] && return 0
+      printf 'ok' > \"\$_target\"
+      return 0
+    }
+
+    download_file 'https://example.com/file.bin' '${target}' '' '' '' 'MonaspiceNe'
+  "
+
+  assert_success
+  assert_file_exists "$target"
+  assert_file_exists "${TEST_DIR}/timeout-captured.txt"
+
+  run cat "${TEST_DIR}/timeout-captured.txt"
+  assert_success
+  assert_output "30"
+}
+
 
 @test "configure_curl_for_proxy does nothing when no proxy configured" {
   # Use run_isolated helper for clean environment

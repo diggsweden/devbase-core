@@ -374,6 +374,27 @@ _normalize_strict_mode() {
   esac
 }
 
+# Brief: Normalize and validate download timeout value
+# Params: $1-timeout $2-default(optional, default:30) $3-min(optional, default:1) $4-max(optional, default:600)
+# Returns: Echoes validated timeout as decimal integer
+_normalize_download_timeout() {
+  local timeout_raw="$1"
+  local timeout_default="${2:-30}"
+  local timeout_min="${3:-1}"
+  local timeout_max="${4:-600}"
+
+  if [[ "$timeout_raw" =~ ^[0-9]+$ ]]; then
+    local timeout_num=$((10#$timeout_raw))
+    if ((timeout_num >= timeout_min && timeout_num <= timeout_max)); then
+      printf '%s' "$timeout_num"
+      return 0
+    fi
+  fi
+
+  add_global_warning "Invalid download timeout '${timeout_raw}' (expected integer ${timeout_min}-${timeout_max}); using ${timeout_default}"
+  printf '%s' "$timeout_default"
+}
+
 # Brief: Download file with caching, retry logic, and optional checksum verification
 # Params: $1-url $2-target $3-checksum_url(opt) $4-expected_checksum(opt) $5-version(opt) $6-timeout(opt) $7-max_retries(opt) $8-retry_delay(opt)
 # Uses: XDG_CACHE_HOME (global)
@@ -393,6 +414,9 @@ download_file() {
   validate_not_empty "$url" "URL" || return 1
   validate_not_empty "$target" "target file" || return 1
   require_env XDG_CACHE_HOME || return 1
+
+  # Normalize timeout once here so downstream network code gets a safe integer.
+  timeout=$(_normalize_download_timeout "$timeout")
 
   # Check if we can skip download and just verify checksum
   local has_checksum=false
