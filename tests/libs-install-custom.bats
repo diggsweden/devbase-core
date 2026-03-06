@@ -81,6 +81,25 @@ teardown() {
   [[ "$result" == "abc123" ]]
 }
 
+@test "get_nerd_font_checksum uses SHA-256.txt only" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  # shellcheck disable=SC2329
+  get_checksum_from_manifest() {
+    printf '%s\n' "$1" >>"${TEST_DIR}/manifest-urls.log"
+    echo "abc123"
+  }
+
+  run get_nerd_font_checksum "v3.4.0" "Monaspace.zip"
+  assert_success
+  assert_output "abc123"
+
+  assert_file_exists "${TEST_DIR}/manifest-urls.log"
+  run cat "${TEST_DIR}/manifest-urls.log"
+  assert_success
+  assert_output "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/SHA-256.txt"
+}
+
 @test "get_oc_checksum validates version parameter" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
   
@@ -190,6 +209,29 @@ EOF
   
   result=$(_determine_font_details "firacode")
   [[ "$result" =~ FiraCode ]]
+}
+
+@test "_determine_font_details keeps timeout and family as separate fields" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  local font_name font_zip_name font_dir_name font_display_name timeout font_family_name
+  IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout font_family_name <<<"$(_determine_font_details "monaspace")"
+
+  [[ "$timeout" == "120" ]]
+  [[ "$font_family_name" == "MonaspiceNe Nerd Font Mono" ]]
+}
+
+@test "_download_all_fonts_to_cache keeps timeout separate from font family" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  get_font_ids() { printf '%s\n' "monaspace"; }
+  _download_font_to_cache() {
+    local timeout="$4"
+    [[ "$timeout" == "120" ]]
+  }
+
+  run _download_all_fonts_to_cache "${TEST_DIR}/cache" "v3.4.0"
+  assert_success
 }
 
 @test "_is_wayland_session detects Wayland" {

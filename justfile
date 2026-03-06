@@ -109,6 +109,11 @@ devbase-install-verify: _ensure-devtools
 lint-all: _ensure-devtools
     @{{devtools_dir}}/scripts/verify.sh
 
+# Lint version control hygiene (working tree, branch state, etc.)
+[group('lint')]
+lint-version-control:
+    @{{lint}}/version-control.sh
+
 # Validate commit messages (conform)
 [group('lint')]
 lint-commits:

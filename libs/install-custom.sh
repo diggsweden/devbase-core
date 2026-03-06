@@ -628,7 +628,8 @@ get_nerd_font_checksum() {
   validate_not_empty "$nf_version" "Nerd Fonts version" || return 1
   validate_not_empty "$font_zip_name" "Nerd Fonts package" || return 1
 
-  local checksum_url="${DEVBASE_URL_NERD_FONTS_RELEASES}/${nf_version}/SHA256SUMS"
+  # Nerd Fonts checksum manifest
+  local checksum_url="${DEVBASE_URL_NERD_FONTS_RELEASES}/${nf_version}/SHA-256.txt"
   local checksum
 
   if checksum=$(get_checksum_from_manifest "$checksum_url" "$font_zip_name" "60"); then
@@ -718,8 +719,8 @@ _download_all_fonts_to_cache() {
   for font in "${all_fonts[@]}"; do
     local font_details
     font_details=$(_determine_font_details "$font")
-    local font_name font_zip_name font_dir_name font_display_name timeout
-    IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout <<<"$font_details"
+    local font_name font_zip_name font_dir_name font_display_name timeout font_family_name
+    IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout font_family_name <<<"$font_details"
 
     if _download_font_to_cache "$font_zip_name" "$cache_dir" "$nf_version" "$timeout"; then
       show_progress success "$font_display_name cached"
@@ -763,8 +764,8 @@ install_nerd_fonts() {
   local font_details
   font_details=$(_determine_font_details "$font_choice")
 
-  local font_name font_zip_name font_dir_name font_display_name timeout
-  IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout <<<"$font_details"
+  local font_name font_zip_name font_dir_name font_display_name timeout font_family_name
+  IFS='|' read -r font_name font_zip_name font_dir_name font_display_name timeout font_family_name <<<"$font_details"
 
   show_progress info "Installing $font_display_name..."
 
