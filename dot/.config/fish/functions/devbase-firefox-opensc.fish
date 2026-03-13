@@ -15,9 +15,10 @@ function devbase-firefox-opensc --description "Configure Firefox to use OpenSC f
     end
 
     # Find Firefox profile directory
-    set -l profile_dir (find ~/.config/mozilla/firefox -maxdepth 1 -type d -name '*.default*' 2>/dev/null | head -1)
+    set -l firefox_dir ~/.config/mozilla/firefox
+    set -l profile_dir $firefox_dir/(grep -m1 '^Default=' $firefox_dir/installs.ini | string replace 'Default=' '')
 
-    if test -z "$profile_dir"
+    if not test -d "$profile_dir"
         printf "No Firefox profile found.\n"
         printf "\n"
         printf "Please launch Firefox once to create a profile, then run this command again.\n"
