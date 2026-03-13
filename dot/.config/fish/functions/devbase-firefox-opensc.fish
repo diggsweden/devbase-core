@@ -15,8 +15,10 @@ function devbase-firefox-opensc --description "Configure Firefox to use OpenSC f
     end
 
     # Find Firefox profile directory
+    # Firefox 67 introduces one profile per channel [release, nightly, beta]  https://support.mozilla.org/en-US/kb/understanding-depth-profile-installation
+    # checking profiles.ini for which profile is set to Default
     set -l firefox_dir ~/.config/mozilla/firefox
-    set -l profile_dir $firefox_dir/(grep -m1 '^Default=' $firefox_dir/installs.ini | string replace 'Default=' '')
+    set -l profile_dir $firefox_dir/(grep -m1 '^Default=' $firefox_dir/profiles.ini | string replace 'Default=' '')
 
     if not test -d "$profile_dir"
         printf "No Firefox profile found.\n"
