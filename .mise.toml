@@ -33,7 +33,7 @@ PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 "aqua:koalaman/shellcheck" = "v0.11.0"
 "aqua:mvdan/sh" = "v3.12.0"  # shfmt - Shell formatter
 "aqua:hadolint/hadolint" = "v2.14.0"
-"aqua:sharkdp/fd" = "v10.3.0"
+"aqua:sharkdp/fd" = "v10.4.1"
 "aqua:BurntSushi/ripgrep" = "15.1.0"
 "aqua:tldr-pages/tlrc" = "v1.12.0"
 "aqua:bats-core/bats-core" = "1.13.0"
