@@ -215,6 +215,16 @@ teardown() {
   [[ "$result" == "$HOME/.config/Code/User" ]]
 }
 
+@test "_get_vscode_settings_dir respects XDG_CONFIG_HOME for native Code" {
+  source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
+
+  export XDG_CONFIG_HOME="${TEST_DIR}/xdg-config"
+  mkdir -p "$XDG_CONFIG_HOME/Code/User"
+
+  result=$(_get_vscode_settings_dir)
+  [[ "$result" == "$XDG_CONFIG_HOME/Code/User" ]]
+}
+
 @test "_get_vscode_settings_dir creates directory if vscode-server exists" {
   source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
   
@@ -223,6 +233,16 @@ teardown() {
   result=$(_get_vscode_settings_dir)
   [[ "$result" == "$HOME/.vscode-server/data/Machine" ]]
   [[ -d "$HOME/.vscode-server/data/Machine" ]]
+}
+
+@test "_find_vscode_server_cli works outside VS Code terminal" {
+  source "${DEVBASE_ROOT}/libs/setup-vscode.sh"
+
+  mkdir -p "$HOME/.vscode-server/bin/test-build/bin/remote-cli"
+  touch "$HOME/.vscode-server/bin/test-build/bin/remote-cli/code"
+
+  result=$(_find_vscode_server_cli)
+  [[ "$result" == "$HOME/.vscode-server/bin/test-build/bin/remote-cli/code" ]]
 }
 
 @test "_backup_vscode_settings creates timestamped backup" {
@@ -321,4 +341,58 @@ teardown() {
   assert_output --partial '"workbench.colorTheme": "Everforest Dark"'
   refute_output --partial "vscode-neovim"
   refute_output --partial "neovimExecutablePaths"
+}
+
+@test "configure_vscode_settings leaves invalid settings.json unchanged" {
+  if ! command -v jq >/dev/null 2>&1; then
+    skip "jq required to test merge behavior"
+  fi
+
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  printf '{invalid json\n' > "${settings_dir}/settings.json"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='nord'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+
+    configure_vscode_settings >/dev/null 2>&1
+    cat '${settings_dir}/settings.json'
+  "
+
+  assert_success
+  assert_output '{invalid json'
+}
+
+@test "configure_vscode_settings leaves non-object settings.json unchanged" {
+  if ! command -v jq >/dev/null 2>&1; then
+    skip "jq required to test merge behavior"
+  fi
+
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  printf '[]\n' > "${settings_dir}/settings.json"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='nord'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+
+    configure_vscode_settings >/dev/null 2>&1
+    cat '${settings_dir}/settings.json'
+  "
+
+  assert_success
+  assert_output '[]'
 }

@@ -12,7 +12,7 @@
 #          These are now consolidated into packages.yaml and the old files are orphaned.
 # Returns: 0 always (cleanup is best-effort)
 migrate_legacy_package_files() {
-  local config_dir="${HOME}/.config/devbase"
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/devbase"
   local removed=0
 
   local legacy_files=(
@@ -63,9 +63,10 @@ migrate_mise_yq_backend() {
 # Returns: 0 always (cleanup is best-effort)
 migrate_mise_fish_hook() {
   local removed=0
+  local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
   local fish_files=(
-    "$HOME/.config/fish/functions/fish_command_not_found.fish"
-    "$HOME/.config/fish/conf.d/mise.fish"
+    "$config_home/fish/functions/fish_command_not_found.fish"
+    "$config_home/fish/conf.d/mise.fish"
   )
 
   for file in "${fish_files[@]}"; do
@@ -129,22 +130,12 @@ migrate_deployed_hooks_templates() {
   return 0
 }
 
-# Brief: Remove stale deployed vscode settings directory
-# Context: VS Code settings.json was previously deployed as a dotfile to ~/.config/vscode/
-#          but is now managed inline by configure_vscode_settings(). The deployed copy was
-#          never read by VS Code itself and is just litter.
-# Returns: 0 always (cleanup is best-effort)
+# Brief: Preserve legacy deployed vscode settings directory
+# Context: Older installations may still have data in ~/.config/vscode/ and external
+#          tooling can still reference it. Removing it during update risks deleting
+#          user-managed state or breaking organization-specific workflows.
+# Returns: 0 always
 migrate_deployed_vscode_settings() {
-  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
-  local deployed_vscode="${config_dir}/vscode"
-
-  if [[ -d "$deployed_vscode" ]]; then
-    safe_rm_rf "$config_dir" "$deployed_vscode"
-    if declare -f show_progress &>/dev/null; then
-      show_progress info "Removed stale deployed vscode settings directory"
-    fi
-  fi
-
   return 0
 }
 

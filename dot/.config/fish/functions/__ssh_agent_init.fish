@@ -6,7 +6,11 @@ function __ssh_agent_init --description "Auto-add devbase SSH key to agent if no
     # Find devbase SSH key
     # First, try to read key name from preferences.yaml (supports custom configs)
     set -l devbase_key ""
-    set -l prefs_file "$HOME/.config/devbase/preferences.yaml"
+    set -l config_home "$HOME/.config"
+    if set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"
+        set config_home "$XDG_CONFIG_HOME"
+    end
+    set -l prefs_file "$config_home/devbase/preferences.yaml"
     
     if test -f $prefs_file
         # Extract key_name from preferences.yaml (format: "  key_name: <value>")

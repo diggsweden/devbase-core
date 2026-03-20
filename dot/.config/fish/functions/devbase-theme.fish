@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+source (dirname (status current-filename))/__devbase_vscode.fish
+
 function __devbase_theme_show_usage --description "Display theme usage information"
     printf "Usage: devbase-theme <name>\n"
     printf "\n"
@@ -295,14 +297,7 @@ function __devbase_theme_update_vifm --description "Update vifm colorscheme"
 end
 
 function __devbase_theme_get_vscode_settings_path --description "Get VSCode settings file path"
-    if test -d ~/.vscode-server/data/Machine
-        echo ~/.vscode-server/data/Machine/settings.json
-        return 0
-    else if test -d ~/.config/Code/User
-        echo ~/.config/Code/User/settings.json
-        return 0
-    end
-    return 1
+    __devbase_vscode_get_settings_path
 end
 
 function __devbase_theme_update_vscode --description "Update VSCode theme"
@@ -311,17 +306,26 @@ function __devbase_theme_update_vscode --description "Update VSCode theme"
     set -l settings_file (__devbase_theme_get_vscode_settings_path)
     
     if test -z "$settings_file"
+        printf "Warning: VS Code settings path not found, skipping VS Code theme update\n" >&2
         return 1
     end
-    
-    if test -f $settings_file
-        if command -v jq &>/dev/null
-            jq --arg theme "$vscode_theme" '. + {"workbench.colorTheme": $theme}' $settings_file > $settings_file.tmp
-            and mv $settings_file.tmp $settings_file
+
+    if command -v jq &>/dev/null
+        set -l theme_json (jq -n --arg theme "$vscode_theme" '{"workbench.colorTheme": $theme}')
+        __devbase_vscode_merge_settings "$settings_file" "$theme_json"
+        set -l merge_status $status
+        if test $merge_status -ne 0
+            printf "Warning: %s\n" (__devbase_vscode_describe_merge_status $merge_status) >&2
         end
+        return $merge_status
     else
+        if test -f $settings_file
+            printf "Warning: jq not found, skipping VS Code theme update to avoid overwriting existing settings\n" >&2
+            return 1
+        end
         mkdir -p (dirname $settings_file)
         printf '{\n  "workbench.colorTheme": "%s"\n}\n' "$vscode_theme" > $settings_file
+        return $status
     end
 end
 

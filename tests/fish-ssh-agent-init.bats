@@ -23,8 +23,9 @@ setup() {
   fi
 
   export TEST_HOME="${TEST_DIR}/home"
+  export TEST_XDG_CONFIG_HOME="${TEST_DIR}/config"
   mkdir -p "${TEST_HOME}/.ssh"
-  mkdir -p "${TEST_HOME}/.config/devbase"
+  mkdir -p "${TEST_XDG_CONFIG_HOME}/devbase"
 
   FISH_FUNC="${DEVBASE_ROOT}/dot/.config/fish/functions/__ssh_agent_init.fish"
 
@@ -32,7 +33,11 @@ setup() {
   # Written to a file to avoid bash double-quote escaping noise.
   cat > "${TEST_DIR}/detect_key.fish" <<'FISH'
 set -l devbase_key ""
-set -l prefs_file "$HOME/.config/devbase/preferences.yaml"
+set -l config_home "$HOME/.config"
+if set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"
+    set config_home "$XDG_CONFIG_HOME"
+end
+set -l prefs_file "$config_home/devbase/preferences.yaml"
 
 if test -f $prefs_file
     set -l key_name (grep '^\s*key_name:' $prefs_file 2>/dev/null | sed 's/.*key_name:\s*//' | string trim)
@@ -81,7 +86,7 @@ EOF
 # Helper: Create preferences.yaml with specific key name
 create_preferences_yaml() {
   local key_name="$1"
-  cat > "${TEST_HOME}/.config/devbase/preferences.yaml" << EOF
+  cat > "${TEST_XDG_CONFIG_HOME}/devbase/preferences.yaml" << EOF
 # DevBase User Preferences
 theme: everforest-dark
 font: monaspace
@@ -104,7 +109,7 @@ EOF
   create_mock_ssh_key "id_ecdsa_mycompany"
   create_preferences_yaml "id_ecdsa_mycompany"
 
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ecdsa_mycompany"
@@ -113,7 +118,7 @@ EOF
 @test "__ssh_agent_init finds default devbase key without preferences.yaml" {
   create_mock_ssh_key "id_ed25519_devbase"
 
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ed25519_devbase"
@@ -124,14 +129,14 @@ EOF
   create_mock_ssh_key "id_ed25519_custom_org"
   create_preferences_yaml "id_ed25519_custom_org"
 
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ed25519_custom_org"
 }
 
 @test "__ssh_agent_init returns empty when no devbase key found" {
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output ""
@@ -141,7 +146,7 @@ EOF
   create_preferences_yaml "id_ed25519_nonexistent"
   create_mock_ssh_key "id_ed25519_devbase"
 
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ed25519_devbase"
@@ -151,7 +156,7 @@ EOF
   create_mock_ssh_key "id_ecdsa_nistp521_devbase"
   create_preferences_yaml "id_ecdsa_nistp521_devbase"
 
-  run env HOME="${TEST_HOME}" fish "${TEST_DIR}/detect_key.fish"
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
 
   assert_success
   assert_output "${TEST_HOME}/.ssh/id_ecdsa_nistp521_devbase"
@@ -169,7 +174,7 @@ exit 2
 SCRIPT
   chmod +x "${TEST_DIR}/bin/ssh-add"
 
-  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_HOME}/.config" fish --no-config -c "
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish --no-config -c "
     set -x PATH '${TEST_DIR}/bin:' \$PATH
     source '$FISH_FUNC'
     __ssh_agent_init
@@ -180,7 +185,7 @@ SCRIPT
 }
 
 @test "__ssh_agent_init silently returns 0 when no key exists" {
-  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_HOME}/.config" fish --no-config -c "
+  run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish --no-config -c "
     source '$FISH_FUNC'
     __ssh_agent_init
     echo \"status: \$status\"

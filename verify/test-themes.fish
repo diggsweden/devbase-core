@@ -10,6 +10,8 @@
 set -g script_dir (dirname (status --current-filename))
 set -g devbase_root (realpath "$script_dir/..")
 
+source "$devbase_root/dot/.config/fish/functions/__devbase_vscode.fish"
+
 set -g ALL_THEMES (bash -lc "source \"$devbase_root/libs/theme-registry.sh\"; get_theme_ids")
 set -g LIGHT_THEMES (bash -lc "source \"$devbase_root/libs/theme-registry.sh\"; get_light_theme_ids")
 
@@ -123,15 +125,25 @@ function test_config_app
             end
             
         case vscode
-            type -q code || return
+            set -l vscode_cli (__devbase_vscode_resolve_cli)
+            if test $status -ne 0
+                return
+            end
+            set -l vscode_cmd $vscode_cli[1]
+            set -l vscode_remote_target $vscode_cli[2]
             show_header 10 "VS CODE" "Editor theme - Close window when done"
             echo "Expected: "(get_mapped_value $theme vscode)
-            if test -f ~/.config/Code/User/settings.json
-                echo "Current: "(grep '"workbench.colorTheme"' ~/.config/Code/User/settings.json | cut -d':' -f2 | tr -d '," ')
+            set -l settings_path (__devbase_vscode_get_settings_path)
+            if test -n "$settings_path"; and test -f "$settings_path"
+                echo "Current: "(grep '"workbench.colorTheme"' "$settings_path" | cut -d':' -f2 | tr -d '," ')
             end
             echo ""
             echo "Note: May need Ctrl+Shift+P > Reload Window"
-            code --new-window $file >/dev/null 2>&1 &
+            if test -n "$vscode_remote_target"
+                $vscode_cmd --remote "$vscode_remote_target" --new-window $file >/dev/null 2>&1 &
+            else
+                $vscode_cmd --new-window $file >/dev/null 2>&1 &
+            end
             sleep 1
             echo "VS Code launched in background"
             wait_enter "Press ENTER to continue..."

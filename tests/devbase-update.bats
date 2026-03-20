@@ -506,6 +506,64 @@ SCRIPT
   assert_output --partial "checkout"
 }
 
+@test "devbase-update preserves existing WSL VS Code settings file" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
+
+  mkdir -p "${HOME}/.vscode-server/data/Machine"
+  printf '{"workbench.colorTheme":"Nord"}\n' > "${HOME}/.vscode-server/data/Machine/settings.json"
+
+  cat > "$core_dir/setup.sh" << 'SCRIPT'
+#!/usr/bin/env bash
+set -e
+test -f "$HOME/.vscode-server/data/Machine/settings.json"
+grep -q 'Nord' "$HOME/.vscode-server/data/Machine/settings.json"
+echo "Setup completed"
+SCRIPT
+  chmod +x "$core_dir/setup.sh"
+
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+if [[ "\$*" == *"fetch"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123\trefs/tags/v1.0.0"
+  echo "def456\trefs/tags/v2.0.0"
+  exit 0
+fi
+if [[ "\$*" == *"describe"* ]]; then
+  echo "v1.0.0"
+  exit 0
+fi
+if [[ "\$*" == *"checkout"* ]]; then
+  exit 0
+fi
+if [[ "\$*" == *"stash"* ]]; then
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+
+  assert_success
+  assert_output --partial "Setup completed"
+  assert_file_exists "${HOME}/.vscode-server/data/Machine/settings.json"
+
+  run grep -q 'Nord' "${HOME}/.vscode-server/data/Machine/settings.json"
+  assert_success
+}
+
 @test "devbase-update --ref uses requested git ref" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
@@ -708,6 +766,21 @@ MOCKSCRIPT
   assert_success
   assert_output --partial "Updates snoozed for 24 hour(s)"
   refute_output --partial "Updates available:"
+}
+
+@test "devbase-update stores snooze under XDG_CONFIG_HOME" {
+  local xdg_config_home="${TEST_DIR}/custom-config"
+  mkdir -p "$xdg_config_home/devbase"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx XDG_CONFIG_HOME '$xdg_config_home'
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --snooze 24
+  "
+
+  assert_success
+  assert_file_exists "$xdg_config_home/devbase/update-snooze"
 }
 
 @test "devbase-update updates both core and custom when both have updates" {

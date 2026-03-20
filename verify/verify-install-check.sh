@@ -1266,7 +1266,7 @@ check_vscode_extensions() {
 
   # Check if VS Code is available
   local code_cmd=""
-  local remote_flag=""
+  local remote_target=""
 
   if command -v code &>/dev/null; then
     code_cmd="code"
@@ -1285,7 +1285,7 @@ check_vscode_extensions() {
       # Prefer Windows code with --remote flag (same as installation)
       if [[ -f "/mnt/c/Program Files/Microsoft VS Code/bin/code" ]] && [[ -n "${WSL_INTEROP:-}" ]]; then
         code_cmd="/mnt/c/Program Files/Microsoft VS Code/bin/code"
-        remote_flag="--remote wsl+${wsl_distro}"
+        remote_target="wsl+${wsl_distro}"
       else
         # Fallback to vscode-server CLI
         code_cmd=$(find "$HOME/.vscode-server/bin/" -path "*/bin/remote-cli/code" 2>/dev/null | head -1)
@@ -1320,8 +1320,8 @@ check_vscode_extensions() {
   local extensions_found_via_fallback=false
 
   if [[ -n "$code_cmd" ]]; then
-    if [[ -n "$remote_flag" ]]; then
-      installed_extensions=$("$code_cmd" "$remote_flag" --list-extensions 2>/dev/null || echo "")
+    if [[ -n "$remote_target" ]]; then
+      installed_extensions=$("$code_cmd" --remote "$remote_target" --list-extensions 2>/dev/null || echo "")
     else
       installed_extensions=$("$code_cmd" --list-extensions 2>/dev/null || echo "")
     fi

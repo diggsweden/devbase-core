@@ -6,9 +6,17 @@
 # Checks for updates and re-runs setup.sh to apply changes
 # Version info is read directly from the persisted git repos
 
+function __devbase_update_config_home --description "Get XDG config home"
+    if set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"
+        echo "$XDG_CONFIG_HOME"
+    else
+        echo "$HOME/.config"
+    end
+end
+
 set -g __devbase_core_dir "$HOME/.local/share/devbase/core"
 set -g __devbase_custom_dir "$HOME/.local/share/devbase/custom"
-set -g __devbase_snooze_file "$HOME/.config/devbase/update-snooze"
+set -g __devbase_snooze_file (__devbase_update_config_home)/devbase/update-snooze
 
 function __devbase_update_print_info
     printf "%sⓘ%s %s\n" (set_color cyan) (set_color normal) "$argv[1]"

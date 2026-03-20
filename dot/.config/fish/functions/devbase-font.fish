@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+source (dirname (status current-filename))/__devbase_vscode.fish
+
 function __devbase_font_show_usage
     printf "Usage: devbase-font <name>\n"
     printf "\nAvailable fonts:\n"
@@ -63,7 +65,7 @@ end
 
 function __devbase_font_get_version --description "Get Nerd Fonts version from config"
     # Try to read version from packages.yaml
-    set -l config_file "$HOME/.config/devbase/packages.yaml"
+    set -l config_file (__devbase_vscode_config_home)/devbase/packages.yaml
     if test -f "$config_file"; and command -q yq
         set -l nf_version (yq '.core.custom.nerd_fonts.version // .packs.[].custom.nerd_fonts.version // ""' "$config_file" 2>/dev/null | head -1)
         if test -n "$nf_version"
@@ -233,14 +235,7 @@ function __devbase_font_update_ghostty
 end
 
 function __devbase_font_get_vscode_settings_path
-    if test -d ~/.vscode-server/data/Machine
-        echo ~/.vscode-server/data/Machine/settings.json
-        return 0
-    else if test -d ~/.config/Code/User
-        echo ~/.config/Code/User/settings.json
-        return 0
-    end
-    return 1
+    __devbase_vscode_get_settings_path
 end
 
 function __devbase_font_update_vscode
@@ -248,23 +243,29 @@ function __devbase_font_update_vscode
     set -l settings_file (__devbase_font_get_vscode_settings_path)
     
     if test -z "$settings_file"
+        printf "Warning: VS Code settings path not found, skipping VS Code font update\n" >&2
         return 1
     end
-    
-    if test -f $settings_file
-        if command -v jq &>/dev/null
-            jq --arg font "$font_family_name" '. + {"editor.fontFamily": $font}' $settings_file > $settings_file.tmp
-            mv $settings_file.tmp $settings_file
-            return 0
+
+    if command -v jq &>/dev/null
+        set -l font_json (jq -n --arg font "$font_family_name" '{"editor.fontFamily": $font}')
+        __devbase_vscode_merge_settings "$settings_file" "$font_json"
+        set -l merge_status $status
+        if test $merge_status -ne 0
+            printf "Warning: %s\n" (__devbase_vscode_describe_merge_status $merge_status) >&2
         end
+        return $merge_status
     else
+        if test -f $settings_file
+            printf "Warning: jq not found, skipping VS Code font update to avoid overwriting existing settings\n" >&2
+            return 1
+        end
         mkdir -p (dirname $settings_file)
         echo '{
   "editor.fontFamily": "'$font_family_name'"
 }' > $settings_file
         return 0
     end
-    return 1
 end
 
 function __devbase_font_print_results

@@ -15,7 +15,7 @@ load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
   common_setup_isolated
-  mkdir -p "${HOME}/.config/devbase"
+  mkdir -p "${XDG_CONFIG_HOME}/devbase"
 }
 
 teardown() {
@@ -23,59 +23,59 @@ teardown() {
 }
 
 @test "migrate_legacy_package_files removes apt-packages.txt" {
-  touch "${HOME}/.config/devbase/apt-packages.txt"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/apt-packages.txt"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
 }
 
 @test "migrate_legacy_package_files removes snap-packages.txt" {
-  touch "${HOME}/.config/devbase/snap-packages.txt"
+  touch "${XDG_CONFIG_HOME}/devbase/snap-packages.txt"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/snap-packages.txt"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/snap-packages.txt"
 }
 
 @test "migrate_legacy_package_files removes custom-tools.yaml" {
-  touch "${HOME}/.config/devbase/custom-tools.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/custom-tools.yaml"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/custom-tools.yaml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/custom-tools.yaml"
 }
 
 @test "migrate_legacy_package_files removes vscode-extensions.yaml" {
-  touch "${HOME}/.config/devbase/vscode-extensions.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/vscode-extensions.yaml"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/vscode-extensions.yaml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/vscode-extensions.yaml"
 }
 
 @test "migrate_legacy_package_files removes all legacy files at once" {
-  touch "${HOME}/.config/devbase/apt-packages.txt"
-  touch "${HOME}/.config/devbase/snap-packages.txt"
-  touch "${HOME}/.config/devbase/custom-tools.yaml"
-  touch "${HOME}/.config/devbase/vscode-extensions.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
+  touch "${XDG_CONFIG_HOME}/devbase/snap-packages.txt"
+  touch "${XDG_CONFIG_HOME}/devbase/custom-tools.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/vscode-extensions.yaml"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/apt-packages.txt"
-  assert_file_not_exists "${HOME}/.config/devbase/snap-packages.txt"
-  assert_file_not_exists "${HOME}/.config/devbase/custom-tools.yaml"
-  assert_file_not_exists "${HOME}/.config/devbase/vscode-extensions.yaml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/snap-packages.txt"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/custom-tools.yaml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/vscode-extensions.yaml"
 }
 
 @test "migrate_legacy_package_files succeeds when no legacy files exist" {
@@ -87,36 +87,48 @@ teardown() {
 }
 
 @test "migrate_legacy_package_files preserves packages.yaml" {
-  echo "core: {}" > "${HOME}/.config/devbase/packages.yaml"
-  touch "${HOME}/.config/devbase/apt-packages.txt"
+  echo "core: {}" > "${XDG_CONFIG_HOME}/devbase/packages.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_exists "${HOME}/.config/devbase/packages.yaml"
-  assert_file_not_exists "${HOME}/.config/devbase/apt-packages.txt"
+  assert_file_exists "${XDG_CONFIG_HOME}/devbase/packages.yaml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
 }
 
 @test "migrate_legacy_package_files preserves other config files" {
-  echo "theme: gruvbox" > "${HOME}/.config/devbase/preferences.yaml"
-  touch "${HOME}/.config/devbase/apt-packages.txt"
+  echo "theme: gruvbox" > "${XDG_CONFIG_HOME}/devbase/preferences.yaml"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run migrate_legacy_package_files
   
   assert_success
-  assert_file_exists "${HOME}/.config/devbase/preferences.yaml"
+  assert_file_exists "${XDG_CONFIG_HOME}/devbase/preferences.yaml"
 }
 
 @test "run_migrations calls migrate_legacy_package_files" {
-  touch "${HOME}/.config/devbase/apt-packages.txt"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
   source "${DEVBASE_ROOT}/libs/migrations.sh"
   
   run run_migrations
   
   assert_success
-  assert_file_not_exists "${HOME}/.config/devbase/apt-packages.txt"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
+}
+
+@test "migrate_legacy_package_files respects XDG_CONFIG_HOME override" {
+  export XDG_CONFIG_HOME="${TEST_DIR}/custom-xdg"
+  mkdir -p "${XDG_CONFIG_HOME}/devbase"
+  touch "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_legacy_package_files
+
+  assert_success
+  assert_file_not_exists "${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
 }
 
 @test "migrate_git_signature_hook removes pre-push signature hook" {
@@ -153,7 +165,7 @@ teardown() {
   assert_success
 }
 
-@test "migrate_deployed_vscode_settings removes stale vscode directory" {
+@test "migrate_deployed_vscode_settings preserves existing vscode directory" {
   local vscode_dir="${HOME}/.config/vscode"
   mkdir -p "${vscode_dir}"
   echo '{}' > "${vscode_dir}/settings.json"
@@ -162,7 +174,8 @@ teardown() {
   run migrate_deployed_vscode_settings
 
   assert_success
-  assert_file_not_exists "${vscode_dir}"
+  assert_dir_exists "${vscode_dir}"
+  assert_file_exists "${vscode_dir}/settings.json"
 }
 
 @test "migrate_deployed_vscode_settings succeeds when directory does not exist" {

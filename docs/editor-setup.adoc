@@ -43,7 +43,10 @@ Extensions installed automatically if VS Code detected:
 - Docker
 - Remote Development
 
-Settings applied: `.config/Code/User/settings.json`
+Settings applied:
+
+- WSL / Remote-WSL: `~/.vscode-server/data/Machine/settings.json`
+- Native Linux: `~/.config/Code/User/settings.json`
 
 == Neovim
 

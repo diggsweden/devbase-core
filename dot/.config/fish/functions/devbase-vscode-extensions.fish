@@ -5,9 +5,13 @@
 # devbase-vscode-extensions - Install VS Code extensions based on DevBase preferences
 # Reads selected language packs from preferences and installs matching extensions
 
-set -g __vscode_ext_config_dir "$HOME/.config/devbase"
-set -g __vscode_ext_packages_yaml "$HOME/.config/devbase/packages.yaml"
-set -g __vscode_ext_preferences "$HOME/.config/devbase/preferences.yaml"
+source (dirname (status current-filename))/__devbase_vscode.fish
+
+set -g __vscode_ext_config_dir (__devbase_vscode_config_home)/devbase
+set -g __vscode_ext_packages_yaml "$__vscode_ext_config_dir/packages.yaml"
+set -g __vscode_ext_preferences "$__vscode_ext_config_dir/preferences.yaml"
+set -g __vscode_ext_code_cmd ""
+set -g __vscode_ext_remote_target ""
 
 function __vscode_ext_print_info
     printf "%sⓘ%s %s\n" (set_color cyan) (set_color normal) "$argv[1]"
@@ -32,12 +36,6 @@ function __vscode_ext_check_requirements
         return 1
     end
 
-    # Check for VS Code
-    if not command -q code
-        __vscode_ext_print_error "VS Code (code) is not installed or not in PATH"
-        return 1
-    end
-
     # Check for packages.yaml
     if not test -f "$__vscode_ext_packages_yaml"
         __vscode_ext_print_error "packages.yaml not found: $__vscode_ext_packages_yaml"
@@ -52,6 +50,27 @@ function __vscode_ext_check_requirements
         return 1
     end
 
+    if not __vscode_ext_resolve_code_command
+        __vscode_ext_print_error "VS Code CLI not found"
+        if __devbase_vscode_is_wsl
+            __vscode_ext_print_info "Open the distro in VS Code Remote-WSL once, or ensure Windows VS Code is installed"
+        else
+            __vscode_ext_print_info "Install VS Code or make the 'code' command available in PATH"
+        end
+        return 1
+    end
+
+    return 0
+end
+
+function __vscode_ext_resolve_code_command --description "Resolve VS Code CLI for extension commands"
+    set -l resolved (__devbase_vscode_resolve_cli)
+    if test $status -ne 0
+        return 1
+    end
+
+    set -g __vscode_ext_code_cmd $resolved[1]
+    set -g __vscode_ext_remote_target $resolved[2]
     return 0
 end
 
@@ -94,14 +113,7 @@ function __vscode_ext_prompt_neovim --description "Ask user about neovim extensi
 end
 
 function __vscode_ext_get_vscode_settings_path --description "Get VS Code settings file path"
-    if test -d ~/.vscode-server/data/Machine
-        echo ~/.vscode-server/data/Machine/settings.json
-        return 0
-    else if test -d ~/.config/Code/User
-        echo ~/.config/Code/User/settings.json
-        return 0
-    end
-    return 1
+    __devbase_vscode_get_settings_path
 end
 
 function __vscode_ext_configure_neovim_settings --description "Merge neovim settings into VS Code settings.json"
@@ -125,13 +137,21 @@ function __vscode_ext_configure_neovim_settings --description "Merge neovim sett
         '{"vscode-neovim.useWSL": ($wsl == "true"), "vscode-neovim.neovimExecutablePaths.linux": $nvim, "vscode-neovim.neovimInitVimPaths.linux": ""}')
 
     if test -f $settings_file
-        jq -s '.[0] * .[1]' $settings_file (echo "$neovim_json" | psub) >$settings_file.tmp
-        and mv $settings_file.tmp $settings_file
-        and __vscode_ext_print_success "Neovim settings configured"
+        __devbase_vscode_merge_settings "$settings_file" "$neovim_json"
+        switch $status
+            case 0
+                __vscode_ext_print_success "Neovim settings configured"
+            case 2
+                __vscode_ext_print_warning (__devbase_vscode_describe_merge_status 2)
+            case '*'
+                __vscode_ext_print_warning (__devbase_vscode_describe_merge_status 1)
+        end
     else
-        mkdir -p (dirname $settings_file)
-        echo "$neovim_json" >$settings_file
-        and __vscode_ext_print_success "Neovim settings configured (new settings file created)"
+        if __devbase_vscode_merge_settings "$settings_file" "$neovim_json"
+            __vscode_ext_print_success "Neovim settings configured (new settings file created)"
+        else
+            __vscode_ext_print_warning "Failed to create VS Code settings for neovim"
+        end
     end
 end
 
@@ -164,7 +184,11 @@ function __vscode_ext_get_extensions
 end
 
 function __vscode_ext_get_installed
-    code --list-extensions 2>/dev/null
+    if test -n "$__vscode_ext_remote_target"
+        $__vscode_ext_code_cmd --remote "$__vscode_ext_remote_target" --list-extensions 2>/dev/null
+    else
+        $__vscode_ext_code_cmd --list-extensions 2>/dev/null
+    end
 end
 
 function __vscode_ext_display_name
@@ -235,7 +259,12 @@ function __vscode_ext_install --description "Install extensions"
             __vscode_ext_print_info "$display_name (would install)"
             set installed_count (math $installed_count + 1)
         else
-            if code --install-extension "$ext_id" --force >/dev/null 2>&1
+            if test -n "$__vscode_ext_remote_target"
+                $__vscode_ext_code_cmd --remote "$__vscode_ext_remote_target" --install-extension "$ext_id" --force >/dev/null 2>&1
+            else
+                $__vscode_ext_code_cmd --install-extension "$ext_id" --force >/dev/null 2>&1
+            end
+            if test $status -eq 0
                 __vscode_ext_print_success "$display_name"
                 set installed_count (math $installed_count + 1)
             else
@@ -308,6 +337,8 @@ function __vscode_ext_show_help
     echo "Configuration:"
     echo "  Preferences: $__vscode_ext_preferences"
     echo "  Packages:    $__vscode_ext_packages_yaml"
+    echo ""
+    echo "On WSL, DevBase uses Windows VS Code or the VS Code Server remote CLI automatically."
 end
 
 function devbase-vscode-extensions --description "Install VS Code extensions based on DevBase preferences"

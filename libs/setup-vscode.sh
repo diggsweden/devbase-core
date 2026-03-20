@@ -73,13 +73,11 @@ _find_vscode_server_cli() {
   fi
 
   local vscode_server_path
-  vscode_server_path=$(find "$HOME/.vscode-server/bin/" -maxdepth 2 -path "*/bin/remote-cli/code" -type f 2>/dev/null | sort -r | head -1)
+  vscode_server_path=$(find "$HOME/.vscode-server/bin/" -maxdepth 4 -path "*/bin/remote-cli/code" -type f 2>/dev/null | sort -r | head -1)
 
   if [[ -n "$vscode_server_path" ]] && [[ -f "$vscode_server_path" ]]; then
-    if [[ "${TERM_PROGRAM:-}" == "vscode" ]]; then
-      echo "$vscode_server_path"
-      return 0
-    fi
+    echo "$vscode_server_path"
+    return 0
   fi
 
   return 1
@@ -87,23 +85,28 @@ _find_vscode_server_cli() {
 
 # Brief: Setup code command for WSL environment
 # Params: $1 - Windows code command (if available)
-# Returns: Echoes "code_command remote_flag" to stdout
+# Returns: Echoes code command and remote target to stdout on separate lines
 _setup_wsl_code_command() {
   local win_code_cmd="$1"
   local code_command=""
-  local remote_flag=""
+  local remote_target=""
+  local wsl_distro
+  wsl_distro=$(_detect_wsl_distro)
 
   if [[ -d "$HOME/.vscode-server/bin" ]]; then
     show_progress success "[WSL-specific] VS Code Server detected" >&2
 
     if [[ -n "$win_code_cmd" ]] && [[ -n "${WSL_INTEROP:-}" ]]; then
       code_command="$win_code_cmd"
-      remote_flag=""
+      remote_target="wsl+${wsl_distro}"
     else
       local vscode_server_path
       if vscode_server_path=$(_find_vscode_server_cli); then
         code_command="$vscode_server_path"
         show_progress info "[WSL-specific] Using VS Code Server CLI" >&2
+      elif [[ -n "$win_code_cmd" ]]; then
+        code_command="$win_code_cmd"
+        remote_target="wsl+${wsl_distro}"
       fi
       # If no code_command available, we'll handle messaging in the main function
     fi
@@ -115,7 +118,19 @@ _setup_wsl_code_command() {
   fi
 
   echo "$code_command"
-  echo "$remote_flag"
+  echo "$remote_target"
+}
+
+_get_native_vscode_settings_dir() {
+  local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local native_dir="$config_home/Code/User"
+
+  if [[ -d "$native_dir" ]] || [[ -d "$config_home/Code" ]]; then
+    echo "$native_dir"
+    return 0
+  fi
+
+  return 1
 }
 
 # Brief: Find native VSCode command (non-WSL)
@@ -145,7 +160,7 @@ setup_vscode() {
   show_progress info "Setting up VS Code extensions..."
 
   local code_command=""
-  local remote_flag=""
+  local remote_target=""
 
   if is_wsl; then
     local wsl_distro
@@ -159,7 +174,7 @@ setup_vscode() {
     local wsl_setup
     wsl_setup=$(_setup_wsl_code_command "$win_code_cmd")
     code_command=$(echo "$wsl_setup" | sed -n '1p')
-    remote_flag=$(echo "$wsl_setup" | sed -n '2p')
+    remote_target=$(echo "$wsl_setup" | sed -n '2p')
   else
     if code_command=$(_find_native_vscode); then
       : # code_command already set
@@ -189,14 +204,17 @@ _get_vscode_settings_dir() {
   if [[ -d "$HOME/.vscode-server/data/Machine" ]]; then
     echo "$HOME/.vscode-server/data/Machine"
     return 0
-  elif [[ -d "$HOME/.config/Code/User" ]]; then
-    echo "$HOME/.config/Code/User"
-    return 0
   elif [[ -d "$HOME/.vscode-server" ]]; then
     local dir="$HOME/.vscode-server/data/Machine"
     mkdir -p "$dir"
     echo "$dir"
     return 0
+  else
+    local native_dir
+    if native_dir=$(_get_native_vscode_settings_dir); then
+      echo "$native_dir"
+      return 0
+    fi
   fi
   return 1
 }
@@ -210,7 +228,10 @@ _backup_vscode_settings() {
   local settings_file="$1"
   if [[ -f "$settings_file" ]]; then
     local backup_file="${settings_file}.bak.$(date +%Y%m%d_%H%M%S)"
-    cp "$settings_file" "$backup_file"
+    if ! cp "$settings_file" "$backup_file"; then
+      show_progress warning "Failed to back up existing VS Code settings"
+      return 1
+    fi
     show_progress info "Backed up existing settings to $backup_file"
     return 0
   fi
@@ -252,11 +273,22 @@ configure_vscode_settings() {
   fi
 
   if [[ -f "$settings_target" ]]; then
-    _backup_vscode_settings "$settings_target"
+    if ! _backup_vscode_settings "$settings_target"; then
+      show_progress warning "Could not create backup, leaving VS Code settings unchanged"
+      return 0
+    fi
+    if ! jq -e 'type == "object"' "$settings_target" >/dev/null 2>&1; then
+      show_progress warning "Existing VS Code settings.json is not a JSON object, leaving it unchanged"
+      return 0
+    fi
     show_progress info "Merging VS Code settings..."
-    echo "$new_settings" | jq -s '.[0] * .[1]' "$settings_target" - >"${settings_target}.tmp"
-    mv "${settings_target}.tmp" "$settings_target"
-    show_progress success "VS Code settings merged successfully"
+    if echo "$new_settings" | jq -s '.[0] * .[1]' "$settings_target" - >"${settings_target}.tmp"; then
+      mv "${settings_target}.tmp" "$settings_target"
+      show_progress success "VS Code settings merged successfully"
+    else
+      rm -f "${settings_target}.tmp"
+      show_progress warning "Failed to merge VS Code settings, leaving existing file unchanged"
+    fi
   else
     echo "$new_settings" | jq '.' >"$settings_target"
     show_progress success "VS Code settings configured with theme: $vscode_theme"
@@ -328,14 +360,14 @@ _setup_vscode_parser() {
 }
 
 # Brief: Test VS Code command availability
-# Params: $1-code_cmd $2-remote_flag
+# Params: $1-code_cmd $2-remote_target
 # Returns: 0 if working, 1 if failed
 _install_vscode_ext_test_command() {
   local code_cmd="$1"
-  local remote_flag="$2"
+  local remote_target="$2"
 
   # Skip version test if using --remote flag since it would open GUI
-  [[ -n "$remote_flag" ]] && return 0
+  [[ -n "$remote_target" ]] && return 0
 
   local test_output
   if ! test_output=$("$code_cmd" --version 2>&1); then
@@ -347,14 +379,14 @@ _install_vscode_ext_test_command() {
 }
 
 # Brief: Get list of already-installed extensions
-# Params: $1-code_cmd $2-remote_flag
+# Params: $1-code_cmd $2-remote_target
 # Returns: echoes extension list to stdout
 _install_vscode_ext_get_installed() {
   local code_cmd="$1"
-  local remote_flag="$2"
+  local remote_target="$2"
 
-  if [[ -n "$remote_flag" ]]; then
-    "$code_cmd" "$remote_flag" --list-extensions 2>/dev/null || true
+  if [[ -n "$remote_target" ]]; then
+    "$code_cmd" --remote "$remote_target" --list-extensions 2>/dev/null || true
   else
     "$code_cmd" --list-extensions 2>/dev/null || true
   fi
@@ -394,11 +426,11 @@ _install_vscode_ext_display_name() {
 }
 
 # Brief: Install single extension
-# Params: $1-code_cmd $2-remote_flag $3-ext_id $4-display_name $5-installed_list
+# Params: $1-code_cmd $2-remote_target $3-ext_id $4-display_name $5-installed_list
 # Returns: 0=installed, 1=failed, 2=skipped
 _install_vscode_ext_install_one() {
   local code_cmd="$1"
-  local remote_flag="$2"
+  local remote_target="$2"
   local ext_id="$3"
   local display_name="$4"
   local installed_list="$5"
@@ -411,7 +443,7 @@ _install_vscode_ext_install_one() {
 
   # Install extension
   local install_args=("--install-extension" "$ext_id" "--force")
-  [[ -n "$remote_flag" ]] && install_args=("$remote_flag" "${install_args[@]}")
+  [[ -n "$remote_target" ]] && install_args=("--remote" "$remote_target" "${install_args[@]}")
 
   if NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt "$code_cmd" "${install_args[@]}"; then
     show_progress success "$display_name"
@@ -445,23 +477,23 @@ _install_vscode_ext_print_summary() {
 }
 
 # Brief: Install VS Code extensions from packages.yaml
-# Params: $1 - code_cmd (path to code executable), $2 - remote_flag (optional)
+# Params: $1 - code_cmd (path to code executable), $2 - remote_target (optional)
 # Uses: DEVBASE_DOT, _DEVBASE_CUSTOM_PACKAGES, get_extension_description, show_progress (globals/functions)
 # Returns: 0 on success, 1 if code_cmd fails or packages.yaml not found
 # Side-effects: Installs VS Code extensions, prints installation summary
 install_vscode_extensions() {
   local code_cmd="$1"
-  local remote_flag="${2:-}"
+  local remote_target="${2:-}"
 
   validate_not_empty "$code_cmd" "VS Code command" || return 1
 
   # Set up parser
   _setup_vscode_parser || return 1
 
-  _install_vscode_ext_test_command "$code_cmd" "$remote_flag" || return 1
+  _install_vscode_ext_test_command "$code_cmd" "$remote_target" || return 1
 
   local installed_list
-  installed_list=$(_install_vscode_ext_get_installed "$code_cmd" "$remote_flag")
+  installed_list=$(_install_vscode_ext_get_installed "$code_cmd" "$remote_target")
 
   local installed_count=0
   local skipped_count=0
@@ -486,7 +518,7 @@ install_vscode_extensions() {
     display_name=$(_install_vscode_ext_display_name "$ext_id")
 
     local result
-    _install_vscode_ext_install_one "$code_cmd" "$remote_flag" "$ext_id" "$display_name" "$installed_list"
+    _install_vscode_ext_install_one "$code_cmd" "$remote_target" "$ext_id" "$display_name" "$installed_list"
     result=$?
 
     case $result in

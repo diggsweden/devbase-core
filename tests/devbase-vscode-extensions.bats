@@ -17,6 +17,7 @@ load "${BATS_TEST_DIRNAME}/test_helper.bash"
 setup() {
   common_setup_isolated
   export DEVBASE_VSCODE_EXT_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-vscode-extensions.fish"
+  export DEVBASE_VSCODE_HELPER_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_vscode.fish"
   
   # Create mock config directory (matching the fish function's expected paths)
   # Both preferences.yaml and packages.yaml live in ~/.config/devbase/
@@ -38,7 +39,7 @@ run_fish_vscode_ext() {
 run_fish_vscode_ext_with_mock_home() {
   local yq_path
   yq_path=$(dirname "$(command -v yq)")
-  env HOME="$TEST_DIR" PATH="${yq_path}:${PATH}" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; $*"
+  env HOME="$TEST_DIR" XDG_CONFIG_HOME="${TEST_DIR}/.config" PATH="${yq_path}:${PATH}" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; $*"
 }
 
 # Helper to create mock preferences.yaml
@@ -82,6 +83,10 @@ EOF
   assert_file_exists "$DEVBASE_VSCODE_EXT_FISH"
 }
 
+@test "__devbase_vscode helper function file exists" {
+  assert_file_exists "$DEVBASE_VSCODE_HELPER_FISH"
+}
+
 @test "devbase-vscode-extensions --help shows usage" {
   run run_fish_vscode_ext "devbase-vscode-extensions --help"
   
@@ -113,6 +118,42 @@ EOF
   "
   
   assert_failure
+}
+
+@test "devbase-vscode-extensions uses vscode-server remote CLI on WSL without code in PATH" {
+  create_mock_preferences "java node"
+  create_mock_packages
+
+  local yq_path
+  yq_path=$(dirname "$(command -v yq)")
+  local remote_cli_dir="${TEST_DIR}/.vscode-server/bin/test-build/bin/remote-cli"
+  mkdir -p "$remote_cli_dir"
+
+  cat > "${remote_cli_dir}/code" <<EOF
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "${remote_cli_dir}/code"
+
+  run env -u WSL_INTEROP HOME="$TEST_DIR" XDG_CONFIG_HOME="${TEST_DIR}/.config" PATH="${yq_path}:/usr/bin:/bin" WSL_DISTRO_NAME="Ubuntu-24.04" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; __vscode_ext_resolve_code_command; printf '%s\n%s\n' \"\$__vscode_ext_code_cmd\" \"\$__vscode_ext_remote_target\""
+
+  assert_success
+  assert_output --partial "$remote_cli_dir/code"
+
+  run env -u WSL_INTEROP HOME="$TEST_DIR" XDG_CONFIG_HOME="${TEST_DIR}/.config" PATH="${yq_path}:/usr/bin:/bin" WSL_DISTRO_NAME="Ubuntu-24.04" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; devbase-vscode-extensions --dry-run"
+
+  assert_success
+}
+
+@test "devbase-vscode-extensions uses XDG_CONFIG_HOME for VS Code settings path" {
+  local xdg_config_home="${TEST_DIR}/custom-config"
+  local settings_dir="${xdg_config_home}/Code/User"
+  mkdir -p "$settings_dir"
+
+  run env HOME="$TEST_DIR" XDG_CONFIG_HOME="$xdg_config_home" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; __vscode_ext_get_vscode_settings_path"
+
+  assert_success
+  assert_output "$settings_dir/settings.json"
 }
 
 @test "__vscode_ext_get_selected_packs reads from preferences" {
@@ -220,6 +261,42 @@ EOF
   # Verify settings file was created with neovim keys
   run jq -r 'keys[]' "${settings_dir}/settings.json"
   assert_output --partial "vscode-neovim.useWSL"
+}
+
+@test "__vscode_ext_configure_neovim_settings leaves invalid settings file unchanged" {
+  if ! command -v jq &>/dev/null; then
+    skip "jq is required for this test"
+  fi
+
+  local settings_dir="${TEST_DIR}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  printf '{invalid json\n' > "${settings_dir}/settings.json"
+
+  run run_fish_vscode_ext_with_mock_home "__vscode_ext_configure_neovim_settings"
+
+  assert_success
+  assert_output --partial "invalid JSON"
+
+  run cat "${settings_dir}/settings.json"
+  assert_output '{invalid json'
+}
+
+@test "__vscode_ext_configure_neovim_settings leaves non-object settings file unchanged" {
+  if ! command -v jq &>/dev/null; then
+    skip "jq is required for this test"
+  fi
+
+  local settings_dir="${TEST_DIR}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  printf '[]\n' > "${settings_dir}/settings.json"
+
+  run run_fish_vscode_ext_with_mock_home "__vscode_ext_configure_neovim_settings"
+
+  assert_success
+  assert_output --partial "not a JSON object"
+
+  run cat "${settings_dir}/settings.json"
+  assert_output '[]'
 }
 
 @test "devbase-vscode-extensions --list shows extensions by pack" {

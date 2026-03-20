@@ -2534,10 +2534,12 @@ devbase-vscode-extensions --list
 devbase-vscode-extensions --dry-run
 ```
 
-The function reads your preferences from `~/.config/devbase/preferences.yaml` and installs:
+The function reads your preferences from `$XDG_CONFIG_HOME/devbase/preferences.yaml` (default: `~/.config/devbase/preferences.yaml`) and installs:
 
 - Core extensions (always)
 - Pack-specific extensions (based on your selected language packs)
+
+On WSL, the function automatically targets your Remote-WSL VS Code instance by using either Windows VS Code with `--remote` or the VS Code Server remote CLI.
 
 You can run this function anytime to install or update extensions.
 
