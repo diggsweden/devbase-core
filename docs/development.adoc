@@ -10,7 +10,7 @@
 - hadolint - Dockerfile linting
 - yamlfmt - YAML formatting
 - actionlint - GitHub Actions linting
-- conform - Commit message validation
+- gommitlint - Commit message validation
 
 Managed by mise (see `.mise.toml`):
 
@@ -47,7 +47,7 @@ just lint-shell             # Lint shell scripts with shellcheck
 just lint-shell-fmt         # Check shell script formatting with shfmt
 just lint-actions           # Lint GitHub Actions workflows with actionlint
 just lint-secrets           # Check for secrets and sensitive data with gitleaks
-just lint-commit            # Validate commit messages with conform
+just lint-commits           # Validate commit messages with gommitlint
 ----
 
 === Fixing Issues

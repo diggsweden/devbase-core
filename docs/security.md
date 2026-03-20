@@ -524,7 +524,7 @@ export NO_PROXY="localhost,127.0.0.1,*.internal"
 **Security Model**:
 
 - Organization controls repo
-- Commit policy enforced by repo tooling (e.g., conform in CI)
+- Commit policy enforced by repo tooling (e.g., gommitlint in CI)
 - Code review enforced
 
 **Certificates**:

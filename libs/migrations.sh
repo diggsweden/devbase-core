@@ -94,7 +94,7 @@ migrate_mise_fish_hook() {
 }
 
 # Brief: Remove legacy pre-push signature hook from active hooks directory
-# Context: Signature enforcement moved to conform; old hook should be removed on update
+# Context: Signature enforcement moved to post-commit validation; old hook should be removed on update
 # Returns: 0 always (cleanup is best-effort)
 migrate_git_signature_hook() {
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"

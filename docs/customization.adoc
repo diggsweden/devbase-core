@@ -620,7 +620,7 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 │   └── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
 ├── commit-msg                     # Dispatcher
 ├── post-commit.d/
-│   └── 01-conventional-commits.sh # Active: Conventional commits (if .conform.yaml exists)
+│   └── 01-conventional-commits.sh # Active: Conventional commits via gommitlint defaults
 ├── prepare-commit-msg             # Dispatcher
 ├── prepare-commit-msg.d/
 │   └── 01-add-issue-ref.sh       # Active: Auto-add Refs: from branch
@@ -633,7 +633,7 @@ DevBase Core provides minimal hooks focused on security and workflow automation.
 === Active Hooks
 
 * **01-secrets-scan.sh** - Scans staged files for secrets using gitleaks before commit. Prevents accidentally committing API keys, passwords, and tokens.
-* **01-conventional-commits.sh** - Validates commit policy using conform. Only active if the repository has a `.conform.yaml` config file.
+* **01-conventional-commits.sh** - Validates commit policy using gommitlint. Uses gommitlint defaults automatically, and applies project-specific rules from `.gommitlint.yaml` when present.
 * **01-add-issue-ref.sh** - Automatically adds `Refs: ISSUE-123` footer to commit messages when the branch name contains an issue reference (e.g., `feature/PROJ-456-add-feature`).
 
 === How It Works
@@ -645,7 +645,7 @@ When you run `git commit`:
 3. **prepare-commit-msg** dispatcher runs, auto-adding issue references from branch name
 4. User edits commit message
 5. Git creates the commit
-6. **post-commit** dispatcher validates commit policy (non-blocking, if `.conform.yaml` exists)
+6. **post-commit** dispatcher validates commit policy non-blocking, using gommitlint defaults and optional project config
 
 When you run `git push`:
 
@@ -716,7 +716,7 @@ NOTE: During non-interactive rebase (`git rebase main`), pre-commit and commit-m
 - Hooks run when you **edit** or **reword** commits
 - Hooks do **not** run for commits you **pick**
 
-**Enforcement:** Use repository policies (for example, conform in CI) to ensure rebased commits still comply.
+**Enforcement:** Use repository policies (for example, gommitlint in CI) to ensure rebased commits still comply.
 
 == Installation Hooks
 

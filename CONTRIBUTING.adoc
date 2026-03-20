@@ -98,7 +98,7 @@ Before you submit your Merge/Pull Request you are expected to run a quick qualit
 (And fix any problems you might find;).
 
 * Project quality tooling:
-* https://github.com/siderolabs/conform[conform] (commit check)
+* https://codeberg.org/itiquette/gommitlint[gommitlint] (commit check)
 * shellcheck, shfmt, hadolint, yamlfmt (via mise)
 
 === Code quality tools and test coverage

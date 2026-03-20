@@ -67,7 +67,7 @@ This guide documents all tools in the devbase environment, including devbase-spe
   - [Actionlint](#actionlint)
   - [Checkstyle](#checkstyle)
   - [ClamAV](#clamav)
-  - [Conform](#conform)
+  - [Gommitlint](#gommitlint)
   - [DNSUtils](#dnsutils)
   - [Gitleaks](#gitleaks)
   - [Hadolint](#hadolint)
@@ -828,7 +828,7 @@ DevBase provides minimal git hooks focused on security and workflow automation. 
   - `01-secrets-scan.sh` - Scans staged files for secrets using gitleaks
 
 - **post-commit** - Validates commit policy (non-blocking):
-  - `01-conventional-commits.sh` - Enforces conventional commits via conform (only if `.conform.yaml` exists in repo)
+  - `01-conventional-commits.sh` - Enforces conventional commits via gommitlint, using built-in defaults and optional `.gommitlint.yaml` overrides
 
 - **prepare-commit-msg** - Prepares commit message:
   - `01-add-issue-ref.sh` - Auto-adds `Refs:` trailer from branch name (e.g., `JIRA-123`)
@@ -1855,22 +1855,22 @@ Provides virus scanning on Linux systems for files, email attachments, and downl
 
 ---
 
-### Conform
+### Gommitlint
 
-Validates git commits against conventional commit format and other repository policies.
-Ensures commit messages follow a consistent structure (type, scope, description).
-Enforces repository standards like required sign-offs or commit message length limits.
+Validates git commits against conventional commit format and repository policies.
+Ensures commit messages follow a consistent structure and verifies required signatures.
+Supports local validation and CI-friendly output for commit policy enforcement.
 
-#### Conform Key Commands
+#### Gommitlint Key Commands
 
-- **Check commits**: `conform enforce`
-- **Check specific range**: `conform enforce --from=HEAD~5`
-- **Init config**: `conform init`
-- **Version**: `conform version`
+- **Check latest commit**: `gommitlint validate`
+- **Check against base branch**: `gommitlint validate --base-branch=main`
+- **Init config**: `gommitlint config init > .gommitlint.yaml`
+- **Version**: `gommitlint version`
 
 **Learn more**:
 
-- Documentation: [Conform Documentation](https://github.com/siderolabs/conform)
+- Documentation: [Gommitlint Documentation](https://codeberg.org/itiquette/gommitlint)
 
 ---
 

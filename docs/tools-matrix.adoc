@@ -689,10 +689,10 @@ toc::[]
 |
 |
 
-|link:https://github.com/siderolabs/conform[conform]
+|link:https://codeberg.org/itiquette/gommitlint[gommitlint]
 |Git commit policy enforcement
-|mise/aqua
-|MPL-2.0
+|mise/forgejo
+|EUPL-1.2
 |✓
 |✓
 |

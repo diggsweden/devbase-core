@@ -173,7 +173,7 @@ core:
     cosign: {backend: "aqua:sigstore/cosign", version: "3.0.4"} # renovate: datasource=github-releases depName=sigstore/cosign
     slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
     # Standards
-    conform: {backend: "aqua:siderolabs/conform", version: "v0.1.0-alpha.30"} # renovate: datasource=github-releases depName=siderolabs/conform
+    gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.4"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
     publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.2.3"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
     # Testing
     bats: {backend: "aqua:bats-core/bats-core", version: "1.13.0"} # renovate: datasource=github-releases depName=bats-core/bats-core
