@@ -162,7 +162,7 @@ core:
     tkn: {backend: "aqua:tektoncd/cli", version: "v0.43.0"} # renovate: datasource=github-releases depName=tektoncd/cli
     # Code quality
     yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0"} # renovate: datasource=github-releases depName=google/yamlfmt
-    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.10"} # renovate: datasource=github-releases depName=rhysd/actionlint
+    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.12"} # renovate: datasource=github-releases depName=rhysd/actionlint
     hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.14.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
     shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
     shfmt: {backend: "aqua:mvdan/sh", version: "v3.12.0"} # renovate: datasource=github-releases depName=mvdan/sh
