@@ -154,7 +154,7 @@ core:
     neovim: {backend: "aqua:neovim/neovim", version: "v0.11.6"} # renovate: datasource=github-releases depName=neovim/neovim
     tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.26.5"} # renovate: datasource=npm depName=tree-sitter-cli
     # Container/Kubernetes
-    docker-compose: {backend: "aqua:docker/compose", version: "v5.1.2"} # renovate: datasource=github-releases depName=docker/compose
+    docker-compose: {backend: "aqua:docker/compose", version: "v5.1.3"} # renovate: datasource=github-releases depName=docker/compose
     k9s: {backend: "aqua:derailed/k9s", version: "v0.50.18"} # renovate: datasource=github-releases depName=derailed/k9s
     k6: {backend: "aqua:grafana/k6", version: "v1.5.0"} # renovate: datasource=github-releases depName=grafana/k6
     argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.3.0"} # renovate: datasource=github-releases depName=argoproj/argo-cd
