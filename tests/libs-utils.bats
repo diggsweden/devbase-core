@@ -166,7 +166,50 @@ SCRIPT
   export PATH="${TEST_DIR}/bin:${PATH}"
   
   run --separate-stderr retry_command --delay 0 -- flaky_command
-  
+
   assert_success
   assert_output --partial "Success on attempt 3"
+}
+
+@test "safe_rm_file removes a regular file" {
+  local target="${TEST_DIR}/file-to-remove"
+  echo "content" > "$target"
+
+  run safe_rm_file "$target"
+
+  assert_success
+  [ ! -e "$target" ]
+}
+
+@test "safe_rm_file removes a symlink without following it" {
+  local dead_target="/nonexistent/path"
+  local link="${TEST_DIR}/broken-link"
+  ln -sfn "$dead_target" "$link"
+
+  run safe_rm_file "$link"
+
+  assert_success
+  [ ! -L "$link" ]
+}
+
+@test "safe_rm_file is a no-op on a missing target" {
+  run safe_rm_file "${TEST_DIR}/does-not-exist"
+
+  assert_success
+}
+
+@test "safe_rm_file refuses to remove a directory" {
+  local dir="${TEST_DIR}/a-directory"
+  mkdir -p "$dir"
+
+  run --separate-stderr safe_rm_file "$dir"
+
+  assert_failure
+  assert [ -d "$dir" ]
+}
+
+@test "safe_rm_file rejects empty target" {
+  run --separate-stderr safe_rm_file ""
+
+  assert_failure
 }

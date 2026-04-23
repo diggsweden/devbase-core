@@ -639,6 +639,26 @@ safe_rm_rf() {
   rm -rf "$real_target"
 }
 
+# Brief: Remove a single file or symlink, refusing directories
+# Params: $1 - target path
+# Returns: 0 if removed (or absent), 1 if target is a directory or arg is empty
+# Side-effects: Unlinks the target (does not follow symlinks)
+safe_rm_file() {
+  local target="$1"
+
+  if [[ -z "$target" ]]; then
+    show_progress error "safe_rm_file: target must be non-empty"
+    return 1
+  fi
+
+  if [[ -d "$target" && ! -L "$target" ]]; then
+    show_progress error "safe_rm_file: refusing directory: ${target}"
+    return 1
+  fi
+
+  rm -f "$target"
+}
+
 # Brief: Safely remove temporary directory with path validation
 # Params: None
 # Uses: _DEVBASE_TEMP (global)

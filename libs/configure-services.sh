@@ -187,6 +187,53 @@ configure_podman_service() {
   return 0
 }
 
+# Brief: Expose mise-managed docker-compose to podman as a Docker CLI plugin
+# Params: None
+# Uses: HOME, MISE_DATA_DIR, XDG_DATA_HOME, show_progress (globals/functions)
+# Returns: 0 always
+# Side-effects: Creates or removes ~/.docker/cli-plugins/docker-compose wrapper
+#
+# Podman's `compose` command probes $PATH and ~/.docker/cli-plugins. The
+# aqua:docker/compose package installs the binary as
+# `docker-cli-plugin-docker-compose`, so podman never finds a provider on its
+# own. We drop a small wrapper that execs the mise shim by its real name.
+#
+# A plain symlink does NOT work: mise dispatches on basename(argv[0]), so a
+# link named `docker-compose` makes mise look up a tool that doesn't exist
+# and error out ("not a valid shim").
+#
+# Shim path honours MISE_DATA_DIR and XDG_DATA_HOME so non-default mise
+# layouts still work. If the shim is gone (tool removed from packages.yaml
+# on a re-install) we also remove any stale wrapper so `podman compose`
+# fails cleanly with "no provider" instead of execing a dead shim.
+configure_podman_compose_provider() {
+  if ! command -v podman &>/dev/null; then
+    return 0
+  fi
+
+  local mise_data="${MISE_DATA_DIR:-${XDG_DATA_HOME:-${HOME}/.local/share}/mise}"
+  local shim="${mise_data}/shims/docker-cli-plugin-docker-compose"
+  local plugin_dir="${HOME}/.docker/cli-plugins"
+  local plugin_link="${plugin_dir}/docker-compose"
+
+  if [[ ! -e "$shim" ]]; then
+    safe_rm_file "$plugin_link"
+    show_progress warning "docker-compose mise shim not found at ${shim}; skipping CLI plugin link"
+    return 0
+  fi
+
+  mkdir -p "$plugin_dir"
+  safe_rm_file "$plugin_link"
+  cat > "$plugin_link" <<EOF
+#!/usr/bin/env bash
+exec "${shim}" "\$@"
+EOF
+  chmod +x "$plugin_link"
+
+  show_progress success "Registered docker-compose as Podman CLI plugin"
+  return 0
+}
+
 # Brief: Enable Wayland socket symlink service if configured
 # Params: None
 # Uses: XDG_CONFIG_HOME, show_progress, enable_user_service (globals/functions)
