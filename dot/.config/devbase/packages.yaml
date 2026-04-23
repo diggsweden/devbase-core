@@ -171,7 +171,7 @@ core:
     gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.1"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
     syft: {backend: "aqua:anchore/syft", version: "v1.41.2"} # renovate: datasource=github-releases depName=anchore/syft
     scorecard: {backend: "aqua:ossf/scorecard", version: "v5.4.0"} # renovate: datasource=github-releases depName=ossf/scorecard
-    cosign: {backend: "aqua:sigstore/cosign", version: "3.0.4"} # renovate: datasource=github-releases depName=sigstore/cosign
+    cosign: {backend: "aqua:sigstore/cosign", version: "3.0.6"} # renovate: datasource=github-releases depName=sigstore/cosign
     slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
     # Standards
     gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.4"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
