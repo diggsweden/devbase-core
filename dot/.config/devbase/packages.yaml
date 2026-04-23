@@ -166,7 +166,7 @@ core:
     hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.14.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
     shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
     shfmt: {backend: "aqua:mvdan/sh", version: "v3.12.0"} # renovate: datasource=github-releases depName=mvdan/sh
-    rumdl: {backend: "github:rvben/rumdl", version: "v0.1.12"} # renovate: datasource=github-releases depName=rvben/rumdl
+    rumdl: {backend: "github:rvben/rumdl", version: "v0.1.72"} # renovate: datasource=github-releases depName=rvben/rumdl
     # Security
     gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.0"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
     syft: {backend: "aqua:anchore/syft", version: "v1.41.2"} # renovate: datasource=github-releases depName=anchore/syft
