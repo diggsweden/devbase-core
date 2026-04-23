@@ -16,16 +16,7 @@
         "/(^|/)dot/\\.config/devbase/packages\\.yaml$/"
       ],
       "matchStrings": [
-        "^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
-      ]
-    },
-{
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/(^|/)dot/\\.config/devbase/vscode-extensions\\.yaml$/"
-      ],
-      "matchStrings": [
-        "^(?<depName>[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_.-]+):\\s+(?<currentValue>\\S+)\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
+        "(?m)^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
     },
     {
