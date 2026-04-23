@@ -224,7 +224,7 @@ configure_podman_compose_provider() {
 
   mkdir -p "$plugin_dir"
   safe_rm_file "$plugin_link"
-  cat > "$plugin_link" <<EOF
+  cat >"$plugin_link" <<EOF
 #!/usr/bin/env bash
 exec "${shim}" "\$@"
 EOF
