@@ -9,6 +9,14 @@
       "/(^|/)\\.mise\\.toml$/"
     ]
   },
+  "packageRules": [
+    {
+      "description": "Skip rumdl v0.1.72 — aqua attestation verification fails (upstream workflow-ref pattern mismatch)",
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["rvben/rumdl"],
+      "allowedVersions": "!=v0.1.72"
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
