@@ -125,7 +125,7 @@ core:
   # Distro-agnostic tools installed via mise
   mise:
     # Build tools
-    just: {backend: "aqua:casey/just", version: "1.46.0"} # renovate: datasource=github-releases depName=casey/just
+    just: {backend: "aqua:casey/just", version: "1.49.0"} # renovate: datasource=github-releases depName=casey/just
     usage: {version: "v2.16.1"} # renovate: datasource=github-releases depName=jdx/usage
     jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
     yq: {backend: "aqua:mikefarah/yq", version: "v4.52.2"} # renovate: datasource=github-releases depName=mikefarah/yq
