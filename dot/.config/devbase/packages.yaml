@@ -169,7 +169,7 @@ core:
     rumdl: {backend: "github:rvben/rumdl", version: "v0.1.12"} # renovate: datasource=github-releases depName=rvben/rumdl
     # Security
     gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.1"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
-    syft: {backend: "aqua:anchore/syft", version: "v1.41.2"} # renovate: datasource=github-releases depName=anchore/syft
+    syft: {backend: "aqua:anchore/syft", version: "v1.42.4"} # renovate: datasource=github-releases depName=anchore/syft
     scorecard: {backend: "aqua:ossf/scorecard", version: "v5.4.0"} # renovate: datasource=github-releases depName=ossf/scorecard
     cosign: {backend: "aqua:sigstore/cosign", version: "3.0.6"} # renovate: datasource=github-releases depName=sigstore/cosign
     slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
