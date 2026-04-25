@@ -132,7 +132,7 @@ core:
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
     excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.4"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
     # Shell enhancements
-    fzf: {backend: "aqua:junegunn/fzf", version: "v0.67.0"} # renovate: datasource=github-releases depName=junegunn/fzf
+    fzf: {backend: "aqua:junegunn/fzf", version: "v0.71.0"} # renovate: datasource=github-releases depName=junegunn/fzf
     zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.9.9"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
     eza: {backend: "aqua:eza-community/eza", version: "v0.23.4"} # renovate: datasource=github-releases depName=eza-community/eza
     bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1"} # renovate: datasource=github-releases depName=sharkdp/bat
