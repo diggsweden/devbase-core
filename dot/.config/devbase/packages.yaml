@@ -140,7 +140,7 @@ core:
     starship: {backend: "aqua:starship/starship", version: "v1.24.2"} # renovate: datasource=github-releases depName=starship/starship
     zellij: {backend: "aqua:zellij-org/zellij", version: "v0.43.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
     ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.1.0"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
-    fd: {backend: "aqua:sharkdp/fd", version: "v10.3.0"} # renovate: datasource=github-releases depName=sharkdp/fd
+    fd: {backend: "aqua:sharkdp/fd", version: "v10.4.2"} # renovate: datasource=github-releases depName=sharkdp/fd
     tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.12.0"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
     btop: {backend: "aqua:aristocratos/btop", version: "v1.4.6"} # renovate: datasource=github-releases depName=aristocratos/btop
     lf: {backend: "aqua:gokcehan/lf", version: "r41"} # renovate: datasource=github-releases depName=gokcehan/lf
