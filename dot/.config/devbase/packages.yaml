@@ -136,7 +136,7 @@ core:
     zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.9.9"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
     eza: {backend: "aqua:eza-community/eza", version: "v0.23.4"} # renovate: datasource=github-releases depName=eza-community/eza
     bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1"} # renovate: datasource=github-releases depName=sharkdp/bat
-    vivid: {backend: "aqua:sharkdp/vivid", version: "v0.10.1"} # renovate: datasource=github-releases depName=sharkdp/vivid
+    vivid: {backend: "aqua:sharkdp/vivid", version: "v0.11.1"} # renovate: datasource=github-releases depName=sharkdp/vivid
     starship: {backend: "aqua:starship/starship", version: "v1.24.2"} # renovate: datasource=github-releases depName=starship/starship
     zellij: {backend: "aqua:zellij-org/zellij", version: "v0.43.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
     ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.1.0"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
