@@ -158,7 +158,7 @@ core:
     k9s: {backend: "aqua:derailed/k9s", version: "v0.50.18"} # renovate: datasource=github-releases depName=derailed/k9s
     k6: {backend: "aqua:grafana/k6", version: "v1.7.1"} # renovate: datasource=github-releases depName=grafana/k6
     argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.3.0"} # renovate: datasource=github-releases depName=argoproj/argo-cd
-    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.34.0"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
+    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.36.6"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
     tkn: {backend: "aqua:tektoncd/cli", version: "v0.43.0"} # renovate: datasource=github-releases depName=tektoncd/cli
     # Code quality
     yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0"} # renovate: datasource=github-releases depName=google/yamlfmt
