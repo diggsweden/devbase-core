@@ -138,7 +138,7 @@ core:
     bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1"} # renovate: datasource=github-releases depName=sharkdp/bat
     vivid: {backend: "aqua:sharkdp/vivid", version: "v0.11.1"} # renovate: datasource=github-releases depName=sharkdp/vivid
     starship: {backend: "aqua:starship/starship", version: "v1.25.0"} # renovate: datasource=github-releases depName=starship/starship
-    zellij: {backend: "aqua:zellij-org/zellij", version: "v0.43.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
+    zellij: {backend: "aqua:zellij-org/zellij", version: "v0.44.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
     ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.1.0"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
     fd: {backend: "aqua:sharkdp/fd", version: "v10.4.2"} # renovate: datasource=github-releases depName=sharkdp/fd
     tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.13.0"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
