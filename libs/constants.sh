@@ -25,7 +25,6 @@ fi
 # =============================================================================
 # MISE (TOOL VERSION MANAGER)
 # =============================================================================
-readonly DEVBASE_URL_MISE_INSTALLER="https://mise.run"
 readonly DEVBASE_URL_MISE_RELEASES="https://github.com/jdx/mise/releases/download"
 
 # =============================================================================

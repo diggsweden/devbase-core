@@ -269,6 +269,7 @@ EOF
   mkdir -p "${TEST_DIR}/bin"
   mkdir -p "${HOME}/.local/bin"
   mkdir -p "${TEST_DIR}/tmp"
+  mkdir -p "${TEST_DIR}/fake-release/mise/bin"
 
   cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
 core:
@@ -283,17 +284,15 @@ echo "mise v2026.1.0"
 SCRIPT
   chmod +x "${TEST_DIR}/bin/mise"
 
-  cat > "${TEST_DIR}/mise_installer.sh" << 'SCRIPT'
+  # Build a fake release tarball with the same layout the upstream tarball has
+  # (mise/bin/mise). The fake binary just echoes the version so we can verify
+  # _run_mise_installer extracts and places it correctly.
+  cat > "${TEST_DIR}/fake-release/mise/bin/mise" << 'SCRIPT'
 #!/usr/bin/env bash
-set -e
-mkdir -p "$HOME/.local/bin"
-cat > "$HOME/.local/bin/mise" << EOF
-#!/usr/bin/env bash
-echo "mise ${MISE_VERSION}"
-EOF
-chmod +x "$HOME/.local/bin/mise"
+echo "mise v2026.2.0"
 SCRIPT
-  chmod +x "${TEST_DIR}/mise_installer.sh"
+  chmod +x "${TEST_DIR}/fake-release/mise/bin/mise"
+  ( cd "${TEST_DIR}/fake-release" && tar -czf "${TEST_DIR}/fake-mise.tar.gz" mise )
 
   run env \
     DEVBASE_ROOT="${DEVBASE_ROOT}" \
@@ -307,8 +306,16 @@ SCRIPT
     HOME="${HOME}" \
     bash -c '
     cat > "${TEST_DIR}/mock-fns.sh" << "SCRIPT"
-retry_command() { "$@"; }
-download_file() { cp "${TEST_DIR}/mise_installer.sh" "$2"; }
+retry_command() {
+  # Stub the SHASUMS download: write a synthetic line with the actual SHA of
+  # our fake tarball and the asset name _run_mise_installer expects.
+  local out_idx=$(($# - 1))
+  local out_file="${@: -1}"
+  local fake_sha
+  fake_sha=$(sha256sum "${TEST_DIR}/fake-mise.tar.gz" | cut -d" " -f1)
+  echo "${fake_sha}  ./mise-v2026.2.0-linux-x64.tar.gz" > "$out_file"
+}
+download_file() { cp "${TEST_DIR}/fake-mise.tar.gz" "$2"; }
 verify_mise_checksum() { return 0; }
 SCRIPT
 
@@ -316,12 +323,13 @@ SCRIPT
     source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/utils.sh" >/dev/null 2>&1
     source "${DEVBASE_ROOT}/libs/parse-packages.sh"
     source "${DEVBASE_ROOT}/libs/install-mise.sh"
     source "${TEST_DIR}/mock-fns.sh"
 
     update_mise_if_needed
-    "${HOME}/.local/bin/mise" --version
+    "${XDG_BIN_HOME}/mise" --version
   '
 
   assert_success
@@ -394,4 +402,51 @@ SCRIPT
 
   assert_success
   assert_output --partial "no-install"
+}
+
+@test "_run_mise_installer dies if asset checksum is missing from SHASUMS256.txt" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  mkdir -p "${TEST_DIR}/tmp"
+
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: { version: "v2026.2.0", installer: "install_mise" }
+packs: {}
+EOF
+
+  run env \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    DEVBASE_LIBS="${DEVBASE_ROOT}/libs" \
+    PACKAGES_YAML="${TEST_DIR}/.config/devbase/packages.yaml" \
+    SELECTED_PACKS="" \
+    _DEVBASE_TEMP="${TEST_DIR}/tmp" \
+    TEST_DIR="${TEST_DIR}" \
+    HOME="${HOME}" \
+    bash -c '
+    cat > "${TEST_DIR}/mock-fns.sh" << "SCRIPT"
+# Stub SHASUMS download with a manifest that does not contain our asset
+retry_command() {
+  local out_file="${@: -1}"
+  echo "deadbeef  ./mise-v0.0.0-linux-x64.tar.gz" > "$out_file"
+}
+download_file() { return 0; }
+SCRIPT
+
+    source "${DEVBASE_ROOT}/libs/constants.sh"
+    source "${DEVBASE_ROOT}/libs/define-colors.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/utils.sh" >/dev/null 2>&1
+    source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+    source "${DEVBASE_ROOT}/libs/install-mise.sh"
+    source "${TEST_DIR}/mock-fns.sh"
+
+    # Run in a nested subshell so die() does not abort the outer bash -c
+    ( _run_mise_installer "Test installing mise" ) 2>&1
+  '
+
+  assert_failure
+  assert_output --partial "No checksum found"
 }

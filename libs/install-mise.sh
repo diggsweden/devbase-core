@@ -9,6 +9,28 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+# Brief: Map uname architecture to mise's release-asset naming convention
+# Returns: 0 with arch on stdout (x64/arm64), 1 on unsupported arch
+_get_mise_arch() {
+  case "$(uname -m)" in
+  x86_64) echo "x64" ;;     # mise ships as mise-vX.Y-linux-x64
+  aarch64) echo "arm64" ;;  # mise ships as mise-vX.Y-linux-arm64
+  *) return 1 ;;
+  esac
+}
+
+# Brief: Resolve the target mise version (without leading 'v')
+# Uses: MISE_VERSION (env), get_tool_version (function from parse-packages.sh)
+# Returns: 0 with version on stdout, 1 if unresolved
+_get_mise_target_version() {
+  local version="${MISE_VERSION:-}"
+  if [[ -z "$version" ]] && declare -f get_tool_version &>/dev/null; then
+    version=$(get_tool_version "mise")
+  fi
+  [[ -z "$version" ]] && return 1
+  printf '%s\n' "${version#v}"
+}
+
 # Brief: Verify mise binary checksum against official release checksums
 # Params: $1 = version (optional, uses get_tool_version if not provided)
 # Uses: XDG_BIN_HOME, _DEVBASE_TEMP, retry_command (globals/functions)
@@ -22,29 +44,16 @@ verify_mise_checksum() {
     return 1
   fi
 
-  # Map uname architecture to mise's binary naming convention.
-  # Explicit table avoids the silent x86_64→x64 mismatch and makes
-  # adding future architectures (armv7l, riscv64…) straightforward.
   local mise_arch
-  case "$(uname -m)" in
-  x86_64) mise_arch="x64" ;;    # mise ships as mise-vX.Y-linux-x64
-  aarch64) mise_arch="arm64" ;; # mise ships as mise-vX.Y-linux-arm64
-  *)
+  if ! mise_arch=$(_get_mise_arch); then
     die "Mise checksum verification not supported on architecture: $(uname -m). Install mise manually or skip with DEVBASE_STRICT_CHECKSUMS=warn"
-    ;;
-  esac
-
-  # Get version from packages.yaml if not provided
-  if [[ -z "$version" ]]; then
-    [[ -n "${MISE_VERSION:-}" ]] && version="$MISE_VERSION"
-    if [[ -z "$version" ]] && declare -f get_tool_version &>/dev/null; then
-      version=$(get_tool_version "mise")
-    fi
   fi
 
   if [[ -z "$version" ]]; then
-    show_progress info "Mise version not yet available (first-run is OK); checksum verification will run after setup"
-    return 0
+    if ! version=$(_get_mise_target_version); then
+      show_progress info "Mise version not yet available (first-run is OK); checksum verification will run after setup"
+      return 0
+    fi
   fi
 
   # Strip 'v' prefix if present
@@ -135,39 +144,75 @@ get_mise_installed_version() {
   [[ -n "$version" ]] && printf '%s\n' "$version"
 }
 
-# Brief: Download, verify checksum, and run the mise installer script
+# Brief: Install mise binary from the official GitHub release tarball
 # Params: $1 - progress label shown in the spinner/output (e.g. "Installing mise")
-# Uses: DEVBASE_URL_MISE_INSTALLER, _DEVBASE_TEMP, DEVBASE_TUI_MODE,
-#       MISE_VERSION (optional, set by caller before invoking)
-# Returns: calls die() on any failure (download, validation, or run)
-# Side-effects: Runs installer; adds ~/.local/bin to PATH once (idempotent guard)
+# Uses: DEVBASE_URL_MISE_RELEASES, _DEVBASE_TEMP, XDG_BIN_HOME, DEVBASE_TUI_MODE
+#       MISE_VERSION (optional, falls back to get_tool_version "mise")
+# Returns: calls die() on any failure (download, checksum, extract)
+# Side-effects: Writes ${XDG_BIN_HOME}/mise; adds ~/.local/bin to PATH once
+# Notes: Deliberately bypasses the upstream mise.run script — its default CDN
+#        (mise.en.dev) is blocked by some egress proxies, and its only documented
+#        knob (MISE_INSTALL_FROM_GITHUB) is undocumented in the project README.
+#        Going straight to GitHub releases keeps this install path under our
+#        control: one URL pattern, one SHASUMS256.txt for verification, no
+#        chained shell script with version-dependent branching.
 _run_mise_installer() {
   local label="${1:-Installing mise}"
-  local mise_installer="${_DEVBASE_TEMP}/mise_installer.sh"
 
-  if ! download_file "$DEVBASE_URL_MISE_INSTALLER" "$mise_installer" "" "${DEVBASE_MISE_INSTALLER_SHA256:-}"; then
-    die "Failed to download Mise installer"
+  local mise_arch
+  if ! mise_arch=$(_get_mise_arch); then
+    die "Mise install not supported on architecture: $(uname -m)"
   fi
 
-  # A valid installer must be non-empty, start with a shell shebang (rules out
-  # HTML error pages and truncated downloads), and mention "mise" somewhere in
-  # its body.  The checksum verification that follows is the real integrity
-  # check; this is a fast sanity gate for obviously wrong files.
-  if [[ ! -s "$mise_installer" ]] ||
-    ! grep -qE '^#!/.*(ba)?sh' "$mise_installer" ||
-    ! grep -q 'mise' "$mise_installer"; then
-    die "Downloaded file doesn't appear to be Mise installer"
+  local version
+  if ! version=$(_get_mise_target_version); then
+    die "Cannot determine mise version (set MISE_VERSION or pin in packages.yaml)"
   fi
 
-  if [[ -n "${DEVBASE_MISE_INSTALLER_SHA256:-}" ]]; then
-    show_progress info "Verifying mise installer checksum"
+  local asset="mise-v${version}-linux-${mise_arch}.tar.gz"
+  local tarball_url="${DEVBASE_URL_MISE_RELEASES}/v${version}/${asset}"
+  local checksums_url="${DEVBASE_URL_MISE_RELEASES}/v${version}/SHASUMS256.txt"
+  local tarball="${_DEVBASE_TEMP}/${asset}"
+  local checksums_file="${_DEVBASE_TEMP}/mise-shasums-v${version}.txt"
+
+  # Fetch the checksums manifest with raw curl: this file is the trust anchor
+  # for the tarball below, so it cannot itself be checksum-verified (would be
+  # circular). Trust comes from HTTPS + the github.com domain pin. Same pattern
+  # used by verify_mise_checksum and get_oc_checksum.
+  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
+    die "Failed to download mise SHASUMS256.txt for v${version}"
   fi
 
+  local expected_checksum
+  expected_checksum=$(grep -F "$asset" "$checksums_file" 2>/dev/null | head -1 | awk '{print $1}')
+  if [[ -z "$expected_checksum" ]]; then
+    die "No checksum found for $asset in SHASUMS256.txt"
+  fi
+
+  if ! download_file "$tarball_url" "$tarball" "" "$expected_checksum"; then
+    die "Failed to download or verify mise tarball v${version}"
+  fi
+
+  local extract_dir="${_DEVBASE_TEMP}/mise-extract-v${version}"
+  rm -rf "$extract_dir"
+  mkdir -p "$extract_dir"
+
+  local extract_cmd=(tar -C "$extract_dir" -xzf "$tarball")
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
-    run_with_spinner "$label" bash "$mise_installer" || die "Failed to run Mise installer script"
+    run_with_spinner "$label" "${extract_cmd[@]}" || die "Failed to extract mise tarball"
   else
-    bash "$mise_installer" || die "Failed to run Mise installer script"
+    show_progress info "$label (v${version})"
+    "${extract_cmd[@]}" || die "Failed to extract mise tarball"
   fi
+
+  if [[ ! -f "$extract_dir/mise/bin/mise" ]]; then
+    die "Extracted mise tarball has unexpected layout: missing mise/bin/mise"
+  fi
+
+  mkdir -p "$XDG_BIN_HOME"
+  mv -f "$extract_dir/mise/bin/mise" "$XDG_BIN_HOME/mise"
+  chmod +x "$XDG_BIN_HOME/mise"
+  rm -rf "$extract_dir"
 
   # Add the default mise install location to PATH once.  The guard prevents
   # a duplicate entry when both install_mise and update_mise_if_needed run
@@ -177,7 +222,7 @@ _run_mise_installer() {
 
 # Brief: Install mise tool version manager
 # Params: None
-# Uses: _DEVBASE_TEMP, HOME, XDG_BIN_HOME, DEVBASE_URL_MISE_INSTALLER (globals)
+# Uses: _DEVBASE_TEMP, HOME, XDG_BIN_HOME, DEVBASE_URL_MISE_RELEASES (globals)
 # Returns: 0 on success, calls die() on fatal failure
 # Side-effects: Downloads and installs mise, bootstraps yq/just, activates mise on PATH
 install_mise() {
