@@ -71,7 +71,14 @@
       "defaultRegistryUrlTemplate": "https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html",
       "format": "html",
       "transformTemplates": [
-        "{\"releases\": [{\"version\": $match(body, /icaclient_([0-9.]+)_amd64\\.deb/).groups[0]}]}"
+        "{\"releases\": $map(releases[$contains(version, /icaclient_[0-9.]+_amd64\\.deb/)], function($r) { {\"version\": $match($r.version, /icaclient_([0-9.]+)_amd64\\.deb/).groups[0]} })}"
+      ]
+    },
+    "openshift-oc": {
+      "defaultRegistryUrlTemplate": "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/",
+      "format": "html",
+      "transformTemplates": [
+        "{\"releases\": $map(releases[$contains(version, /^[0-9]+\\.[0-9]+\\.[0-9]+\\/$/)], function($r) { {\"version\": $replace($r.version, /\\/$/, \"\")} })}"
       ]
     }
   }

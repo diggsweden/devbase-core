@@ -187,7 +187,7 @@ core:
     fzf_fish: {version: "v10.3", installer: "install_fzf_fish"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
     lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
     nerd_fonts: {version: "v3.4.0", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
-    oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom depName=openshift/oc
+    oc: {version: "4.15.33", installer: "install_oc_kubectl"} # renovate: datasource=custom.openshift-oc depName=openshift/oc
     k3s: {version: "v1.35.3+k3s1", installer: "install_k3s", tags: ["@optional"]} # renovate: datasource=github-releases depName=k3s-io/k3s
     vscode: {version: "1.116.0", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
 
