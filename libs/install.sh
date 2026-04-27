@@ -653,6 +653,15 @@ finalize_installation() {
 
   cleanup
 
+  # Prune orphaned mise tool versions now that all configuration is done.
+  # Done last because the bootstrap yq (installed by install_mise via
+  # `mise use -g`) is orphaned by generate_mise_config but still in use
+  # during apply_configurations (templates) earlier in the run.
+  if command -v mise &>/dev/null; then
+    run_mise_from_home_dir prune --tools &>/dev/null ||
+      add_install_warning "mise prune failed (non-fatal)"
+  fi
+
   # Copy helper scripts to user data directory (directory already created by ensure_user_dirs())
   if [[ -f "${DEVBASE_LIBS}/install-windows-terminal-themes.sh" ]]; then
     cp "${DEVBASE_LIBS}/install-windows-terminal-themes.sh" "$XDG_DATA_HOME/devbase/libs/" 2>/dev/null || true

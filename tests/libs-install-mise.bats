@@ -247,6 +247,148 @@ EOF
   refute_output --partial "python"
 }
 
+@test "_get_mise_target_version reads packages.yaml without yq when get_tool_version is unavailable" {
+  # First-run bootstrap regression: install_mise runs before parse-packages.sh
+  # (and therefore yq) is loaded. _get_mise_target_version must still resolve
+  # the pinned version from packages.yaml — otherwise _run_mise_installer dies
+  # with "Cannot determine mise version".
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: {version: "v2026.4.24", installer: "install_mise"}
+packs: {}
+EOF
+
+  run env -i \
+    PATH="/usr/bin:/bin" \
+    HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    XDG_BIN_HOME="${XDG_BIN_HOME}" \
+    bash -c '
+      source "${DEVBASE_ROOT}/libs/install-mise.sh" >/dev/null 2>&1
+      # Confirm parse-packages contract is NOT in scope (no get_tool_version)
+      declare -f get_tool_version >/dev/null 2>&1 && { echo "UNEXPECTED: get_tool_version is loaded"; exit 99; }
+      _get_mise_target_version
+    '
+
+  assert_success
+  assert_output "2026.4.24"
+}
+
+@test "_get_mise_target_version prefers packages-custom.yaml over base" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  mkdir -p "${TEST_DIR}/custom/packages"
+
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: {version: "v2026.4.24", installer: "install_mise"}
+packs: {}
+EOF
+
+  cat > "${TEST_DIR}/custom/packages/packages-custom.yaml" << 'EOF'
+core:
+  custom:
+    mise: {version: "v2026.5.0", installer: "install_mise"}
+EOF
+
+  run env -i \
+    PATH="/usr/bin:/bin" \
+    HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    XDG_BIN_HOME="${XDG_BIN_HOME}" \
+    _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom/packages" \
+    bash -c '
+      source "${DEVBASE_ROOT}/libs/install-mise.sh" >/dev/null 2>&1
+      _get_mise_target_version
+    '
+
+  assert_success
+  assert_output "2026.5.0"
+}
+
+@test "_get_mise_target_version falls back to base when custom yaml lacks mise" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  mkdir -p "${TEST_DIR}/custom/packages"
+
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: {version: "v2026.4.24", installer: "install_mise"}
+packs: {}
+EOF
+
+  cat > "${TEST_DIR}/custom/packages/packages-custom.yaml" << 'EOF'
+packs: {}
+EOF
+
+  run env -i \
+    PATH="/usr/bin:/bin" \
+    HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    XDG_BIN_HOME="${XDG_BIN_HOME}" \
+    _DEVBASE_CUSTOM_PACKAGES="${TEST_DIR}/custom/packages" \
+    bash -c '
+      source "${DEVBASE_ROOT}/libs/install-mise.sh" >/dev/null 2>&1
+      _get_mise_target_version
+    '
+
+  assert_success
+  assert_output "2026.4.24"
+}
+
+@test "_get_mise_target_version returns 1 when packages.yaml has no mise pin" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom: {}
+packs: {}
+EOF
+
+  run env -i \
+    PATH="/usr/bin:/bin" \
+    HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    XDG_BIN_HOME="${XDG_BIN_HOME}" \
+    bash -c '
+      source "${DEVBASE_ROOT}/libs/install-mise.sh" >/dev/null 2>&1
+      _get_mise_target_version && echo "FOUND" || echo "NOT_FOUND"
+    '
+
+  assert_success
+  assert_output "NOT_FOUND"
+}
+
+@test "_get_mise_target_version prefers MISE_VERSION env over packages.yaml" {
+  mkdir -p "${TEST_DIR}/.config/devbase"
+  cat > "${TEST_DIR}/.config/devbase/packages.yaml" << 'EOF'
+core:
+  custom:
+    mise: {version: "v2026.4.24", installer: "install_mise"}
+packs: {}
+EOF
+
+  run env -i \
+    PATH="/usr/bin:/bin" \
+    HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" \
+    DEVBASE_DOT="${TEST_DIR}" \
+    XDG_BIN_HOME="${XDG_BIN_HOME}" \
+    MISE_VERSION="v2027.1.0" \
+    bash -c '
+      source "${DEVBASE_ROOT}/libs/install-mise.sh" >/dev/null 2>&1
+      _get_mise_target_version
+    '
+
+  assert_success
+  assert_output "2027.1.0"
+}
+
 @test "verify_mise_checksum returns 1 if mise binary doesn't exist" {
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'

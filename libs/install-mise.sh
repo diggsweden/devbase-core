@@ -13,20 +13,64 @@ fi
 # Returns: 0 with arch on stdout (x64/arm64), 1 on unsupported arch
 _get_mise_arch() {
   case "$(uname -m)" in
-  x86_64) echo "x64" ;;     # mise ships as mise-vX.Y-linux-x64
-  aarch64) echo "arm64" ;;  # mise ships as mise-vX.Y-linux-arm64
+  x86_64) echo "x64" ;;    # mise ships as mise-vX.Y-linux-x64
+  aarch64) echo "arm64" ;; # mise ships as mise-vX.Y-linux-arm64
   *) return 1 ;;
   esac
 }
 
+# Brief: Read mise version from a packages.yaml without requiring yq.
+# Used during first-run bootstrap, before yq is available — yq itself is
+# what mise is about to install. Matches only the inline-flow form used
+# in core.custom (e.g. `mise: {version: "v2026.4.24", installer: ...}`),
+# which is the canonical form in the shipped packages.yaml. Custom
+# overrides should follow the same form to be picked up here; otherwise
+# the user can set MISE_VERSION explicitly.
+# Params: $1 = path to a packages.yaml file
+# Returns: 0 with version on stdout, 1 if no version found
+_read_mise_version_from_yaml() {
+  local yaml="$1"
+  [[ -f "$yaml" ]] || return 1
+
+  local line
+  line=$(grep -E '^[[:space:]]+mise:[[:space:]]*\{[^}]*version:' "$yaml" | head -1)
+  [[ -z "$line" ]] && return 1
+
+  local version
+  version=$(printf '%s' "$line" | sed -nE 's/.*version:[[:space:]]*"([^"]+)".*/\1/p')
+  [[ -z "$version" ]] && return 1
+  printf '%s\n' "$version"
+}
+
 # Brief: Resolve the target mise version (without leading 'v')
-# Uses: MISE_VERSION (env), get_tool_version (function from parse-packages.sh)
+# Uses: MISE_VERSION (env), get_tool_version (function from parse-packages.sh),
+#       PACKAGES_CUSTOM_YAML, _DEVBASE_CUSTOM_PACKAGES, PACKAGES_YAML, DEVBASE_DOT
 # Returns: 0 with version on stdout, 1 if unresolved
+# Notes: First-run bootstrap installs mise *before* parse-packages.sh can be
+#        sourced (the parser requires yq, which mise is about to install).
+#        In that window neither MISE_VERSION nor get_tool_version is set, so
+#        we fall back to reading packages.yaml directly with grep/sed.
 _get_mise_target_version() {
   local version="${MISE_VERSION:-}"
   if [[ -z "$version" ]] && declare -f get_tool_version &>/dev/null; then
     version=$(get_tool_version "mise")
   fi
+
+  if [[ -z "$version" ]]; then
+    # Custom yaml overrides base, matching the merge order in parse-packages.sh
+    local custom_yaml="${PACKAGES_CUSTOM_YAML:-}"
+    if [[ -z "$custom_yaml" && -n "${_DEVBASE_CUSTOM_PACKAGES:-}" ]]; then
+      custom_yaml="${_DEVBASE_CUSTOM_PACKAGES}/packages-custom.yaml"
+    fi
+    [[ -n "$custom_yaml" ]] && version=$(_read_mise_version_from_yaml "$custom_yaml" 2>/dev/null || true)
+
+    if [[ -z "$version" ]]; then
+      local base_yaml="${PACKAGES_YAML:-}"
+      [[ -z "$base_yaml" && -n "${DEVBASE_DOT:-}" ]] && base_yaml="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+      [[ -n "$base_yaml" ]] && version=$(_read_mise_version_from_yaml "$base_yaml" 2>/dev/null || true)
+    fi
+  fi
+
   [[ -z "$version" ]] && return 1
   printf '%s\n' "${version#v}"
 }
@@ -101,13 +145,21 @@ _check_mise_server_error() {
 #        the current directory without requiring prior shell session state.
 #        `mise activate bash` only installs shell hooks and does not expose
 #        installed tool paths — wrong for script use.
+#
+#        Runs from $HOME, not the caller's CWD. setup.sh is typically invoked
+#        from DEVBASE_ROOT, whose .mise.toml may pin tool versions that aren't
+#        yet installed during bootstrap (e.g. yq v4.52.5 vs the v4.52.4 we
+#        bootstrap). `mise env` from there would emit a PATH for the pinned
+#        version's (non-existent) install dir, hiding the bootstrap binary
+#        we just installed via `use -g`. From $HOME only the global config
+#        applies, which is exactly what install_mise needs.
 _mise_apply_path_from_activate() {
   local mise_path="$1"
 
   # mise env outputs the complete environment for current directory tools;
   # suppress stderr (WARN: missing tool messages for not-yet-installed tools)
   local activation_output
-  activation_output=$("$mise_path" env -s bash 2>/dev/null)
+  activation_output=$(cd "$HOME" && "$mise_path" env -s bash 2>/dev/null)
 
   local path_line
   path_line=$(printf '%s\n' "$activation_output" | grep -E '^export PATH=' | tail -1)
@@ -265,19 +317,14 @@ install_mise() {
   fi
 
   if [[ -z "$mise_path" ]]; then
-    # Set MISE_VERSION from packages.yaml so the installer downloads the
-    # pinned version; unset means the installer picks the latest release.
-    local mise_version=""
-    if declare -f get_tool_version &>/dev/null; then
-      mise_version=$(get_tool_version "mise")
-    fi
-    [[ -n "$mise_version" ]] && export MISE_VERSION="$mise_version"
-
+    # Version resolution lives in _get_mise_target_version: MISE_VERSION env,
+    # then get_tool_version (if parse-packages.sh is loaded), then a yq-free
+    # read of packages.yaml. The last fallback is what makes first-run work,
+    # since yq isn't installed yet at this point.
     _run_mise_installer "Installing mise"
 
-    # Find where mise was actually installed
     if ! mise_path=$(command -v mise 2>/dev/null); then
-      die "Mise installation failed - binary not found in PATH after installation${MISE_VERSION:+ (requested version: ${MISE_VERSION})}"
+      die "Mise installation failed - binary not found in PATH after installation"
     fi
 
     if ! verify_mise_checksum; then
@@ -595,10 +642,9 @@ install_mise_tools() {
     add_install_warning "mise reshim failed"
     add_install_warning "See log: $second_install_log"
   fi
-  if ! run_mise_from_home_dir prune --tools &>>"$second_install_log"; then
-    add_install_warning "mise prune failed"
-    add_install_warning "See log: $second_install_log"
-  fi
+  # `mise prune --tools` deferred to finalize_installation: pruning here
+  # would delete the bootstrap yq (orphaned by generate_mise_config) while
+  # apply_configurations still has it on PATH and needs it for templates.
 
   local verified_count=0
   local missing=()
