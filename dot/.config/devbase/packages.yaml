@@ -146,7 +146,7 @@ core:
     lf: {backend: "aqua:gokcehan/lf", version: "r41"} # renovate: datasource=github-releases depName=gokcehan/lf
     # Git tools
     delta: {backend: "aqua:dandavison/delta", version: "0.19.2"} # renovate: datasource=github-releases depName=dandavison/delta
-    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.12.0"} # renovate: datasource=github-releases depName=orhun/git-cliff
+    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.13.1"} # renovate: datasource=github-releases depName=orhun/git-cliff
     lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.61.1"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
     gh: {backend: "aqua:cli/cli", version: "v2.90.0"} # renovate: datasource=github-releases depName=cli/cli
     glab: {backend: "gitlab:gitlab-org/cli", version: "v1.92.1"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
