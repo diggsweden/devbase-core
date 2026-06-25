@@ -186,23 +186,17 @@ install_lazyvim() {
     return 1
   fi
 
-  show_progress info "Cloning LazyVim starter (version: $lazyvim_version)..."
+  # lazyvim_version tracks the LazyVim plugin release (LazyVim/LazyVim) for
+  # supply-chain awareness, but the starter repo (LazyVim/starter) has no
+  # version tags — it is always cloned at main.
+  show_progress info "Cloning LazyVim starter (LazyVim plugin: $lazyvim_version)..."
   local git_output
   if git_output=$(git clone --quiet "$DEVBASE_URL_LAZYVIM_STARTER" "$nvim_config" 2>&1); then
-    # Use subshell to avoid changing the caller's working directory
     (
       cd "$nvim_config" || exit 1
-
-      # Checkout specific version (commit SHA or tag) if not main
-      if [[ "$lazyvim_version" != "main" ]]; then
-        git checkout --quiet "$lazyvim_version" 2>/dev/null || {
-          add_install_warning "Failed to checkout $lazyvim_version, using main"
-        }
-      fi
-
       safe_rm_rf "$nvim_config" "$nvim_config/.git"
     )
-    show_progress success "LazyVim starter installed ($lazyvim_version)"
+    show_progress success "LazyVim starter installed (LazyVim plugin: $lazyvim_version)"
   else
     show_progress error "Failed to clone LazyVim starter"
     if [[ -n "$git_output" ]]; then

@@ -13,6 +13,7 @@
 # anchors but forgets the `(?m)` inline flag will extract zero
 # dependencies without raising any error — causing every pinned
 # version in that file to silently go stale.
+# See https://docs.renovatebot.com/configuration-options/#matchstrings
 #
 # Also guards the minimumReleaseAge supply-chain policy:
 #   - Top-level default: 7 days (blocks newly-published packages)
@@ -21,7 +22,6 @@
 #     control. Without the null override, Renovate 42+ would block those
 #     updates entirely (timestamp-required behaviour).
 #
-# See https://docs.renovatebot.com/configuration-options/#matchstrings
 # See https://docs.renovatebot.com/key-concepts/minimum-release-age/
 
 bats_require_minimum_version 1.13.0
@@ -121,13 +121,12 @@ _strip_char_classes() {
   assert_success
 }
 
-@test "git-refs packageRule overrides minimumReleaseAge to null and has a schedule" {
-  # git-refs (lazyvim) carries no commit timestamps in Renovate's datasource.
-  # Without null override, Renovate 42+ blocks updates entirely.
+@test "git-refs datasource is not used (lazyvim migrated to github-releases)" {
+  # LazyVim/starter has no release tags, so git-refs provided no timestamps
+  # and minimumReleaseAge could not be enforced. The entry was migrated to
+  # track LazyVim/LazyVim github-releases instead.
   run jq -e '
-    .packageRules[]
-    | select(.matchDatasources | arrays | contains(["git-refs"]))
-    | (.minimumReleaseAge == null) and (.schedule | length > 0)
+    [.packageRules[]? | .matchDatasources[]?] | contains(["git-refs"]) | not
   ' "${DEVBASE_ROOT}/renovate.json"
   assert_success
 }

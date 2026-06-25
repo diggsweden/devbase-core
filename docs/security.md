@@ -72,7 +72,6 @@ SPDX-License-Identifier: CC0-1.0
 #### Git Clones
 
 - Version-pinned: `git clone --branch "4.4.5" ...`
-- Commit hashes: `git checkout "803bc18"`
 
 ## Downloads & Checksums
 
@@ -484,6 +483,51 @@ sudo unattended-upgrade --dry-run --debug
 - **Stability period**: 7-day delay reduces risk from brand-new buggy releases
 
 **Configuration Location**: `renovate.json` (extends base config)
+
+### Release Age Coverage per Datasource
+
+`minimumReleaseAge: "7 days"` is set at the top level in `renovate.json` and applies to all datasources that expose a release timestamp. Some datasources cannot provide timestamps — those have explicit compensating controls.
+
+#### Not tracked by Renovate
+
+These package sources have no `# renovate:` annotations and are never touched by Renovate. They install whatever version is current when `setup.sh` runs.
+
+| Source | Packages |
+|--------|----------|
+| `snap` | chromium, ghostty, microk8s |
+| `flatpak` | org.chromium.Chromium |
+
+#### Tracked — `minimumReleaseAge` enforced
+
+| Datasource | Used for |
+|------------|----------|
+| `github-releases` | Most mise tools (ripgrep, lazyvim, gh, k9s, …) |
+| `gitlab-releases` | glab |
+| `forgejo-releases` | gommitlint |
+| `npm` | tree-sitter-cli, all VS Code extensions |
+| `maven` | Maven |
+
+#### Tracked — timestamp support uncertain (language runtimes)
+
+These datasources fetch from each language's own versioning API. Whether Renovate surfaces a `releaseTimestamp` depends on the upstream API. In practice, language runtime releases go through months of public RC testing before appearing as stable, so the supply-chain risk is lower than for registry packages.
+
+| Datasource | Used for |
+|------------|----------|
+| `python-version` | Python |
+| `node-version` | Node.js |
+| `go-version` | Go |
+| `ruby-version` | Ruby |
+| `rust-version` | Rust |
+| `java-version` | Java (Temurin) |
+| `gradle-version` | Gradle |
+| `jetbrains-releases` | IntelliJ IDEA |
+
+#### Tracked — compensating control (no timestamps available)
+
+| Datasource | Reason | Control |
+|------------|--------|---------|
+| `custom.citrix` | Release date is in a `<span>` tag, unreachable by HTML parser | Monthly schedule (1st of month) |
+| `custom.openshift-oc` | Mirror page returns empty `<time>` elements | Monthly schedule (1st of month) |
 
 ## Network Security
 
