@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-# Linting tests for renovate.json custom managers.
+# Linting tests for renovate.json custom managers and supply-chain age policy.
 #
 # Catches a class of silent failure: renovate applies `matchStrings`
 # regexes in single-line mode by default, so `^` anchors the start of
@@ -14,7 +14,15 @@
 # dependencies without raising any error — causing every pinned
 # version in that file to silently go stale.
 #
+# Also guards the minimumReleaseAge supply-chain policy:
+#   - Top-level default: 7 days (blocks newly-published packages)
+#   - Datasources without timestamps (git-refs, custom.*) must override
+#     minimumReleaseAge to null AND carry a schedule as the compensating
+#     control. Without the null override, Renovate 42+ would block those
+#     updates entirely (timestamp-required behaviour).
+#
 # See https://docs.renovatebot.com/configuration-options/#matchstrings
+# See https://docs.renovatebot.com/key-concepts/minimum-release-age/
 
 bats_require_minimum_version 1.13.0
 
@@ -106,4 +114,39 @@ _strip_char_classes() {
     for m in "${missing[@]}"; do printf '  %s\n' "$m" >&2; done
     return 1
   fi
+}
+
+@test "top-level minimumReleaseAge is set to 7 days" {
+  run jq -e '.minimumReleaseAge == "7 days"' "${DEVBASE_ROOT}/renovate.json"
+  assert_success
+}
+
+@test "git-refs packageRule overrides minimumReleaseAge to null and has a schedule" {
+  # git-refs (lazyvim) carries no commit timestamps in Renovate's datasource.
+  # Without null override, Renovate 42+ blocks updates entirely.
+  run jq -e '
+    .packageRules[]
+    | select(.matchDatasources | arrays | contains(["git-refs"]))
+    | (.minimumReleaseAge == null) and (.schedule | length > 0)
+  ' "${DEVBASE_ROOT}/renovate.json"
+  assert_success
+}
+
+@test "custom HTML datasources override minimumReleaseAge to null and have a schedule" {
+  # custom.citrix and custom.openshift-oc return no release timestamps.
+  # Schedule is the compensating control in place of minimumReleaseAge.
+  local citrix_ok oc_ok
+  citrix_ok=$(jq -r '
+    .packageRules[]
+    | select(.matchDatasources | arrays | contains(["custom.citrix"]))
+    | (.minimumReleaseAge == null) and (.schedule | length > 0)
+  ' "${DEVBASE_ROOT}/renovate.json")
+  oc_ok=$(jq -r '
+    .packageRules[]
+    | select(.matchDatasources | arrays | contains(["custom.openshift-oc"]))
+    | (.minimumReleaseAge == null) and (.schedule | length > 0)
+  ' "${DEVBASE_ROOT}/renovate.json")
+
+  [[ "$citrix_ok" == "true" ]] || { echo "custom.citrix rule missing null override or schedule" >&2; return 1; }
+  [[ "$oc_ok" == "true" ]] || { echo "custom.openshift-oc rule missing null override or schedule" >&2; return 1; }
 }

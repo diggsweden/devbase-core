@@ -3,6 +3,7 @@
   "extends": [
     "github>diggsweden/.github//renovate-base.json"
   ],
+  "minimumReleaseAge": "7 days",
   "mise": {
     "managerFilePatterns": [
       "/(^|/)dot/\\.config/mise/config\\.toml$/",
@@ -15,6 +16,18 @@
       "matchDatasources": ["github-releases"],
       "matchPackageNames": ["rvben/rumdl"],
       "allowedVersions": "!=v0.1.72"
+    },
+    {
+      "description": "git-refs (lazyvim) provides no commit timestamps to Renovate. The top-level minimumReleaseAge would block these updates entirely under Renovate 42+ timestamp-required behaviour. Override to null and use a monthly schedule as the compensating control instead.",
+      "matchDatasources": ["git-refs"],
+      "minimumReleaseAge": null,
+      "schedule": ["on the first day of the month"]
+    },
+    {
+      "description": "Custom HTML-scraped datasources carry no release timestamps: citrix dates are in a <span> outside anchor tags (inaccessible to the HTML parser), openshift-oc returns empty <time> elements. minimumReleaseAge has no effect here. Monthly schedule is the compensating control.",
+      "matchDatasources": ["custom.citrix", "custom.openshift-oc"],
+      "minimumReleaseAge": null,
+      "schedule": ["on the first day of the month"]
     }
   ],
   "customManagers": [
