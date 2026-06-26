@@ -8,38 +8,38 @@ SPDX-License-Identifier: CC0-1.0
 
 ## Security Overview Matrix
 
-| Category | Feature | Status | Implementation | Details |
-|----------|---------|--------|----------------|---------|
-| **Audit & Monitoring** | Security tools | ✅ 8 tools | Gitleaks, Lynis, Syft, etc. | Pre-installed |
-| | CI security scans | ✅ Enabled | Every PR | Gitleaks, shellcheck |
-| | Git audit trail | ✅ Enabled | All config changes | PR approval required |
-| **Automatic Updates** | APT security patches | ✅ Enabled | unattended-upgrades | Ubuntu/Debian security repos |
-| | Development tools | ✅ Enabled | Renovate Bot (84 tools) | Weekly schedule, 7-day wait |
-| | Virus definitions | ✅ Enabled | ClamAV freshclam | Continuous updates |
-| **Code Safety** | Bash safety flags | ✅ 21/21 scripts | `set -uo pipefail` | Fail on errors |
-| | Input validation | ✅ Enabled | Whitelisted inputs | No arbitrary execution |
-| | Dangerous patterns | ✅ None found | `curl\|sh`, `rm -rf /`, `chmod 777` | Zero matches |
-| **Credentials** | No hardcoded secrets | ✅ Verified | Gitleaks scans | Zero matches |
-| | Password policy | ✅ Enabled | 12-char minimum (NIST) | SSH passphrase validation |
-| | Secure permissions | ✅ Enabled | SSH 600/700, configs 600 | Enforced at creation |
-| **Cryptography** | Secure SSH | ✅ Enabled | ED25519, ChaCha20-Poly1305 | Default configuration |
-| | SSH key type | ✅ Strong | ED25519 (256-bit) | Modern standard |
-| **Temp Files** | Temp cleanup | ✅ Enabled | devbase temp directories cleaned | Respects TMPDIR/XDG_RUNTIME_DIR |
-| **Malware Protection** | ClamAV scanning | ✅ Enabled | Daily full system scan | Low-priority, scheduled |
-| | Virus definitions | ✅ Auto-update | freshclam service | Continuous updates |
-| **Network** | Firewall (UFW) | ✅ Enabled | Default on Linux | K3s rules auto-configured |
-| | HTTPS-only downloads | ✅ Enforced | All package sources | Zero HTTP downloads |
-| | Connection timeouts | ✅ Enabled | 30s connect, 90s max | Prevents hanging |
-| | Proxy support | ✅ Available | HTTP_PROXY, HTTPS_PROXY | Corporate proxy ready |
-| **Privileges** | User-level install | ✅ Default | No root for tools | Only sudo for system packages |
-| | Minimal sudo | ✅ 79 operations | apt/dpkg/snap/systemctl | Documented usage |
-| **Supply Chain** | Version pinning | ✅ Enabled | 84 tools in YAML/TOML | All versions locked, tracked in git |
-| | Checksums | ✅ Enabled | Mise, OpenShift CLI, IntelliJ, VS Code | SHA256 verification |
-| | Renovate updates | ✅ Enabled | 7-day stability period | Auto-PRs with CI validation |
-| | Aqua SLSA attestation | ✅ Enabled | 50+ mise tools | Supply chain verification |
-| **System Hardening** | File descriptors | ✅ 65,536 | /etc/security/limits.d/ | Build-optimized |
-| | Process limits | ✅ 32,768 | PAM limits | Parallel builds |
-| | Memory locking | ✅ Unlimited | Container support | VM/container ready |
+| Category               | Feature               | Status          | Implementation                         | Details                             |
+|------------------------|-----------------------|-----------------|----------------------------------------|-------------------------------------|
+| **Audit & Monitoring** | Security tools        | ✅ 8 tools       | Gitleaks, Lynis, Syft, etc.            | Pre-installed                       |
+|                        | CI security scans     | ✅ Enabled       | Every PR                               | Gitleaks, shellcheck                |
+|                        | Git audit trail       | ✅ Enabled       | All config changes                     | PR approval required                |
+| **Automatic Updates**  | APT security patches  | ✅ Enabled       | unattended-upgrades                    | Ubuntu/Debian security repos        |
+|                        | Development tools     | ✅ Enabled       | Renovate Bot (84 tools)                | Weekly schedule, 7-day wait         |
+|                        | Virus definitions     | ✅ Enabled       | ClamAV freshclam                       | Continuous updates                  |
+| **Code Safety**        | Bash safety flags     | ✅ 21/21 scripts | `set -uo pipefail`                     | Fail on errors                      |
+|                        | Input validation      | ✅ Enabled       | Whitelisted inputs                     | No arbitrary execution              |
+|                        | Dangerous patterns    | ✅ None found    | `curl\|sh`, `rm -rf /`, `chmod 777`    | Zero matches                        |
+| **Credentials**        | No hardcoded secrets  | ✅ Verified      | Gitleaks scans                         | Zero matches                        |
+|                        | Password policy       | ✅ Enabled       | 12-char minimum (NIST)                 | SSH passphrase validation           |
+|                        | Secure permissions    | ✅ Enabled       | SSH 600/700, configs 600               | Enforced at creation                |
+| **Cryptography**       | Secure SSH            | ✅ Enabled       | ED25519, ChaCha20-Poly1305             | Default configuration               |
+|                        | SSH key type          | ✅ Strong        | ED25519 (256-bit)                      | Modern standard                     |
+| **Temp Files**         | Temp cleanup          | ✅ Enabled       | devbase temp directories cleaned       | Respects TMPDIR/XDG_RUNTIME_DIR     |
+| **Malware Protection** | ClamAV scanning       | ✅ Enabled       | Daily full system scan                 | Low-priority, scheduled             |
+|                        | Virus definitions     | ✅ Auto-update   | freshclam service                      | Continuous updates                  |
+| **Network**            | Firewall (UFW)        | ✅ Enabled       | Default on Linux                       | K3s rules auto-configured           |
+|                        | HTTPS-only downloads  | ✅ Enforced      | All package sources                    | Zero HTTP downloads                 |
+|                        | Connection timeouts   | ✅ Enabled       | 30s connect, 90s max                   | Prevents hanging                    |
+|                        | Proxy support         | ✅ Available     | HTTP_PROXY, HTTPS_PROXY                | Corporate proxy ready               |
+| **Privileges**         | User-level install    | ✅ Default       | No root for tools                      | Only sudo for system packages       |
+|                        | Minimal sudo          | ✅ 79 operations | apt/dpkg/snap/systemctl                | Documented usage                    |
+| **Supply Chain**       | Version pinning       | ✅ Enabled       | 84 tools in YAML/TOML                  | All versions locked, tracked in git |
+|                        | Checksums             | ✅ Enabled       | Mise, OpenShift CLI, IntelliJ, VS Code | SHA256 verification                 |
+|                        | Renovate updates      | ✅ Enabled       | 7-day stability period                 | Auto-PRs with CI validation         |
+|                        | Aqua SLSA attestation | ✅ Enabled       | 50+ mise tools                         | Supply chain verification           |
+| **System Hardening**   | File descriptors      | ✅ 65,536        | /etc/security/limits.d/                | Build-optimized                     |
+|                        | Process limits        | ✅ 32,768        | PAM limits                             | Parallel builds                     |
+|                        | Memory locking        | ✅ Unlimited     | Container support                      | VM/container ready                  |
 
 **Legend**: ✅ Implemented, ⚠️ Known Issue, ❌ Not Implemented
 
@@ -75,15 +75,15 @@ SPDX-License-Identifier: CC0-1.0
 
 ## Downloads & Checksums
 
-| Tool | Checksum | Status |
-|------|----------|--------|
-| Mise | SHA256 vendor file | ✅ |
-| OpenShift CLI | `sha256sum.txt` | ✅ |
-| IntelliJ IDEA | `.sha256` file | ✅ |
-| VS Code | Microsoft API | ✅ |
-| JMC | None | HTTPS only |
-| DBeaver | None | HTTPS + dpkg |
-| KeyStore Explorer | None | HTTPS + dpkg |
+| Tool              | Checksum           | Status       |
+|-------------------|--------------------|--------------|
+| Mise              | SHA256 vendor file | ✅            |
+| OpenShift CLI     | `sha256sum.txt`    | ✅            |
+| IntelliJ IDEA     | `.sha256` file     | ✅            |
+| VS Code           | Microsoft API      | ✅            |
+| JMC               | None               | HTTPS only   |
+| DBeaver           | None               | HTTPS + dpkg |
+| KeyStore Explorer | None               | HTTPS + dpkg |
 
 ## SSH Security
 
@@ -232,14 +232,14 @@ sudo ufw allow 8080/tcp comment 'custom app'
 
 ## File Permissions
 
-| Resource | Permission |
-|----------|-----------|
-| SSH private keys (ED25519) | 600 |
-| SSH public keys | 644 |
-| SSH directory | 700 |
-| SSH config | 600 |
-| Passphrase temp files | 600 (deleted after use) |
-| Cache directory | 700 |
+| Resource                   | Permission              |
+|----------------------------|-------------------------|
+| SSH private keys (ED25519) | 600                     |
+| SSH public keys            | 644                     |
+| SSH directory              | 700                     |
+| SSH config                 | 600                     |
+| Passphrase temp files      | 600 (deleted after use) |
+| Cache directory            | 700                     |
 
 **Sudo Usage**: 79 operations total
 
@@ -492,42 +492,42 @@ sudo unattended-upgrade --dry-run --debug
 
 These package sources have no `# renovate:` annotations and are never touched by Renovate. They install whatever version is current when `setup.sh` runs.
 
-| Source | Packages |
-|--------|----------|
-| `snap` | chromium, ghostty, microk8s |
-| `flatpak` | org.chromium.Chromium |
+| Source    | Packages                    |
+|-----------|-----------------------------|
+| `snap`    | chromium, ghostty, microk8s |
+| `flatpak` | org.chromium.Chromium       |
 
 #### Tracked — `minimumReleaseAge` enforced
 
-| Datasource | Used for |
-|------------|----------|
-| `github-releases` | Most mise tools (ripgrep, lazyvim, gh, k9s, …) |
-| `gitlab-releases` | glab |
-| `forgejo-releases` | gommitlint |
-| `npm` | tree-sitter-cli, all VS Code extensions |
-| `maven` | Maven |
+| Datasource         | Used for                                       |
+|--------------------|------------------------------------------------|
+| `github-releases`  | Most mise tools (ripgrep, lazyvim, gh, k9s, …) |
+| `gitlab-releases`  | glab                                           |
+| `forgejo-releases` | gommitlint                                     |
+| `npm`              | tree-sitter-cli, all VS Code extensions        |
+| `maven`            | Maven                                          |
 
 #### Tracked — timestamp support uncertain (language runtimes)
 
 These datasources fetch from each language's own versioning API. Whether Renovate surfaces a `releaseTimestamp` depends on the upstream API. In practice, language runtime releases go through months of public RC testing before appearing as stable, so the supply-chain risk is lower than for registry packages.
 
-| Datasource | Used for |
-|------------|----------|
-| `python-version` | Python |
-| `node-version` | Node.js |
-| `go-version` | Go |
-| `ruby-version` | Ruby |
-| `rust-version` | Rust |
-| `java-version` | Java (Temurin) |
-| `gradle-version` | Gradle |
-| `jetbrains-releases` | IntelliJ IDEA |
+| Datasource           | Used for       |
+|----------------------|----------------|
+| `python-version`     | Python         |
+| `node-version`       | Node.js        |
+| `go-version`         | Go             |
+| `ruby-version`       | Ruby           |
+| `rust-version`       | Rust           |
+| `java-version`       | Java (Temurin) |
+| `gradle-version`     | Gradle         |
+| `jetbrains-releases` | IntelliJ IDEA  |
 
 #### Tracked — compensating control (no timestamps available)
 
-| Datasource | Reason | Control |
-|------------|--------|---------|
-| `custom.citrix` | Release date is in a `<span>` tag, unreachable by HTML parser | Monthly schedule (1st of month) |
-| `custom.openshift-oc` | Mirror page returns empty `<time>` elements | Monthly schedule (1st of month) |
+| Datasource            | Reason                                                        | Control                         |
+|-----------------------|---------------------------------------------------------------|---------------------------------|
+| `custom.citrix`       | Release date is in a `<span>` tag, unreachable by HTML parser | Monthly schedule (1st of month) |
+| `custom.openshift-oc` | Mirror page returns empty `<time>` elements                   | Monthly schedule (1st of month) |
 
 ## Network Security
 
@@ -587,17 +587,17 @@ git config --global http.https://internal.com/.sslCAInfo /etc/ssl/certs/ca-certi
 
 ## Security Tools
 
-| Tool | Purpose |
-|------|---------|
-| Gitleaks | Secret scanning |
-| Syft | SBOM generation |
-| Scorecard | Security scoring |
-| Cosign | Container signing |
+| Tool       | Purpose                |
+|------------|------------------------|
+| Gitleaks   | Secret scanning        |
+| Syft       | SBOM generation        |
+| Scorecard  | Security scoring       |
+| Cosign     | Container signing      |
 | Actionlint | GitHub Actions linting |
-| Shellcheck | Shell linting |
-| Hadolint | Dockerfile linting |
-| Lynis | System auditing |
-| ClamAV | Antivirus scanning |
+| Shellcheck | Shell linting          |
+| Hadolint   | Dockerfile linting     |
+| Lynis      | System auditing        |
+| ClamAV     | Antivirus scanning     |
 
 ### ClamAV Antivirus
 
