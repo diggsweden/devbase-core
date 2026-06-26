@@ -16,12 +16,6 @@
       "matchDatasources": ["github-releases"],
       "matchPackageNames": ["rvben/rumdl"],
       "allowedVersions": "!=v0.1.72"
-    },
-    {
-      "description": "custom.openshift-oc returns empty <time> elements so minimumReleaseAge has no effect. Monthly schedule is the compensating control.",
-      "matchDatasources": ["custom.openshift-oc"],
-      "minimumReleaseAge": null,
-      "schedule": ["on the first day of the month"]
     }
   ],
   "customManagers": [
@@ -60,14 +54,5 @@
       "packageNameTemplate": "jasonkarns/{{{depName}}}",
       "versioningTemplate": "semver"
     }
-  ],
-  "customDatasources": {
-    "openshift-oc": {
-      "defaultRegistryUrlTemplate": "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/",
-      "format": "html",
-      "transformTemplates": [
-        "{\"releases\": $map(releases[$contains(version, /^[0-9]+\\.[0-9]+\\.[0-9]+\\/$/)], function($r) { {\"version\": $replace($r.version, /\\/$/, \"\")} })}"
-      ]
-    }
-  }
+  ]
 }

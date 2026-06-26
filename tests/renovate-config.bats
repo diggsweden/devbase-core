@@ -132,15 +132,6 @@ _strip_char_classes() {
 }
 
 
-@test "custom.openshift-oc overrides minimumReleaseAge to null and has a schedule" {
-  local oc_ok
-  oc_ok=$(jq -r '
-    .packageRules[]
-    | select(.matchDatasources | arrays | contains(["custom.openshift-oc"]))
-    | (.minimumReleaseAge == null) and (.schedule | length > 0)
-  ' "${DEVBASE_ROOT}/renovate.json")
-  [[ "$oc_ok" == "true" ]] || { echo "custom.openshift-oc rule missing null override or schedule" >&2; return 1; }
-}
 
 @test "no standard datasource bypasses minimumReleaseAge via packageRules" {
   # Only custom.* datasources (no release timestamps) may set minimumReleaseAge

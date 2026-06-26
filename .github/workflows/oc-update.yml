@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: OpenShift OC Update Check
+on: # yamllint disable-line rule:truthy
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  check-oc:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Fetch OC release info
+        id: oc
+        run: |
+          latest=$(curl -s "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/" \
+            | grep -oP 'href="\K[0-9]+\.[0-9]+\.[0-9]+(?=/)' \
+            | sort -V \
+            | tail -n 1)
+
+          if [[ -z "$latest" ]]; then
+            echo "Could not determine latest OC version" >&2
+            exit 1
+          fi
+
+          created=$(curl -s "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${latest}/release.txt" \
+            | grep -oP 'Created:\s+\K\S+')
+
+          if [[ -z "$created" ]]; then
+            echo "Could not read release date from release.txt for ${latest}" >&2
+            exit 1
+          fi
+
+          release_epoch=$(date -d "$created" +%s)
+          cutoff_epoch=$(date -d "-7 days" +%s)
+          release_date=$(date -d "$created" +"%Y-%m-%d")
+
+          echo "version=$latest" >> "$GITHUB_OUTPUT"
+          echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
+
+          if [[ "$release_epoch" -le "$cutoff_epoch" ]]; then
+            echo "old_enough=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "old_enough=false" >> "$GITHUB_OUTPUT"
+            echo "Release ${latest} (${release_date}) is less than 7 days old — skipping"
+          fi
+
+      - name: Check pinned version
+        if: steps.oc.outputs.old_enough == 'true'
+        id: pinned
+        run: |
+          current=$(grep -oP 'oc: \{version: "\K[^"]+' dot/.config/devbase/packages.yaml)
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR if version changed
+        if: >
+          steps.oc.outputs.old_enough == 'true' &&
+          steps.oc.outputs.version != steps.pinned.outputs.version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.oc.outputs.version }}
+          RELEASE_DATE: ${{ steps.oc.outputs.release_date }}
+        run: |
+          branch="oc-update/${NEW_VERSION}"
+
+          if gh pr list --head "$branch" --json number --jq '.[0].number' | grep -q .; then
+            echo "PR for ${NEW_VERSION} already exists — skipping"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+
+          sed -i "s/\(oc: {version: \"\)[^\"]*\"/\1${NEW_VERSION}\"/" \
+            dot/.config/devbase/packages.yaml
+
+          git add dot/.config/devbase/packages.yaml
+          git commit -m "build(deps): update openshift-oc to ${NEW_VERSION}"
+          git push origin "$branch"
+
+          gh pr create \
+            --title "build(deps): update openshift-oc to ${NEW_VERSION}" \
+            --body "OpenShift OC ${NEW_VERSION} released on ${RELEASE_DATE} (>= 7 days old)."
