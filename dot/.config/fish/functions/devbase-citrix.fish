@@ -8,8 +8,7 @@
 set -g __citrix_download_dir "/tmp/citrix-install"
 set -g __citrix_download_page "https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html"
 
-# Citrix Workspace App version - update via Renovate or manually
-# renovate: datasource=custom.citrix depName=citrix-workspace
+# Citrix Workspace App version - updated by citrix-update.yml workflow
 set -g __citrix_version "25.08.10.111"
 
 function __citrix_print_info

@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Citrix Update Check
+on: # yamllint disable-line rule:truthy
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  check-citrix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Fetch Citrix release info
+        id: citrix
+        run: |
+          page=$(curl -sL "https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html")
+
+          version=$(printf '%s' "$page" | grep -oP 'icaclient_\K[0-9.]+(?=_amd64\.deb)' | head -n 1)
+          raw_date=$(printf '%s' "$page" | grep -oP 'Release Date: \K[A-Za-z]{3} [0-9]{1,2}, [0-9]{4}' | head -n 1)
+
+          if [[ -z "$version" || -z "$raw_date" ]]; then
+            echo "Could not retrieve Citrix version or release date" >&2
+            exit 1
+          fi
+
+          release_date=$(LC_TIME=C date -d "$raw_date" +"%Y-%m-%d")
+          release_epoch=$(LC_TIME=C date -d "$release_date" +%s)
+          cutoff_epoch=$(LC_TIME=C date -d "-7 days" +%s)
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
+
+          if [[ "$release_epoch" -le "$cutoff_epoch" ]]; then
+            echo "old_enough=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "old_enough=false" >> "$GITHUB_OUTPUT"
+            echo "Release $version ($release_date) is less than 7 days old — skipping"
+          fi
+
+      - name: Check pinned version
+        if: steps.citrix.outputs.old_enough == 'true'
+        id: pinned
+        run: |
+          current=$(grep -oP 'set -g __citrix_version "\K[^"]+' dot/.config/fish/functions/devbase-citrix.fish)
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR if version changed
+        if: >
+          steps.citrix.outputs.old_enough == 'true' &&
+          steps.citrix.outputs.version != steps.pinned.outputs.version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.citrix.outputs.version }}
+          RELEASE_DATE: ${{ steps.citrix.outputs.release_date }}
+        run: |
+          branch="citrix-update/${NEW_VERSION}"
+
+          if gh pr list --head "$branch" --json number --jq '.[0].number' | grep -q .; then
+            echo "PR for $NEW_VERSION already exists — skipping"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+
+          sed -i "s/set -g __citrix_version \"[^\"]*\"/set -g __citrix_version \"${NEW_VERSION}\"/" \
+            dot/.config/fish/functions/devbase-citrix.fish
+
+          git add dot/.config/fish/functions/devbase-citrix.fish
+          git commit -m "build(deps): update citrix-workspace to ${NEW_VERSION}"
+          git push origin "$branch"
+
+          gh pr create \
+            --title "build(deps): update citrix-workspace to ${NEW_VERSION}" \
+            --body "Citrix Workspace App ${NEW_VERSION} released on ${RELEASE_DATE} (>= 7 days old)."

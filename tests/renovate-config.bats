@@ -131,21 +131,27 @@ _strip_char_classes() {
   assert_success
 }
 
-@test "custom HTML datasources override minimumReleaseAge to null and have a schedule" {
-  # custom.citrix and custom.openshift-oc return no release timestamps.
-  # Schedule is the compensating control in place of minimumReleaseAge.
-  local citrix_ok oc_ok
-  citrix_ok=$(jq -r '
-    .packageRules[]
-    | select(.matchDatasources | arrays | contains(["custom.citrix"]))
-    | (.minimumReleaseAge == null) and (.schedule | length > 0)
-  ' "${DEVBASE_ROOT}/renovate.json")
+
+@test "custom.openshift-oc overrides minimumReleaseAge to null and has a schedule" {
+  local oc_ok
   oc_ok=$(jq -r '
     .packageRules[]
     | select(.matchDatasources | arrays | contains(["custom.openshift-oc"]))
     | (.minimumReleaseAge == null) and (.schedule | length > 0)
   ' "${DEVBASE_ROOT}/renovate.json")
-
-  [[ "$citrix_ok" == "true" ]] || { echo "custom.citrix rule missing null override or schedule" >&2; return 1; }
   [[ "$oc_ok" == "true" ]] || { echo "custom.openshift-oc rule missing null override or schedule" >&2; return 1; }
+}
+
+@test "no standard datasource bypasses minimumReleaseAge via packageRules" {
+  # Only custom.* datasources (no release timestamps) may set minimumReleaseAge
+  # to null. Any other datasource that does so bypasses the 7-day supply-chain
+  # policy silently — this test catches that.
+  run jq -e '
+    [.packageRules[]?
+     | select(has("minimumReleaseAge") and .minimumReleaseAge == null)
+     | .matchDatasources[]?
+     | select(startswith("custom.") | not)]
+    | length == 0
+  ' "${DEVBASE_ROOT}/renovate.json"
+  assert_success
 }
