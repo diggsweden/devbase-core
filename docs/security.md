@@ -518,16 +518,16 @@ These datasources fetch from each language's own versioning API. Whether Renovat
 | `go-version`         | Go             |
 | `ruby-version`       | Ruby           |
 | `rust-version`       | Rust           |
-| `java-version`       | Java (Temurin) |
+| `java-version`       | Java (Temurin) | 
 | `gradle-version`     | Gradle         |
 | `jetbrains-releases` | IntelliJ IDEA  |
 
-#### Tracked — compensating control (no timestamps available)
+#### Tracked — compensating control (run dailt)
 
-| Datasource            | Reason                                                        | Control                         |
-|-----------------------|---------------------------------------------------------------|---------------------------------|
-| `custom.citrix`       | Release date is in a `<span>` tag, unreachable by HTML parser | Monthly schedule (1st of month) |
-| `custom.openshift-oc` | Mirror page returns empty `<time>` elements                   | Monthly schedule (1st of month) |
+| Datasource            | Reason                                                        | Control        |
+|-----------------------|---------------------------------------------------------------|----------------|
+| `custom.citrix`       | Release date is in a `<span>` tag, unreachable by HTML parser |  citrix-update |
+| `custom.openshift-oc` | Mirror page returns empty `<time>` elements                   | oc-update      |
 
 ## Network Security
 
