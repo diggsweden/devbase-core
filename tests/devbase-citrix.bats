@@ -88,11 +88,9 @@ run_fish_citrix() {
   assert_output --partial "Unknown option"
 }
 
-@test "citrix version file contains renovate comment" {
-  run grep -E "^# renovate:" "$DEVBASE_CITRIX_FISH"
-  
+@test "citrix version is managed by citrix-update.yml workflow" {
+  run test -f "${DEVBASE_ROOT}/.github/workflows/citrix-update.yml"
   assert_success
-  assert_output --partial "datasource=custom.citrix"
 }
 
 @test "citrix version is valid format" {

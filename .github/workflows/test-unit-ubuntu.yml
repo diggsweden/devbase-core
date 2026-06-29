@@ -43,3 +43,5 @@ jobs:
         run: just test-setup
       - name: Run tests
         run: just test
+      - name: Check Citrix release age
+        run: bash verify/citrix-release-date.sh
