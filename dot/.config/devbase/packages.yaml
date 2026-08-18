@@ -223,7 +223,7 @@ packs:
       java-latest-openjdk: {}
       java-latest-openjdk-devel: {}
     mise:
-      java: {version: "temurin-25.0.2+10.0.LTS"} # renovate: datasource=java-version depName=java-temurin
+      java: {version: "25.0.4+7.0.LTS"} # renovate: datasource=java-version depName=java-temurin
       maven: {version: "3.9.12"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
       gradle: {version: "9.4.1"} # renovate: datasource=gradle-version depName=gradle
       pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0"} # renovate: datasource=github-releases depName=pmd/pmd
