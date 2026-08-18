@@ -177,7 +177,7 @@ core:
     gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.4"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
     publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.3.1"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
     # Testing
-    bats: {backend: "aqua:bats-core/bats-core", version: "1.13.0"} # renovate: datasource=github-releases depName=bats-core/bats-core
+    bats: {backend: "aqua:bats-core/bats-core", version: "1.14.0"} # renovate: datasource=github-releases depName=bats-core/bats-core
 
   # Custom installers (distro-agnostic, installers handle deb/rpm)
   custom:
