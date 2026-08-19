@@ -36,6 +36,13 @@ setup_non_interactive_mode() {
     DEVBASE_SSH_PASSPHRASE="$(generate_ssh_passphrase)"
     passphrase_was_generated=true
   else
+    # Both interactive front-ends reject a passphrase under 12 characters
+    # (NIST SP 800-63B), and --non-interactive must not be a way around it.
+    if [[ ${#SSH_KEY_PASSPHRASE} -lt 12 ]]; then
+      show_progress error "SSH_KEY_PASSPHRASE must be at least 12 characters (NIST SP 800-63B)"
+      show_progress info "Leave it unset to have a secure passphrase generated instead."
+      return 1
+    fi
     DEVBASE_SSH_PASSPHRASE="$SSH_KEY_PASSPHRASE"
   fi
   export DEVBASE_SSH_PASSPHRASE
@@ -71,6 +78,8 @@ setup_non_interactive_mode() {
   printf "  Git Name: %s\n  Git Email: %s\n  Theme: %s\n  Packs: %s\n" \
     "$DEVBASE_GIT_AUTHOR" "$DEVBASE_GIT_EMAIL" "$DEVBASE_THEME" "$DEVBASE_SELECTED_PACKS"
   [[ "${GENERATED_SSH_PASSPHRASE:-}" == "true" ]] && printf "  SSH Key: Generated with secure passphrase\n"
+
+  return 0
 }
 
 # =============================================================================

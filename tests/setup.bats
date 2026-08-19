@@ -585,3 +585,36 @@ teardown() {
   assert_success
   assert_output --partial "custom_created=yes"
 }
+
+# mask_url_credentials is what keeps proxy credentials out of installation
+# output and out of verify/'s report.
+
+_mask() {
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-apply.sh' >/dev/null 2>&1
+    printf '%s' '$1' | mask_url_credentials
+  "
+}
+
+@test "mask_url_credentials masks a bare token with no password" {
+  _mask 'http://s3cr3t-token@proxy.example.com:8080'
+
+  assert_success
+  refute_output --partial 's3cr3t-token'
+  assert_output --partial '://***@proxy.example.com:8080'
+}
+
+@test "mask_url_credentials masks every credential on the line" {
+  _mask 'http://u1:p1@a.example http://u2:p2@b.example'
+
+  assert_success
+  refute_output --partial 'p1'
+  refute_output --partial 'p2'
+}
+
+@test "mask_url_credentials leaves an @ in a URL path alone" {
+  _mask 'http://proxy.example.com:8080/path@here'
+
+  assert_success
+  assert_output 'http://proxy.example.com:8080/path@here'
+}

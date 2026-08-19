@@ -607,7 +607,7 @@ _show_configuration_summary() {
 collect_user_configuration() {
   # Non-interactive mode
   if [[ "${NON_INTERACTIVE}" == "true" ]]; then
-    setup_non_interactive_mode
+    setup_non_interactive_mode || return 1
     return 0
   fi
 

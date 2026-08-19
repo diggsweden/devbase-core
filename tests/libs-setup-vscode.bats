@@ -389,10 +389,37 @@ teardown() {
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
 
-    configure_vscode_settings >/dev/null 2>&1
+    configure_vscode_settings 2>&1
     cat '${settings_dir}/settings.json'
   "
 
   assert_success
-  assert_output '[]'
+  assert_output --partial '[]'
+  # The message is what proves devbase declined deliberately: jq refuses to
+  # add an object to an array anyway.
+  assert_output --partial 'not a JSON object'
+}
+
+@test "configure_vscode_settings backs up existing settings before merging" {
+  command -v jq >/dev/null || skip "jq required to test merge behavior"
+
+  local settings_dir="${HOME}/.vscode-server/data/Machine"
+  mkdir -p "$settings_dir"
+  printf '{"editor.fontSize": 14}\n' >"${settings_dir}/settings.json"
+
+  run bash -c "
+    export HOME='${HOME}'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_THEME='nord'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/setup-vscode.sh' >/dev/null 2>&1
+    configure_vscode_settings >/dev/null 2>&1
+    ls '${settings_dir}' | grep -c 'settings.json.bak'
+  "
+
+  assert_success
+  assert_output "1"
 }

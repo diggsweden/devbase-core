@@ -200,12 +200,26 @@ SSH CONFIGURATION
 EOF
 }
 
+# Brief: Hide any userinfo in a host value before it is written to disk
+# Params: $1 - host, possibly of the form user:password@host
+# Returns: the host with any credentials replaced by ***
+# Notes: validate_hostname rejects shell metacharacters but not @ or :, so an
+#        authenticated proxy host reaches the summary file intact.
+_summary_mask_userinfo() {
+  local host="$1"
+  if [[ "$host" == *@* ]]; then
+    printf '%s' "***@${host##*@}"
+  else
+    printf '%s' "$host"
+  fi
+}
+
 _summary_network_config() {
   cat <<EOF
 
 NETWORK CONFIGURATION
 =====================
-  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then echo "${DEVBASE_PROXY_HOST}:${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
+  • Proxy: $(if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then echo "$(_summary_mask_userinfo "${DEVBASE_PROXY_HOST}"):${DEVBASE_PROXY_PORT}"; else echo "not configured"; fi)
   • Registry: $(if [[ -n "${DEVBASE_REGISTRY_HOST:-}" && -n "${DEVBASE_REGISTRY_PORT:-}" ]]; then echo "${DEVBASE_REGISTRY_HOST}:${DEVBASE_REGISTRY_PORT}"; else echo "not configured"; fi)
 EOF
 }
@@ -270,6 +284,9 @@ write_installation_summary() {
     _summary_custom_config
     _summary_next_steps
   } >"${DEVBASE_CONFIG_DIR}/install-summary.txt"
+
+  # Holds the git email, proxy and registry hosts and SSH key settings.
+  chmod 600 "${DEVBASE_CONFIG_DIR}/install-summary.txt" 2>/dev/null || true
 
   return 0
 }

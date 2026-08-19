@@ -327,3 +327,40 @@ source_summary() {
   refute_output --partial "old content"
   assert_output --partial "DEVBASE INSTALLATION SUMMARY"
 }
+
+@test "_summary_network_config hides credentials in the proxy host" {
+  # validate_hostname rejects shell metacharacters but not @ or :, so an
+  # authenticated proxy host reaches the summary intact and the file is
+  # written to disk.
+  export DEVBASE_PROXY_HOST="proxyuser:s3cr3t@proxy.example.com"
+  export DEVBASE_PROXY_PORT="8080"
+  source_summary
+
+  run _summary_network_config
+
+  assert_success
+  refute_output --partial "s3cr3t"
+  assert_output --partial "***@proxy.example.com:8080"
+}
+
+@test "_summary_network_config leaves a plain proxy host unchanged" {
+  export DEVBASE_PROXY_HOST="proxy.example.com"
+  export DEVBASE_PROXY_PORT="8080"
+  source_summary
+
+  run _summary_network_config
+
+  assert_success
+  assert_output --partial "Proxy: proxy.example.com:8080"
+}
+
+@test "write_installation_summary restricts the summary file to the owner" {
+  export DEVBASE_CONFIG_DIR="${TEST_DIR}/config"
+  mkdir -p "$DEVBASE_CONFIG_DIR"
+  source_summary
+
+  run write_installation_summary
+
+  assert_success
+  assert_equal "$(stat -c %a "${DEVBASE_CONFIG_DIR}/install-summary.txt")" "600"
+}

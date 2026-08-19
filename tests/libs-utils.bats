@@ -53,9 +53,7 @@ teardown() {
 
 @test "command_exists caches results" {
   command_exists bash
-  
-  run --separate-stderr bash -c "[[ -n \"\${COMMAND_CACHE[bash]:-}\" ]] && echo 'cached'"
-  
+
   assert [ -n "${COMMAND_CACHE[bash]:-}" ]
 }
 
@@ -126,7 +124,7 @@ teardown() {
   assert_success
 }
 
-@test "command_exists uses cache to avoid repeated lookups" {
+@test "command_exists answers from cache after the command leaves PATH" {
   mkdir -p "${TEST_DIR}/bin"
   cat > "${TEST_DIR}/bin/test_command" << 'SCRIPT'
 #!/usr/bin/env bash
@@ -137,9 +135,11 @@ SCRIPT
   export PATH="${TEST_DIR}/bin:${PATH}"
   
   command_exists test_command
-  command_exists test_command
-  
-  assert [ -n "${COMMAND_CACHE[test_command]:-}" ]
+
+  # A cached answer still succeeds; a re-probe would not.
+  export PATH="/usr/bin:/bin"
+  run command_exists test_command
+  assert_success
 }
 
 @test "retry_command with mocked failing command" {
@@ -206,10 +206,98 @@ SCRIPT
 
   assert_failure
   assert [ -d "$dir" ]
+  # The message is what proves our guard ran: rm -f refuses a directory on its
+  # own, so a bare failure would only assert coreutils behaviour.
+  assert [ -n "$stderr" ]
+  [[ "$stderr" == *"refusing directory"* ]]
 }
 
 @test "safe_rm_file rejects empty target" {
   run --separate-stderr safe_rm_file ""
 
+  assert_failure
+}
+
+# validate_path is the whitelist that stops devbase operating on system
+# directories; safe_rm_rf is the containment check before a recursive delete.
+
+@test "validate_path refuses a system directory" {
+  run --separate-stderr validate_path '/etc' 'true'
+  assert_failure
+  # validate_path is layered and the final whitelist also rejects /etc, so the
+  # message is what proves the system-directory arm fired.
+  [[ "$stderr" == *"Cannot operate on system directory"* ]]
+}
+
+@test "validate_path refuses the filesystem root" {
+  run --separate-stderr validate_path '/' 'true'
+  assert_failure
+}
+
+@test "validate_path refuses a path outside the allowed zones" {
+  run --separate-stderr validate_path '/srv/somewhere' 'true'
+  assert_failure
+  [[ "$stderr" == *"Path outside allowed zones"* ]]
+}
+
+@test "validate_path refuses a mount point" {
+  run --separate-stderr validate_path '/mnt/usb' 'true'
+  assert_failure
+  [[ "$stderr" == *"Cannot operate on mount point"* ]]
+}
+
+@test "validate_path accepts a path under the temp directory" {
+  run --separate-stderr validate_path "${TEST_DIR}/work" 'true'
+  assert_success
+}
+
+@test "validate_path refuses traversal that escapes into a system directory" {
+  run --separate-stderr validate_path "${TEST_DIR}/../../../etc" 'true'
+  assert_failure
+}
+
+@test "safe_rm_rf removes a directory tree inside the anchor" {
+  mkdir -p "${TEST_DIR}/anchor/tree/deep"
+  touch "${TEST_DIR}/anchor/tree/deep/file"
+
+  run --separate-stderr safe_rm_rf "${TEST_DIR}/anchor" "${TEST_DIR}/anchor/tree"
+
+  assert_success
+  assert [ ! -e "${TEST_DIR}/anchor/tree" ]
+  assert [ -d "${TEST_DIR}/anchor" ]
+}
+
+@test "safe_rm_rf refuses to remove the anchor itself" {
+  mkdir -p "${TEST_DIR}/anchor"
+
+  run --separate-stderr safe_rm_rf "${TEST_DIR}/anchor" "${TEST_DIR}/anchor"
+
+  assert_failure
+  assert [ -d "${TEST_DIR}/anchor" ]
+}
+
+@test "safe_rm_rf refuses a target outside the anchor" {
+  mkdir -p "${TEST_DIR}/anchor" "${TEST_DIR}/sibling"
+
+  run --separate-stderr safe_rm_rf "${TEST_DIR}/anchor" "${TEST_DIR}/sibling"
+
+  assert_failure
+  assert [ -d "${TEST_DIR}/sibling" ]
+}
+
+@test "safe_rm_rf refuses traversal that escapes the anchor" {
+  mkdir -p "${TEST_DIR}/anchor" "${TEST_DIR}/sibling"
+
+  run --separate-stderr safe_rm_rf "${TEST_DIR}/anchor" "${TEST_DIR}/anchor/../sibling"
+
+  assert_failure
+  assert [ -d "${TEST_DIR}/sibling" ]
+}
+
+@test "safe_rm_rf rejects empty arguments" {
+  run --separate-stderr safe_rm_rf '' "${TEST_DIR}"
+  assert_failure
+
+  run --separate-stderr safe_rm_rf "${TEST_DIR}" ''
   assert_failure
 }

@@ -264,7 +264,10 @@ DevBase enforces a minimum password length policy for SSH key passphrases based 
 - **Standard**: NIST SP 800-63B recommends minimum 12 characters for memorized secrets
 - **Validation**: Interactive prompt rejects passphrases shorter than 12 characters
 - **No bypass**: Policy is always enforced, no configuration override available
-- **Location**: `libs/collect-user-preferences.sh` (`prompt_for_ssh_passphrase()` function)
+- **Location**: `libs/collect-user-preferences-gum.sh` and
+  `libs/collect-user-preferences-whiptail.sh` (`_collect_ssh_passphrase()`), with the
+  same minimum applied to `SSH_KEY_PASSPHRASE` in
+  `libs/collect-user-preferences-common.sh` for non-interactive installs
 
 **Reference**: [NIST Special Publication 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) - Digital Identity Guidelines
 

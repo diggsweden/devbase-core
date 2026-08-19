@@ -168,7 +168,9 @@ check_file_content() {
 
 # Mask credentials in proxy URLs: http://user:pass@host -> http://***:***@host
 mask_url_credentials() {
-  sed 's|://[^:]*:[^@]*@|://***:***@|'
+  # Mask every userinfo occurrence on the line, with or without a password.
+  # Excluding / from both classes keeps a path containing @ untouched.
+  sed -E 's#://[^:/@[:space:]]*:[^@/[:space:]]*@#://***:***@#g; s#://[^:/@[:space:]]+@#://***@#g'
 }
 
 check_env_var() {

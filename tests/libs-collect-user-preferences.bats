@@ -743,3 +743,69 @@ EOF
   assert_success
   assert_output 'Select language packs to install'
 }
+
+# docs/security.md states the 12-character SSH passphrase minimum is enforced
+# with "no bypass", on the interactive and non-interactive paths alike.
+
+_run_non_interactive() {
+  run --separate-stderr bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${TEST_DIR}/config'
+    export USER='tester'
+    export GIT_NAME='Test User'
+    export GIT_EMAIL='test@example.com'
+    ${1}
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences-common.sh' >/dev/null 2>&1
+    setup_non_interactive_mode >/dev/null || exit 1
+    printf 'LEN=%s\n' \"\${#DEVBASE_SSH_PASSPHRASE}\"
+  "
+}
+
+@test "non-interactive mode rejects a passphrase under the documented minimum" {
+  _run_non_interactive "export SSH_KEY_PASSPHRASE='short'"
+
+  assert_failure
+  [[ "$output$stderr" == *"at least 12 characters"* ]]
+}
+
+@test "non-interactive mode accepts a passphrase meeting the minimum" {
+  _run_non_interactive "export SSH_KEY_PASSPHRASE='correct-horse-battery'"
+
+  assert_success
+  assert_output --partial "LEN=21"
+}
+
+@test "non-interactive mode generates a passphrase when none is supplied" {
+  _run_non_interactive "unset SSH_KEY_PASSPHRASE"
+
+  assert_success
+  # Generated passphrases must themselves clear the policy.
+  local len="${output##*LEN=}"
+  assert [ "$len" -ge 12 ]
+}
+
+@test "collect_user_configuration propagates a rejected passphrase" {
+  # The error must also stop the install, not just be printed.
+  run --separate-stderr bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_CONFIG_DIR='${TEST_DIR}/config'
+    export USER='tester'
+    export GIT_NAME='Test User'
+    export GIT_EMAIL='test@example.com'
+    export SSH_KEY_PASSPHRASE='short'
+    export NON_INTERACTIVE=true
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences-common.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/collect-user-preferences-gum.sh' >/dev/null 2>&1
+    collect_user_configuration >/dev/null
+  "
+
+  assert_failure
+}

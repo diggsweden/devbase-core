@@ -125,3 +125,83 @@ teardown() {
   assert_failure
   [[ "$stderr" == *"Required environment variable"* ]] || [[ "$output" == *"Required environment variable"* ]]
 }
+
+# The validators below sanitise values that arrive from org.env - a separate,
+# organisation-controlled repository - before they are written into generated
+# config files. They are the only sanitisation on that path.
+
+@test "validate_hostname accepts an ordinary hostname" {
+  run --separate-stderr validate_hostname 'proxy.example.com' 'DEVBASE_PROXY_HOST'
+  assert_success
+}
+
+@test "validate_hostname rejects shell metacharacters" {
+  run --separate-stderr validate_hostname 'proxy.example.com;id' 'DEVBASE_PROXY_HOST'
+  assert_failure
+  assert [ -n "$stderr" ]
+}
+
+@test "validate_hostname rejects command substitution" {
+  run --separate-stderr validate_hostname 'host$(id)' 'DEVBASE_PROXY_HOST'
+  assert_failure
+}
+
+@test "validate_hostname treats an unset value as optional" {
+  run --separate-stderr validate_hostname '' 'DEVBASE_PROXY_HOST'
+  assert_success
+}
+
+@test "validate_port accepts a port inside the valid range" {
+  run --separate-stderr validate_port '8080' 'DEVBASE_PROXY_PORT'
+  assert_success
+}
+
+@test "validate_port rejects a port above the valid range" {
+  run --separate-stderr validate_port '65536' 'DEVBASE_PROXY_PORT'
+  assert_failure
+}
+
+@test "validate_port rejects zero" {
+  run --separate-stderr validate_port '0' 'DEVBASE_PROXY_PORT'
+  assert_failure
+}
+
+@test "validate_port rejects a non-numeric port" {
+  run --separate-stderr validate_port '80a' 'DEVBASE_PROXY_PORT'
+  assert_failure
+}
+
+@test "validate_port reads a leading zero as decimal, not octal" {
+  # Bash arithmetic treats 08 as octal and errors out unless 10# forces base 10.
+  run --separate-stderr validate_port '08' 'DEVBASE_PROXY_PORT'
+  assert_success
+  refute_output --partial 'value too great for base'
+  assert [ -z "$stderr" ]
+}
+
+@test "validate_safe_value rejects shell metacharacters" {
+  run --separate-stderr validate_safe_value 'name$(id)' 'GIT_NAME'
+  assert_failure
+}
+
+@test "validate_safe_value rejects an embedded newline" {
+  # A newline here injects an extra line into every generated config file the
+  # value is rendered into.
+  run --separate-stderr validate_safe_value "$(printf 'good\nInjected=1')" 'GIT_NAME'
+  assert_failure
+}
+
+@test "validate_safe_value accepts an apostrophe in a personal name" {
+  run --separate-stderr validate_safe_value "O'Brien" 'GIT_NAME'
+  assert_success
+}
+
+@test "validate_email rejects shell metacharacters" {
+  run --separate-stderr validate_email 'user@example.com;id' 'GIT_EMAIL'
+  assert_failure
+}
+
+@test "validate_email accepts an ordinary address" {
+  run --separate-stderr validate_email 'user@example.com' 'GIT_EMAIL'
+  assert_success
+}

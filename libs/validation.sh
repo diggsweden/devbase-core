@@ -227,7 +227,15 @@ validate_port() {
     return 0 # Empty is OK (optional)
   fi
 
-  if ! [[ "$value" =~ ^[0-9]+$ ]] || [[ "$value" -lt 1 ]] || [[ "$value" -gt 65535 ]]; then
+  if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+    show_progress error "${name} must be a number between 1-65535, got: ${value}"
+    return 1
+  fi
+
+  # 10# forces base 10: bash reads a leading zero as octal, and an invalid
+  # octal like 08 makes [[ -lt ]] error out instead of comparing.
+  local port=$((10#$value))
+  if ((port < 1 || port > 65535)); then
     show_progress error "${name} must be a number between 1-65535, got: ${value}"
     return 1
   fi
@@ -267,7 +275,10 @@ validate_safe_value() {
     return 0
   fi
 
-  if [[ "$value" =~ [\;\|\&\$\`\<\>] ]]; then
+  # [[:cntrl:]] covers newline and carriage return: a value from org.env would
+  # otherwise inject extra lines into generated config files. Quotes are
+  # deliberately allowed: names like O'Brien are legitimate.
+  if [[ "$value" =~ [\;\|\&\$\`\<\>] || "$value" =~ [[:cntrl:]] ]]; then
     show_progress error "${name} contains shell metacharacters: ${value}"
     return 1
   fi
