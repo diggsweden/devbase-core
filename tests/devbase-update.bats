@@ -1024,3 +1024,60 @@ SCRIPT
   # Should fail because no recognized tags found (alpha not supported)
   assert_failure
 }
+
+# --- Ubuntu version gate on the update path ---
+
+_fish_os_gate() {
+  local osfile="$1" fn="$2"
+  fish -c "
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_too_old.fish'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_upgrade_notice.fish'
+    set -gx DEVBASE_OS_RELEASE_FILE '$osfile'
+    $fn
+  "
+}
+
+_write_os_release() {
+  printf 'ID=%s\nVERSION_ID="%s"\n' "$2" "$3" >"$1"
+}
+
+@test "__devbase_ubuntu_too_old is true below the minimum" {
+  _write_os_release "$TEST_DIR/os" ubuntu 24.04
+  run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
+  assert_success
+}
+
+@test "__devbase_ubuntu_too_old is false at and above the minimum" {
+  for v in 26.04 26.10 28.04; do
+    _write_os_release "$TEST_DIR/os" ubuntu "$v"
+    run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
+    assert_failure
+  done
+}
+
+@test "__devbase_ubuntu_too_old catches an older release within the same year" {
+  _write_os_release "$TEST_DIR/os" ubuntu 25.10
+  run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
+  assert_success
+}
+
+@test "__devbase_ubuntu_too_old does not block a non-Ubuntu distro" {
+  _write_os_release "$TEST_DIR/os" fedora 45
+  run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
+  assert_failure
+}
+
+@test "__devbase_ubuntu_too_old does not block when os-release is unreadable" {
+  run _fish_os_gate "$TEST_DIR/does-not-exist" "__devbase_ubuntu_too_old"
+  assert_failure
+}
+
+@test "upgrade notice names the release, the target and the upgrade command" {
+  _write_os_release "$TEST_DIR/os" ubuntu 24.04
+  run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_upgrade_notice"
+  assert_success
+  assert_output --partial "You are on Ubuntu 24.04"
+  assert_output --partial "require Ubuntu 26.04"
+  assert_output --partial "sudo do-release-upgrade -d"
+  assert_output --partial "Back up your work"
+}

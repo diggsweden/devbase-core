@@ -17,6 +17,13 @@ function __devbase_update_check --description "Check for devbase updates on shel
     set -l result (devbase-update --check 2>/dev/null)
 
     if test -n "$result"
+        # An update exists, but this release can no longer install it, so say
+        # so instead of prompting.
+        if __devbase_ubuntu_too_old
+            __devbase_ubuntu_upgrade_notice
+            return 0
+        end
+
         printf "\n"
         printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
         printf "%s  DevBase Update Available%s\n" (set_color yellow) (set_color normal)

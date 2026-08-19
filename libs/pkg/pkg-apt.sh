@@ -140,7 +140,26 @@ _pkg_apt_add_repo() {
 # Params: None
 # Returns: 0 on success, 1 on failure
 # Side-effects: Adds fish-shell/release-4 PPA
+# Brief: Major version of the fish package the distro itself offers
+# Returns: 0 with major version on stdout, 1 if no candidate is available
+_pkg_apt_fish_candidate_major() {
+  local candidate
+  candidate=$(apt-cache policy fish 2>/dev/null | awk '/Candidate:/ {print $2}')
+  [[ -z "$candidate" || "$candidate" == "(none)" ]] && return 1
+  printf '%s' "${candidate%%.*}"
+}
+
 _pkg_apt_add_fish_ppa() {
+  # Ubuntu 26.04 (resolute) ships fish 4.x in universe, and the PPA has no
+  # build for newer series - adding it there would leave apt pointing at a
+  # repository with no packages.
+  local fish_major
+  if fish_major=$(_pkg_apt_fish_candidate_major) &&
+    [[ "$fish_major" =~ ^[0-9]+$ ]] && ((fish_major >= 4)); then
+    show_progress success "Fish ${fish_major}.x available in distro repos - skipping PPA"
+    return 0
+  fi
+
   show_progress info "Adding Fish shell 4.x PPA..."
 
   if ! _pkg_apt_add_repo "ppa" "fish-shell/release-4"; then

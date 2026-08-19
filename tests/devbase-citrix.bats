@@ -59,7 +59,7 @@ run_fish_citrix() {
   assert_output --regexp '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
 }
 
-@test "__citrix_get_static_urls returns two URLs" {
+@test "__citrix_get_static_urls lists both amd64 naming variants" {
   run run_fish_citrix "__citrix_get_static_urls"
   
   assert_success
@@ -101,4 +101,48 @@ run_fish_citrix() {
   assert_success
   # Citrix versions are: YY.MM.PATCH.BUILD (e.g., 25.08.10.111)
   [[ "$output" =~ ^[0-9]{2}\.[0-9]{2}\.[0-9]+\.[0-9]+$ ]]
+}
+
+# Citrix publishes the amd64 build as icaclient_<ver>_amd64.deb on some releases
+# and icaclient-gcc-8_<ver>_amd64.deb on others. Both must resolve, or the
+# installer silently finds nothing.
+
+_citrix_page_fixture() {
+  printf '<a rel="//downloads.citrix.com/26543/%s?__gda__=exp=1" >x</a>\n' "$@" >"$TEST_DIR/page.html"
+}
+
+_citrix_urls_from_fixture() {
+  fish -c "
+    source '$DEVBASE_CITRIX_FISH'
+    set -g __citrix_download_page 'file://$TEST_DIR/page.html'
+    __citrix_fetch_download_urls
+  "
+}
+
+@test "download URLs resolve when Citrix uses the gcc-8 amd64 names" {
+  _citrix_page_fixture "icaclient-gcc-8_26.04.10.1_amd64.deb" "ctxusb-gcc-8_26.04.10.1_amd64.deb"
+
+  run _citrix_urls_from_fixture
+
+  assert_success
+  assert_output --partial "icaclient-gcc-8_26.04.10.1_amd64.deb"
+  assert_output --partial "ctxusb-gcc-8_26.04.10.1_amd64.deb"
+}
+
+@test "download URLs prefer the plain amd64 name when Citrix publishes it" {
+  _citrix_page_fixture "icaclient_26.04.10.1_amd64.deb" "icaclient-gcc-8_26.04.10.1_amd64.deb"
+
+  run _citrix_urls_from_fixture
+
+  assert_success
+  assert_output --partial "icaclient_26.04.10.1_amd64.deb"
+  refute_output --partial "icaclient-gcc-8"
+}
+
+@test "download URL lookup fails when no amd64 package is listed" {
+  _citrix_page_fixture "icaclient_26.04.10.1_arm64.deb"
+
+  run _citrix_urls_from_fixture
+
+  assert_failure
 }

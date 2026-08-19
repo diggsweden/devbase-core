@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2153,SC2155,SC2218
+# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2153,SC2155,SC2218,SC2329
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -292,4 +292,43 @@ SCRIPT
 
   run cat "${TEST_DIR}/warnings"
   assert_output --partial "Could not set npm min-release-age"
+}
+
+_load_report_sudoers_failure() {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  eval "$(awk '/^_report_sudoers_failure\(\)/,/^}/' "${DEVBASE_ROOT}/libs/install.sh")"
+  show_progress() { printf '%s %s\n' "$1" "$2"; }
+  # Stub sudo so the test does not depend on it being installed or authorised
+  sudo() { [[ "$1" == "--version" ]] && printf 'Sudo version 1.9.15p5\n'; }
+}
+
+@test "_report_sudoers_failure surfaces visudo diagnostics" {
+  _load_report_sudoers_failure
+
+  run _report_sudoers_failure "Invalid sudoers proxy config" \
+    "/tmp/x:1:21: syntax error
+Defaults env_keep +="
+
+  assert_success
+  assert_output --partial "Invalid sudoers proxy config"
+  assert_output --partial "visudo: /tmp/x:1:21: syntax error"
+  assert_output --partial "visudo: Defaults env_keep +="
+}
+
+@test "_report_sudoers_failure names the sudo implementation" {
+  _load_report_sudoers_failure
+
+  run _report_sudoers_failure "Invalid sudoers proxy config" "some error"
+
+  assert_success
+  assert_output --partial "using: Sudo version 1.9.15p5"
+}
+
+@test "_report_sudoers_failure says so when visudo produced no output" {
+  _load_report_sudoers_failure
+
+  run _report_sudoers_failure "Invalid sudoers proxy config" ""
+
+  assert_success
+  assert_output --partial "visudo exited non-zero without output"
 }

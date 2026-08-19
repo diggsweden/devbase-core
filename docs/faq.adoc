@@ -12,7 +12,7 @@ See link:tools-matrix.adoc[Tools Matrix] - ~90+ development tools.
 
 === Which Ubuntu versions does it support?
 
-24.04 LTS or newer. WSL2 or native.
+26.04 LTS or newer. WSL2 or native. On an older release, back up your work and run `sudo do-release-upgrade -d` before installing.
 
 === Can I run this multiple times?
 

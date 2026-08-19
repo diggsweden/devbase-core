@@ -327,6 +327,13 @@ function __devbase_update_do_update --description "Perform the update"
     if test -n "$target_ref"
         set force_ref true
     end
+
+    # Refuse before touching the repo: updating the checkout and then failing
+    # in setup.sh leaves a core version that cannot be installed.
+    if __devbase_ubuntu_too_old
+        __devbase_ubuntu_upgrade_notice
+        return 1
+    end
     if not __devbase_update_get_core_info
         __devbase_update_print_error "Core repo not found at $__devbase_core_dir"
         __devbase_update_print_info "Run devbase setup.sh first to install"

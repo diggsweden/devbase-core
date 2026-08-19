@@ -246,7 +246,7 @@ SCRIPT
     source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
 
-    get_wsl_version() { echo '2.6.0'; }
+    get_wsl_version() { echo '2.7.7'; }
     detect_environment >/dev/null 2>&1
     echo \"\$_DEVBASE_ENV\"
   "
@@ -349,4 +349,59 @@ SCRIPT
   assert_dir_exists "${TEST_DIR}/bin"
   assert_dir_exists "${TEST_DIR}/config"
   assert_dir_exists "${TEST_DIR}/cache"
+}
+
+@test "check_ubuntu_version blocks releases older than the minimum" {
+  # The comparison uses dpkg --compare-versions, which Fedora does not ship.
+  command -v dpkg >/dev/null || skip "dpkg not available"
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+
+    is_ubuntu() { return 0; }
+    get_os_version() { echo '24.04'; }
+    check_ubuntu_version '26.04'
+  "
+
+  assert_failure
+  assert_output --partial "Ubuntu 26.04 or later is required"
+  assert_output --partial "do-release-upgrade -d"
+  assert_output --partial "Back up your work"
+}
+
+@test "check_ubuntu_version accepts the minimum release and newer" {
+  # The comparison uses dpkg --compare-versions, which Fedora does not ship.
+  command -v dpkg >/dev/null || skip "dpkg not available"
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+
+    is_ubuntu() { return 0; }
+    get_os_version() { echo '26.04'; }
+    check_ubuntu_version '26.04' || exit 1
+
+    get_os_version() { echo '26.10'; }
+    check_ubuntu_version '26.04'
+  "
+
+  assert_success
+}
+
+@test "check_ubuntu_version does not block when the version is undeterminable" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/check-requirements.sh' >/dev/null 2>&1
+
+    is_ubuntu() { return 0; }
+    get_os_version() { echo 'unknown'; }
+    check_ubuntu_version '26.04'
+  "
+
+  assert_success
 }

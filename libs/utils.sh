@@ -368,7 +368,8 @@ merge_dotfiles_with_backup() {
     }
   done < <(find "$src_dir" -maxdepth "$_FIND_DEPTH" -type f -print0)
 
-  # Now copy new dotfiles (NOTE: still uses cp -r which follows symlinks in src)
+  # Now copy new dotfiles. cp -r copies symlinks met during recursion as
+  # symlinks rather than dereferencing them, so shipped symlinks stay links.
   cp -r "$src_dir"/. "$target_dir/" || {
     show_progress error "Failed to copy dotfiles from $src_dir to $target_dir"
     return 1

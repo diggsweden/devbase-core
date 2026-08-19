@@ -188,23 +188,21 @@ detect_environment() {
   ubuntu-wsl)
     export _DEVBASE_ENV="wsl-ubuntu"
 
-    # Check WSL version and require >= 2.6.0
+    # Check WSL version against the supported minimum. dpkg honours the patch
+    # component, so a requirement like 2.7.7 can be expressed.
     local wsl_version
+    local wsl_min_version="${DEVBASE_MIN_WSL_VERSION:-2.7.7}"
     wsl_version=$(get_wsl_version)
 
     if [[ -n "$wsl_version" ]]; then
-      local major minor
-      major=$(echo "$wsl_version" | cut -d. -f1)
-      minor=$(echo "$wsl_version" | cut -d. -f2)
-
-      if [[ "$major" -lt 2 ]] || { [[ "$major" -eq 2 ]] && [[ "$minor" -lt 6 ]]; }; then
-        show_progress error "WSL version $wsl_version detected - version 2.6.0 or higher is required"
+      if dpkg --compare-versions "$wsl_version" "lt" "$wsl_min_version" 2>/dev/null; then
+        show_progress error "WSL version $wsl_version detected - version ${wsl_min_version} or higher is required"
         show_progress info "To upgrade WSL, run in Windows PowerShell:"
         show_progress info "  wsl --update"
         show_progress info "Then restart your WSL distribution"
         show_progress info "See: https://learn.microsoft.com/en-us/windows/wsl/install"
         tui_blank_line
-        die "WSL version too old. Please upgrade to WSL 2.6.0 or higher and try again."
+        die "WSL version too old. Please upgrade to WSL ${wsl_min_version} or higher and try again."
       fi
     fi
 
@@ -225,12 +223,13 @@ detect_environment() {
 }
 
 # Brief: Verify Ubuntu version meets minimum requirement
-# Params: $1 - minimum version (optional, default: "24.04")
+# Params: $1 - minimum version (optional, default: "26.04")
 # Uses: is_ubuntu, get_os_version, show_progress (functions)
-# Returns: 0 on success, 1 if not Ubuntu
+# Returns: 0 on success, 1 if not Ubuntu or if the release is older than
+#          min_version (installation must not proceed on an unsupported release)
 # Side-effects: Prints version check results
 check_ubuntu_version() {
-  local min_version=${1:-"24.04"}
+  local min_version=${1:-"26.04"}
   local current_version=""
 
   if ! is_ubuntu; then
@@ -247,7 +246,16 @@ check_ubuntu_version() {
 
   if [[ "$current_version" != "unknown" ]]; then
     if dpkg --compare-versions "$current_version" "lt" "$min_version" 2>/dev/null; then
-      add_global_warning "Ubuntu $min_version or later recommended (found: $current_version)"
+      show_progress error "Ubuntu $current_version detected - Ubuntu $min_version or later is required"
+      tui_blank_line
+      show_progress info "Upgrade the distribution before installing or updating DevBase:"
+      show_progress info "  1. Back up your work first. Commit and push any local git"
+      show_progress info "     repositories, and copy anything you cannot lose off this machine."
+      show_progress info "  2. Upgrade Ubuntu:"
+      show_progress info "       sudo do-release-upgrade -d"
+      show_progress info "  3. Reboot, then run ./setup.sh again."
+      tui_blank_line
+      return 1
     else
       show_progress success "Ubuntu version $current_version"
     fi
@@ -550,8 +558,8 @@ run_preflight_checks() {
     check_results+=("✓ Fedora version OK")
     ;;
   ubuntu | wsl-ubuntu | *)
-    check_ubuntu_version "24.04" || return 1
-    check_results+=("✓ Ubuntu version 24.04+")
+    check_ubuntu_version "26.04" || return 1
+    check_results+=("✓ Ubuntu version 26.04+")
     ;;
   esac
 

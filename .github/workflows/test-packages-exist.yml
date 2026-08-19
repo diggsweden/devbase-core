@@ -1,0 +1,126 @@
+# SPDX-FileCopyrightText: 2026 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Test Ubuntu 26.04 Compatibility
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    paths:
+      - 'dot/.config/devbase/packages.yaml'
+      - 'libs/**'
+      - 'setup.sh'
+      - '.github/workflows/test-ubuntu-compat.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dot/.config/devbase/packages.yaml'
+      - 'libs/**'
+      - 'setup.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  packages-exist:
+    runs-on: ubuntu-26.04
+    name: apt package names resolve on Ubuntu 26.04
+    container:
+      image: ubuntu:26.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install probe dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends bash curl ca-certificates
+          curl -fsSL -o /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+      - name: Every apt/common package name has an install candidate
+        shell: bash
+        run: |
+          set -uo pipefail
+          mapfile -t packages < <(
+            yq -r '
+              [.core.common // {} | keys]
+              + [.core.apt // {} | keys]
+              + [.packs[].common // {} | keys]
+              + [.packs[].apt // {} | keys]
+              | flatten | unique | .[]
+            ' dot/.config/devbase/packages.yaml
+          )
+          printf 'Checking %d package names...\n' "${#packages[@]}"
+
+          missing=()
+          for pkg in "${packages[@]}"; do
+            policy=$(apt-cache policy "$pkg" 2>/dev/null)
+            if [[ -z "$policy" ]] || grep -q 'Candidate: (none)' <<<"$policy"; then
+              missing+=("$pkg")
+            fi
+          done
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            printf '\nNo install candidate on Ubuntu 26.04 (%d):\n' "${#missing[@]}"
+            printf '  %s\n' "${missing[@]}"
+            exit 1
+          fi
+          printf 'All %d package names resolve.\n' "${#packages[@]}"
+
+  coreutils-flags:
+    runs-on: ubuntu-26.04
+    name: GNU coreutils flags behave as expected
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Ensure bash is present
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends bash
+      - name: Probe the GNU-specific flags devbase relies on
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "coreutils implementation in this image:"
+          mktemp --version 2>&1 | head -1 || true
+          realpath --version 2>&1 | head -1 || true
+          echo
+
+          # setup.sh:332 and libs/utils.sh:110 run before any install work,
+          # so an unsupported --tmpdir aborts setup.sh immediately.
+          probe_tmp=$(mktemp -d --tmpdir devbase.XXXXXX)
+          test -d "$probe_tmp"
+          rmdir "$probe_tmp"
+          echo "ok  mktemp -d --tmpdir"
+
+          # libs/utils.sh validate_path() and safe_rm_rf() resolve paths that
+          # do not exist yet; -m must not fail on a missing target.
+          test "$(realpath -m /no/such/path)" = "/no/such/path"
+          echo "ok  realpath -m"
+
+          # libs/utils.sh merge_dotfiles_with_backup() relies on -r not
+          # following symlinks when backing up existing dotfiles.
+          ln -sf /etc/hostname /tmp/probe-link
+          cp --no-dereference -r /tmp/probe-link /tmp/probe-copy
+          test -L /tmp/probe-copy
+          echo "ok  cp --no-dereference -r"
+
+          # merge_dotfiles_with_backup() then copies the new dotfiles with a
+          # plain cp -r. GNU coreutils copies symlinks met during recursion as
+          # symlinks rather than dereferencing them; devbase relies on that, so
+          # assert it here where a uutils swap would show up.
+          mkdir -p /tmp/probe-src /tmp/probe-dst
+          ln -sf /etc/hostname /tmp/probe-src/link
+          cp -r /tmp/probe-src/. /tmp/probe-dst/
+          test -L /tmp/probe-dst/link
+          echo "ok  cp -r preserves symlinks"
+
+          # libs/install-custom.sh:1240 and libs/install-mise.sh:452 compare
+          # versions with sort -V. A wrong ordering here is silent: it yields
+          # a bad answer rather than an error, so assert the result.
+          test "$(printf '1.10\n1.2\n' | sort -V | head -1)" = "1.2"
+          echo "ok  sort -V"
+
+          echo
+          echo "All GNU-specific coreutils flags behave as devbase expects."

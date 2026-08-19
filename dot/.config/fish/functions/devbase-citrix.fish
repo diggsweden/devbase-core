@@ -10,7 +10,7 @@ set -g __citrix_download_page "https://www.citrix.com/downloads/workspace-app/li
 
 # Citrix Workspace App version - update via Renovate or manually
 # renovate: datasource=custom.citrix depName=citrix-workspace
-set -g __citrix_version "25.08.10.111"
+set -g __citrix_version "26.04.10.1"
 
 function __citrix_print_info
     printf "%sⓘ%s %s\n" (set_color cyan) (set_color normal) "$argv[1]"
@@ -43,8 +43,18 @@ function __citrix_fetch_download_urls --description "Fetch download URLs from Ci
     end
     
     # Extract URLs with tokens for amd64 packages
+    # Citrix publishes the amd64 build under either name depending on release:
+    # icaclient_<ver>_amd64.deb or icaclient-gcc-8_<ver>_amd64.deb. Prefer the
+    # plain name so a revert upstream keeps working, then fall back.
     set -l icaclient_url (echo "$page_content" | string match -r 'downloads\.citrix\.com/[0-9]+/icaclient_[0-9.]+_amd64\.deb[^"]*' | head -1)
+    if test -z "$icaclient_url"
+        set icaclient_url (echo "$page_content" | string match -r 'downloads\.citrix\.com/[0-9]+/icaclient-gcc-8_[0-9.]+_amd64\.deb[^"]*' | head -1)
+    end
+
     set -l ctxusb_url (echo "$page_content" | string match -r 'downloads\.citrix\.com/[0-9]+/ctxusb_[0-9.]+_amd64\.deb[^"]*' | head -1)
+    if test -z "$ctxusb_url"
+        set ctxusb_url (echo "$page_content" | string match -r 'downloads\.citrix\.com/[0-9]+/ctxusb-gcc-8_[0-9.]+_amd64\.deb[^"]*' | head -1)
+    end
     
     if test -z "$icaclient_url"
         return 1
@@ -52,12 +62,17 @@ function __citrix_fetch_download_urls --description "Fetch download URLs from Ci
     
     echo "https://$icaclient_url"
     test -n "$ctxusb_url"; and echo "https://$ctxusb_url"
+
+    # ctxusb is optional: a missing one must not fail the function.
+    return 0
 end
 
 function __citrix_get_static_urls --description "Get static URLs (for display/testing)"
     # Static URLs without tokens (for --check display)
     echo "https://downloads.citrix.com/*/icaclient_"$__citrix_version"_amd64.deb"
+    echo "https://downloads.citrix.com/*/icaclient-gcc-8_"$__citrix_version"_amd64.deb"
     echo "https://downloads.citrix.com/*/ctxusb_"$__citrix_version"_amd64.deb"
+    echo "https://downloads.citrix.com/*/ctxusb-gcc-8_"$__citrix_version"_amd64.deb"
 end
 
 function __citrix_get_version --description "Get current pinned version"

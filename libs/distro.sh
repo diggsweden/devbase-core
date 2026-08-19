@@ -267,7 +267,7 @@ get_pkg_name() {
     ;;
   dnsutils)
     case "$distro" in
-    ubuntu | ubuntu-wsl) echo "dnsutils" ;;
+    ubuntu | ubuntu-wsl) echo "bind9-dnsutils" ;;
     fedora) echo "bind-utils" ;;
     esac
     ;;

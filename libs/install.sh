@@ -110,6 +110,35 @@ validate_environment() {
   return 0
 }
 
+# Brief: Report a visudo rejection with enough detail to act on
+# Params: $1 - headline message, $2 - captured visudo output
+# Uses: show_progress (function)
+# Returns: 0 always
+# Side-effects: Prints the sudo implementation and visudo's own diagnostics
+# Notes: Ubuntu 26.04 defaults to sudo-rs, which parses sudoers more strictly
+#        than classic sudo, so name the implementation in the report.
+_report_sudoers_failure() {
+  local message="$1"
+  local output="$2"
+
+  show_progress error "$message"
+
+  local sudo_version
+  sudo_version=$(sudo --version 2>/dev/null | head -1)
+  [[ -n "$sudo_version" ]] && show_progress info "  using: ${sudo_version}"
+
+  if [[ -n "$output" ]]; then
+    local line
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && show_progress info "  visudo: ${line}"
+    done <<<"$output"
+  else
+    show_progress info "  visudo exited non-zero without output"
+  fi
+
+  return 0
+}
+
 # Brief: Configure sudo to preserve proxy environment variables
 # Params: None
 # Uses: DEVBASE_FILES, DEVBASE_PROXY_HOST, DEVBASE_PROXY_PORT, validate_var_set, show_progress (globals/functions)
@@ -128,8 +157,10 @@ setup_sudo_and_system() {
     trap "rm -f '$sudoers_tmp'" RETURN
 
     cp "$sudoers_src" "$sudoers_tmp"
-    if ! sudo visudo -c -f "$sudoers_tmp" &>/dev/null; then
-      show_progress error "Invalid sudoers proxy config (refusing to install)"
+
+    local visudo_output
+    if ! visudo_output=$(sudo visudo -c -f "$sudoers_tmp" 2>&1); then
+      _report_sudoers_failure "Invalid sudoers proxy config (refusing to install)" "$visudo_output"
       return 1
     fi
 
@@ -138,9 +169,9 @@ setup_sudo_and_system() {
       return 1
     fi
 
-    if ! sudo visudo -c -f "$sudoers_dst" &>/dev/null; then
+    if ! visudo_output=$(sudo visudo -c -f "$sudoers_dst" 2>&1); then
       sudo rm -f "$sudoers_dst"
-      show_progress error "Sudoers proxy config failed validation and was removed"
+      _report_sudoers_failure "Sudoers proxy config failed validation and was removed" "$visudo_output"
       return 1
     fi
 

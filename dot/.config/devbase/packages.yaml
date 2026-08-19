@@ -69,13 +69,13 @@ core:
     ufw: {}
     unattended-upgrades: {}
     dbus-user-session: {}
-    libfontconfig: {}
+    libfontconfig1: {}
     libgbm1: {}
     libgtk-3-bin: {}
     libxi6: {}
     libxrender1: {}
     libxtst6: {}
-    dnsutils: {}
+    bind9-dnsutils: {}
     libxml2-utils: {}
     libnss3-tools: {}
     openssh-client: {}
