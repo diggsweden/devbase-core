@@ -243,7 +243,7 @@ packs:
   node:
     description: "(node / eslint / prettier / tailwindcss)"
     mise:
-      node: {version: "24.13.0"} # renovate: datasource=node-version depName=node
+      node: {version: "24.19.0"} # renovate: datasource=node-version depName=node
     vscode:
       dbaeumer.vscode-eslint: {version: "3.0.10"} # renovate: datasource=npm
       esbenp.prettier-vscode: {version: "11.0.0"} # renovate: datasource=npm

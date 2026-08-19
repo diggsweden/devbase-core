@@ -29,6 +29,15 @@ http_timeout = "90s"
 # Note: verify_downloads was deprecated in newer mise versions
 # Checksums are now verified automatically when available
 
+# Refuse to install a tool version published less than 7 days ago, so
+# `mise upgrade` cannot outrun the Renovate policy behind packages.yaml.
+minimum_release_age = "7d"
+
+# Strict supply-chain checks (checksum/signature/attestation verification).
+# Only honoured in the global config - mise ignores `paranoid` in project
+# configs such as a repo-local .mise.toml.
+paranoid = true
+
 [env]
 # Proxy configuration - available during tool installation AND runtime
 # These are set by devbase during installation (00-proxy.fish)
@@ -44,6 +53,11 @@ PIP_INDEX_URL = "{{ get_env(name='PIP_INDEX_URL', default='') }}"
 
 # NPM configuration
 NPM_CONFIG_REGISTRY = "{{ get_env(name='NPM_CONFIG_REGISTRY', default='') }}"
+
+# Backstop for the min-release-age written to ~/.npmrc during install: env
+# beats the user npmrc, so this survives an organisation npmrc template.
+# Requires npm >= 11.10.0 (node >= 24.14.1); ignored by older npm.
+NPM_CONFIG_MIN_RELEASE_AGE = "7"
 
 # Configure ruby-build to use system OpenSSL instead of compiling from source
 RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"

@@ -556,9 +556,15 @@ install_fisher() {
     if fish -c "source $fisher_dir/functions/fisher.fish && fisher install jorgebucaran/fisher" >/dev/null 2>&1; then
       show_progress success "Fisher installed ($fisher_version)"
 
-      # Install fzf.fish plugin
-      show_progress info "Installing fzf.fish plugin..."
-      if fish -c "fisher install PatrickF1/fzf.fish" >/dev/null 2>&1; then
+      # Install fzf.fish plugin, pinned to the version in packages.yaml.
+      # fisher supports "owner/repo@tag"; fall back to unpinned if the pin is
+      # missing, so a parse failure cannot break the install.
+      local fzf_fish_spec="PatrickF1/fzf.fish"
+      local fzf_fish_version="${TOOL_VERSIONS[fzf_fish]:-}"
+      [[ -n "$fzf_fish_version" ]] && fzf_fish_spec="${fzf_fish_spec}@${fzf_fish_version}"
+
+      show_progress info "Installing fzf.fish plugin (${fzf_fish_version:-latest})..."
+      if fish -c "fisher install $fzf_fish_spec" >/dev/null 2>&1; then
         show_progress success "fzf.fish plugin installed (Ctrl+R for history, Ctrl+Alt+F for files)"
       else
         add_install_warning "fzf.fish plugin installation failed"

@@ -208,3 +208,88 @@ teardown() {
   run setup_installation_paths
   assert_success
 }
+
+# install.sh guards at source time, so extract just the function under test.
+_load_npm_min_release_age() {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  eval "$(awk '/^configure_npm_min_release_age\(\)/,/^}/' "${DEVBASE_ROOT}/libs/install.sh")"
+  show_progress() { :; }
+  add_install_warning() { :; }
+}
+
+# Stub npm so nothing here depends on the npm the host happens to have on PATH.
+# $1 is what `npm config get` answers, $2 the exit code of `npm config set`.
+# Every invocation is recorded so the tests can assert what devbase asked for.
+_stub_npm() {
+  local get_answer="$1" set_rc="${2:-0}"
+  mkdir -p "${TEST_DIR}/bin"
+  cat >"${TEST_DIR}/bin/npm" <<SCRIPT
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"${TEST_DIR}/npm-calls"
+[[ "\$1 \$2" == "config set" ]] && exit ${set_rc}
+[[ "\$1 \$2" == "config get" ]] && printf '%s\n' "${get_answer}"
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/npm"
+  : >"${TEST_DIR}/npm-calls"
+  export PATH="${TEST_DIR}/bin:${PATH}"
+}
+
+@test "configure_npm_min_release_age skips when npm is not installed" {
+  _load_npm_min_release_age
+  mkdir -p "${TEST_DIR}/no-npm"
+  local host_path="$PATH"
+
+  PATH="${TEST_DIR}/no-npm" configure_npm_min_release_age
+  local rc=$?
+  PATH="$host_path"
+
+  assert_equal "$rc" 0
+}
+
+@test "configure_npm_min_release_age sets the value at user scope when unset" {
+  _load_npm_min_release_age
+  _stub_npm "null"
+
+  configure_npm_min_release_age
+
+  # --location=user leaves the rest of the user's npmrc to npm.
+  run cat "${TEST_DIR}/npm-calls"
+  assert_success
+  assert_output --partial "config set min-release-age=7 --location=user"
+}
+
+@test "configure_npm_min_release_age leaves an existing value alone" {
+  _load_npm_min_release_age
+  _stub_npm "30"
+
+  configure_npm_min_release_age
+
+  run cat "${TEST_DIR}/npm-calls"
+  assert_success
+  refute_output --partial "config set"
+}
+
+@test "configure_npm_min_release_age honours DEVBASE_NPM_MIN_RELEASE_AGE" {
+  _load_npm_min_release_age
+  _stub_npm "null"
+  export DEVBASE_NPM_MIN_RELEASE_AGE=14
+
+  configure_npm_min_release_age
+
+  run cat "${TEST_DIR}/npm-calls"
+  assert_success
+  assert_output --partial "config set min-release-age=14 --location=user"
+}
+
+@test "configure_npm_min_release_age warns rather than fails when npm rejects the write" {
+  _load_npm_min_release_age
+  _stub_npm "null" 1
+  add_install_warning() { printf '%s\n' "$1" >>"${TEST_DIR}/warnings"; }
+
+  run configure_npm_min_release_age
+  assert_success
+
+  run cat "${TEST_DIR}/warnings"
+  assert_output --partial "Could not set npm min-release-age"
+}

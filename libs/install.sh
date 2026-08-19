@@ -647,11 +647,45 @@ configure_docker_proxy() {
   return 0
 }
 
+# Brief: Apply the npm minimum release age to the user npm config
+# Params: None
+# Uses: DEVBASE_NPM_MIN_RELEASE_AGE (global, optional)
+# Returns: 0 always (advisory; never fails the install)
+# Side-effects: Runs `npm config set min-release-age` at user scope
+# Notes: Runs after custom template processing, which writes ~/.npmrc from an
+#        organisation npmrc.template and would otherwise overwrite this.
+configure_npm_min_release_age() {
+  local age="${DEVBASE_NPM_MIN_RELEASE_AGE:-7}"
+
+  if ! command -v npm &>/dev/null; then
+    show_progress info "npm not installed - skipping min-release-age"
+    return 0
+  fi
+
+  # npm reports an unset key as the literal "null"
+  local current
+  current=$(npm config get min-release-age 2>/dev/null)
+  if [[ -n "$current" && "$current" != "null" && "$current" != "undefined" ]]; then
+    show_progress info "npm min-release-age already set (${current}) - leaving as is"
+    return 0
+  fi
+
+  if npm config set "min-release-age=${age}" --location=user &>/dev/null; then
+    show_progress success "npm min-release-age set to ${age} days"
+  else
+    add_install_warning "Could not set npm min-release-age"
+  fi
+
+  return 0
+}
+
 finalize_installation() {
   validate_var_set "DEVBASE_LIBS" || return 1
   validate_var_set "XDG_DATA_HOME" || return 1
 
   cleanup
+
+  configure_npm_min_release_age
 
   # Prune orphaned mise tool versions now that all configuration is done.
   # Done last because the bootstrap yq (installed by install_mise via
