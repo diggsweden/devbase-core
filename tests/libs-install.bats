@@ -332,3 +332,79 @@ Defaults env_keep +="
   assert_success
   assert_output --partial "visudo exited non-zero without output"
 }
+
+# setup_sudo_and_system validates a sudoers fragment, installs it 0440, then
+# re-validates and rolls back if the installed copy is rejected.
+
+_sudoers_harness() {
+  local visudo_rc="$1"       # exit code the stubbed visudo returns
+  local second_visudo_rc="${2:-0}"
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/sudo" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/sudo.log"
+case "\$1" in
+  visudo)
+    # -c -f <file>; the destination check is the second invocation
+    if grep -qc 'install' "${TEST_DIR}/sudo.log" 2>/dev/null && [[ "\$4" == */etc/* ]]; then
+      exit ${second_visudo_rc}
+    fi
+    exit ${visudo_rc}
+    ;;
+  install)
+    # \$2=-m \$3=mode \$4=src \$5=dst - redirect the destination
+    cp "\$4" "${TEST_DIR}/installed-sudoers"
+    echo "\$3" > "${TEST_DIR}/installed-mode"
+    exit 0
+    ;;
+  rm) rm -f "${TEST_DIR}/installed-sudoers"; exit 0 ;;
+esac
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/sudo"
+}
+
+_run_setup_sudo() {
+  run --separate-stderr bash -c "
+    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_FILES='${DEVBASE_ROOT}/devbase_files'
+    export DEVBASE_PROXY_HOST='proxy.example.com'
+    export DEVBASE_PROXY_PORT='8080'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    eval \"\$(awk '/^_report_sudoers_failure\(\)/,/^}/' '${DEVBASE_ROOT}/libs/install.sh')\"
+    eval \"\$(awk '/^setup_sudo_and_system\(\)/,/^}/' '${DEVBASE_ROOT}/libs/install.sh')\"
+    setup_sudo_and_system
+  "
+}
+
+@test "setup_sudo_and_system installs the sudoers fragment mode 0440" {
+  _sudoers_harness 0 0
+  _run_setup_sudo
+
+  assert_success
+  assert_equal "$(cat "${TEST_DIR}/installed-mode")" "0440"
+}
+
+@test "setup_sudo_and_system refuses to install a fragment visudo rejects" {
+  _sudoers_harness 1
+  _run_setup_sudo
+
+  assert_failure
+  assert [ ! -f "${TEST_DIR}/installed-sudoers" ]
+  run grep -c install "${TEST_DIR}/sudo.log"
+  assert_output "0"
+}
+
+@test "setup_sudo_and_system removes the fragment when the installed copy is rejected" {
+  _sudoers_harness 0 1
+  _run_setup_sudo
+
+  assert_failure
+  assert [ ! -f "${TEST_DIR}/installed-sudoers" ]
+  run grep -c '^rm' "${TEST_DIR}/sudo.log"
+  assert_output "1"
+}

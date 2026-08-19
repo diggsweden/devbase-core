@@ -180,3 +180,43 @@ teardown() {
   
   assert_failure
 }
+
+# Every caller of ask_yes_no passes "N": low disk space, a missing GitHub
+# token, and terminal font configuration all decline unless the user agrees.
+# The non-interactive branch decides what happens in CI and in
+# --non-interactive installs.
+
+_ask() {
+  # stdin is a pipe here, so the non-tty branch is the one under test
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export DEVBASE_TUI_MODE=none
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-messages.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    _fallback_ask_yes_no 'Proceed?' ${1:-} </dev/null
+  "
+}
+
+@test "ask_yes_no declines without a terminal when no default is given" {
+  _ask
+  assert_failure
+}
+
+@test "ask_yes_no declines without a terminal when the default is N" {
+  _ask "N"
+  assert_failure
+}
+
+@test "ask_yes_no accepts without a terminal only when the default is Y" {
+  _ask "Y"
+  assert_success
+}
+
+@test "every ask_yes_no caller defaults to declining" {
+  # The fail-closed default only helps if callers actually pass N.
+  run bash -c "grep -rn 'ask_yes_no ' '${DEVBASE_ROOT}/libs' --include='*.sh' \
+    | grep -v 'ui-helpers' \
+    | grep -vc '\"N\"'"
+  assert_output "0"
+}

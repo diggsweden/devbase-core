@@ -227,6 +227,7 @@ EOF
 
   assert_success
   assert_file_exists "${HOME}/.ssh/id_ed25519_corp.pub"
+  assert_equal "$(stat -c %a "${HOME}/.ssh/id_ed25519_corp.pub")" "600"
 }
 
 @test "setup_ssh_config_includes copies legacy 'identity' key to .ssh" {
@@ -242,6 +243,9 @@ EOF
 
   assert_success
   assert_file_exists "${HOME}/.ssh/identity"
+  # The allowlist admits id_*, identity and *.pem, all of which can hold
+  # private key material, so assert the mode and not just the copy.
+  assert_equal "$(stat -c %a "${HOME}/.ssh/identity")" "600"
 }
 
 @test "setup_ssh_config_includes blocks unrecognised files with warning" {
@@ -392,4 +396,24 @@ SCRIPT
   run grep -c "NewKey" "${XDG_CONFIG_HOME}/ssh/allowed_signers"
   assert_success
   assert_output "1"
+}
+
+@test "setup_ssh_config_includes copies a config fragment with owner-only permissions" {
+  local custom_ssh="${TEST_DIR}/custom_ssh"
+  mkdir -p "${HOME}/.ssh" "${custom_ssh}"
+
+  # Config fragments come from the organisation's custom SSH directory and can
+  # carry internal hostnames or a ProxyCommand with credentials.
+  printf 'Host internal\n  HostName internal.example\n' >"${custom_ssh}/org.config"
+
+  export _DEVBASE_CUSTOM_SSH="${custom_ssh}"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_file_exists "${XDG_CONFIG_HOME}/ssh/org.config"
+  assert_equal "$(stat -c %a "${XDG_CONFIG_HOME}/ssh/org.config")" "600"
+  # Existence and mode alone pass even if the fragment is copied empty.
+  run cat "${XDG_CONFIG_HOME}/ssh/org.config"
+  assert_output --partial "HostName internal.example"
 }

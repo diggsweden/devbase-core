@@ -58,31 +58,24 @@ setup() {
   assert_output "ubuntu"
 }
 
-@test "get_distro returns ubuntu-wsl on WSL" {
-  # Skip if not WSL
-  if ! grep -qi microsoft /proc/version 2>/dev/null; then
-    skip "Not running on WSL"
-  fi
-  
+@test "get_distro returns ubuntu-wsl when Ubuntu is running under WSL" {
+  printf 'ID=ubuntu\nVERSION_ID="26.04"\n' >"${TEST_DIR}/os-release"
+  export DEVBASE_OS_RELEASE_FILE="${TEST_DIR}/os-release"
+  is_wsl() { return 0; }
+
   run get_distro
   assert_success
   assert_output "ubuntu-wsl"
 }
 
-@test "get_distro returns fedora on Fedora" {
-  # Skip if not Fedora
-  if ! grep -q "^ID=fedora" /etc/os-release 2>/dev/null; then
-    skip "Not running on Fedora"
-  fi
-  
+@test "get_distro returns fedora for a Fedora os-release" {
+  printf 'ID=fedora\nVERSION_ID="45"\n' >"${TEST_DIR}/os-release"
+  export DEVBASE_OS_RELEASE_FILE="${TEST_DIR}/os-release"
+
   run get_distro
   assert_success
   assert_output "fedora"
 }
-
-# =============================================================================
-# get_distro_family tests
-# =============================================================================
 
 @test "get_distro_family returns debian for ubuntu" {
   # Mock get_distro

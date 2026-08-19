@@ -29,33 +29,10 @@ setup() {
 
   FISH_FUNC="${DEVBASE_ROOT}/dot/.config/fish/functions/__ssh_agent_init.fish"
 
-  # Shared key-detection script used by detection tests.
-  # Written to a file to avoid bash double-quote escaping noise.
-  cat > "${TEST_DIR}/detect_key.fish" <<'FISH'
-set -l devbase_key ""
-set -l config_home "$HOME/.config"
-if set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"
-    set config_home "$XDG_CONFIG_HOME"
-end
-set -l prefs_file "$config_home/devbase/preferences.yaml"
-
-if test -f $prefs_file
-    set -l key_name (grep '^\s*key_name:' $prefs_file 2>/dev/null | sed 's/.*key_name:\s*//' | string trim)
-    if test -n "$key_name"; and test -f "$HOME/.ssh/$key_name"
-        set devbase_key "$HOME/.ssh/$key_name"
-    end
-end
-
-if test -z "$devbase_key"
-    for key_pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase
-        if test -f "$HOME/.ssh/$key_pattern"
-            set devbase_key "$HOME/.ssh/$key_pattern"
-            break
-        end
-    end
-end
-
-echo $devbase_key
+  # Detection tests call the shipped function rather than a copy of it.
+  cat > "${TEST_DIR}/detect_key.fish" <<FISH
+source '${FISH_FUNC}'
+__ssh_agent_detect_key
 FISH
 }
 
@@ -193,4 +170,16 @@ SCRIPT
 
   assert_success
   assert_output "status: 0"
+}
+
+@test "every fallback key name is recognised" {
+  for key in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase; do
+    rm -f "${TEST_HOME}/.ssh"/id_*
+    : >"${TEST_HOME}/.ssh/${key}"
+
+    run env HOME="${TEST_HOME}" XDG_CONFIG_HOME="${TEST_XDG_CONFIG_HOME}" fish "${TEST_DIR}/detect_key.fish"
+
+    assert_success
+    assert_output "${TEST_HOME}/.ssh/${key}"
+  done
 }

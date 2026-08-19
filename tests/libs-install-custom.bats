@@ -373,3 +373,77 @@ EOF
   assert_output --partial "-Dawt.toolkit.name=WLToolkit"
   assert_output --partial "-Dsun.awt.wl.Shadow=false"
 }
+
+# get_oc_checksum, get_vscode_checksum and get_gum_checksum are each tested on
+# their own; these assert the digest they return reaches the download.
+
+_capture_download_args() {
+  # $1 = extra setup, $2 = call under test
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export _DEVBASE_TEMP='${TEST_DIR}/tmp'
+    export XDG_BIN_HOME='${TEST_DIR}/bin'
+    export XDG_CACHE_HOME='${TEST_DIR}/cache'
+    mkdir -p \"\$_DEVBASE_TEMP\" \"\$XDG_BIN_HOME\" \"\$XDG_CACHE_HOME\"
+    source '${DEVBASE_ROOT}/libs/constants.sh'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/install-custom.sh' >/dev/null 2>&1
+    declare -gA TOOL_VERSIONS
+    add_install_warning() { :; }
+    command_exists() { return 1; }
+    # install_k3s probes with `command -v k3s` directly, so without this the
+    # test result depends on whether the host happens to have k3s installed.
+    command() { [[ \$1 == '-v' ]] && return 1; builtin command \$@; }
+    # Record the arguments and stop before anything is unpacked or run.
+    download_file() { printf 'ARGS:%s\n' \"\$*\"; return 1; }
+    download_with_cache() { printf 'ARGS:%s\n' \"\$*\"; return 1; }
+    ${1}
+    ${2}
+  "
+}
+
+@test "install_oc_kubectl passes the fetched checksum to the download" {
+  _capture_download_args \
+    "TOOL_VERSIONS[oc]='4.22.10'; get_oc_checksum() { echo 'deadbeefoc'; }" \
+    "install_oc_kubectl"
+
+  assert_output --partial "ARGS:"
+  assert_output --partial "deadbeefoc"
+}
+
+@test "install_k3s forwards a pinned installer checksum to the download" {
+  # Unlike the other installers, k3s does not fetch a digest; it only honours
+  # DEVBASE_K3S_INSTALL_SHA256.
+  _capture_download_args \
+    "TOOL_VERSIONS[k3s]='v1.36.3+k3s1'; export DEVBASE_K3S_INSTALL_SHA256='deadbeefk3s'" \
+    "install_k3s"
+
+  assert_output --partial "deadbeefk3s"
+}
+
+@test "install_k3s downloads the installer unverified when nothing is pinned" {
+  # Pins current behaviour: with DEVBASE_K3S_INSTALL_SHA256 unset the k3s
+  # install.sh is fetched with an empty checksum and then executed with sh.
+  # The URL is allowlisted in DEVBASE_STRICT_CHECKSUMS_ALLOWLIST, so
+  # download_file permits it.
+  _capture_download_args \
+    "TOOL_VERSIONS[k3s]='v1.36.3+k3s1'; unset DEVBASE_K3S_INSTALL_SHA256" \
+    "install_k3s"
+
+  assert_output --partial "install.sh"
+  refute_output --partial "deadbeef"
+}
+
+@test "install_gum passes the fetched checksum to the download" {
+  _capture_download_args \
+    "TOOL_VERSIONS[gum]='0.17.0'
+     _get_custom_pkg_format() { echo deb; }
+     get_deb_arch() { echo amd64; }
+     get_gum_checksum() { echo 'deadbeefgum'; }" \
+    "install_gum"
+
+  assert_output --partial "deadbeefgum"
+}

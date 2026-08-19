@@ -1041,13 +1041,13 @@ _write_os_release() {
   printf 'ID=%s\nVERSION_ID="%s"\n' "$2" "$3" >"$1"
 }
 
-@test "__devbase_ubuntu_too_old is true below the minimum" {
+@test "updates are blocked on Ubuntu below the minimum release" {
   _write_os_release "$TEST_DIR/os" ubuntu 24.04
   run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
   assert_success
 }
 
-@test "__devbase_ubuntu_too_old is false at and above the minimum" {
+@test "updates are allowed on Ubuntu at or above the minimum release" {
   for v in 26.04 26.10 28.04; do
     _write_os_release "$TEST_DIR/os" ubuntu "$v"
     run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
@@ -1055,24 +1055,24 @@ _write_os_release() {
   done
 }
 
-@test "__devbase_ubuntu_too_old catches an older release within the same year" {
+@test "updates are blocked on an older release from the same year" {
   _write_os_release "$TEST_DIR/os" ubuntu 25.10
   run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
   assert_success
 }
 
-@test "__devbase_ubuntu_too_old does not block a non-Ubuntu distro" {
+@test "updates are not blocked on a non-Ubuntu distro" {
   _write_os_release "$TEST_DIR/os" fedora 45
   run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_too_old"
   assert_failure
 }
 
-@test "__devbase_ubuntu_too_old does not block when os-release is unreadable" {
+@test "updates are not blocked when os-release cannot be read" {
   run _fish_os_gate "$TEST_DIR/does-not-exist" "__devbase_ubuntu_too_old"
   assert_failure
 }
 
-@test "upgrade notice names the release, the target and the upgrade command" {
+@test "the upgrade notice names the current release, the target and the command" {
   _write_os_release "$TEST_DIR/os" ubuntu 24.04
   run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_upgrade_notice"
   assert_success
@@ -1080,4 +1080,70 @@ _write_os_release() {
   assert_output --partial "require Ubuntu 26.04"
   assert_output --partial "sudo do-release-upgrade -d"
   assert_output --partial "Back up your work"
+}
+
+@test "devbase-update refuses on an old Ubuntu without touching the core repo" {
+  # Without the gate the repo advances to a version setup.sh then refuses to
+  # install, while --check reports "already up to date".
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
+
+  printf '#!/usr/bin/env bash\necho "Setup completed"\n' >"$core_dir/setup.sh"
+  chmod +x "$core_dir/setup.sh"
+
+  mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/logs"
+  cat > "${TEST_DIR}/bin/git" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/logs/git_calls.log"
+if [[ "\$*" == *"ls-remote --tags"* ]]; then
+  echo "abc123	refs/tags/v1.0.0"
+  echo "def456	refs/tags/v2.0.0"
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  printf 'ID=ubuntu\nVERSION_ID="24.04"\n' >"${TEST_DIR}/os-release"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    set -gx DEVBASE_OS_RELEASE_FILE '${TEST_DIR}/os-release'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_too_old.fish'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_upgrade_notice.fish'
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update
+  " </dev/null
+
+  assert_failure
+  assert_output --partial "do-release-upgrade -d"
+  refute_output --partial "Setup completed"
+
+  # The repo must not have moved: no checkout, no stash.
+  run cat "${TEST_DIR}/logs/git_calls.log"
+  refute_output --partial "checkout"
+}
+
+@test "shell-start check shows the upgrade notice instead of an update prompt" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+  printf 'ID=ubuntu\nVERSION_ID="24.04"\n' >"${TEST_DIR}/os-release"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx DEVBASE_OS_RELEASE_FILE '${TEST_DIR}/os-release'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_too_old.fish'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_ubuntu_upgrade_notice.fish'
+    source '$DEVBASE_UPDATE_FISH'
+    source '${DEVBASE_ROOT}/dot/.config/fish/functions/__devbase_update_check.fish'
+    function devbase-update; echo 'devbase-core: v1.0.0 -> v2.0.0'; end
+    __devbase_update_check
+  " </dev/null
+
+  assert_success
+  assert_output --partial "do-release-upgrade -d"
+  refute_output --partial "Update now?"
+  refute_output --partial "DevBase Update Available"
 }

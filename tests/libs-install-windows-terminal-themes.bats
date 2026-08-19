@@ -180,19 +180,21 @@ SCRIPT
   [[ "$result" == "[]" ]]
 }
 
-@test "_inject_themes_to_settings creates backup before modification" {
+@test "_inject_themes_to_settings leaves the settings file valid with no themes" {
   command -v jq &>/dev/null || skip "jq not available"
-  
+
   source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
-  
+
   local settings_file="${TEMP_DIR}/settings.json"
   local backup_file="${TEMP_DIR}/settings.json.bak"
-  
+
   echo '{"schemes": []}' > "$settings_file"
-  
+
   _inject_themes_to_settings "$settings_file" "[]" "$backup_file" || true
-  
-  [[ -f "$backup_file" ]] || [[ -f "$settings_file" ]]
+
+  # The function does not create the backup, the caller passes one in.
+  run jq -e '.schemes | length == 0' "$settings_file"
+  assert_success
 }
 
 @test "_inject_themes_to_settings uses jq for JSON manipulation" {
@@ -208,4 +210,41 @@ SCRIPT
   run _inject_themes_to_settings "$settings_file" '[{"name": "new"}]' "$backup_file"
   
   [[ -f "$settings_file" ]]
+}
+
+# _inject_themes_to_settings rewrites the user's Windows Terminal
+# settings.json. It only replaces the original once jq has produced non-empty,
+# valid JSON, and restores the backup if the move fails.
+
+@test "_inject_themes_to_settings leaves settings intact when jq produces nothing usable" {
+  command -v jq &>/dev/null || skip "jq not available"
+  source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
+
+  local wt_settings="${TEST_DIR}/settings.json"
+  local backup="${TEST_DIR}/settings.json.bak"
+  # Invalid JSON: jq cannot merge into it, so the filter yields no usable output.
+  printf 'this is not json\n' >"$wt_settings"
+  cp "$wt_settings" "$backup"
+
+  run _inject_themes_to_settings "$wt_settings" '[{"name":"Nord"}]' "$backup"
+
+  # Whatever the outcome, the user's file must not be replaced by junk.
+  run cat "$wt_settings"
+  assert_output "this is not json"
+}
+
+@test "_inject_themes_to_settings writes valid JSON when the merge succeeds" {
+  command -v jq &>/dev/null || skip "jq not available"
+  source "${DEVBASE_ROOT}/libs/install-windows-terminal-themes.sh"
+
+  local wt_settings="${TEST_DIR}/settings.json"
+  local backup="${TEST_DIR}/settings.json.bak"
+  printf '{"profiles":{},"schemes":[]}\n' >"$wt_settings"
+  cp "$wt_settings" "$backup"
+
+  run _inject_themes_to_settings "$wt_settings" '[{"name":"Nord"}]' "$backup"
+
+  assert_success
+  run jq -e '.schemes[] | select(.name == "Nord")' "$wt_settings"
+  assert_success
 }

@@ -448,3 +448,57 @@ SCRIPT
   assert_success
   assert_output --partial "OpenSC already configured"
 }
+
+# _pkg_apt_install_firefox_deb pins Mozilla's APT signing key by fingerprint
+# before installing it. That key then signs Firefox packages installed as
+# root, so it is a supply-chain boundary.
+
+_firefox_key_harness() {
+  local served_fingerprint="$1"
+  mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/tmp"
+  cat > "${TEST_DIR}/bin/sudo" << SCRIPT
+#!/usr/bin/env bash
+echo "\$*" >> "${TEST_DIR}/sudo.log"
+exit 0
+SCRIPT
+  cat > "${TEST_DIR}/bin/gpg" << SCRIPT
+#!/usr/bin/env bash
+printf '      %s\n' '${served_fingerprint}'
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/sudo" "${TEST_DIR}/bin/gpg"
+}
+
+_run_firefox_key() {
+  run --separate-stderr bash -c "
+    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export _DEVBASE_TEMP='${TEST_DIR}/tmp'
+    source '${DEVBASE_ROOT}/libs/constants.sh'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/handle-network.sh' >/dev/null 2>&1
+    devbase_curl() { printf 'fake-key\n' > \"\${!#}\"; return 0; }
+    eval \"\$(awk '/^_pkg_apt_install_firefox_deb\(\)/,/^}/' '${DEVBASE_ROOT}/libs/pkg/pkg-apt.sh')\"
+    _pkg_apt_install_firefox_deb
+  "
+}
+
+@test "Mozilla APT key is installed when its fingerprint matches the pin" {
+  _firefox_key_harness "35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3"
+  _run_firefox_key
+
+  run grep -c "install -m 0644 .*packages.mozilla.org.asc" "${TEST_DIR}/sudo.log"
+  assert_output "1"
+}
+
+@test "Mozilla APT key is refused when its fingerprint does not match the pin" {
+  _firefox_key_harness "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
+  _run_firefox_key
+
+  assert_failure
+  [[ "$stderr" == *"fingerprint mismatch"* ]]
+  # The key must not reach the keyring, and the repo must not be added.
+  run grep -c "packages.mozilla.org.asc" "${TEST_DIR}/sudo.log"
+  assert_output "0"
+}

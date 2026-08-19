@@ -592,3 +592,54 @@ SCRIPT
   assert_failure
   assert_output --partial "No checksum found"
 }
+
+# mise installs the rest of the toolchain, so its own binary is the root of
+# the supply chain.
+
+_mise_checksum_harness() {
+  local served_digest="$1"
+  cat <<SCRIPT
+    export DEVBASE_ROOT='${DEVBASE_ROOT}'
+    export XDG_BIN_HOME='${TEST_DIR}/bin'
+    export _DEVBASE_TEMP='${TEST_DIR}/tmp'
+    mkdir -p "\$XDG_BIN_HOME" "\$_DEVBASE_TEMP"
+    printf 'not-a-real-mise\n' > "\$XDG_BIN_HOME/mise"
+
+    source '${DEVBASE_ROOT}/libs/constants.sh'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+
+    retry_command() {
+      while [[ "\$1" == --* ]]; do shift 2; done
+      [[ "\$1" == "--" ]] && shift
+      local out=""; local prev=""
+      for a in "\$@"; do [[ "\$prev" == "-o" ]] && out="\$a"; prev="\$a"; done
+      printf '%s  mise-v9.9.9-linux-x64.tar.gz\n' '${served_digest}' > "\$out"
+      return 0
+    }
+    _get_mise_arch() { echo x64; }
+
+    verify_mise_checksum '9.9.9'
+SCRIPT
+}
+
+@test "verify_mise_checksum rejects a binary whose digest does not match" {
+  run --separate-stderr bash -c "$(_mise_checksum_harness 0000000000000000000000000000000000000000000000000000000000000000)"
+
+  assert_failure
+  [[ "$output$stderr" == *"checksum mismatch"* || "$output$stderr" == *"mismatch"* ]]
+}
+
+@test "verify_mise_checksum accepts a binary whose digest matches" {
+  mkdir -p "${TEST_DIR}/bin"
+  printf 'not-a-real-mise\n' >"${TEST_DIR}/bin/mise"
+  local digest
+  digest=$(sha256sum "${TEST_DIR}/bin/mise" | cut -d' ' -f1)
+
+  run --separate-stderr bash -c "$(_mise_checksum_harness "$digest")"
+
+  assert_success
+}

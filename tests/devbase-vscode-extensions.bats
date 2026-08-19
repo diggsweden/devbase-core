@@ -98,15 +98,21 @@ EOF
 }
 
 @test "devbase-vscode-extensions fails without yq" {
-  # Skip if yq is not in PATH (can't test missing yq if it's installed)
-  if command -v yq &>/dev/null; then
-    skip "yq is installed, cannot test missing yq scenario"
-  fi
-  
-  run run_fish_vscode_ext "devbase-vscode-extensions"
-  
+  # Point PATH at a directory holding nothing but fish, so yq is absent
+  # wherever it is installed from. Trimming PATH to /usr/bin:/bin is not
+  # enough: that assumes yq only ever comes from mise.
+  command -v fish >/dev/null || skip "fish not available"
+  mkdir -p "${TEST_DIR}/only-fish"
+  ln -sf "$(command -v fish)" "${TEST_DIR}/only-fish/fish"
+
+  # Prove the isolation worked, so a leaked yq fails here with a clear reason.
+  run ! env PATH="${TEST_DIR}/only-fish" fish -c "command -q yq"
+
+  run env PATH="${TEST_DIR}/only-fish" fish -c "source '${DEVBASE_VSCODE_EXT_FISH}'; devbase-vscode-extensions"
+
   assert_failure
   assert_output --partial "yq is required"
+  refute_output --partial "packages.yaml not found"
 }
 
 @test "devbase-vscode-extensions fails without preferences.yaml" {

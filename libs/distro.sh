@@ -37,9 +37,13 @@ is_wsl() {
 get_distro() {
   local distro_id
 
+  # DEVBASE_OS_RELEASE_FILE lets the tests reach the Fedora and WSL branches
+  # from any host.
+  local os_release="${DEVBASE_OS_RELEASE_FILE:-/etc/os-release}"
+
   # Read from os-release
-  if [[ -f /etc/os-release ]]; then
-    distro_id=$(grep "^ID=" /etc/os-release | cut -d= -f2 | tr -d '"')
+  if [[ -f "$os_release" ]]; then
+    distro_id=$(grep "^ID=" "$os_release" | cut -d= -f2 | tr -d '"')
   else
     echo "unknown"
     return 1

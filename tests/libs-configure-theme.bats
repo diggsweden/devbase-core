@@ -153,3 +153,30 @@ setup() {
   [[ -n "$VIFM_COLORSCHEME" ]]
   [[ -n "$K9S_SKIN" ]]
 }
+
+@test "apply_theme populates every theme variable templates require" {
+  # validate_template_variables treats these as required, so a theme missing
+  # one fails template rendering at install time.
+  # ZELLIJ_COPY_COMMAND is excluded: it comes from detect_clipboard_utility
+  # during template processing, not from the theme.
+  source "${DEVBASE_ROOT}/libs/theme-registry.sh"
+  source "${DEVBASE_ROOT}/libs/configure-theme.sh"
+
+  local theme_vars=(
+    BAT_THEME BTOP_THEME DELTA_SYNTAX_THEME DELTA_FEATURES DELTA_DARK
+    ZELLIJ_THEME THEME_BACKGROUND LAZYGIT_LIGHT_THEME VIFM_COLORSCHEME K9S_SKIN
+  )
+
+  local theme var missing=()
+  for theme in $(get_theme_ids); do
+    apply_theme "$theme" >/dev/null 2>&1
+    for var in "${theme_vars[@]}"; do
+      [[ -z "${!var:-}" ]] && missing+=("${theme}:${var}")
+    done
+  done
+
+  if ((${#missing[@]} > 0)); then
+    printf 'unset theme variables: %s\n' "${missing[*]}" >&2
+    return 1
+  fi
+}

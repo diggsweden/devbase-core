@@ -77,6 +77,29 @@ packs:
 EOF
 }
 
+# The apt and dnf get_pack_contents tests differ only in which section holds
+# the system packages, so the fixture is shared.
+_write_test_pack_fixture() {
+  local manager="$1" variant="${2:-full}"
+  {
+    printf 'core: {}\npacks:\n  test:\n    description: "Test pack"\n    %s:\n      pkg1: {}\n' "$manager"
+    if [[ "$variant" == full ]]; then printf '      pkg2: {}\n'; fi
+    printf '    mise:\n      tool1: {version: "1.0"}\n'
+    printf '    vscode:\n      ext1: {version: "1.0"}\n      ext2: {version: "2.0"}\n'
+    if [[ "$variant" == full ]]; then
+      printf '    custom:\n      myapp: {version: "1.0", installer: "install_myapp"}\n'
+    fi
+  } >"${DEVBASE_DOT}/.config/devbase/packages.yaml"
+
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  # _get_merged_packages caches into _MERGED_YAML; a stale one would silently
+  # test the previous manager's fixture.
+  _MERGED_YAML=""
+  _PARSE_PKG_MANAGER="$manager"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+}
+
 # =============================================================================
 # yq requirement check
 # =============================================================================
@@ -460,7 +483,6 @@ EOF
 # =============================================================================
 
 @test "get_pack_contents returns list of pack items" {
-  command -v apt-get &>/dev/null || skip "apt not available"
   create_test_packages
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
   export PACKAGES_CUSTOM_YAML=""
@@ -500,29 +522,8 @@ EOF
 }
 
 @test "get_pack_contents shows primary tools and labels vscode extensions" {
-  command -v apt-get &>/dev/null || skip "apt not available"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
-core: {}
-packs:
-  test:
-    description: "Test pack"
-    apt:
-      pkg1: {}
-      pkg2: {}
-    mise:
-      tool1: {version: "1.0"}
-    vscode:
-      ext1: {version: "1.0"}
-      ext2: {version: "2.0"}
-    custom:
-      myapp: {version: "1.0", installer: "install_myapp"}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export PACKAGES_CUSTOM_YAML=""
-  _MERGED_YAML=""
-  _PARSE_PKG_MANAGER="apt"
-  source "${DEVBASE_LIBS}/parse-packages.sh"
-  
+  _write_test_pack_fixture apt full
+
   run get_pack_contents "test"
   
   assert_success
@@ -537,27 +538,8 @@ EOF
 }
 
 @test "get_pack_contents hides vscode extensions when show_vscode is false" {
-  command -v apt-get &>/dev/null || skip "apt not available"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
-core: {}
-packs:
-  test:
-    description: "Test pack"
-    apt:
-      pkg1: {}
-    mise:
-      tool1: {version: "1.0"}
-    vscode:
-      ext1: {version: "1.0"}
-      ext2: {version: "2.0"}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export PACKAGES_CUSTOM_YAML=""
-  _MERGED_YAML=""
-  _PARSE_PKG_MANAGER="apt"
-  source "${DEVBASE_LIBS}/parse-packages.sh"
-  
-  # With show_vscode=false, extensions should not appear
+  _write_test_pack_fixture apt minimal
+
   run get_pack_contents "test" "false"
   
   assert_success
@@ -573,7 +555,6 @@ EOF
 # -----------------------------------------------------------------------------
 
 @test "get_pack_contents returns list of pack items (dnf)" {
-  command -v dnf &>/dev/null || skip "dnf not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core: {}
 packs:
@@ -606,28 +587,7 @@ EOF
 }
 
 @test "get_pack_contents shows primary tools and labels vscode extensions (dnf)" {
-  command -v dnf &>/dev/null || skip "dnf not available"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
-core: {}
-packs:
-  test:
-    description: "Test pack"
-    dnf:
-      pkg1: {}
-      pkg2: {}
-    mise:
-      tool1: {version: "1.0"}
-    vscode:
-      ext1: {version: "1.0"}
-      ext2: {version: "2.0"}
-    custom:
-      myapp: {version: "1.0", installer: "install_myapp"}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export PACKAGES_CUSTOM_YAML=""
-  _MERGED_YAML=""
-  _PARSE_PKG_MANAGER="dnf"
-  source "${DEVBASE_LIBS}/parse-packages.sh"
+  _write_test_pack_fixture dnf full
 
   run get_pack_contents "test"
 
@@ -640,25 +600,7 @@ EOF
 }
 
 @test "get_pack_contents hides vscode extensions when show_vscode is false (dnf)" {
-  command -v dnf &>/dev/null || skip "dnf not available"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
-core: {}
-packs:
-  test:
-    description: "Test pack"
-    dnf:
-      pkg1: {}
-    mise:
-      tool1: {version: "1.0"}
-    vscode:
-      ext1: {version: "1.0"}
-      ext2: {version: "2.0"}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  export PACKAGES_CUSTOM_YAML=""
-  _MERGED_YAML=""
-  _PARSE_PKG_MANAGER="dnf"
-  source "${DEVBASE_LIBS}/parse-packages.sh"
+  _write_test_pack_fixture dnf minimal
 
   run get_pack_contents "test" "false"
 
@@ -902,7 +844,6 @@ EOF
 # =============================================================================
 
 @test "get_system_packages reads common packages" {
-  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:
@@ -928,7 +869,6 @@ EOF
 }
 
 @test "get_system_packages includes pack common and distro-specific" {
-  command -v apt-get &>/dev/null || skip "apt not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:
@@ -961,7 +901,6 @@ EOF
 }
 
 @test "get_system_packages uses dnf section on Fedora" {
-  command -v dnf &>/dev/null || skip "dnf not available"
   cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
 core:
   common:

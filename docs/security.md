@@ -78,13 +78,22 @@ SPDX-License-Identifier: CC0-1.0
 
 | Tool | Checksum | Status |
 |------|----------|--------|
-| Mise | SHA256 vendor file | ✅ |
+| Mise | `SHASUMS256.txt` from the GitHub release | ✅ |
 | OpenShift CLI | `sha256sum.txt` | ✅ |
 | IntelliJ IDEA | `.sha256` file | ✅ |
 | VS Code | Microsoft API | ✅ |
+| gum | GitHub release checksums file | ✅ |
+| Nerd Fonts | `SHA-256.txt`; installs unverified if the entry is missing | ⚠️ |
+| k3s `install.sh` | None unless `DEVBASE_K3S_INSTALL_SHA256` is set | ⚠️ fetched, then executed with `sh` |
 | JMC | None | HTTPS only |
 | DBeaver | None | HTTPS + dpkg |
 | KeyStore Explorer | None | HTTPS + dpkg |
+
+The k3s entry is the widest exposure: its URL is in
+`DEVBASE_STRICT_CHECKSUMS_ALLOWLIST`, so the download proceeds without a
+digest and the script is then executed. k3s is an optional pack.
+`require_remote_script_checksum()` exists in `libs/handle-network.sh` to enforce
+a digest on remote installer scripts but is not currently called anywhere.
 
 ## SSH Security
 

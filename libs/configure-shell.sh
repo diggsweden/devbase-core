@@ -23,8 +23,11 @@ configure_fish_interactive() {
     local fish_path
     fish_path=$(command -v fish)
 
-    if ! grep -q "$fish_path" /etc/shells; then
-      printf "%s\n" "$fish_path" | sudo tee -a /etc/shells &>/dev/null
+    # DEVBASE_SHELLS_FILE lets the tests exercise the registration branch
+    # without consulting the host's /etc/shells.
+    local shells_file="${DEVBASE_SHELLS_FILE:-/etc/shells}"
+    if ! grep -q "$fish_path" "$shells_file" 2>/dev/null; then
+      printf "%s\n" "$fish_path" | sudo tee -a "$shells_file" &>/dev/null
     fi
 
     if ! grep -q "Launch Fish for interactive sessions (added by devbase)" "${HOME}/.bashrc"; then

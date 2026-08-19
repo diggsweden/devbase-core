@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2027,SC2030,SC2031,SC2086,SC2123,SC2155,SC2218
+# shellcheck disable=SC1090,SC2016,SC2027,SC2030,SC2031,SC2086,SC2123,SC2155,SC2218,SC2329
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -410,6 +410,43 @@ EOF
   assert_success
 }
 
+@test "download_file fails when the remote checksum does not match the payload" {
+  # download_file honouring a mismatch reported via a remote checksum file is
+  # the point at which a tampered payload is accepted or rejected.
+  local target="${TEST_DIR}/payload.bin"
+
+  run --separate-stderr bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/utils.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}/cache'
+
+    # Serve a payload for the artefact URL and a deliberately wrong digest for
+    # the checksum URL.
+    devbase_curl() {
+      local out='' url='' prev=''
+      for a in \"\$@\"; do
+        [[ \"\$prev\" == '-o' ]] && out=\"\$a\"
+        [[ \"\$a\" == http* ]] && url=\"\$a\"
+        prev=\"\$a\"
+      done
+      if [[ \"\$url\" == *checksums* ]]; then
+        printf '%s\n' '0000000000000000000000000000000000000000000000000000000000000000' > \"\$out\"
+      else
+        printf 'payload\n' > \"\$out\"
+      fi
+      return 0
+    }
+
+    download_file 'https://example.com/payload.bin' '${target}' 'https://example.com/checksums.txt'
+  "
+
+  assert_failure
+  [[ "$stderr" == *"Checksum mismatch"* ]]
+}
+
 # =============================================================================
 # _normalize_strict_mode tests
 # =============================================================================
@@ -451,4 +488,166 @@ EOF
   assert_output "warn"
   # The warning must reach stderr, not stdout: stdout is the return value.
   assert_regex "$stderr" "Unknown DEVBASE_STRICT_CHECKSUMS=bogus"
+}
+
+# =============================================================================
+# require_remote_script_checksum tests
+# =============================================================================
+
+@test "require_remote_script_checksum refuses a remote script with no checksum" {
+  run --separate-stderr require_remote_script_checksum "https://example.test/i.sh" "" "installer"
+  assert_failure
+  assert_regex "$stderr$output" "checksum required for remote script"
+}
+
+@test "require_remote_script_checksum accepts a remote script with a checksum" {
+  run --separate-stderr require_remote_script_checksum "https://example.test/i.sh" "abc123" "installer"
+  assert_success
+}
+
+# =============================================================================
+# _download_file_verify tests
+#
+# The two verify_* helpers are replaced per test to reach the branch under
+# test. What matters is which return code maps to which outcome: rc=1 is a
+# real mismatch and must always fail, rc=2 is an unavailable checksum and
+# depends on strict_mode.
+# =============================================================================
+
+@test "_download_file_verify fails when an explicit checksum does not match" {
+  verify_checksum_value() { return 1; }
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "" "deadbeef" 30 "warn"
+  assert_failure
+}
+
+@test "_download_file_verify succeeds when an explicit checksum matches" {
+  verify_checksum_value() { return 0; }
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "" "cafebabe" 30 "warn"
+  assert_success
+}
+
+@test "_download_file_verify fails on a mismatch from a checksum URL even when lenient" {
+  verify_checksum_from_url() { return 1; }
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "https://example.test/sums" "" 30 "warn"
+  assert_failure
+}
+
+@test "_download_file_verify fails on an unavailable checksum only in fail mode" {
+  verify_checksum_from_url() { return 2; }
+
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "https://example.test/sums" "" 30 "fail"
+  assert_failure
+  assert_regex "$stderr$output" "Checksum required but unavailable"
+
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "https://example.test/sums" "" 30 "warn"
+  assert_success
+}
+
+@test "_download_file_verify succeeds when no checksum was requested at all" {
+  run --separate-stderr _download_file_verify "${TEST_DIR}/f" "" "" 30 "warn"
+  assert_success
+}
+
+# =============================================================================
+# devbase_wget tests
+# =============================================================================
+
+@test "devbase_wget passes the configured proxy arguments through to wget" {
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/wget" << 'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$*"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/wget"
+  export PATH="${TEST_DIR}/bin:${PATH}"
+  DEVBASE_WGET_PROXY_ARGS=(--no-http-keep-alive)
+
+  run --separate-stderr devbase_wget "https://example.test/f"
+
+  assert_success
+  assert_output "--no-http-keep-alive https://example.test/f"
+}
+
+# =============================================================================
+# _download_file_cache tests
+# =============================================================================
+
+@test "_download_file_cache stores the file when a version is known" {
+  echo "payload" > "${TEST_DIR}/downloaded"
+
+  run --separate-stderr _download_file_cache "${TEST_DIR}/downloaded" "${TEST_DIR}/cached" "1.2.3"
+
+  assert_success
+  assert_equal "$(cat "${TEST_DIR}/cached")" "payload"
+}
+
+# Without a version the cache key would be ambiguous, so nothing is stored.
+@test "_download_file_cache stores nothing when the version is unknown" {
+  echo "payload" > "${TEST_DIR}/downloaded"
+
+  run --separate-stderr _download_file_cache "${TEST_DIR}/downloaded" "${TEST_DIR}/cached" ""
+
+  assert_success
+  assert_file_not_exists "${TEST_DIR}/cached"
+}
+
+@test "_download_file_cache succeeds even when the cache is not writable" {
+  echo "payload" > "${TEST_DIR}/downloaded"
+
+  # Caching is best-effort; a failure here must never fail the download.
+  run --separate-stderr _download_file_cache "${TEST_DIR}/downloaded" "${TEST_DIR}/absent/cached" "1.2.3"
+
+  assert_success
+}
+
+# =============================================================================
+# check_registry_connectivity tests
+# =============================================================================
+
+@test "check_registry_connectivity does nothing when no registry is configured" {
+  unset DEVBASE_REGISTRY_HOST DEVBASE_REGISTRY_PORT
+  devbase_curl() { touch "${TEST_DIR}/curl-was-called"; return 0; }
+
+  run --separate-stderr check_registry_connectivity 1
+
+  assert_success
+  # An unconfigured registry must not probe the network or warn about it.
+  assert_file_not_exists "${TEST_DIR}/curl-was-called"
+  refute_output --partial "Registry"
+}
+
+@test "check_registry_connectivity reports a reachable registry" {
+  export DEVBASE_REGISTRY_HOST="registry.test" DEVBASE_REGISTRY_PORT="5000"
+  devbase_curl() { return 0; }
+
+  run --separate-stderr check_registry_connectivity 1
+
+  assert_success
+  assert_regex "$stderr$output" "Registry accessible: registry.test:5000"
+}
+
+@test "check_registry_connectivity warns but does not fail on an unreachable registry" {
+  export DEVBASE_REGISTRY_HOST="registry.test" DEVBASE_REGISTRY_PORT="5000"
+  devbase_curl() { return 7; }
+
+  run --separate-stderr check_registry_connectivity 1
+
+  # Returning non-zero here would abort setup over an optional registry.
+  assert_success
+  assert_regex "$stderr$output" "Registry unreachable: registry.test:5000"
+}
+
+# =============================================================================
+# _ensure_progress_logger tests
+# =============================================================================
+
+@test "_ensure_progress_logger provides show_progress when none is loaded" {
+  unset -f show_progress
+
+  _ensure_progress_logger
+
+  assert [ -n "$(declare -f show_progress)" ]
+  run --separate-stderr show_progress info "hello"
+  assert_success
+  assert_regex "$stderr$output" "hello"
 }

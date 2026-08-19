@@ -24,8 +24,20 @@ echo "/usr/bin/fish"
 SCRIPT
   chmod +x "${TEST_DIR}/bin/fish"
 
+  # Record the arguments rather than swallowing them, and run tee for real
+  # against the injected file.
   cat > "${TEST_DIR}/bin/sudo" << 'SCRIPT'
 #!/usr/bin/env bash
+echo "$*" >> "${TEST_DIR}/sudo.log"
+if [[ "$1" == "tee" ]]; then
+  shift
+  # Only write for real when the target is inside the temp dir; otherwise
+  # consume stdin and do nothing, so the host's /etc is never touched.
+  for arg in "$@"; do
+    if [[ "$arg" == "${TEST_DIR}"/* ]]; then exec tee "$@"; fi
+  done
+  cat >/dev/null
+fi
 exit 0
 SCRIPT
   chmod +x "${TEST_DIR}/bin/sudo"
@@ -39,13 +51,29 @@ teardown() {
   common_teardown
 }
 
-@test "configure_fish_interactive adds fish to /etc/shells when available" {
+@test "configure_fish_interactive registers fish in the shells file" {
   touch "${TEST_HOME}/.bashrc"
+  export DEVBASE_SHELLS_FILE="${TEST_DIR}/shells"
+  printf '/bin/bash\n' >"$DEVBASE_SHELLS_FILE"
 
   run --separate-stderr configure_fish_interactive
 
   assert_success
-  assert_output --partial "Fish shell configured"
+  # configure_fish_interactive registers whatever `command -v fish` resolves
+  # to, which under test is the stub on PATH.
+  run grep -cxF "${TEST_DIR}/bin/fish" "${TEST_DIR}/shells"
+  assert_output "1"
+}
+
+@test "configure_fish_interactive does not register fish twice" {
+  touch "${TEST_HOME}/.bashrc"
+  export DEVBASE_SHELLS_FILE="${TEST_DIR}/shells"
+  printf '/bin/bash\n%s\n' "${TEST_DIR}/bin/fish" >"$DEVBASE_SHELLS_FILE"
+
+  configure_fish_interactive >/dev/null 2>&1
+
+  run grep -cxF "${TEST_DIR}/bin/fish" "${TEST_DIR}/shells"
+  assert_output "1"
 }
 
 @test "configure_fish_interactive adds launch code to bashrc" {

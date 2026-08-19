@@ -91,10 +91,12 @@ SCRIPT
   
   cat > "${TEST_DIR}/bin/sudo" << SCRIPT
 #!/usr/bin/env bash
+# Redirect writes into the temp dir so nothing lands in the real /etc/sysctl.d
+# when the tests run as root, as they do in the Fedora container job.
 if [[ "\$1" == "tee" ]]; then
   cat > "${TEST_DIR}/\$(basename "\$2")"
 elif [[ "\$1" == "bash" && "\$2" == "-c" ]]; then
-  eval "\$3"
+  eval "\$(printf '%s' "\$3" | sed 's|/etc/sysctl.d/|${TEST_DIR}/sysctl-|g')"
 elif [[ "\$1" == "sysctl" ]]; then
   exit 0
 fi
@@ -117,8 +119,18 @@ SCRIPT
   assert_success
   assert_output --partial "System limits configured"
   
+  # Assert the values, not just that the keys appear: grep "nofile" matches
+  # whether the limit is 65536 or 256.
   assert_file_exists "${TEST_DIR}/99-devbase.conf"
-  run grep "nofile" "${TEST_DIR}/99-devbase.conf"
+  run grep -F "* soft nofile 65536" "${TEST_DIR}/99-devbase.conf"
+  assert_success
+  run grep -F "* hard nproc 32768" "${TEST_DIR}/99-devbase.conf"
+  assert_success
+
+  # It shares the basename 99-devbase.conf with the limits file, so the stub
+  # gives it a distinct destination.
+  assert_file_exists "${TEST_DIR}/sysctl-99-devbase.conf"
+  run grep -F "fs.file-max = 90000" "${TEST_DIR}/sysctl-99-devbase.conf"
   assert_success
 }
 

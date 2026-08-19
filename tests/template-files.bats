@@ -18,7 +18,7 @@ setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 }
 
-@test "colorscheme.lua.template is valid Lua syntax" {
+@test "colorscheme.lua.template keeps its expected structure" {
   local template="${DEVBASE_ROOT}/dot/.config/nvim/lua/plugins/colorscheme.lua.template"
   
   assert_file_exists "$template"
@@ -28,18 +28,33 @@ setup() {
   line_count=$(wc -l < "$template")
   [ "$line_count" -gt 5 ]
   
-  # Check it contains expected Lua structure
-  assert_file_contains "$template" "return {"
+  # Anchored: assert_file_contains is a substring match, so "return {" also
+  # matches a corrupted "return {{".
+  run grep -cx 'return {' "$template"
+  assert_output "1"
+  assert_file_contains "$template" "colorscheme"
   assert_file_contains "$template" "sainnhe/everforest"
   assert_file_contains "$template" "LazyVim/LazyVim"
   assert_file_contains "$template" "colorscheme"
   
-  # If luacheck is available, validate syntax
-  if command -v luacheck &>/dev/null; then
-    # Replace template variable for syntax check
-    local temp_file="${BATS_TEST_TMPDIR}/colorscheme.lua"
-    sed 's/\${THEME_BACKGROUND}/dark/' "$template" > "$temp_file"
-    run luacheck --no-config --codes "$temp_file"
-    assert_success
+}
+
+@test "colorscheme.lua.template parses as Lua" {
+  # luacheck is not installed here or in CI. nvim ships LuaJIT and is present
+  # on any devbase machine; loadfile parses without executing.
+  local validator=""
+  command -v luacheck &>/dev/null && validator=luacheck
+  [[ -z "$validator" ]] && command -v nvim &>/dev/null && validator=nvim
+  [[ -n "$validator" ]] || skip "no Lua validator available (install luacheck or nvim)"
+
+  local template="${DEVBASE_ROOT}/dot/.config/nvim/lua/plugins/colorscheme.lua.template"
+  local rendered="${BATS_TEST_TMPDIR}/colorscheme.lua"
+  sed 's/\${THEME_BACKGROUND}/dark/' "$template" >"$rendered"
+
+  if [[ "$validator" == luacheck ]]; then
+    run luacheck --no-config --codes "$rendered"
+  else
+    run nvim --headless --clean -c "lua if not loadfile('${rendered}') then vim.cmd('cq') end" -c q
   fi
+  assert_success
 }

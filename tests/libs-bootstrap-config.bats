@@ -24,18 +24,23 @@ teardown() {
   common_teardown
 }
 
-@test "load_environment_configuration fails when protected vars exist" {
-  mkdir -p "${TEST_DIR}/custom/config"
-  cat > "${TEST_DIR}/custom/config/org.env" << 'EOF'
-DEVBASE_ROOT=/tmp/override
-EOF
+@test "load_environment_configuration rejects every protected path variable" {
+  # org.env comes from a separate, organisation-controlled repository. These
+  # variables locate devbase's own libraries and templates, so an override
+  # would redirect what the installer sources and copies.
+  local protected=(DEVBASE_ROOT DEVBASE_LIBS DEVBASE_DOT DEVBASE_FILES DEVBASE_ENVS DEVBASE_DOCS)
 
-  DEVBASE_CUSTOM_DIR="${TEST_DIR}/custom"
-  DEVBASE_ENVS="${TEST_DIR}"
+  for var in "${protected[@]}"; do
+    mkdir -p "${TEST_DIR}/custom/config"
+    printf '%s=/tmp/override\n' "$var" >"${TEST_DIR}/custom/config/org.env"
 
-  run load_environment_configuration
-  assert_failure
-  assert_output --partial "override protected variable"
+    DEVBASE_CUSTOM_DIR="${TEST_DIR}/custom"
+    DEVBASE_ENVS="${TEST_DIR}"
+
+    run load_environment_configuration
+    assert_failure
+    assert_output --partial "$var"
+  done
 }
 
 @test "load_environment_configuration fails when default env missing" {

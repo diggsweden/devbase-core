@@ -2,25 +2,26 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-function __ssh_agent_init --description "Auto-add devbase SSH key to agent if not already loaded"
-    # Find devbase SSH key
-    # First, try to read key name from preferences.yaml (supports custom configs)
+# Brief: Print the devbase SSH key to load, or nothing if none is present.
+# Notes: Split out so the tests can exercise the detection directly.
+function __ssh_agent_detect_key --description "Locate the devbase SSH key to add to the agent"
     set -l devbase_key ""
     set -l config_home "$HOME/.config"
     if set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"
         set config_home "$XDG_CONFIG_HOME"
     end
     set -l prefs_file "$config_home/devbase/preferences.yaml"
-    
+
+    # Prefer the key named in preferences.yaml (supports custom configs)
     if test -f $prefs_file
-        # Extract key_name from preferences.yaml (format: "  key_name: <value>")
         set -l key_name (grep '^\s*key_name:' $prefs_file 2>/dev/null | sed 's/.*key_name:\s*//' | string trim)
         if test -n "$key_name"; and test -f "$HOME/.ssh/$key_name"
             set devbase_key "$HOME/.ssh/$key_name"
         end
     end
-    
-    # Fallback: try common devbase key patterns (for fresh installs before preferences are written)
+
+    # Fallback: common devbase key names, for fresh installs before
+    # preferences.yaml has been written
     if test -z "$devbase_key"
         for key_pattern in id_ed25519_devbase id_ecdsa_521_devbase id_ed25519_sk_devbase id_ecdsa_sk_devbase
             if test -f $HOME/.ssh/$key_pattern
@@ -29,7 +30,13 @@ function __ssh_agent_init --description "Auto-add devbase SSH key to agent if no
             end
         end
     end
-    
+
+    echo $devbase_key
+end
+
+function __ssh_agent_init --description "Auto-add devbase SSH key to agent if not already loaded"
+    set -l devbase_key (__ssh_agent_detect_key)
+
     # Silently skip if no devbase key found
     if test -z "$devbase_key"
         return 0

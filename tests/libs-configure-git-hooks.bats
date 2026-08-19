@@ -263,27 +263,31 @@ teardown() {
   unstub git
 }
 
-@test "configure_git_hooks excludes .sample files from executable permission" {
-  bash -c "
+@test "configure_git_hooks leaves .sample files non-executable" {
+  local custom_hooks="${TEST_DIR}/git-hooks"
+  mkdir -p "$custom_hooks"
+  # The shipped templates contain no .sample files, so supply one through the
+  # custom hooks directory to exercise the exclusion.
+  printf '#!/bin/bash\necho sample\n' >"${custom_hooks}/pre-commit.sample"
+  chmod 644 "${custom_hooks}/pre-commit.sample"
+
+  run bash -c "
     export HOME='${HOME}'
     export XDG_CONFIG_HOME='${XDG_CONFIG_HOME}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export DEVBASE_BACKUP_DIR='${DEVBASE_BACKUP_DIR}'
-    export DEVBASE_CUSTOM_DIR=''
+    export DEVBASE_CUSTOM_DIR='${TEST_DIR}'
     export DEVBASE_ENABLE_GIT_HOOKS='true'
-    
+
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/configure-git-hooks.sh' >/dev/null 2>&1
-    
+
     configure_git_hooks
-  " >/dev/null 2>&1
-  
-  # Verify no .sample files are marked executable
-  local count
-  count=$(find "${XDG_CONFIG_HOME}/git/git-hooks" -type f -name '*.sample' -perm -u+x 2>/dev/null | wc -l)
-  
-  # Should find 0 executable .sample files
-  [ "$count" -eq 0 ]
+  "
+
+  assert_success
+  assert_file_exists "${XDG_CONFIG_HOME}/git/git-hooks/pre-commit.sample"
+  assert [ ! -x "${XDG_CONFIG_HOME}/git/git-hooks/pre-commit.sample" ]
 }

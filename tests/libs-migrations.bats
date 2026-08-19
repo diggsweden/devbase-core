@@ -185,3 +185,33 @@ teardown() {
 
   assert_success
 }
+
+@test "migrate_legacy_package_files reports nothing when there is nothing to clean" {
+  # A fresh install must not report cleaning up files it never removed.
+  mkdir -p "${XDG_CONFIG_HOME}/devbase"
+  printf 'core: {}\n' >"${XDG_CONFIG_HOME}/devbase/packages.yaml"
+  # show_progress is not loaded by the other tests in this file.
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_legacy_package_files
+
+  assert_success
+  refute_output --partial "Cleaned up"
+  refute_output --partial "Removed legacy file"
+}
+
+@test "migrate_legacy_package_files counts only the files it actually removed" {
+  mkdir -p "${XDG_CONFIG_HOME}/devbase"
+  printf 'x\n' >"${XDG_CONFIG_HOME}/devbase/apt-packages.txt"
+  printf 'x\n' >"${XDG_CONFIG_HOME}/devbase/custom-tools.yaml"
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/migrations.sh"
+
+  run migrate_legacy_package_files
+
+  assert_success
+  assert_output --partial "Cleaned up 2 legacy package file(s)"
+}
