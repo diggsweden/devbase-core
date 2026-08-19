@@ -121,7 +121,9 @@ validate_path() {
   validate_not_empty "$path" "path" || die "Path required"
 
   # Determine user home directory
-  local original_user="${SUDO_USER:-$USER}"
+  # USER is empty in containers, in cron and under su without a login shell,
+  # so fall back to id -un.
+  local original_user="${SUDO_USER:-${USER:-$(id -un 2>/dev/null)}}"
   local user_home
   user_home=$(getent passwd "$original_user" | cut -d: -f6)
   [[ -n "$user_home" ]] || die "Cannot determine user home directory"

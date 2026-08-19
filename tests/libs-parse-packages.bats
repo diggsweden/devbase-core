@@ -1044,3 +1044,54 @@ EOF
   assert_line "chromium|"
   assert_line "microk8s|--classic"
 }
+
+# =============================================================================
+# _setup_package_yaml_env tests
+# =============================================================================
+
+@test "_setup_package_yaml_env fails with a clear error when packages.yaml is missing" {
+  export DEVBASE_DOT="${TEST_DIR}/emptydot"
+  mkdir -p "${DEVBASE_DOT}/.config/devbase"
+  # No core libs sourced here on purpose: parse-packages.sh pulls in the
+  # helpers it calls, so sourcing it alone must be enough.
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  run --separate-stderr _setup_package_yaml_env
+
+  assert_failure
+  assert_regex "$stderr$output" "Package configuration not found"
+}
+
+@test "_setup_package_yaml_env exports the yaml path and clears the merge cache" {
+  create_test_packages
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  # A stale cache from an earlier environment must not leak into the new one.
+  _MERGED_YAML="stale content"
+  export DEVBASE_SELECTED_PACKS="java"
+
+  _setup_package_yaml_env
+
+  assert_equal "$PACKAGES_YAML" "${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  assert_equal "$SELECTED_PACKS" "java"
+  assert_equal "$_MERGED_YAML" ""
+}
+
+# The installers and the tests source this file directly, so run it in a clean
+# shell and assert every helper it calls is reachable.
+@test "parse-packages.sh loads its own dependencies when sourced standalone" {
+  create_test_packages
+
+  run --separate-stderr env -i \
+    PATH="${PATH}" HOME="${HOME}" \
+    DEVBASE_ROOT="${DEVBASE_ROOT}" DEVBASE_LIBS="${DEVBASE_LIBS}" DEVBASE_DOT="${DEVBASE_DOT}" \
+    bash -c '
+      source "${DEVBASE_LIBS}/parse-packages.sh" || exit 1
+      for fn in require_env show_progress get_default_packs is_wsl get_pkg_manager get_app_store; do
+        declare -f "$fn" >/dev/null || { printf "MISSING %s\n" "$fn"; exit 1; }
+      done
+      printf "ALL_DEPENDENCIES_PRESENT\n"
+    '
+
+  assert_success
+  assert_output --partial "ALL_DEPENDENCIES_PRESENT"
+}

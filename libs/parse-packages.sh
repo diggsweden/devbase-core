@@ -33,6 +33,16 @@ if ! command -v yq &>/dev/null; then
   return 1
 fi
 
+# setup.sh loads these first in a normal run, so the sources below are usually
+# no-ops. They matter when parse-packages.sh is sourced on its own, which both
+# the installers and the tests do.
+_parse_packages_libs="${DEVBASE_LIBS:-${DEVBASE_ROOT:-}/libs}"
+declare -f require_env &>/dev/null || source "${_parse_packages_libs}/validation.sh"
+declare -f show_progress &>/dev/null || source "${_parse_packages_libs}/ui/ui-helpers.sh"
+declare -f get_default_packs &>/dev/null || source "${_parse_packages_libs}/defaults.sh"
+declare -f is_wsl &>/dev/null || source "${_parse_packages_libs}/distro.sh"
+unset _parse_packages_libs
+
 # Global: Path to packages.yaml (set by caller or default)
 PACKAGES_YAML="${PACKAGES_YAML:-${DEVBASE_DOT}/.config/devbase/packages.yaml}"
 PACKAGES_CUSTOM_YAML="${PACKAGES_CUSTOM_YAML:-}"

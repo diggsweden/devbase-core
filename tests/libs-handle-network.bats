@@ -409,3 +409,46 @@ EOF
   
   assert_success
 }
+
+# =============================================================================
+# _normalize_strict_mode tests
+# =============================================================================
+
+@test "_normalize_strict_mode maps legacy boolean values onto modes" {
+  run --separate-stderr _normalize_strict_mode "true"
+  assert_success
+  assert_output "warn"
+
+  run --separate-stderr _normalize_strict_mode "false"
+  assert_success
+  assert_output "off"
+}
+
+@test "_normalize_strict_mode passes warn and fail through unchanged" {
+  run --separate-stderr _normalize_strict_mode "warn"
+  assert_output "warn"
+
+  run --separate-stderr _normalize_strict_mode "fail"
+  assert_output "fail"
+
+  run --separate-stderr _normalize_strict_mode "off"
+  assert_output "off"
+}
+
+# A blank or missing setting must fail closed. If this ever returns "off" the
+# checksum verification in verify_checksum_value is silently disabled.
+@test "_normalize_strict_mode falls back to fail when unset or empty" {
+  run --separate-stderr _normalize_strict_mode ""
+  assert_output "fail"
+
+  run --separate-stderr _normalize_strict_mode
+  assert_output "fail"
+}
+
+@test "_normalize_strict_mode warns and degrades to warn on an unknown value" {
+  run --separate-stderr _normalize_strict_mode "bogus"
+  assert_success
+  assert_output "warn"
+  # The warning must reach stderr, not stdout: stdout is the return value.
+  assert_regex "$stderr" "Unknown DEVBASE_STRICT_CHECKSUMS=bogus"
+}

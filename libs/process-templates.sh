@@ -217,7 +217,9 @@ validate_custom_template() {
   done
 
   # Normal validation: check if template exists in vanilla
-  if ! find "$temp_dir" -name "$template_name" -type f -quit | grep -q .; then
+  # -quit is an action and suppresses find's implicit -print, so -print has to
+  # be explicit or a matching template is never seen.
+  if ! find "$temp_dir" -name "$template_name" -type f -print -quit | grep -q .; then
     show_progress warning "Custom template '$template_name' not found in vanilla (ignored)"
     show_progress info "See available templates: ls ${DEVBASE_ROOT}/dot -name '*.template'"
     return 1

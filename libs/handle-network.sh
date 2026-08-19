@@ -362,13 +362,17 @@ _download_file_cache() {
 # Params: $1 - raw value (from env or default)
 # Returns: Echoes one of: off, warn, fail
 _normalize_strict_mode() {
+  # An empty value takes the "fail" default above: a blank setting must fail
+  # closed rather than disable checksum verification.
   local mode="${1:-fail}"
   case "$mode" in
   true) printf '%s' "warn" ;;
-  false | off | "") printf '%s' "off" ;;
+  false | off) printf '%s' "off" ;;
   warn | fail) printf '%s' "$mode" ;;
   *)
-    add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$mode (using warn)"
+    # >&2 is required: the function is consumed via command substitution, so a
+    # warning on stdout would end up in the caller's strict_mode.
+    add_global_warning "Unknown DEVBASE_STRICT_CHECKSUMS=$mode (using warn)" >&2
     printf '%s' "warn"
     ;;
   esac
