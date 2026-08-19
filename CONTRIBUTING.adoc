@@ -99,7 +99,7 @@ Before you submit your Merge/Pull Request you are expected to run a quick qualit
 
 * Project quality tooling:
 * https://codeberg.org/itiquette/gommitlint[gommitlint] (commit check)
-* shellcheck, shfmt, hadolint, yamlfmt (via mise)
+* shellcheck, shfmt, yamlfmt (via mise)
 
 === Code quality tools and test coverage
 
@@ -107,9 +107,9 @@ Run the code quality tooling:
 
 [source,shell]
 ----
-$ just veriyf    # Run all checks
-$ just lint      # Only linting
-$ just commits   # Only commit message check
+$ just verify       # Run all checks
+$ just lint-all     # Only linting
+$ just lint-commits # Only commit message check
 ----
 
 
@@ -118,6 +118,6 @@ TIP: The linters can be integrated into VSCode for real-time feedback during dev
 [[development]]
 == Development Guidelines
 
-For further guidance on how to get started with Development, see the link:./docs/guides/development.adoc[Development Guide].
+For further guidance on how to get started with Development, see the link:./docs/development.adoc[Development Guide].
 
 *_Happy contributing!_*

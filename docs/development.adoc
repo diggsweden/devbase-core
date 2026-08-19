@@ -7,7 +7,6 @@
 == Project Tools for Development
 
 - shellcheck, shfmt - Shell linting/formatting
-- hadolint - Dockerfile linting
 - yamlfmt - YAML formatting
 - actionlint - GitHub Actions linting
 - gommitlint - Commit message validation

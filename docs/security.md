@@ -63,6 +63,21 @@ SPDX-License-Identifier: CC0-1.0
 - All versioned entries auto-updated by Renovate
 - Git tracks all changes, PR approval required
 
+### Minimum Release Age
+
+Newly published versions are not installed until they are at least 7 days old,
+so a compromised release has time to be detected and pulled before it reaches a
+workstation.
+
+| Layer | Control |
+|-------|---------|
+| Renovate | `minimumReleaseAge: "7 days"` in the shared base config, governing when pins in `packages.yaml` move |
+| mise | `minimum_release_age = "7d"` in the generated `~/.config/mise/config.toml`, so `mise upgrade` cannot outrun the policy after install |
+| npm | `min-release-age=7` set at user scope during install (requires npm 11.10.0+, shipped with node 24.14.1+) |
+
+Not covered: snap, flatpak, apt/dnf and VS Code extensions provide no equivalent
+mechanism.
+
 #### Aqua Registry (35 tools)
 
 - Automatic checksum verification

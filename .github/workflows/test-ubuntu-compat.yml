@@ -87,15 +87,15 @@ jobs:
           realpath --version 2>&1 | head -1 || true
           echo
 
-          # setup.sh:332 and libs/utils.sh:110 run before any install work,
-          # so an unsupported --tmpdir aborts setup.sh immediately.
+          # setup.sh and utils.sh call this before any install work, so an
+          # unsupported --tmpdir aborts setup.sh immediately.
           probe_tmp=$(mktemp -d --tmpdir devbase.XXXXXX)
           test -d "$probe_tmp"
           rmdir "$probe_tmp"
           echo "ok  mktemp -d --tmpdir"
 
-          # libs/utils.sh validate_path() and safe_rm_rf() resolve paths that
-          # do not exist yet; -m must not fail on a missing target.
+          # validate_path() and safe_rm_rf() resolve paths that do not exist
+          # yet; -m must not fail on a missing target.
           test "$(realpath -m /no/such/path)" = "/no/such/path"
           echo "ok  realpath -m"
 
@@ -107,18 +107,16 @@ jobs:
           echo "ok  cp --no-dereference -r"
 
           # merge_dotfiles_with_backup() then copies the new dotfiles with a
-          # plain cp -r. GNU coreutils copies symlinks met during recursion as
-          # symlinks rather than dereferencing them; devbase relies on that, so
-          # assert it here where a uutils swap would show up.
+          # plain cp -r, and relies on symlinks met during recursion staying
+          # symlinks - which a uutils swap would change.
           mkdir -p /tmp/probe-src /tmp/probe-dst
           ln -sf /etc/hostname /tmp/probe-src/link
           cp -r /tmp/probe-src/. /tmp/probe-dst/
           test -L /tmp/probe-dst/link
           echo "ok  cp -r preserves symlinks"
 
-          # libs/install-custom.sh:1240 and libs/install-mise.sh:452 compare
-          # versions with sort -V. A wrong ordering here is silent: it yields
-          # a bad answer rather than an error, so assert the result.
+          # install-custom.sh and install-mise.sh compare versions with sort -V.
+          # A wrong ordering is silent: a bad answer rather than an error.
           test "$(printf '1.10\n1.2\n' | sort -V | head -1)" = "1.2"
           echo "ok  sort -V"
 

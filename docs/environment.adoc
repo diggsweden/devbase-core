@@ -105,6 +105,18 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | _(unset)_
 | Comma-separated URL patterns allowed without checksums
 
+| `DEVBASE_MIN_WSL_VERSION`
+| `2.7.7`
+| Minimum WSL version accepted when installing under WSL
+
+| `DEVBASE_MIN_UBUNTU_VERSION`
+| `26.04`
+| Minimum Ubuntu release the update path will install onto
+
+| `DEVBASE_NPM_MIN_RELEASE_AGE`
+| `7`
+| Days an npm package must be published before it may be installed
+
 | `MISE_HTTP_TIMEOUT`
 | `150s`
 | Timeout for HTTP requests made by mise

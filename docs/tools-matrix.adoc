@@ -1084,7 +1084,7 @@ toc::[]
 |
 |
 
-|link:https://www.isc.org/bind/[dnsutils]
+|link:https://www.isc.org/bind/[bind9-dnsutils]
 |DNS utilities (dig, nslookup)
 |apt
 |ISC
