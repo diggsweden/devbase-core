@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-26.04
     name: apt package names resolve on Ubuntu 26.04
     container:
-      image: ubuntu:26.04
+      image: ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install probe dependencies
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-26.04
     name: GNU coreutils flags behave as expected
     container:
-      image: ubuntu:26.04
+      image: ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
     steps:
       - name: Ensure bash is present
         run: |
