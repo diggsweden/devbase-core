@@ -218,6 +218,8 @@ devbase-update --unsnooze
 
 Note: when `--ref` is used, the persisted core repo at `~/.local/share/devbase/core` is pinned to that ref during the setup run. SHA refs are not supported.
 
+A fresh install can be pinned the same way with `./setup.sh --ref <ref>` or the `DEVBASE_CORE_REF` environment variable - see [Test a Branch or Pull Request](development.adoc) in the Development Guide.
+
 **Theme Provenance:**
 
 | Tool | Theme Source | Notes |

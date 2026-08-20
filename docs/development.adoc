@@ -120,6 +120,35 @@ Before testing with a clean user account, you can use the verification scripts t
 - `just verify` - Run all code quality checks
 - `just devbase-install-verify` - Verify installation completeness
 
+=== Test a Branch or Pull Request
+
+DevBase keeps its own copy of the core repo at `~/.local/share/devbase/core` and
+follows the latest release tag from there. To try a branch - a pull request
+branch, for instance - point that copy at the branch instead:
+
+[source,bash]
+----
+# Fresh install from a branch
+git clone -b feat/some-branch https://github.com/diggsweden/devbase-core
+cd devbase-core
+./setup.sh --ref feat/some-branch
+
+# Already installed: move the existing installation to the branch
+devbase-update --ref feat/some-branch
+
+# Same as the flag, for scripted runs (--ref=feat/some-branch also works)
+DEVBASE_CORE_REF=feat/some-branch ./setup.sh --non-interactive
+----
+
+`git clone -b` decides what the current run installs. `--ref` decides what the
+persisted copy tracks afterwards: without it that copy is pinned to the latest
+tag, so the next `devbase-update` would move you off the branch.
+
+Branch and tag names only. A commit SHA is rejected.
+
+To go back to release tags, run `devbase-update` with no `--ref` from a new
+shell - the flag exports `DEVBASE_CORE_REF` for the session it ran in.
+
 === Test with Clean User Account
 
 Testing with a fresh user account simulates a real installation without affecting your main account:

@@ -117,6 +117,10 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | `7`
 | Days an npm package must be published before it may be installed
 
+| `DEVBASE_CORE_REF`
+| _(latest tag)_
+| Branch or tag the persisted core repo tracks, for testing a branch or pull request (same as `./setup.sh --ref`, see link:development.adoc[Development Guide])
+
 | `MISE_HTTP_TIMEOUT`
 | `150s`
 | Timeout for HTTP requests made by mise

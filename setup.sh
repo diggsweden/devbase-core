@@ -163,15 +163,38 @@ DEVBASE_TUI_MODE="${DEVBASE_TUI_MODE:-gum}"
 # ============================================================================
 # ============================================================================
 
+# Brief: Accept a git ref for the persisted core repo
+# Params: $1 - branch or tag name
+# Modifies: DEVBASE_CORE_REF (exported)
+# Returns: 0, exits 1 on a missing or unusable ref
+# Side-effects: None
+# Notes: The value reaches git as `clone --branch` and `checkout` in
+#        libs/persist.sh, so reject anything that is not a plain ref name.
+_set_core_ref() {
+  local ref="${1:-}"
+
+  if [[ -z "$ref" ]]; then
+    printf "Error: --ref requires a branch or tag name\n" >&2
+    exit 1
+  fi
+
+  if [[ ! "$ref" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || [[ "$ref" == *".."* ]]; then
+    printf "Error: Invalid ref '%s' (expected a branch or tag name)\n" "$ref" >&2
+    exit 1
+  fi
+
+  export DEVBASE_CORE_REF="$ref"
+}
+
 parse_arguments() {
-  for arg in "$@"; do
-    case $arg in
+  while [[ $# -gt 0 ]]; do
+    case $1 in
     --non-interactive)
       export NON_INTERACTIVE=true
       export DEBIAN_FRONTEND=noninteractive
       ;;
     --tui=*)
-      local tui_value="${arg#--tui=}"
+      local tui_value="${1#--tui=}"
       case "$tui_value" in
       gum | whiptail)
         DEVBASE_TUI_MODE="$tui_value"
@@ -181,6 +204,13 @@ parse_arguments() {
         exit 1
         ;;
       esac
+      ;;
+    --ref)
+      shift
+      _set_core_ref "${1:-}"
+      ;;
+    --ref=*)
+      _set_core_ref "${1#--ref=}"
       ;;
     --dry-run)
       export DEVBASE_DRY_RUN=true
@@ -195,16 +225,19 @@ parse_arguments() {
       printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
       printf "  --dry-run          Print planned steps without installing\n"
       printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
+      printf "  --ref <ref>        Track a branch or tag for updates, instead of the\n"
+      printf "                     latest tag (same as DEVBASE_CORE_REF)\n"
       printf "  --version, -v      Show version information\n"
       printf "  --help, -h         Show this help message\n"
       exit 0
       ;;
     *)
-      printf "Error: Unknown option '%s'\n" "$arg" >&2
+      printf "Error: Unknown option '%s'\n" "$1" >&2
       printf "Run '%s --help' for valid options.\n" "$0" >&2
       exit 1
       ;;
     esac
+    shift
   done
 }
 

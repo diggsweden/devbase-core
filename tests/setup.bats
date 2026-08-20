@@ -133,11 +133,63 @@ teardown() {
   assert_output --partial "Unknown option"
 }
 
+# --ref pins the persisted core repo, which is what devbase-update follows
+# afterwards, so both spellings and the rejection of a non-ref have to hold.
+@test "parse_arguments sets DEVBASE_CORE_REF for --ref <ref>" {
+  run bash -c "
+    eval \"\$(sed -n '/^_set_core_ref()/,/^}/p;/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --ref feat/some-branch
+    echo \"\$DEVBASE_CORE_REF\"
+  "
+
+  assert_success
+  assert_output "feat/some-branch"
+}
+
+@test "parse_arguments sets DEVBASE_CORE_REF for --ref=<ref>" {
+  run bash -c "
+    eval \"\$(sed -n '/^_set_core_ref()/,/^}/p;/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --ref=v1.2.3
+    echo \"\$DEVBASE_CORE_REF\"
+  "
+
+  assert_success
+  assert_output "v1.2.3"
+}
+
+@test "parse_arguments rejects a ref that is not a plain ref name" {
+  run bash -c "
+    eval \"\$(sed -n '/^_set_core_ref()/,/^}/p;/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments '--ref=main; touch ${TEST_DIR}/pwned'
+  "
+
+  assert_failure
+  assert_output --partial "Invalid ref"
+  assert_file_not_exists "${TEST_DIR}/pwned"
+}
+
+@test "parse_arguments rejects --ref without a value" {
+  run bash -c "
+    eval \"\$(sed -n '/^_set_core_ref()/,/^}/p;/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --ref
+  "
+
+  assert_failure
+  assert_output --partial "requires a branch or tag name"
+}
+
 @test "setup.sh help shows --tui option" {
   run bash "${DEVBASE_ROOT}/setup.sh" --help
-  
+
   assert_success
   assert_output --partial "--tui=<mode>"
+}
+
+@test "setup.sh help shows --ref option" {
+  run bash "${DEVBASE_ROOT}/setup.sh" --help
+
+  assert_success
+  assert_output --partial "--ref <ref>"
 }
 
 @test "setup.sh --version prints version string" {
