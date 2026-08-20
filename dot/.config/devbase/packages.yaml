@@ -289,7 +289,7 @@ packs:
       libyaml-devel: {}
       zlib-devel: {}
     mise:
-      ruby: {version: "3.4.10"} # renovate: datasource=ruby-version depName=ruby
+      ruby: {version: "4.0.6"} # renovate: datasource=ruby-version depName=ruby
 
   rust:
     description: "(rustc / cargo)"
