@@ -393,12 +393,14 @@ install_dbeaver() {
   local pkg_format
   pkg_format=$(_get_custom_pkg_format)
 
+  # Upstream publishes Linux packages as dbeaver-ce-<version>-linux-<arch>;
+  # x86_64 is the only architecture devbase installs on.
   local dbeaver_url dbeaver_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce_${dbeaver_version}_amd64.deb"
+    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-linux-x86_64.deb"
     cache_name="dbeaver-${dbeaver_version}.deb"
   else
-    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-stable.x86_64.rpm"
+    dbeaver_url="${DEVBASE_URL_DBEAVER_RELEASES}/${dbeaver_version}/dbeaver-ce-${dbeaver_version}-linux-x86_64.rpm"
     cache_name="dbeaver-${dbeaver_version}.rpm"
   fi
   dbeaver_pkg="${_DEVBASE_TEMP}/${cache_name}"

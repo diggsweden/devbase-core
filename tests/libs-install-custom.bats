@@ -414,6 +414,24 @@ _capture_download_args() {
   assert_output --partial "deadbeefoc"
 }
 
+# DBeaver renamed its Linux assets, and nothing tracks the URL shape - Renovate
+# only moves the version - so a stale name here 404s at install time.
+@test "install_dbeaver requests the published deb asset name" {
+  _capture_download_args \
+    "TOOL_VERSIONS[dbeaver]='26.1.4'; _get_custom_pkg_format() { echo deb; }" \
+    "install_dbeaver"
+
+  assert_output --partial "/26.1.4/dbeaver-ce-26.1.4-linux-x86_64.deb"
+}
+
+@test "install_dbeaver requests the published rpm asset name" {
+  _capture_download_args \
+    "TOOL_VERSIONS[dbeaver]='26.1.4'; _get_custom_pkg_format() { echo rpm; }" \
+    "install_dbeaver"
+
+  assert_output --partial "/26.1.4/dbeaver-ce-26.1.4-linux-x86_64.rpm"
+}
+
 @test "install_k3s forwards a pinned installer checksum to the download" {
   # Unlike the other installers, k3s does not fetch a digest; it only honours
   # DEVBASE_K3S_INSTALL_SHA256.
