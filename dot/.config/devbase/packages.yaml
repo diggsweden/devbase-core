@@ -130,7 +130,7 @@ core:
     jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
     yq: {backend: "aqua:mikefarah/yq", version: "v4.53.3"} # renovate: datasource=github-releases depName=mikefarah/yq
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
-    excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.4"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
+    excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.6"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
     # Shell enhancements
     fzf: {backend: "aqua:junegunn/fzf", version: "v0.71.0"} # renovate: datasource=github-releases depName=junegunn/fzf
     zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.10.0"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
