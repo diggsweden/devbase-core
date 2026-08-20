@@ -251,8 +251,7 @@ check_ubuntu_version() {
       show_progress info "Upgrade the distribution before installing or updating DevBase:"
       show_progress info "  1. Back up your work first. Commit and push any local git"
       show_progress info "     repositories, and copy anything you cannot lose off this machine."
-      show_progress info "  2. Upgrade Ubuntu:"
-      show_progress info "       sudo do-release-upgrade -d"
+      show_progress info "  2. Upgrade Ubuntu to $min_version or later."
       show_progress info "  3. Reboot, then run ./setup.sh again."
       tui_blank_line
       return 1

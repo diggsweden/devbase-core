@@ -33,8 +33,7 @@ function __devbase_ubuntu_upgrade_notice --description "Explain the Ubuntu upgra
     printf "\n"
     printf "  1. Back up your work: commit and push local repositories, and\n"
     printf "     copy anything you cannot lose off this machine.\n"
-    printf "  2. Upgrade Ubuntu:\n"
-    printf "       %ssudo do-release-upgrade -d%s\n" (set_color --bold) (set_color normal)
+    printf "  2. Upgrade Ubuntu to %s or later.\n" "$min"
     printf "  3. Reboot, then run: %sdevbase-update%s\n" (set_color --bold) (set_color normal)
     printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
     printf "\n"

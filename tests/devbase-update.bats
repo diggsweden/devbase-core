@@ -1072,13 +1072,13 @@ _write_os_release() {
   assert_failure
 }
 
-@test "the upgrade notice names the current release, the target and the command" {
+@test "the upgrade notice names the current release and the target" {
   _write_os_release "$TEST_DIR/os" ubuntu 24.04
   run _fish_os_gate "$TEST_DIR/os" "__devbase_ubuntu_upgrade_notice"
   assert_success
   assert_output --partial "You are on Ubuntu 24.04"
   assert_output --partial "require Ubuntu 26.04"
-  assert_output --partial "sudo do-release-upgrade -d"
+  assert_output --partial "Upgrade Ubuntu to 26.04 or later"
   assert_output --partial "Back up your work"
 }
 
@@ -1118,7 +1118,7 @@ SCRIPT
   " </dev/null
 
   assert_failure
-  assert_output --partial "do-release-upgrade -d"
+  assert_output --partial "Upgrade Ubuntu to 26.04 or later"
   refute_output --partial "Setup completed"
 
   # The repo must not have moved: no checkout, no stash.
@@ -1143,7 +1143,7 @@ SCRIPT
   " </dev/null
 
   assert_success
-  assert_output --partial "do-release-upgrade -d"
+  assert_output --partial "Upgrade Ubuntu to 26.04 or later"
   refute_output --partial "Update now?"
   refute_output --partial "DevBase Update Available"
 }

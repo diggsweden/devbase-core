@@ -367,7 +367,7 @@ SCRIPT
 
   assert_failure
   assert_output --partial "Ubuntu 26.04 or later is required"
-  assert_output --partial "do-release-upgrade -d"
+  assert_output --partial "Upgrade Ubuntu to 26.04 or later"
   assert_output --partial "Back up your work"
 }
 

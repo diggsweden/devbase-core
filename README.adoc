@@ -27,7 +27,7 @@ Transforms a fresh Ubuntu installation into a opinionated configured development
 
 == Requirements
 
-* Ubuntu 26.04 LTS or newer (WSL2 or native). Older releases must run `sudo do-release-upgrade -d` first.
+* Ubuntu 26.04 LTS or newer (WSL2 or native). Older releases must upgrade Ubuntu first.
 * 6GB free disk space
 * Installation time: ~10-15 minutes
 * (A basic GitHub-token to avoid RateLimiting - might be provided automatically by custom config)
