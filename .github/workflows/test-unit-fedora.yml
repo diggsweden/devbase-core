@@ -29,12 +29,12 @@ jobs:
   test-fedora:
     runs-on: ubuntu-26.04
     container:
-      image: fedora:45@sha256:af8cdc432037f5e8e288bbc26c2b55b96000a911ec5b37959cd464d830f6cc5b # renovate: datasource=docker depName=fedora
+      image: fedora:45@sha256:0c1f63ed8fb818fad16cf6ae091598c410a21d2e1a9adf183beb93189299bfba # renovate: datasource=docker depName=fedora
     steps:
       - name: Install prerequisites
         run: |
           dnf install -y git just pipx fish gettext jq
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
       - name: Setup test dependencies
         run: just test-setup

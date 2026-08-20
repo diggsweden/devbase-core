@@ -16,7 +16,7 @@ permissions:
   contents: read
 jobs:
   release:
-    uses: diggsweden/reusable-ci/.github/workflows/release-orchestrator.yml@d31c989acd139c3e8754e116496c826af8dbbca0 # v2.8.2
+    uses: diggsweden/reusable-ci/.github/workflows/release-orchestrator.yml@617cb32268cb6aefdfa4117b4159d37e3b47d7b3 # v2.8.3
     permissions:
       contents: write
       packages: write
@@ -29,7 +29,7 @@ jobs:
     # which need OSPO_BOT_GPG_* and RELEASE_BOT_TOKEN.
     secrets: inherit
     with:
-      reusable-ci-ref: d31c989acd139c3e8754e116496c826af8dbbca0
+      reusable-ci-ref: 617cb32268cb6aefdfa4117b4159d37e3b47d7b3
       artifacts-config: .github/artifacts.yml
       changelog-creator: git-cliff
       release-publisher: github-cli
