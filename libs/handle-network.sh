@@ -434,7 +434,8 @@ download_file() {
 
   if [[ "$has_checksum" == false ]]; then
     if [[ "$allowlisted" == "true" ]]; then
-      add_global_warning "Checksum allowlisted for download: $url"
+      # A configured exception, not something the operator needs to act on.
+      show_progress info "Checksum allowlisted for download: $url"
     else
       case "$strict_mode" in
       fail)

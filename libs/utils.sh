@@ -546,20 +546,18 @@ download_with_cache() {
   local allowlisted=false
   _checksum_allowlisted "$url" && allowlisted=true
 
-  if [[ "$has_checksum" == false ]]; then
-    if [[ "$allowlisted" == "true" ]]; then
-      add_global_warning "Checksum allowlisted for download: $url"
-    else
-      case "$strict_mode" in
-      fail)
-        show_progress error "Checksum required for download: $url"
-        return 1
-        ;;
-      warn)
-        add_global_warning "No checksum available for download: $url"
-        ;;
-      esac
-    fi
+  # An allowlisted URL is reported by download_file when it runs; saying it here
+  # too would report the same download twice, in the log and in the summary.
+  if [[ "$has_checksum" == false && "$allowlisted" == false ]]; then
+    case "$strict_mode" in
+    fail)
+      show_progress error "Checksum required for download: $url"
+      return 1
+      ;;
+    warn)
+      add_global_warning "No checksum available for download: $url"
+      ;;
+    esac
   fi
 
   if validate_custom_dir "DEVBASE_DEB_CACHE" "Package cache"; then

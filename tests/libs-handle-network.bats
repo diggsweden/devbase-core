@@ -343,6 +343,39 @@ EOF
   assert_file_exists "$target"
 }
 
+# The policy check runs in download_with_cache and again in download_file, so
+# an allowlisted URL used to be reported twice - and as a warning, which put an
+# operator's own allowlist entry in the end-of-run "Warnings during setup" list.
+@test "an allowlisted download is reported once, and not as a warning" {
+  local target="${TEST_DIR}/allowlisted-once.bin"
+
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh'
+    source '${DEVBASE_ROOT}/libs/validation.sh'
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh'
+    source '${DEVBASE_ROOT}/libs/utils.sh'
+    source '${DEVBASE_ROOT}/libs/handle-network.sh'
+    export XDG_CACHE_HOME='${TEST_DIR}'
+    export DEVBASE_STRICT_CHECKSUMS='fail'
+    export DEVBASE_STRICT_CHECKSUMS_ALLOWLIST='https://example.com/*'
+
+    _download_file_attempt() {
+      [[ \"\$4\" == 'true' ]] && return 0
+      printf 'ok' > \"\$2\"
+      return 0
+    }
+
+    download_with_cache 'https://example.com/file.bin' '${target}' 'file.bin' 'Example package' \
+      >'${TEST_DIR}/run.log' 2>&1
+    grep -c 'Checksum allowlisted' '${TEST_DIR}/run.log'
+    printf 'warnings=%s\n' \"\${#DEVBASE_GLOBAL_WARNINGS[@]}\"
+  "
+
+  assert_success
+  assert_line --index 0 "1"
+  assert_line --index 1 "warnings=0"
+}
+
 @test "verify_checksum_from_url returns 2 when checksum unavailable" {
   local test_file="${TEST_DIR}/testfile"
   echo "test content" > "$test_file"
