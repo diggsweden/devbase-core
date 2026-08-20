@@ -156,7 +156,7 @@ core:
     # Container/Kubernetes
     docker-compose: {backend: "aqua:docker/compose", version: "v5.4.0"} # renovate: datasource=github-releases depName=docker/compose
     k9s: {backend: "aqua:derailed/k9s", version: "v0.51.0"} # renovate: datasource=github-releases depName=derailed/k9s
-    k6: {backend: "aqua:grafana/k6", version: "v1.8.0"} # renovate: datasource=github-releases depName=grafana/k6
+    k6: {backend: "aqua:grafana/k6", version: "v1.8.1"} # renovate: datasource=github-releases depName=grafana/k6
     argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.5.0"} # renovate: datasource=github-releases depName=argoproj/argo-cd
     kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.38.4"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
     tkn: {backend: "aqua:tektoncd/cli", version: "v0.46.0"} # renovate: datasource=github-releases depName=tektoncd/cli
