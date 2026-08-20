@@ -163,7 +163,7 @@ core:
     # Code quality
     yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0"} # renovate: datasource=github-releases depName=google/yamlfmt
     actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.12"} # renovate: datasource=github-releases depName=rhysd/actionlint
-    hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.14.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
+    hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.15.1"} # renovate: datasource=github-releases depName=hadolint/hadolint
     shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
     shfmt: {backend: "aqua:mvdan/sh", version: "v3.13.1"} # renovate: datasource=github-releases depName=mvdan/sh
     rumdl: {backend: "github:rvben/rumdl", version: "v0.2.53"} # renovate: datasource=github-releases depName=rvben/rumdl
