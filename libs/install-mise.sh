@@ -138,6 +138,35 @@ _check_mise_server_error() {
   grep -qE "HTTP status server error \(50[0-9]" "$log_file" 2>/dev/null
 }
 
+# Brief: Keep a bootstrapped tool reachable across later PATH rebuilds
+# Params: $1 - tool name as mise knows it, $2 - path to the mise binary
+# Modifies: _DEVBASE_BOOTSTRAP_BINS (colon-separated directory list)
+# Returns: 0 always - an unresolvable tool simply records nothing
+# Side-effects: None
+# Notes: generate_mise_config repins the tools bootstrapped here to the
+#        packages.yaml version, which is not installed until the full run.
+#        `mise env` then emits no path for them at all, so the binary that is
+#        already on disk becomes unreachable. Recording its directory lets
+#        _mise_apply_path_from_activate put it back.
+_mise_remember_bootstrap_bin() {
+  local tool="$1" mise_path="$2"
+
+  local binary
+  binary=$(cd "$HOME" && "$mise_path" which "$tool" 2>/dev/null) || return 0
+  [[ -n "$binary" ]] || return 0
+
+  local dir
+  dir=$(dirname "$binary")
+  [[ -d "$dir" ]] || return 0
+
+  case ":${_DEVBASE_BOOTSTRAP_BINS:-}:" in
+  *":${dir}:"*) ;;
+  *) export _DEVBASE_BOOTSTRAP_BINS="${dir}${_DEVBASE_BOOTSTRAP_BINS:+:${_DEVBASE_BOOTSTRAP_BINS}}" ;;
+  esac
+
+  return 0
+}
+
 # Brief: Apply mise tool PATH without eval by reading mise env output
 # Params: $1 = mise path
 # Returns: 0 on success, 1 on failure
@@ -178,6 +207,12 @@ _mise_apply_path_from_activate() {
   if [[ "$path_value" == *'$'* ]]; then
     show_progress error "Unsupported mise PATH activation output"
     return 1
+  fi
+
+  # Bootstrapped tools first: the global config may already pin a version that
+  # is not installed yet, and mise env leaves those out of the PATH entirely.
+  if [[ -n "${_DEVBASE_BOOTSTRAP_BINS:-}" ]]; then
+    path_value="${_DEVBASE_BOOTSTRAP_BINS}:${path_value}"
   fi
 
   export PATH="$path_value"
@@ -347,13 +382,15 @@ install_mise() {
   # the full config.toml on a second call, which triggers spurious warnings for
   # tools whose backends aren't available yet e.g. npm:tree-sitter-cli).
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
-    local yq_tool="aqua:mikefarah/yq@v4.52.4"
+    local yq_tool="aqua:mikefarah/yq@v4.53.3"
     show_progress info "Bootstrapping essential tools (yq)..."
     local _bootstrap_err
     if ! _bootstrap_err=$("$mise_path" --no-config use -g "$yq_tool" --yes 2>&1 >/dev/null); then
       [[ -n "$_bootstrap_err" ]] && show_progress error "$_bootstrap_err"
       die "Failed to bootstrap yq via mise"
     fi
+
+    _mise_remember_bootstrap_bin yq "$mise_path"
 
     # Activate mise so yq is available on PATH
     _mise_apply_path_from_activate "$mise_path" || die "Failed to activate mise PATH"
@@ -363,11 +400,13 @@ install_mise() {
     fi
 
     if ! command -v just &>/dev/null; then
-      local just_tool="aqua:casey/just@1.46.0"
+      local just_tool="aqua:casey/just@1.58.0"
       show_progress info "Bootstrapping essential tools (just)..."
       if ! _bootstrap_err=$("$mise_path" --no-config use -g "$just_tool" --yes 2>&1 >/dev/null); then
         [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
         add_install_warning "Failed to bootstrap just (continuing)"
+      else
+        _mise_remember_bootstrap_bin just "$mise_path"
       fi
     fi
   fi
@@ -379,18 +418,21 @@ install_mise() {
   if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
     show_progress warning "yq unavailable before package parser, attempting recovery"
 
-    local yq_recovery_spec="aqua:mikefarah/yq@v4.52.4"
+    local yq_recovery_spec="aqua:mikefarah/yq@v4.53.3"
     local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
 
     "$mise_path" --no-config use -g "$yq_recovery_spec" --yes >/dev/null 2>&1 || true
+    _mise_remember_bootstrap_bin yq "$mise_path"
     _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
   fi
 
   if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
     die "yq not found after bootstrap/recovery"
   fi
+
+  show_progress info "Using yq $(yq --version 2>/dev/null | awk '{print $NF}') for package parsing"
 
   if ! declare -f generate_mise_config &>/dev/null; then
     # shellcheck source=parse-packages.sh

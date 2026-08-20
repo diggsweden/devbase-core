@@ -277,6 +277,92 @@ EOF
   assert_output "2026.4.24"
 }
 
+# generate_mise_config repins yq to the packages.yaml version, which is not
+# installed until the full run. mise env then emits no path for yq at all, so
+# without this the bootstrap binary on disk becomes unreachable and package
+# parsing fails mid-install.
+@test "_mise_apply_path_from_activate keeps bootstrapped tools reachable" {
+  mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/bootstrap"
+  cat > "${TEST_DIR}/bin/mise" << 'SCRIPT'
+#!/usr/bin/env bash
+printf "export PATH='/usr/bin:/bin'\n"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    _DEVBASE_BOOTSTRAP_BINS='${TEST_DIR}/bootstrap'
+    _mise_apply_path_from_activate '${TEST_DIR}/bin/mise'
+    printf '%s' \"\$PATH\"
+  "
+
+  assert_success
+  # First, so a stale pin in the generated config cannot shadow it.
+  assert_output "${TEST_DIR}/bootstrap:/usr/bin:/bin"
+}
+
+@test "_mise_apply_path_from_activate leaves PATH to mise when nothing was bootstrapped" {
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/mise" << 'SCRIPT'
+#!/usr/bin/env bash
+printf "export PATH='/usr/bin:/bin'\n"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    unset _DEVBASE_BOOTSTRAP_BINS
+    _mise_apply_path_from_activate '${TEST_DIR}/bin/mise'
+    printf '%s' \"\$PATH\"
+  "
+
+  assert_success
+  assert_output "/usr/bin:/bin"
+}
+
+@test "_mise_remember_bootstrap_bin records the directory holding the binary" {
+  mkdir -p "${TEST_DIR}/bin" "${TEST_DIR}/installs/yq/v4.52.4"
+  touch "${TEST_DIR}/installs/yq/v4.52.4/yq"
+  cat > "${TEST_DIR}/bin/mise" << SCRIPT
+#!/usr/bin/env bash
+[[ "\$1" == "which" ]] && printf '%s\n' "${TEST_DIR}/installs/yq/v4.52.4/yq"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    # A second call must not stack the same directory twice.
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    printf '%s' \"\$_DEVBASE_BOOTSTRAP_BINS\"
+  "
+
+  assert_success
+  assert_output "${TEST_DIR}/installs/yq/v4.52.4"
+}
+
+@test "_mise_remember_bootstrap_bin records nothing when mise cannot resolve the tool" {
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/mise" << 'SCRIPT'
+#!/usr/bin/env bash
+exit 1
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  run bash -c "
+    source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    printf '[%s]' \"\${_DEVBASE_BOOTSTRAP_BINS:-}\"
+  "
+
+  assert_success
+  assert_output "[]"
+}
+
 @test "_get_mise_target_version prefers packages-custom.yaml over base" {
   mkdir -p "${TEST_DIR}/.config/devbase"
   mkdir -p "${TEST_DIR}/custom/packages"

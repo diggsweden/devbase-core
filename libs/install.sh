@@ -776,7 +776,11 @@ bootstrap_for_configuration() {
 
     if [[ -n "$mise_path" ]]; then
       [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && "$mise_path" trust "${DEVBASE_ROOT}/.mise.toml" >/dev/null 2>&1 || true
-      "$mise_path" --no-config use -g "aqua:mikefarah/yq@v4.52.4" --yes >/dev/null 2>&1 || true
+      "$mise_path" --no-config use -g "aqua:mikefarah/yq@v4.53.3" --yes >/dev/null 2>&1 || true
+
+      if declare -f _mise_remember_bootstrap_bin &>/dev/null; then
+        _mise_remember_bootstrap_bin yq "$mise_path"
+      fi
 
       if declare -f _mise_apply_path_from_activate &>/dev/null; then
         _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
