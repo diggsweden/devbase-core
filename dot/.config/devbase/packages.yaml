@@ -152,7 +152,7 @@ core:
     glab: {backend: "gitlab:gitlab-org/cli", version: "v1.92.1"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
     # Neovim
     neovim: {backend: "aqua:neovim/neovim", version: "v0.12.4"} # renovate: datasource=github-releases depName=neovim/neovim
-    tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.26.5"} # renovate: datasource=npm depName=tree-sitter-cli
+    tree-sitter-cli: {backend: "npm:tree-sitter-cli", version: "0.26.12"} # renovate: datasource=npm depName=tree-sitter-cli
     # Container/Kubernetes
     docker-compose: {backend: "aqua:docker/compose", version: "v5.4.0"} # renovate: datasource=github-releases depName=docker/compose
     k9s: {backend: "aqua:derailed/k9s", version: "v0.51.0"} # renovate: datasource=github-releases depName=derailed/k9s
