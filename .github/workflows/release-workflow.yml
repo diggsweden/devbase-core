@@ -27,6 +27,7 @@ jobs:
     # reusable-ci relies on `inherit` end to end: it declares no
     # `on.workflow_call.secrets` but forwards the store to its nested jobs,
     # which need OSPO_BOT_GPG_* and RELEASE_BOT_TOKEN.
+    # nosemgrep: yaml.github-actions.security.secrets-inherit.secrets-inherit
     secrets: inherit
     with:
       reusable-ci-ref: 617cb32268cb6aefdfa4117b4159d37e3b47d7b3

@@ -281,8 +281,13 @@ configure_git() {
   [[ "$proxy_configured" == true ]] && details+=("proxy: enabled")
   [[ "$signing_configured" == true ]] && details+=("SSH signing: enabled")
 
-  local IFS=", "
-  msg="${msg}${details[*]})"
+  local joined=""
+  local detail
+  for detail in "${details[@]}"; do
+    [[ -n "$joined" ]] && joined+=", "
+    joined+="$detail"
+  done
+  msg="${msg}${joined})"
 
   show_progress success "$msg"
   return 0

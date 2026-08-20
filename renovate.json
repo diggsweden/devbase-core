@@ -14,7 +14,8 @@
       "description": "Skip rumdl v0.1.72 — aqua attestation verification fails (upstream workflow-ref pattern mismatch)",
       "matchDatasources": ["github-releases"],
       "matchPackageNames": ["rvben/rumdl"],
-      "allowedVersions": "!=v0.1.72"
+      "allowedVersions": "!=v0.1.72",
+      "minimumReleaseAge": "7 days"
     }
   ],
   "customManagers": [
