@@ -229,7 +229,7 @@ packs:
       pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0"} # renovate: datasource=github-releases depName=pmd/pmd
     custom:
       keystore_explorer: {version: "v5.6.1", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
-      jdk_mission_control: {version: "9.1.1", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
+      jdk_mission_control: {version: "9.1.2", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
       dbeaver: {version: "26.1.4", installer: "install_dbeaver", tags: ["@optional"]} # renovate: datasource=github-releases depName=dbeaver/dbeaver
       intellij_idea: {version: "2025.3.3", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=jetbrains-releases depName=idea packageName=IIU
     vscode:
