@@ -124,14 +124,23 @@ SCRIPT
   assert_file_exists "${TEST_DIR}/99-devbase.conf"
   run grep -F "* soft nofile 65536" "${TEST_DIR}/99-devbase.conf"
   assert_success
-  run grep -F "* hard nproc 32768" "${TEST_DIR}/99-devbase.conf"
+  run grep -F "* hard memlock unlimited" "${TEST_DIR}/99-devbase.conf"
   assert_success
+
+  # A hard limit written here can only cap what the distro already grants,
+  # and the user cannot raise it back.
+  run grep -E "^\* hard (nofile|nproc)" "${TEST_DIR}/99-devbase.conf"
+  assert_failure
 
   # It shares the basename 99-devbase.conf with the limits file, so the stub
   # gives it a distinct destination.
   assert_file_exists "${TEST_DIR}/sysctl-99-devbase.conf"
-  run grep -F "fs.file-max = 90000" "${TEST_DIR}/sysctl-99-devbase.conf"
+  run grep -F "vm.swappiness = 5" "${TEST_DIR}/sysctl-99-devbase.conf"
   assert_success
+
+  # The kernel sizes fs.file-max from memory; a fixed value only lowers it.
+  run grep -F "fs.file-max" "${TEST_DIR}/sysctl-99-devbase.conf"
+  assert_failure
 }
 
 @test "configure_ufw enables firewall when ufw available" {

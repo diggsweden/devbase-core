@@ -678,20 +678,23 @@ DevBase configures system resource limits optimized for development workloads.
 
 ### Resource Limits
 
+DevBase only raises soft limits. Hard limits are left as the distribution
+ships them: they are already higher than development needs, and a hard limit
+lowered in a config file cannot be raised back by the user.
+
 **File Descriptors:**
 
-- **Soft/Hard limit**: 65,536 open files per process
-- **System maximum**: 90,000 total file handles
+- **Soft limit**: 65,536 open files per process (the systemd default soft limit is 1,024)
+- **Hard limit**: untouched
 - **Purpose**: Supports large builds, many containers, and concurrent connections
 
 **Process Limits:**
 
-- **Soft/Hard limit**: 32,768 processes per user
-- **Purpose**: Enables parallel builds, testing frameworks, and containerized workloads
+- Not set. The distribution default is already far above what development needs.
 
 **Memory Locking:**
 
-- **Soft/Hard limit**: Unlimited locked memory
+- **Soft/Hard limit**: Unlimited locked memory (the default hard limit is 64 MB, so both are named)
 - **Purpose**: Required for containers, virtual machines, and performance-critical applications
 
 ### Resource Limit Configuration
@@ -704,11 +707,8 @@ DevBase creates system-wide limit configurations:
 ```
 
 ```text
-# DevBase development limits
+# DevBase development limits - raise soft limits, never cap the hard ones
 * soft nofile 65536
-* hard nofile 65536
-* soft nproc 32768
-* hard nproc 32768
 * soft memlock unlimited
 * hard memlock unlimited
 ```
@@ -719,10 +719,13 @@ DevBase creates system-wide limit configurations:
 ```
 
 ```text
-fs.file-max = 90000
+vm.swappiness = 5
 ```
 
-**Location**: `libs/configure-services.sh:79` (`set_system_limits()` function)
+`fs.file-max` is deliberately not set: the kernel sizes it from available
+memory, so a fixed value only lowers it.
+
+**Location**: `libs/configure-services.sh` (`set_system_limits()` function)
 
 ### Verifying Resource Limits
 

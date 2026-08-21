@@ -5,21 +5,13 @@
 # ~/.config/fish/conf.d/10-ulimits.fish
 # Set development-friendly resource limits
 
+# Only core dumps are set here. File descriptors and processes come from
+# /etc/security/limits.d/99-devbase.conf, and `ulimit -n`/`-u` without -S
+# would lower the hard limit for the whole session, which cannot be undone.
+# File size and virtual memory are unlimited by default already.
 function setup_ulimits --description "Set development resource limits"
-    # File descriptors - needed for development tools, IDEs, containers
-    ulimit -n 70000 2>/dev/null
-    
-    # File size - unlimited for logs, dumps, builds
-    ulimit -f unlimited 2>/dev/null
-    
-    # Core dump size - useful for debugging
+    # Core dump size - useful for debugging, disabled by default
     ulimit -c unlimited 2>/dev/null
-    
-    # Max user processes - for containers and build tools
-    ulimit -u 32768 2>/dev/null
-    
-    # Virtual memory - unlimited for development
-    ulimit -v unlimited 2>/dev/null
 end
 
 # Run on shell startup

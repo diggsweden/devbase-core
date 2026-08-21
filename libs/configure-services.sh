@@ -148,25 +148,27 @@ set_system_limits() {
   local limits_file="/etc/security/limits.d/99-devbase.conf"
   local sysctl_file="/etc/sysctl.d/99-devbase.conf"
 
+  # Raise the soft limits only. The hard limits the distro ships are already
+  # higher than anything development needs (systemd defaults to nofile
+  # 1048576), and a hard limit lowered here cannot be raised back by the user.
+  # memlock names both because its default hard limit is 64 MB.
   sudo tee "$limits_file" &>/dev/null <<'EOF'
-# DevBase development limits
+# DevBase development limits - raise soft limits, never cap the hard ones
 * soft nofile 65536
-* hard nofile 65536
-* soft nproc 32768
-* hard nproc 32768
 * soft memlock unlimited
 * hard memlock unlimited
 EOF
 
+  # fs.file-max is sized from available memory by the kernel; pinning it to a
+  # constant can only lower it on a machine with a normal amount of RAM.
   sudo bash -c "cat > '$sysctl_file'" <<'EOF'
 # DevBase kernel parameters
-fs.file-max = 90000
 vm.swappiness = 5
 EOF
 
   sudo sysctl -p "$sysctl_file" &>/dev/null || true
 
-  show_progress success "System limits configured (nofile: 65536, nproc: 32768, fs.file-max: 90000, swappiness: 5)"
+  show_progress success "System limits configured (soft nofile: 65536, memlock: unlimited, swappiness: 5)"
   return 0
 }
 
