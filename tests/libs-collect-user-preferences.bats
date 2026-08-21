@@ -761,6 +761,7 @@ _run_non_interactive() {
     source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/collect-user-preferences-common.sh' >/dev/null 2>&1
     setup_non_interactive_mode >/dev/null || exit 1
+    printf 'ACTION=%s\n' \"\$DEVBASE_SSH_KEY_ACTION\"
     printf 'LEN=%s\n' \"\${#DEVBASE_SSH_PASSPHRASE}\"
   "
 }
@@ -786,6 +787,19 @@ _run_non_interactive() {
   # Generated passphrases must themselves clear the policy.
   local len="${output##*LEN=}"
   assert [ "$len" -ge 12 ]
+}
+
+@test "non-interactive mode keeps an existing SSH key" {
+  # An unattended re-run must not replace a key that is already there, and
+  # must not generate a passphrase for a key it never creates.
+  mkdir -p "${HOME}/.ssh"
+  touch "${HOME}/.ssh/id_ed25519_test"
+
+  _run_non_interactive "export DEVBASE_SSH_KEY_NAME='id_ed25519_test'"
+
+  assert_success
+  assert_output --partial "ACTION=keep"
+  assert_output --partial "LEN=0"
 }
 
 @test "collect_user_configuration propagates a rejected passphrase" {

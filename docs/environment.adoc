@@ -89,6 +89,10 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | `DevBase User`
 | Git user.name (e.g., "Jane Doe")
 
+| `DEVBASE_SSH_KEY_ACTION`
+| `keep` if a key exists, else `new`
+| Set to `new` to replace an existing key; the old one is renamed with a `.backup.<timestamp>` suffix
+
 | `SSH_KEY_PASSPHRASE`
 | _(auto-generated)_
 | SSH key passphrase (displayed at end of installation if auto-generated)
@@ -130,7 +134,7 @@ For CI/automation, set these with `./setup.sh --non-interactive`:
 | Timeout for remote version lookups in mise
 |===
 
-NOTE: In non-interactive mode, if `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.
+NOTE: In non-interactive mode an SSH key is only generated when none exists, so re-running keeps the key you already have. If a key is generated and `SSH_KEY_PASSPHRASE` is not set, a secure random passphrase will be auto-generated. The passphrase will be displayed at the end of installation with instructions on how to change it. Make sure to save this passphrase before the installation summary disappears.
 
 === Example: CI/Automation
 

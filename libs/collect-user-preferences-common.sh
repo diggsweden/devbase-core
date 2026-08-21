@@ -26,6 +26,19 @@ setup_non_interactive_mode() {
   printf "\n%bRunning in non-interactive mode with defaults...%b\n" \
     "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
 
+  apply_preference_defaults
+
+  # With nobody to answer the prompt, keep a key that is already there rather
+  # than replacing it — the same answer both interactive front-ends default to.
+  # Set DEVBASE_SSH_KEY_ACTION=new to rotate it deliberately.
+  if [[ -z "$DEVBASE_SSH_KEY_ACTION" ]]; then
+    if [[ -f "${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" ]]; then
+      DEVBASE_SSH_KEY_ACTION="keep"
+    else
+      DEVBASE_SSH_KEY_ACTION="new"
+    fi
+  fi
+
   # Determine passphrase: use the user-supplied value or generate one.
   # Track whether we generated it so we know to write it to disk later —
   # an explicit boolean flag makes this intent clear and is robust against
@@ -33,8 +46,10 @@ setup_non_interactive_mode() {
   # decisions (the previous double-check of the same variable was fragile).
   local passphrase_was_generated=false
   if [[ -z "${SSH_KEY_PASSPHRASE:-}" ]]; then
-    DEVBASE_SSH_PASSPHRASE="$(generate_ssh_passphrase)"
-    passphrase_was_generated=true
+    if [[ "$DEVBASE_SSH_KEY_ACTION" == "new" ]]; then
+      DEVBASE_SSH_PASSPHRASE="$(generate_ssh_passphrase)"
+      passphrase_was_generated=true
+    fi
   else
     # Both interactive front-ends reject a passphrase under 12 characters
     # (NIST SP 800-63B), and --non-interactive must not be a way around it.
@@ -67,9 +82,6 @@ setup_non_interactive_mode() {
   export DEVBASE_GIT_AUTHOR="${GIT_NAME}"
   # shellcheck disable=SC2153
   export DEVBASE_GIT_EMAIL="${GIT_EMAIL}"
-
-  [[ -z "$DEVBASE_SSH_KEY_ACTION" ]] && DEVBASE_SSH_KEY_ACTION="new"
-  apply_preference_defaults
 
   export DEVBASE_THEME DEVBASE_FONT DEVBASE_VSCODE_INSTALL DEVBASE_VSCODE_EXTENSIONS
   export DEVBASE_INSTALL_DEVTOOLS DEVBASE_INSTALL_LAZYVIM DEVBASE_INSTALL_INTELLIJ DEVBASE_INSTALL_JMC
@@ -109,7 +121,9 @@ load_saved_preferences() {
   DEVBASE_FONT=$(_yq_read '.font' "$prefs_file")
   DEVBASE_GIT_AUTHOR=$(_yq_read '.git.author' "$prefs_file")
   DEVBASE_GIT_EMAIL=$(_yq_read '.git.email' "$prefs_file")
-  DEVBASE_SSH_KEY_NAME=$(_yq_read '.ssh.key_name' "$prefs_file")
+  local saved_ssh_key_name
+  saved_ssh_key_name=$(_yq_read '.ssh.key_name' "$prefs_file")
+  [[ -n "$saved_ssh_key_name" ]] && DEVBASE_SSH_KEY_NAME="$saved_ssh_key_name"
   EDITOR=$(_yq_read '.editor.default' "$prefs_file")
   VISUAL="$EDITOR"
 
