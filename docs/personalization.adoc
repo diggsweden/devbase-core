@@ -18,7 +18,7 @@ DevBase provides these default aliases:
 
 - `docker` → `podman` (container management)
 - `vim`, `vi` → `nvim` (Neovim)
-- `ls` → `eza --icons` (better ls)
+- `ls` → `eza --icons=auto` (better ls)
 - `top` → `btop` (better top)
 - `grep` → `grep --color=auto` (colored output)
 

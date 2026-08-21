@@ -670,7 +670,7 @@ DevBase pre-configures git to use delta automatically for all diff and log comma
 Replacement for `ls` that adds colors, icons, and git status information to directory listings.
 Shows file types, permissions, and modification status at a glance with visual indicators.
 Makes browsing directories in the terminal more informative than standard ls output.
-DevBase aliases `ls` to `eza --icons` for enhanced default listings.
+DevBase aliases `ls` to `eza --icons=auto` for enhanced default listings.
 
 #### Eza Key Commands
 
@@ -688,7 +688,7 @@ DevBase aliases `ls` to `eza --icons` for enhanced default listings.
 
 **Alias:**
 
-- `ls` → `eza --icons`
+- `ls` → `eza --icons=auto`
 
 **Learn more**:
 

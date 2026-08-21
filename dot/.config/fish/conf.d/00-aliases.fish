@@ -29,7 +29,8 @@ else if command -q vim
 end
 
 # Better ls with eza
-alias ls="eza --icons"
+# Value must be attached: a bare --icons swallows the next argument (eza 0.23.5+)
+alias ls="eza --icons=auto"
 
 # Container tools
 alias docker="podman"
