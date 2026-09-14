@@ -12,13 +12,27 @@
   "packageRules": [
     {
       "description": "Skip rumdl v0.1.72 — aqua attestation verification fails (upstream workflow-ref pattern mismatch)",
-      "matchDatasources": ["github-releases"],
-      "matchPackageNames": ["rvben/rumdl"],
+      "matchDatasources": [
+        "github-releases"
+      ],
+      "matchPackageNames": [
+        "rvben/rumdl"
+      ],
       "allowedVersions": "!=v0.1.72",
       "minimumReleaseAge": "7 days"
     }
   ],
   "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/config\\/versions\\.env$/"
+      ],
+      "description": "Update shared tool versions",
+      "matchStrings": [
+        "(?m)^\\s*[A-Z0-9_]+_VERSION=\\\"(?<currentValue>[^\\\"]+)\\\"\\s+#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*$"
+      ]
+    },
     {
       "customType": "regex",
       "managerFilePatterns": [
