@@ -41,6 +41,7 @@ declare -f require_env &>/dev/null || source "${_parse_packages_libs}/validation
 declare -f show_progress &>/dev/null || source "${_parse_packages_libs}/ui/ui-helpers.sh"
 declare -f get_default_packs &>/dev/null || source "${_parse_packages_libs}/defaults.sh"
 declare -f is_wsl &>/dev/null || source "${_parse_packages_libs}/distro.sh"
+source "${_parse_packages_libs}/../config/versions.env"
 unset _parse_packages_libs
 
 # Global: Path to packages.yaml (set by caller or default)
@@ -188,6 +189,10 @@ _process_custom() {
     [[ -z "$tool" ]] && continue
     local version installer tags
     version=$(echo "$yaml" | yq -r "${path}[\"$tool\"].version // \"\"")
+    if [[ -z "$version" ]]; then
+      local version_variable="${tool^^}_VERSION"
+      version="${!version_variable:-}"
+    fi
     installer=$(echo "$yaml" | yq -r "${path}[\"$tool\"].installer // \"\"")
     tags=$(echo "$yaml" | yq -r "${path}[\"$tool\"].tags // \"\"")
     _should_skip "$tags" && continue

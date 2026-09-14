@@ -1315,7 +1315,7 @@ install_gum() {
   fi
 
   # Get version from packages.yaml or use default
-  local version="${TOOL_VERSIONS[gum]:-0.17.0}"
+  local version="${TOOL_VERSIONS[gum]:-${GUM_VERSION}}"
 
   show_progress info "Installing gum ${version}..."
 

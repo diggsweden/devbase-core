@@ -276,6 +276,7 @@ load_devbase_libraries() {
   fi
 
   source "${DEVBASE_LIBS}/constants.sh"
+  source "${DEVBASE_ROOT}/config/versions.env"
   source "${DEVBASE_LIBS}/define-colors.sh"
   source "${DEVBASE_LIBS}/utils.sh"
   source "${DEVBASE_LIBS}/defaults.sh"
