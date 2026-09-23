@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-26.04
     name: apt package names resolve on Ubuntu 26.04
     container:
-      image: ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
+      image: ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install probe dependencies
@@ -35,7 +35,7 @@ jobs:
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends bash curl ca-certificates
           curl -fsSL -o /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
+            https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64
           chmod +x /usr/local/bin/yq
       - name: Every apt/common package name has an install candidate
         shell: bash
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-26.04
     name: GNU coreutils flags behave as expected
     container:
-      image: ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
+      image: ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78
     steps:
       - name: Ensure bash is present
         run: |
