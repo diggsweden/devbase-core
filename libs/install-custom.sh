@@ -1276,7 +1276,7 @@ install_intellij_idea() {
 }
 
 # Brief: Get SHA256 checksum for gum package from checksums.txt
-# Params: $1 - version (e.g. "0.17.0"), $2 - package name (e.g. "gum_0.17.0_amd64.deb")
+# Params: $1 - version (e.g. "2.0.0"), $2 - package name (e.g. "gum_2.0.0_amd64.deb")
 # Returns: 0 with checksum on stdout if found, 1 if not found
 # Side-effects: Makes curl request to GitHub releases
 get_gum_checksum() {
@@ -1315,7 +1315,7 @@ install_gum() {
   fi
 
   # Get version from packages.yaml or use default
-  local version="${TOOL_VERSIONS[gum]:-0.17.0}"
+  local version="${TOOL_VERSIONS[gum]:-2.0.0}"
 
   show_progress info "Installing gum ${version}..."
 
@@ -1337,7 +1337,7 @@ install_gum() {
   if [[ "$pkg_format" == "deb" ]]; then
     package_name="gum_${version}_${arch}.deb"
   else
-    package_name="gum-${version}.${rpm_arch}.rpm"
+    package_name="gum-${version}-1.${rpm_arch}.rpm"
   fi
   gum_url="${DEVBASE_URL_GUM_RELEASES}/v${version}/${package_name}"
   gum_pkg="${_DEVBASE_TEMP}/${package_name}"
