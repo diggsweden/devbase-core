@@ -59,7 +59,7 @@
       "managerFilePatterns": [
         "/dot/\\.config/fish/functions/devbase-citrix\\.fish$/"
       ],
-      "description": "Update Citrix Workspace App version (manual update required)",
+      "description": "Update Citrix Workspace App for Linux version",
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=custom\\.citrix\\s+depName=(?<depName>\\S+)\\nset\\s+-g\\s+__citrix_version\\s+\"(?<currentValue>[0-9.]+)\""
       ],
@@ -70,9 +70,9 @@
   "customDatasources": {
     "citrix": {
       "defaultRegistryUrlTemplate": "https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html",
-      "format": "html",
+      "format": "plain",
       "transformTemplates": [
-        "{\"releases\": $map(releases[$contains(version, /icaclient(?:-gcc-8)?_[0-9.]+_amd64\\.deb/)], function($r) { {\"version\": $match($r.version, /icaclient(?:-gcc-8)?_([0-9.]+)_amd64\\.deb/).groups[0]} })}"
+        "{\"releases\": [$map($distinct($match($join(releases.version, \"\\n\"), /icaclient(?:-gcc-8)?_([0-9.]+)_amd64\\.deb/).groups[0]), function($v) { {\"version\": $v} })]}"
       ]
     },
     "openshift-oc": {

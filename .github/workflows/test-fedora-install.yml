@@ -12,9 +12,9 @@ concurrency:
 jobs:
   test-fedora-install:
     runs-on: ubuntu-latest
-    name: Test on Fedora 43
+    name: Test on Fedora 46
     container:
-      image: fedora:45@sha256:0c1f63ed8fb818fad16cf6ae091598c410a21d2e1a9adf183beb93189299bfba # renovate: datasource=docker depName=fedora
+      image: fedora:46@sha256:a9bab18d01cf2c2cf62f3e79c72623405bce14ac062995cc6651a3073c802e41 # renovate: datasource=docker depName=fedora
       options: --user root
     steps:
       - name: Install prerequisites
@@ -33,17 +33,17 @@ jobs:
           path: |
             /home/testuser/.local/share/mise/installs
             /home/testuser/.local/share/mise/downloads
-          key: mise-fedora-43-${{ hashFiles('dot/.config/mise/config.toml') }}
+          key: mise-fedora-46-${{ hashFiles('dot/.config/mise/config.toml') }}
           restore-keys: |
-            mise-fedora-43-
+            mise-fedora-46-
 
       - name: Cache binary downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /home/testuser/.cache/devbase/rpms
-          key: binary-downloads-fedora-43-${{ hashFiles('dot/.config/devbase/packages.yaml') }}
+          key: binary-downloads-fedora-46-${{ hashFiles('dot/.config/devbase/packages.yaml') }}
           restore-keys: |
-            binary-downloads-fedora-43-
+            binary-downloads-fedora-46-
 
       - name: Prepare directories
         run: |
