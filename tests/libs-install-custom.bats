@@ -457,11 +457,50 @@ _capture_download_args() {
 
 @test "install_gum passes the fetched checksum to the download" {
   _capture_download_args \
-    "TOOL_VERSIONS[gum]='0.17.0'
+    "TOOL_VERSIONS[gum]='2.0.0'
      _get_custom_pkg_format() { echo deb; }
      get_deb_arch() { echo amd64; }
      get_gum_checksum() { echo 'deadbeefgum'; }" \
     "install_gum"
 
   assert_output --partial "deadbeefgum"
+  assert_output --partial "/v2.0.0/gum_2.0.0_amd64.deb"
+}
+
+@test "install_gum requests the published v2 rpm asset name" {
+  _capture_download_args \
+    "TOOL_VERSIONS[gum]='2.0.0'
+     _get_custom_pkg_format() { echo rpm; }
+     get_deb_arch() { echo amd64; }
+     get_rpm_arch() { echo x86_64; }
+     get_gum_checksum() { echo 'deadbeefgum'; }" \
+    "install_gum"
+
+  assert_output --partial "/v2.0.0/gum-2.0.0-1.x86_64.rpm"
+  assert_output --partial "deadbeefgum"
+}
+
+_capture_bootstrap_gum_url() {
+  _capture_download_args \
+    "source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-ui.sh'
+     NON_INTERACTIVE=false
+     _DEVBASE_ENV='${1}'
+     get_deb_arch() { echo '${2}'; }
+     get_rpm_arch() { echo '${3}'; }
+     curl() { printf '%s\\n' \"\$*\" >'${TEST_DIR}/gum-url'; return 1; }" \
+    "bootstrap_gum"
+
+  assert_failure
+  run cat "${TEST_DIR}/gum-url"
+  assert_success
+}
+
+@test "bootstrap_gum requests the published v2 deb asset name" {
+  _capture_bootstrap_gum_url ubuntu amd64 x86_64
+  assert_output --partial "/v2.0.0/gum_2.0.0_amd64.deb"
+}
+
+@test "bootstrap_gum requests the published v2 arm64 rpm asset name" {
+  _capture_bootstrap_gum_url fedora arm64 aarch64
+  assert_output --partial "/v2.0.0/gum-2.0.0-1.aarch64.rpm"
 }
