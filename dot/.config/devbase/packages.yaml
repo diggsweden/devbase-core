@@ -32,6 +32,7 @@ core:
     podman: {}
     skopeo: {}
     # Security
+    bubblewrap: {}
     clamav: {}
     lynis: {}
     # Development utilities
