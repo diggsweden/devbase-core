@@ -4,6 +4,10 @@
 
 .vscode
 
+# Tool versions are pinned in .mise.toml. A committed mise.lock makes
+# mise-action use --locked, which requires complete platform metadata.
+mise.lock
+
 # BATS test helper libraries (downloaded by setup-bats-libs.sh)
 tests/libs/bats-assert/
 tests/libs/bats-file/
