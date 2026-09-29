@@ -380,7 +380,7 @@ install_mise() {
   # just: task runner used by devbase
   # Skip if already on PATH (idempotent — avoids re-running mise install against
   # the full config.toml on a second call, which triggers spurious warnings for
-  # tools whose backends aren't available yet e.g. npm:tree-sitter-cli).
+  # tools whose backend runtimes aren't available yet).
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
     local yq_tool="aqua:mikefarah/yq@v4.53.3"
     show_progress info "Bootstrapping essential tools (yq)..."
@@ -594,7 +594,7 @@ install_mise_tools() {
 
   # Install core runtimes FIRST (required by npm/cargo/gem backends)
   # This MUST happen before any `mise list` commands, because mise tries to resolve
-  # all tools in config.toml (including npm:tree-sitter-cli) which requires node
+  # all tools in config.toml, including runtime-dependent tools in custom configs.
   local -a core_runtimes=()
   while IFS= read -r runtime; do
     [[ -n "$runtime" ]] && core_runtimes+=("$runtime")
