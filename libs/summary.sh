@@ -230,7 +230,7 @@ _summary_mise_activation() {
 MISE ACTIVATION
 ===============
   • Mise Version: $(mise --version 2>/dev/null | cut -d' ' -f2 || echo "not found")
-  • Config File: $([ -f ~/.config/mise/config.toml ] && echo "exists" || echo "missing")
+  • Config File: $([ -f "${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml" ] && echo "exists" || echo "missing")
   • Activation: Run 'eval "\$(mise activate bash)"' or restart shell
 EOF
 }

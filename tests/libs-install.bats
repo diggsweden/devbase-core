@@ -589,3 +589,51 @@ _run_setup_sudo() {
   run grep -c '^rm' "${TEST_DIR}/sudo.log"
   assert_output "1"
 }
+
+@test "bootstrap_for_configuration independently recovers yq without writing personal mise config" {
+  export XDG_BIN_HOME="${HOME}/.local/bin"
+  export XDG_CACHE_HOME="${HOME}/.cache"
+  export XDG_STATE_HOME="${HOME}/.local/state"
+  export MISE_CONFIG_DIR="${XDG_CONFIG_HOME}/mise"
+  export MISE_DATA_DIR="${XDG_DATA_HOME}/mise"
+  export MISE_CACHE_DIR="${XDG_CACHE_HOME}/mise"
+  export MISE_STATE_DIR="${XDG_STATE_HOME}/mise"
+  unset MISE_GLOBAL_CONFIG_FILE _DEVBASE_BOOTSTRAP_BINS
+  mkdir -p "$XDG_BIN_HOME" "$MISE_CONFIG_DIR" "${TEST_DIR}/recovered"
+  printf '[tools]\nyq = "v4.1.0"\n' >"${MISE_CONFIG_DIR}/config.toml"
+  cp "${MISE_CONFIG_DIR}/config.toml" "${TEST_DIR}/personal-before"
+  cat >"${XDG_BIN_HOME}/mise" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${TEST_DIR}/mise-calls"
+case "$*" in
+  '--no-config install aqua:mikefarah/yq@v4.54.1 --yes')
+    printf '#!/bin/sh\necho yq v4.54.1\n' >"${TEST_DIR}/recovered/yq"
+    chmod +x "${TEST_DIR}/recovered/yq" ;;
+  '--no-config which yq --tool aqua:mikefarah/yq@v4.54.1')
+    printf '%s\n' "${TEST_DIR}/recovered/yq" ;;
+  'env -s bash') printf "export PATH='%s:/usr/bin:/bin'\n" "$XDG_BIN_HOME" ;;
+  trust\ *) exit 0 ;;
+  *) exit 1 ;;
+esac
+SCRIPT
+  chmod +x "${XDG_BIN_HOME}/mise"
+  export PATH="${XDG_BIN_HOME}:$PATH"
+  source "${DEVBASE_LIBS}/install-mise.sh"
+  source <(sed -n '/^bootstrap_for_configuration()/,/^}/p' "${DEVBASE_LIBS}/install.sh")
+  install_mise() { :; }
+  show_progress() { :; }
+  die() { printf '%s\n' "$*" >&2; exit 1; }
+  command() {
+    [[ "$*" == '-v yq' && ! -x "${TEST_DIR}/recovered/yq" ]] && return 1
+    builtin command "$@"
+  }
+
+  bootstrap_for_configuration
+
+  assert_equal "$(command -v yq)" "${TEST_DIR}/recovered/yq"
+  cmp "${TEST_DIR}/personal-before" "${MISE_CONFIG_DIR}/config.toml"
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line '--no-config install aqua:mikefarah/yq@v4.54.1 --yes'
+  assert_line '--no-config which yq --tool aqua:mikefarah/yq@v4.54.1'
+  refute_output --partial 'use -g'
+}

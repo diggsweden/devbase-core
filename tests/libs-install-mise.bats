@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2155,SC2218
+# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2123,SC2153,SC2155,SC2218
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -15,6 +15,13 @@ load 'test_helper'
 setup() {
   common_setup_isolated
   export XDG_BIN_HOME="${HOME}/.local/bin"
+  export XDG_CACHE_HOME="${HOME}/.cache"
+  export XDG_STATE_HOME="${HOME}/.local/state"
+  export MISE_DATA_DIR="${XDG_DATA_HOME}/mise"
+  export MISE_CACHE_DIR="${XDG_CACHE_HOME}/mise"
+  export MISE_STATE_DIR="${XDG_STATE_HOME}/mise"
+  export MISE_CONFIG_DIR="${XDG_CONFIG_HOME}/mise"
+  unset MISE_GLOBAL_CONFIG_FILE _DEVBASE_BOOTSTRAP_BINS
   mkdir -p "${XDG_BIN_HOME}"
 }
 
@@ -329,15 +336,15 @@ SCRIPT
   touch "${TEST_DIR}/installs/yq/v4.52.4/yq"
   cat > "${TEST_DIR}/bin/mise" << SCRIPT
 #!/usr/bin/env bash
-[[ "\$1" == "which" ]] && printf '%s\n' "${TEST_DIR}/installs/yq/v4.52.4/yq"
+[[ "\$*" == "--no-config which yq --tool aqua:mikefarah/yq@v4.52.4" ]] && printf '%s\n' "${TEST_DIR}/installs/yq/v4.52.4/yq"
 SCRIPT
   chmod +x "${TEST_DIR}/bin/mise"
 
   run bash -c "
     source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
-    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise' aqua:mikefarah/yq@v4.52.4
     # A second call must not stack the same directory twice.
-    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise' aqua:mikefarah/yq@v4.52.4
     printf '%s' \"\$_DEVBASE_BOOTSTRAP_BINS\"
   "
 
@@ -355,7 +362,7 @@ SCRIPT
 
   run bash -c "
     source '${DEVBASE_ROOT}/libs/install-mise.sh' >/dev/null 2>&1
-    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise'
+    _mise_remember_bootstrap_bin yq '${TEST_DIR}/bin/mise' aqua:mikefarah/yq@v4.52.4
     printf '[%s]' \"\${_DEVBASE_BOOTSTRAP_BINS:-}\"
   "
 
@@ -728,4 +735,391 @@ SCRIPT
   run --separate-stderr bash -c "$(_mise_checksum_harness "$digest")"
 
   assert_success
+}
+
+# Real parser/generator and file operations; external installation is stubbed.
+_setup_managed_mise_install() {
+  source_core_libs
+  source "${DEVBASE_LIBS}/utils.sh"
+  export DEVBASE_DOT="${TEST_DIR}/dot"
+  export _DEVBASE_TEMP="${TEST_DIR}/tmp"
+  export DEVBASE_SELECTED_PACKS="node"
+  mkdir -p "${DEVBASE_DOT}/.config/devbase" "$_DEVBASE_TEMP" "${XDG_CONFIG_HOME}/mise"
+  cat >"${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  mise:
+    jq: {version: "1.7"}
+packs:
+  node:
+    mise:
+      node: {version: "24.1.0"}
+  python:
+    mise:
+      python: {version: "3.13.0"}
+EOF
+  cat >"${XDG_CONFIG_HOME}/mise/config.toml" <<'EOF'
+# Existing global config must be backed up before regeneration.
+[tools]
+node = "22.0.0"
+[settings]
+jobs = 2
+[env]
+PERSONAL = "keep"
+[tasks.mine]
+run = "echo personal"
+EOF
+  cp "${XDG_CONFIG_HOME}/mise/config.toml" "${TEST_DIR}/personal-before"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  source "${DEVBASE_LIBS}/install-mise.sh"
+  show_progress() { printf '%s: %s\n' "$1" "$2"; }
+  add_install_warning() { printf 'warning: %s\n' "$*"; }
+  die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+  # Do not depend on (or purge) a host mise package.
+  command() {
+    [[ "$*" == '-v /usr/bin/mise' ]] && return 1
+    builtin command "$@"
+  }
+  dpkg() { return 1; }
+  just() { :; }
+  cat >"${XDG_BIN_HOME}/mise" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${TEST_DIR}/mise-calls"
+case "$*" in
+  'env -s bash') printf "export PATH='%s'\n" "$PATH" ;;
+  trust\ *) exit 0 ;;
+  *) exit 1 ;;
+esac
+SCRIPT
+  chmod +x "${XDG_BIN_HOME}/mise"
+}
+
+@test "install_mise regenerates the global config and backs up its previous contents" {
+  _setup_managed_mise_install
+
+  run install_mise
+
+  assert_success
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  assert_dir_not_exists "${XDG_CONFIG_HOME}/mise/conf.d"
+  run cat "${XDG_CONFIG_HOME}/mise/config.toml"
+  assert_output --partial '# Managed by DevBase'
+  assert_output --partial 'node = "24.1.0"'
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line "trust ${XDG_CONFIG_HOME}/mise/config.toml"
+  refute_output --partial 'trust --all'
+  refute_output --partial 'use -g'
+}
+
+@test "install_mise regenerates after pack selection and skips backups for unchanged config" {
+  _setup_managed_mise_install
+  rm "${XDG_CONFIG_HOME}/mise/config.toml"
+  install_mise
+  install_mise
+  assert_file_not_exists "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  export DEVBASE_SELECTED_PACKS="python"
+
+  install_mise
+
+  run cat "${XDG_CONFIG_HOME}/mise/config.toml"
+  assert_output --partial 'python = "3.13.0"'
+  refute_output --partial 'node ='
+  run cat "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  assert_output --partial 'node = "24.1.0"'
+}
+
+@test "install_mise preserves the global config when generation fails" {
+  _setup_managed_mise_install
+  printf 'core: [broken\n' >"$PACKAGES_YAML"
+
+  run install_mise
+
+  assert_failure
+  assert_output --partial 'Failed to generate mise config'
+  assert_file_not_exists "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+}
+
+@test "install_mise rejects invalid generated TOML before touching active config" {
+  _setup_managed_mise_install
+  cat >"$PACKAGES_YAML" <<'EOF'
+core:
+  mise: {}
+packs:
+  node:
+    mise:
+      node: {version: '24.1.0"broken'}
+EOF
+
+  run install_mise
+
+  assert_failure
+  assert_output --partial 'Generated mise config is not valid TOML'
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+  assert_file_not_exists "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  run find "${XDG_CONFIG_HOME}/mise" -name 'config.toml.*'
+  assert_success
+  assert_output ''
+
+  rm "${XDG_CONFIG_HOME}/mise/config.toml"
+  run install_mise
+  assert_failure
+  assert_file_not_exists "${XDG_CONFIG_HOME}/mise/config.toml"
+}
+
+@test "install_mise refuses a symlink global config without changing its target" {
+  _setup_managed_mise_install
+  mv "${XDG_CONFIG_HOME}/mise/config.toml" "${TEST_DIR}/linked-config.toml"
+  ln -s "${TEST_DIR}/linked-config.toml" "${XDG_CONFIG_HOME}/mise/config.toml"
+
+  run install_mise
+
+  assert_failure
+  assert_output --partial 'Refusing to overwrite managed mise config'
+  assert_symlink_to "${TEST_DIR}/linked-config.toml" "${XDG_CONFIG_HOME}/mise/config.toml"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+}
+
+@test "install_mise preserves a dangling global config symlink" {
+  _setup_managed_mise_install
+  rm "${XDG_CONFIG_HOME}/mise/config.toml"
+  ln -s missing.toml "${XDG_CONFIG_HOME}/mise/config.toml"
+
+  run install_mise
+
+  assert_failure
+  assert_equal "$(readlink "${XDG_CONFIG_HOME}/mise/config.toml")" missing.toml
+  assert_file_not_exists "${XDG_CONFIG_HOME}/mise/missing.toml"
+}
+
+@test "install_mise keeps defaults when their backup fails" {
+  _setup_managed_mise_install
+  cp() { return 1; }
+
+  run install_mise
+
+  assert_failure
+  assert_output --partial 'Failed to back up mise config'
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+}
+
+@test "install_mise keeps active defaults and their backup when publication fails" {
+  _setup_managed_mise_install
+  mv() { return 1; }
+
+  run install_mise
+
+  assert_failure
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+}
+
+@test "install_mise backs up a previous backup symlink without writing through it" {
+  _setup_managed_mise_install
+  local fragment="${XDG_CONFIG_HOME}/mise/config.toml"
+  printf '# old defaults\n' >"$fragment"
+  printf 'personal\n' >"${TEST_DIR}/linked-backup"
+  ln -s "${TEST_DIR}/linked-backup" "${fragment}-backup"
+
+  run install_mise
+
+  assert_success
+  assert_equal "$(cat "${TEST_DIR}/linked-backup")" personal
+  assert_equal "$(cat "${fragment}-backup")" '# old defaults'
+  assert_symlink_to "${TEST_DIR}/linked-backup" "${fragment}-backup.~1~"
+}
+
+@test "install_mise warns about MISE_GLOBAL_CONFIG_FILE without writing it" {
+  _setup_managed_mise_install
+  export MISE_GLOBAL_CONFIG_FILE="${TEST_DIR}/alternate.toml"
+  cp "${TEST_DIR}/personal-before" "$MISE_GLOBAL_CONFIG_FILE"
+
+  run install_mise
+
+  assert_success
+  assert_output --partial 'MISE_GLOBAL_CONFIG_FILE is set'
+  cmp "${TEST_DIR}/personal-before" "$MISE_GLOBAL_CONFIG_FILE"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+}
+
+_setup_bootstrap_mise_install() {
+  _setup_managed_mise_install
+  export TEST_YQ_BINARY
+  TEST_YQ_BINARY=$(builtin command -v yq)
+  unset -f just
+  # These directories deliberately differ from any effective personal pin.
+  mkdir -p "${TEST_DIR}/bootstrap-yq" "${TEST_DIR}/bootstrap-just"
+  cat >"${XDG_BIN_HOME}/mise" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${TEST_DIR}/mise-calls"
+case "$*" in
+  '--no-config install aqua:mikefarah/yq@v4.54.1 --yes')
+    ln -sf "$TEST_YQ_BINARY" "${TEST_DIR}/bootstrap-yq/yq" ;;
+  '--no-config install aqua:casey/just@1.58.0 --yes')
+    printf '#!/bin/sh\nexit 0\n' >"${TEST_DIR}/bootstrap-just/just"
+    chmod +x "${TEST_DIR}/bootstrap-just/just" ;;
+  '--no-config which yq --tool aqua:mikefarah/yq@v4.54.1')
+    printf '%s\n' "${TEST_DIR}/bootstrap-yq/yq" ;;
+  '--no-config which just --tool aqua:casey/just@1.58.0')
+    printf '%s\n' "${TEST_DIR}/bootstrap-just/just" ;;
+  'env -s bash') printf "export PATH='%s:/usr/bin:/bin'\n" "$XDG_BIN_HOME" ;;
+  trust\ *) exit 0 ;;
+  *) exit 1 ;;
+esac
+SCRIPT
+  # shellcheck disable=SC2329 # Called indirectly by install_mise.
+  command() {
+    [[ "$*" == '-v /usr/bin/mise' ]] && return 1
+    [[ "$*" == '-v yq' && ! -x "${TEST_DIR}/bootstrap-yq/yq" ]] && return 1
+    [[ "$*" == '-v just' && ! -x "${TEST_DIR}/bootstrap-just/just" ]] && return 1
+    builtin command "$@"
+  }
+}
+
+@test "install_mise bootstraps yq and just using explicit version specs" {
+  _setup_bootstrap_mise_install
+
+  install_mise
+
+  assert_equal "$(command -v yq)" "${TEST_DIR}/bootstrap-yq/yq"
+  assert_equal "$(command -v just)" "${TEST_DIR}/bootstrap-just/just"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line '--no-config install aqua:mikefarah/yq@v4.54.1 --yes'
+  assert_line '--no-config install aqua:casey/just@1.58.0 --yes'
+  assert_line '--no-config which yq --tool aqua:mikefarah/yq@v4.54.1'
+  assert_line '--no-config which just --tool aqua:casey/just@1.58.0'
+  refute_output --partial 'use -g'
+}
+
+@test "install_mise bootstraps just even when yq is already available" {
+  _setup_bootstrap_mise_install
+  ln -s "$TEST_YQ_BINARY" "${TEST_DIR}/bootstrap-yq/yq"
+  export PATH="${TEST_DIR}/bootstrap-yq:$PATH"
+
+  install_mise
+
+  assert_equal "$(command -v just)" "${TEST_DIR}/bootstrap-just/just"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line '--no-config install aqua:casey/just@1.58.0 --yes'
+  refute_line '--no-config install aqua:mikefarah/yq@v4.54.1 --yes'
+  refute_output --partial 'use -g'
+}
+
+@test "install_mise recovers a broken yq on PATH using the explicit bootstrap version" {
+  _setup_bootstrap_mise_install
+  printf '#!/bin/sh\nexit 1\n' >"${XDG_BIN_HOME}/yq"
+  chmod +x "${XDG_BIN_HOME}/yq"
+  # shellcheck disable=SC2329 # Called indirectly by install_mise.
+  command() {
+    [[ "$*" == '-v /usr/bin/mise' ]] && return 1
+    builtin command "$@"
+  }
+
+  install_mise
+
+  assert_equal "$(command -v yq)" "${TEST_DIR}/bootstrap-yq/yq"
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml-backup"
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line '--no-config install aqua:mikefarah/yq@v4.54.1 --yes'
+  refute_output --partial 'use -g'
+}
+
+@test "install_mise_tools retries effective runtime selections and warns without activating defaults" {
+  _setup_managed_mise_install
+  get_core_runtimes() { printf 'node\n'; }
+  run_mise_from_home_dir() {
+    printf '%s\n' "$*" >>"${TEST_DIR}/mise-calls"
+    case "$1" in
+      which) return 1 ;;
+      use) printf 'unexpected write' >"${XDG_CONFIG_HOME}/mise/config.toml"; return 1 ;;
+      *) return 0 ;;
+    esac
+  }
+
+  run install_mise_tools
+
+  assert_success
+  assert_output --partial 'Missing critical development tools: node'
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+  run cat "${TEST_DIR}/mise-calls"
+  assert_line 'install node --yes'
+  assert_line 'install --yes'
+  assert_line 'which node'
+  assert_line "trust ${XDG_CONFIG_HOME}/mise/config.toml"
+  refute_output --partial 'use -g'
+  refute_output --partial 'trust --all'
+}
+
+_load_mise_verification() {
+  source <(sed -n '/^check_mise_tools()/,/^}/p' "${DEVBASE_ROOT}/verify/verify-install-check.sh")
+  MISE_CONFIG="${XDG_CONFIG_HOME}/mise/config.toml"
+  GREEN='' RED='' NC='' DIM='' CHECK='+' CROSS='-'
+  print_subheader() { :; }
+  file_exists() { [[ -f "$1" ]]; }
+}
+
+@test "mise verification reports the installed effective version separately from the managed default" {
+  _setup_managed_mise_install
+  install_mise
+  _load_mise_verification
+  # shellcheck disable=SC2329 # Called by the extracted verifier.
+  mise() {
+    [[ "$*" == "--cd $HOME list --current --installed --no-header" ]] || return 1
+    printf 'node 22.0.0\n'
+  }
+
+  run check_mise_tools
+
+  assert_success
+  assert_output --partial 'node (effective: 22.0.0; DevBase default: 24.1.0)'
+  assert_output --partial 'jq (no installed effective version; DevBase default: 1.7)'
+}
+
+@test "mise verification does not count an inactive cached version or an arbitrary PATH command" {
+  _setup_managed_mise_install
+  install_mise
+  _load_mise_verification
+  # shellcheck disable=SC2329 # Called by the extracted verifier.
+  mise() {
+    # A plain list would include the old cached version, which proves nothing
+    # about whether the user's effective selection is installed.
+    [[ "$*" == "--cd $HOME list --current --installed --no-header" ]] && return 0
+    printf 'node 24.1.0\n'
+  }
+  has_command() { return 0; }
+
+  check_mise_tools
+
+  assert_equal "$MISE_INSTALLED_COUNT" 0
+  assert_equal "$MISE_TOTAL_COUNT" 2
+}
+
+@test "native mise resolves an explicit bootstrap spec without changing effective personal selection" {
+  [[ -x "${DEVBASE_TEST_MISE_BIN:-}" ]] || skip 'Set DEVBASE_TEST_MISE_BIN to the pinned mise binary for native validation'
+  _setup_managed_mise_install
+  export MISE_OFFLINE=true
+  export MISE_YES=1
+  # Model two already-installed core runtimes; this test never downloads tools.
+  mkdir -p "${MISE_DATA_DIR}/installs/node/22.0.0/bin" "${MISE_DATA_DIR}/installs/node/24.1.0/bin"
+  printf '#!/bin/sh\necho v22.0.0\n' >"${MISE_DATA_DIR}/installs/node/22.0.0/bin/node"
+  printf '#!/bin/sh\necho v24.1.0\n' >"${MISE_DATA_DIR}/installs/node/24.1.0/bin/node"
+  chmod +x "${MISE_DATA_DIR}/installs/node/22.0.0/bin/node" "${MISE_DATA_DIR}/installs/node/24.1.0/bin/node"
+  "$DEVBASE_TEST_MISE_BIN" --cd "$HOME" trust "${XDG_CONFIG_HOME}/mise/config.toml"
+
+  _mise_remember_bootstrap_bin node "$DEVBASE_TEST_MISE_BIN" node@24.1.0
+
+  assert_equal "$_DEVBASE_BOOTSTRAP_BINS" "${MISE_DATA_DIR}/installs/node/24.1.0/bin"
+  run "$DEVBASE_TEST_MISE_BIN" --cd "$HOME" which node --version
+  assert_success
+  assert_output '22.0.0'
+  cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
+  _load_mise_verification
+  mise() { "$DEVBASE_TEST_MISE_BIN" "$@"; }
+  run check_mise_tools
+  assert_success
+  assert_output --partial 'node (effective: 22.0.0; DevBase default: 22.0.0)'
+  refute_output --partial 'effective: 24.1.0'
 }

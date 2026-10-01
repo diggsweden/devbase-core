@@ -14,7 +14,14 @@ load "${BATS_TEST_DIRNAME}/libs/bats-file/load.bash"
 load "${BATS_TEST_DIRNAME}/test_helper.bash"
 
 setup() {
-  common_setup
+  common_setup_isolated
+  export XDG_CACHE_HOME="${HOME}/.cache"
+  export XDG_STATE_HOME="${HOME}/.local/state"
+  export MISE_CONFIG_DIR="${XDG_CONFIG_HOME}/mise"
+  export MISE_DATA_DIR="${XDG_DATA_HOME}/mise"
+  export MISE_CACHE_DIR="${XDG_CACHE_HOME}/mise"
+  export MISE_STATE_DIR="${XDG_STATE_HOME}/mise"
+  unset MISE_GLOBAL_CONFIG_FILE
   export DEVBASE_DOT="${TEST_DIR}/dot"
   mkdir -p "${DEVBASE_DOT}/.config/devbase"
   
@@ -768,6 +775,116 @@ python"
   grep -q '"aqua:junegunn/fzf"' "$output_file"
   # Simple tools should not be quoted
   grep -q '^jq = "1.7"$' "$output_file"
+}
+
+@test "generate_mise_config adds a managed header and only one tools section from a template" {
+  create_test_packages
+  mkdir -p "${DEVBASE_DOT}/.config/mise"
+  cat >"${DEVBASE_DOT}/.config/mise/config.toml" <<'EOF'
+[settings]
+paranoid = true
+[tools]
+obsolete = "1.0"
+EOF
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  generate_mise_config "${TEST_DIR}/defaults.toml"
+
+  assert_equal "$(grep -c '^\[tools\]$' "${TEST_DIR}/defaults.toml")" 1
+  run cat "${TEST_DIR}/defaults.toml"
+  assert_output --partial '# Managed by DevBase'
+  assert_output --partial 'paranoid = true'
+  assert_output --partial 'jq = "1.7"'
+  refute_output --partial 'obsolete'
+  # An already labelled template must not accumulate headers on regeneration.
+  cp "${TEST_DIR}/defaults.toml" "${DEVBASE_DOT}/.config/mise/config.toml"
+  generate_mise_config "${TEST_DIR}/defaults.toml"
+  assert_equal "$(grep -c '^# Managed by DevBase' "${TEST_DIR}/defaults.toml")" 1
+}
+
+@test "generate_mise_config refuses an output symlink without touching its target" {
+  create_test_packages
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  printf '# personal config\n' >"${TEST_DIR}/personal.toml"
+  ln -s "${TEST_DIR}/personal.toml" "${TEST_DIR}/defaults.toml"
+
+  run generate_mise_config "${TEST_DIR}/defaults.toml"
+
+  assert_failure
+  assert_equal "$(cat "${TEST_DIR}/personal.toml")" '# personal config'
+  assert_symlink_to "${TEST_DIR}/personal.toml" "${TEST_DIR}/defaults.toml"
+}
+
+@test "generate_mise_config rejects malformed custom YAML before writing output" {
+  create_test_packages
+  export PACKAGES_CUSTOM_YAML="${TEST_DIR}/custom.yaml"
+  printf 'core: [broken\n' >"$PACKAGES_CUSTOM_YAML"
+  printf '# previous defaults\n' >"${TEST_DIR}/defaults.toml"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  run generate_mise_config "${TEST_DIR}/defaults.toml"
+
+  assert_failure
+  assert_equal "$(cat "${TEST_DIR}/defaults.toml")" '# previous defaults'
+}
+
+@test "generate_mise_config preserves defaults when tool sections have invalid shapes" {
+  create_test_packages
+  export PACKAGES_CUSTOM_YAML="${TEST_DIR}/custom.yaml"
+  export SELECTED_PACKS="java node"
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  printf '# previous defaults\n' >"${TEST_DIR}/defaults.toml"
+
+  local overlay
+  for overlay in \
+    'core: {mise: invalid}' \
+    'packs: {java: {mise: invalid}}' \
+    'core: {mise: {jq: invalid}}'; do
+    printf '%s\n' "$overlay" >"$PACKAGES_CUSTOM_YAML"
+    _MERGED_YAML=''
+
+    run generate_mise_config "${TEST_DIR}/defaults.toml"
+
+    assert_failure
+    assert_equal "$(cat "${TEST_DIR}/defaults.toml")" '# previous defaults'
+  done
+}
+
+@test "native mise loads the generated global config and honors project selections" {
+  local mise_bin="${DEVBASE_TEST_MISE_BIN:-}"
+  [[ -x "$mise_bin" ]] || skip 'Set DEVBASE_TEST_MISE_BIN to the pinned mise binary for native validation'
+  export MISE_OFFLINE=true
+  export MISE_YES=1
+  create_test_packages
+  # Only use the core node backend: no registry downloads in this test.
+  cat >"${DEVBASE_DOT}/.config/devbase/packages.yaml" <<'EOF'
+core:
+  mise:
+    node: {version: "24.1.0"}
+packs: {}
+EOF
+  mkdir -p "${DEVBASE_DOT}/.config/mise" "${MISE_CONFIG_DIR}" "${HOME}/project"
+  cat >"${DEVBASE_DOT}/.config/mise/config.toml" <<'EOF'
+[settings]
+paranoid = true
+jobs = 6
+EOF
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+  generate_mise_config "${MISE_CONFIG_DIR}/config.toml"
+  "$mise_bin" --cd "$HOME" trust "${MISE_CONFIG_DIR}/config.toml"
+
+  run "$mise_bin" --cd "$HOME" settings get paranoid
+  assert_success
+  assert_output 'true'
+  run "$mise_bin" --cd "$HOME" current node
+  assert_success
+  assert_output '24.1.0'
+
+  printf '[tools]\nnode = "20.0.0"\n' >"${HOME}/project/mise.toml"
+  "$mise_bin" --cd "${HOME}/project" trust "${HOME}/project/mise.toml"
+  run "$mise_bin" --cd "${HOME}/project" current node
+  assert_success
+  assert_output '20.0.0'
 }
 
 # =============================================================================

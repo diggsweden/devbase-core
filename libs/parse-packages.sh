@@ -96,9 +96,9 @@ _get_merged_packages() {
 
   if [[ -n "$PACKAGES_CUSTOM_YAML" && -f "$PACKAGES_CUSTOM_YAML" ]]; then
     _MERGED_YAML=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
-      "$PACKAGES_YAML" "$PACKAGES_CUSTOM_YAML")
+      "$PACKAGES_YAML" "$PACKAGES_CUSTOM_YAML") || return 1
   else
-    _MERGED_YAML=$(cat "$PACKAGES_YAML")
+    _MERGED_YAML=$(cat "$PACKAGES_YAML") || return 1
   fi
   echo "$_MERGED_YAML"
 }
@@ -159,14 +159,18 @@ _process_snap() {
 
 # Brief: Process packages from a yq path for mise type
 # Params: $1=yaml content, $2=yq path
+# Returns: 0 on success, 1 on a YAML query failure
 _process_mise() {
   local yaml="$1" path="$2"
-  echo "$yaml" | yq -r "$path // {} | keys | .[]" 2>/dev/null | while read -r tool; do
+  local tools
+  tools=$(printf '%s\n' "$yaml" | yq -r "$path // {} | keys | .[]") || return 1
+  while IFS= read -r tool; do
     [[ -z "$tool" ]] && continue
     local backend version tags tool_key
-    backend=$(echo "$yaml" | yq -r "${path}[\"$tool\"].backend // \"\"")
-    version=$(echo "$yaml" | yq -r "${path}[\"$tool\"].version // \"\"")
-    tags=$(echo "$yaml" | yq -r "${path}[\"$tool\"].tags // \"\"")
+    # Scalar entries otherwise look like missing fields and silently drop tools.
+    backend=$(printf '%s\n' "$yaml" | yq -er "${path}[\"$tool\"] | select(tag == \"!!map\") | .backend // \"\"") || return 1
+    version=$(printf '%s\n' "$yaml" | yq -r "${path}[\"$tool\"].version // \"\"") || return 1
+    tags=$(printf '%s\n' "$yaml" | yq -r "${path}[\"$tool\"].tags // \"\"") || return 1
 
     _should_skip "$tags" && continue
 
@@ -177,7 +181,7 @@ _process_mise() {
       tool_key="$tool"
     fi
     echo "${tool_key}|${version}"
-  done
+  done <<<"$tools"
 }
 
 # Brief: Process packages from a yq path for custom type
@@ -314,10 +318,11 @@ get_app_store_packages() {
 # Output: Lines of "tool_key|version"
 get_mise_packages() {
   local yaml
-  yaml=$(_get_merged_packages)
-  _process_mise "$yaml" ".core.mise"
+  yaml=$(_get_merged_packages) || return 1
+  # A later successful pack must not hide a failed core or pack query.
+  _process_mise "$yaml" ".core.mise" || return 1
   for pack in $SELECTED_PACKS; do
-    _process_mise "$yaml" ".packs.${pack}.mise"
+    _process_mise "$yaml" ".packs.${pack}.mise" || return 1
   done
 }
 
@@ -428,22 +433,33 @@ get_core_runtimes() {
   printf '%s\n' "${runtimes[@]}"
 }
 
-# Brief: Generate mise config.toml from packages.yaml
+# Brief: Generate the global mise configuration from packages.yaml
 # Params: $1 = output file path
 generate_mise_config() {
   local output_file="$1"
 
+  if [[ -L "$output_file" ]]; then
+    show_progress error "Refusing to generate mise config through symlink: $output_file"
+    return 1
+  fi
+
+  # Resolve packages before writing so a failed parser cannot truncate output.
+  local packages
+  packages=$(get_mise_packages) || return 1
   local template_config="${DEVBASE_DOT}/.config/mise/config.toml"
+  local managed_header="# Managed by DevBase - generated from packages.yaml; do not edit."
+  if ! grep -Fxq "$managed_header" "$template_config" 2>/dev/null; then
+    printf '%s\n\n' "$managed_header" >"$output_file" || return 1
+  else
+    : >"$output_file" || return 1
+  fi
   if [[ -f "$template_config" ]]; then
     awk '
-      { print }
       /^\[tools\]$/ { exit }
-    ' "$template_config" >"$output_file"
+      { print }
+    ' "$template_config" >>"$output_file" || return 1
   else
-    cat >"$output_file" <<'EOF'
-# Auto-generated from packages.yaml - DO NOT EDIT DIRECTLY
-# To modify tools, edit packages.yaml and re-run setup
-
+    cat >>"$output_file" <<'EOF' || return 1
 [settings]
 experimental = true
 legacy_version_file = false
@@ -465,13 +481,13 @@ RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
 EOF
   fi
 
-  printf "\n[tools]\n" >>"$output_file"
-  get_mise_packages | while IFS='|' read -r tool_key version; do
+  printf "\n[tools]\n" >>"$output_file" || return 1
+  while IFS='|' read -r tool_key version; do
     [[ -z "$tool_key" || -z "$version" ]] && continue
     if [[ "$tool_key" == *:* || "$tool_key" == *[* ]]; then
       echo "\"$tool_key\" = \"$version\""
     else
       echo "$tool_key = \"$version\""
     fi
-  done >>"$output_file"
+  done <<<"$packages" >>"$output_file"
 }

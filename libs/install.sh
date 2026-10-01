@@ -784,10 +784,11 @@ bootstrap_for_configuration() {
 
     if [[ -n "$mise_path" ]]; then
       [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && "$mise_path" trust "${DEVBASE_ROOT}/.mise.toml" >/dev/null 2>&1 || true
-      "$mise_path" --no-config use -g "aqua:mikefarah/yq@v4.54.1" --yes >/dev/null 2>&1 || true
+      local yq_tool="aqua:mikefarah/yq@v4.54.1"
+      "$mise_path" --no-config install "$yq_tool" --yes >/dev/null 2>&1 || true
 
       if declare -f _mise_remember_bootstrap_bin &>/dev/null; then
-        _mise_remember_bootstrap_bin yq "$mise_path"
+        _mise_remember_bootstrap_bin yq "$mise_path" "$yq_tool"
       fi
 
       if declare -f _mise_apply_path_from_activate &>/dev/null; then

@@ -139,20 +139,17 @@ _check_mise_server_error() {
 }
 
 # Brief: Keep a bootstrapped tool reachable across later PATH rebuilds
-# Params: $1 - tool name as mise knows it, $2 - path to the mise binary
+# Params: $1 - binary name, $2 - path to mise, $3 - explicit bootstrap tool@version
 # Modifies: _DEVBASE_BOOTSTRAP_BINS (colon-separated directory list)
 # Returns: 0 always - an unresolvable tool simply records nothing
 # Side-effects: None
-# Notes: generate_mise_config repins the tools bootstrapped here to the
-#        packages.yaml version, which is not installed until the full run.
-#        `mise env` then emits no path for them at all, so the binary that is
-#        already on disk becomes unreachable. Recording its directory lets
-#        _mise_apply_path_from_activate put it back.
+# Notes: Resolve the explicit bootstrap version even when the global config
+#        selects a different, not-yet-installed tool.
 _mise_remember_bootstrap_bin() {
-  local tool="$1" mise_path="$2"
+  local tool="$1" mise_path="$2" spec="$3"
 
   local binary
-  binary=$(cd "$HOME" && "$mise_path" which "$tool" 2>/dev/null) || return 0
+  binary=$("$mise_path" --no-config which "$tool" --tool "$spec" 2>/dev/null) || return 0
   [[ -n "$binary" ]] || return 0
 
   local dir
@@ -180,7 +177,7 @@ _mise_remember_bootstrap_bin() {
 #        yet installed during bootstrap (e.g. yq v4.52.5 vs the v4.52.4 we
 #        bootstrap). `mise env` from there would emit a PATH for the pinned
 #        version's (non-existent) install dir, hiding the bootstrap binary
-#        we just installed via `use -g`. From $HOME only the global config
+#        we just installed explicitly. From $HOME only the global config
 #        applies, which is exactly what install_mise needs.
 _mise_apply_path_from_activate() {
   local mise_path="$1"
@@ -316,6 +313,8 @@ install_mise() {
   show_progress info "Installing mise (tool version manager)..."
 
   local mise_path=""
+  # Needed before packages.yaml can be parsed; Renovate groups this with both manifests.
+  local yq_tool="aqua:mikefarah/yq@v4.54.1"
 
   if command -v /usr/bin/mise &>/dev/null || dpkg -l mise 2>/dev/null | grep -q '^ii'; then
     show_progress info "Purging apt-installed mise to use DevBase version..."
@@ -378,19 +377,17 @@ install_mise() {
   # Bootstrap essential tools early - required before full tool installation
   # yq: needed by parse-packages.sh for YAML parsing
   # just: task runner used by devbase
-  # Skip if already on PATH (idempotent — avoids re-running mise install against
-  # the full config.toml on a second call, which triggers spurious warnings for
-  # tools whose backend runtimes aren't available yet).
+  # Skip tools already on PATH; explicit bootstrap installs do not select them
+  # in global config or depend on its other backend runtimes being available.
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
-    local yq_tool="aqua:mikefarah/yq@v4.54.1"
     show_progress info "Bootstrapping essential tools (yq)..."
     local _bootstrap_err
-    if ! _bootstrap_err=$("$mise_path" --no-config use -g "$yq_tool" --yes 2>&1 >/dev/null); then
+    if ! _bootstrap_err=$("$mise_path" --no-config install "$yq_tool" --yes 2>&1 >/dev/null); then
       [[ -n "$_bootstrap_err" ]] && show_progress error "$_bootstrap_err"
       die "Failed to bootstrap yq via mise"
     fi
 
-    _mise_remember_bootstrap_bin yq "$mise_path"
+    _mise_remember_bootstrap_bin yq "$mise_path" "$yq_tool"
 
     # Activate mise so yq is available on PATH
     _mise_apply_path_from_activate "$mise_path" || die "Failed to activate mise PATH"
@@ -398,16 +395,17 @@ install_mise() {
     if ! command -v yq &>/dev/null; then
       die "yq not found after mise bootstrap"
     fi
+  fi
 
-    if ! command -v just &>/dev/null; then
-      local just_tool="aqua:casey/just@1.58.0"
-      show_progress info "Bootstrapping essential tools (just)..."
-      if ! _bootstrap_err=$("$mise_path" --no-config use -g "$just_tool" --yes 2>&1 >/dev/null); then
-        [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
-        add_install_warning "Failed to bootstrap just (continuing)"
-      else
-        _mise_remember_bootstrap_bin just "$mise_path"
-      fi
+  if ! command -v just &>/dev/null; then
+    local just_tool="aqua:casey/just@1.58.0"
+    local _bootstrap_err
+    show_progress info "Bootstrapping essential tools (just)..."
+    if ! _bootstrap_err=$("$mise_path" --no-config install "$just_tool" --yes 2>&1 >/dev/null); then
+      [[ -n "$_bootstrap_err" ]] && show_progress warning "$_bootstrap_err"
+      add_install_warning "Failed to bootstrap just (continuing)"
+    else
+      _mise_remember_bootstrap_bin just "$mise_path" "$just_tool"
     fi
   fi
 
@@ -418,13 +416,12 @@ install_mise() {
   if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
     show_progress warning "yq unavailable before package parser, attempting recovery"
 
-    local yq_recovery_spec="aqua:mikefarah/yq@v4.54.1"
     local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
 
-    "$mise_path" --no-config use -g "$yq_recovery_spec" --yes >/dev/null 2>&1 || true
-    _mise_remember_bootstrap_bin yq "$mise_path"
+    "$mise_path" --no-config install "$yq_tool" --yes >/dev/null 2>&1 || true
+    _mise_remember_bootstrap_bin yq "$mise_path" "$yq_tool"
     _mise_apply_path_from_activate "$mise_path" >/dev/null 2>&1 || true
   fi
 
@@ -441,12 +438,47 @@ install_mise() {
 
   _setup_package_yaml_env || true
 
-  if [[ -f "$PACKAGES_YAML" ]] && [[ -z "${_DEVBASE_MISE_CONFIG_GENERATED:-}" ]]; then
+  if [[ -n "${MISE_GLOBAL_CONFIG_FILE:-}" ]]; then
+    show_progress warning "MISE_GLOBAL_CONFIG_FILE is set; mise may bypass DevBase's generated mise/config.toml"
+  fi
+
+  if [[ -f "$PACKAGES_YAML" ]]; then
     local mise_config="${XDG_CONFIG_HOME}/mise/config.toml"
-    mkdir -p "$(dirname "$mise_config")"
-    generate_mise_config "$mise_config"
-    _DEVBASE_MISE_CONFIG_GENERATED=1
-    show_progress info "Generated mise config from packages.yaml"
+    if [[ -L "$mise_config" || (-e "$mise_config" && ! -f "$mise_config") ]]; then
+      die "Refusing to overwrite managed mise config: $mise_config (symlink or non-regular file)"
+      return 1
+    fi
+    mkdir -p "$(dirname "$mise_config")" || return 1
+    # Stage beside the global config so mise never loads a partial file.
+    # Regenerate after pack selection too; unchanged defaults need no backup.
+    local staged_config
+    staged_config=$(mktemp "${mise_config}.XXXXXX") || return 1
+    if ! generate_mise_config "$staged_config"; then
+      rm -f "$staged_config"
+      die "Failed to generate mise config"
+      return 1
+    fi
+    if ! yq -p=toml -o=json '.' "$staged_config" >/dev/null; then
+      rm -f "$staged_config"
+      die "Generated mise config is not valid TOML"
+      return 1
+    fi
+    if cmp -s "$staged_config" "$mise_config"; then
+      rm -f "$staged_config"
+    else
+      # Keep the old global config active until the replacement is complete.
+      if [[ -f "$mise_config" ]] && ! cp -pT --backup=numbered -- "$mise_config" "${mise_config}-backup"; then
+        rm -f "$staged_config"
+        die "Failed to back up mise config: $mise_config"
+        return 1
+      fi
+      if ! mv -T "$staged_config" "$mise_config"; then
+        rm -f "$staged_config"
+        return 1
+      fi
+      show_progress info "Generated mise config from packages.yaml"
+    fi
+    "$mise_path" trust "$mise_config" 2>/dev/null || true
   fi
 
   # Activate mise for current shell session
@@ -588,9 +620,8 @@ install_mise_tools() {
   show_progress info "Installing development tools..."
   tui_blank_line
 
-  # Trust the config files (both user config and devbase-core root)
+  # Trust only DevBase's generated global config.
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
-  run_mise_from_home_dir trust --all 2>/dev/null || true
 
   # Install core runtimes FIRST (required by npm/cargo/gem backends)
   # This MUST happen before any `mise list` commands, because mise tries to resolve
@@ -644,37 +675,10 @@ install_mise_tools() {
     _install_mise_tools_gum "$full_install_log" mise_server_error
   fi
 
-  # Ensure core runtimes are activated in mise config
-  # This avoids "installed but not activated" warnings for selected packs.
-  local core_runtime_activation_log="${_DEVBASE_TEMP}/mise-core-activate.log"
-  for pack in $DEVBASE_SELECTED_PACKS; do
-    local tool=""
-    case "$pack" in
-    node) tool="node" ;;
-    python) tool="python" ;;
-    go) tool="go" ;;
-    java) tool="java" ;;
-    ruby) tool="ruby" ;;
-    rust) tool="rust" ;;
-    esac
-    [[ -z "$tool" ]] && continue
-
-    local version
-    version=$(get_tool_version "$tool")
-    [[ -z "$version" ]] && continue
-
-    if ! run_mise_from_home_dir which "$tool" &>/dev/null; then
-      show_progress info "Activating ${tool}@${version} in mise config"
-      if ! run_mise_from_home_dir use -g "${tool}@${version}" &>>"$core_runtime_activation_log"; then
-        add_install_warning "Failed to activate ${tool}@${version} in mise config"
-        add_install_warning "See log: $core_runtime_activation_log"
-      fi
-    fi
-  done
-
   # Verify critical tools are present (based on selected packs)
   # Only verify the core runtime for each selected pack
-  # Second pass to catch transient install failures (quiet unless it fails)
+  # Retry the effective config to catch transient failures without rewriting
+  # its version selections during recovery.
   local second_install_log="${_DEVBASE_TEMP}/mise-second-install.log"
   if ! run_mise_from_home_dir install --yes &>"$second_install_log"; then
     add_install_warning "Second mise install pass failed"

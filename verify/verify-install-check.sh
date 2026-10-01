@@ -663,15 +663,19 @@ check_mise_activation() {
   # They will be installed when the user runs them after restarting the shell
 
   if file_exists "$MISE_CONFIG"; then
-    print_check "pass" "Mise configuration file exists"
+    print_check "pass" "Mise configuration exists ($MISE_CONFIG)"
     local has_tools
     has_tools=$(grep -q '^\[tools\]' "$MISE_CONFIG" 2>/dev/null && echo "yes" || echo "no")
     if [[ "$has_tools" == "yes" ]]; then
       print_check "info" "Mise is configured with tools"
     fi
   else
-    print_check "fail" "Mise configuration missing"
+    print_check "fail" "Mise configuration missing ($MISE_CONFIG)"
     mise_ok=false
+  fi
+
+  if [[ -n "${MISE_GLOBAL_CONFIG_FILE:-}" ]]; then
+    print_check "info" "MISE_GLOBAL_CONFIG_FILE is set; mise may bypass the generated global config"
   fi
 
   return 0
@@ -957,22 +961,19 @@ check_apt_packages() {
 check_mise_tools() {
   print_subheader "Mise Tools"
 
-  # Read expected tools from mise config.toml (generated from packages.yaml)
-  local mise_config="$CONFIG_HOME/mise/config.toml"
-  if ! file_exists "$mise_config"; then
-    mise_config="${DEVBASE_ROOT:-$(pwd)}/dot/.config/mise/config.toml"
-  fi
+  # Compare generated global settings with the effective installed versions.
+  # Do not inspect project pins here.
+  local mise_config="$MISE_CONFIG"
 
   local mise_installed=0
   local mise_total=0
 
   if file_exists "$mise_config" && command -v mise &>/dev/null; then
-    # Trust the config file to avoid interactive prompts
-    mise trust "$mise_config" 2>/dev/null || true
-
-    # Get installed mise tools formatted as "tool@version"
-    local installed_tools=$(mise list 2>/dev/null |
-      awk '{print $1 "@" $2}')
+    # Only count installed versions selected by the effective config. Old cached
+    # versions and arbitrary commands on PATH do not verify the selected tool.
+    local installed_tools
+    installed_tools=$(mise --cd "$HOME" list --current --installed --no-header 2>/dev/null |
+      awk '{tool=$1; sub(/^.*:/, "", tool); sub(/^.*\//, "", tool); sub(/\[.*/, "", tool); print tool "@" $2}')
 
     # Collect all tools first for sorting
     declare -A tool_info
@@ -1033,24 +1034,17 @@ check_mise_tools() {
 
     # Display sorted tools and count them
     for tool in "${sorted_tools[@]}"; do
+      [[ -z "$tool" ]] && continue
       local expected_version="${tool_info[$tool]}"
       mise_total=$((mise_total + 1))
 
-      # Check if tool is installed
-      # Handle different tool naming formats:
-      # - Standard: toolname@version
-      # - Aqua/UBI: prefix:org/toolname@version or prefix:toolname/toolname@version
-      if echo "$installed_tools" | grep -qE "^$tool@|^.*:.*$tool.*@|^.*/$tool@"; then
+      local actual_versions
+      actual_versions=$(awk -F@ -v tool="$tool" '$1 == tool {print $2}' <<<"$installed_tools" | paste -sd ', ')
+      if [[ -n "$actual_versions" ]]; then
         mise_installed=$((mise_installed + 1))
-        printf "  %b%s%b %s %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$tool" "${DIM}" "$expected_version" "${NC}"
+        printf "  %b%s%b %s %b(effective: %s; DevBase default: %s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$tool" "${DIM}" "$actual_versions" "$expected_version" "${NC}"
       else
-        # Check if tool exists by command
-        if has_command "$tool"; then
-          mise_installed=$((mise_installed + 1))
-          printf "  %b%s%b %s installed %b(%s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$tool" "${DIM}" "$expected_version" "${NC}"
-        else
-          printf "  %b%s%b %s %b(%s)%b\n" "${RED}" "$CROSS" "${NC}" "$tool" "${DIM}" "$expected_version" "${NC}"
-        fi
+        printf "  %b%s%b %s %b(no installed effective version; DevBase default: %s)%b\n" "${RED}" "$CROSS" "${NC}" "$tool" "${DIM}" "$expected_version" "${NC}"
       fi
     done
 

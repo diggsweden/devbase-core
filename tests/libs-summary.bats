@@ -232,15 +232,21 @@ source_summary() {
   assert_output --partial "Registry: registry.example.com:5000"
 }
 
-@test "_summary_mise_activation outputs mise activation info" {
+@test "_summary_mise_activation reports the generated global config" {
   source_summary
 
   run _summary_mise_activation
   assert_success
   assert_output --partial "MISE ACTIVATION"
   assert_output --partial "Mise Version:"
-  assert_output --partial "Config File:"
+  assert_output --partial "Config File: missing"
   assert_output --partial "Activation:"
+
+  mkdir -p "${XDG_CONFIG_HOME}/mise"
+  touch "${XDG_CONFIG_HOME}/mise/config.toml"
+  run _summary_mise_activation
+  assert_success
+  assert_output --partial "Config File: exists"
 }
 
 @test "_summary_custom_config outputs custom configuration without custom dir" {
