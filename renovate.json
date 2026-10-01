@@ -11,6 +11,11 @@
   },
   "packageRules": [
     {
+      "description": "Keep the Aqua yq tool, package manifest and parser bootstrap pins together",
+      "matchPackageNames": ["mikefarah/yq"],
+      "groupName": "yq"
+    },
+    {
       "description": "Skip rumdl v0.1.72 — aqua attestation verification fails (upstream workflow-ref pattern mismatch)",
       "matchDatasources": ["github-releases"],
       "matchPackageNames": ["rvben/rumdl"],
@@ -19,6 +24,19 @@
     }
   ],
   "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)libs/install-mise\\.sh$/",
+        "/(^|/)libs/install\\.sh$/"
+      ],
+      "description": "Track the Aqua yq bootstrap pins used before YAML parsing is available",
+      "matchStrings": [
+        "aqua:mikefarah/yq@(?<currentValue>v[0-9.]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "mikefarah/yq"
+    },
     {
       "customType": "regex",
       "managerFilePatterns": [

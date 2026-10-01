@@ -105,7 +105,7 @@ _setup_custom_parser() {
 # Params: $1 - version (e.g. "1.85.1"), $2 - platform (default: "linux-deb-x64")
 # Uses: command_exists, validate_not_empty (functions)
 # Returns: 0 with checksum on stdout if found, 1 if jq missing or checksum not found
-# Side-effects: Makes curl request to code.visualstudio.com
+# Side-effects: Makes curl request to update.code.visualstudio.com
 get_vscode_checksum() {
   local version="$1"
   local platform="${2:-linux-deb-x64}"
@@ -116,18 +116,16 @@ get_vscode_checksum() {
     return 1
   fi
 
-  local sha_api="$DEVBASE_URL_VSCODE_SHA_API"
+  # The /sha index only lists current releases; use versioned metadata for pins.
+  local sha_api="${DEVBASE_URL_VSCODE_SHA_API}/${version}/${platform}/stable"
   local checksum
-  checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$sha_api" |
-    jq -r --arg ver "$version" --arg plat "$platform" \
-      '.products[] | select(.productVersion == $ver and .platform.os == $plat and .build == "stable") | .sha256hash')
-
-  if [[ -n "$checksum" ]] && [[ "$checksum" != "null" ]]; then
-    echo "$checksum"
-    return 0
+  if ! checksum=$(retry_command curl -fsSL --connect-timeout 10 --max-time 30 "$sha_api" |
+    jq -er --arg ver "$version" \
+      'select(.productVersion == $ver) | .sha256hash | select(type == "string") | select(test("^[0-9a-fA-F]{64}$"))'); then
+    return 1
   fi
 
-  return 1
+  printf '%s\n' "$checksum"
 }
 
 # Brief: Fetch OpenShift CLI package SHA256 checksum from official mirror
@@ -1315,7 +1313,7 @@ install_gum() {
   fi
 
   # Get version from packages.yaml or use default
-  local version="${TOOL_VERSIONS[gum]:-2.0.0}"
+  local version="${TOOL_VERSIONS[gum]:-2.0.1}"
 
   show_progress info "Installing gum ${version}..."
 

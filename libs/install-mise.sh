@@ -382,7 +382,7 @@ install_mise() {
   # the full config.toml on a second call, which triggers spurious warnings for
   # tools whose backend runtimes aren't available yet).
   if [[ -f "${DEVBASE_ROOT}/.mise.toml" ]] && ! command -v yq &>/dev/null; then
-    local yq_tool="aqua:mikefarah/yq@v4.53.3"
+    local yq_tool="aqua:mikefarah/yq@v4.54.1"
     show_progress info "Bootstrapping essential tools (yq)..."
     local _bootstrap_err
     if ! _bootstrap_err=$("$mise_path" --no-config use -g "$yq_tool" --yes 2>&1 >/dev/null); then
@@ -418,7 +418,7 @@ install_mise() {
   if ! command -v yq &>/dev/null || ! yq --version >/dev/null 2>&1; then
     show_progress warning "yq unavailable before package parser, attempting recovery"
 
-    local yq_recovery_spec="aqua:mikefarah/yq@v4.53.3"
+    local yq_recovery_spec="aqua:mikefarah/yq@v4.54.1"
     local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"

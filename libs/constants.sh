@@ -39,7 +39,7 @@ readonly DEVBASE_MOZILLA_GPG_FINGERPRINT="35BAA0B33E9EB396F59CA838C0BA5CE6DC6315
 # =============================================================================
 # DEVELOPMENT TOOLS
 # =============================================================================
-readonly DEVBASE_URL_VSCODE_SHA_API="https://code.visualstudio.com/sha"
+readonly DEVBASE_URL_VSCODE_SHA_API="https://update.code.visualstudio.com/api/versions"
 readonly DEVBASE_URL_VSCODE_DOWNLOAD="https://update.code.visualstudio.com"
 readonly DEVBASE_URL_JETBRAINS_DOWNLOAD="https://download.jetbrains.com/idea"
 readonly DEVBASE_URL_OCP_MIRROR="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"

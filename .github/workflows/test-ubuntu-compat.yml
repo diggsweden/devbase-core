@@ -6,6 +6,7 @@ on: # yamllint disable-line rule:truthy
   pull_request:
     paths:
       - 'dot/.config/devbase/packages.yaml'
+      - '.mise.toml'
       - 'libs/**'
       - 'setup.sh'
       - '.github/workflows/test-ubuntu-compat.yml'
@@ -14,6 +15,7 @@ on: # yamllint disable-line rule:truthy
       - main
     paths:
       - 'dot/.config/devbase/packages.yaml'
+      - '.mise.toml'
       - 'libs/**'
       - 'setup.sh'
   workflow_dispatch:
@@ -34,9 +36,10 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends bash curl ca-certificates
-          curl -fsSL -o /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64
-          chmod +x /usr/local/bin/yq
+      - name: Install yq from the repo's Aqua pin
+        uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+        with:
+          install_args: aqua:mikefarah/yq
       - name: Every apt/common package name has an install candidate
         shell: bash
         run: |

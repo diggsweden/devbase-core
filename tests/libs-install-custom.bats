@@ -30,16 +30,42 @@ teardown() {
   common_teardown
 }
 
-@test "get_vscode_checksum fetches checksum from API" {
+@test "get_vscode_checksum fetches a pinned release checksum from versioned API" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
-  stub curl '-fsSL --connect-timeout 10 --max-time 30 * : echo "{\"products\":[{\"productVersion\":\"1.85.1\",\"platform\":{\"os\":\"linux-deb-x64\"},\"build\":\"stable\",\"sha256hash\":\"abc123\"}]}"'
-  stub jq '-r * : echo "abc123"'
-  
-  run --separate-stderr get_vscode_checksum "1.85.1"
+
+  stub curl '-fsSL --connect-timeout 10 --max-time 30 https://update.code.visualstudio.com/api/versions/1.139.1/linux-deb-x64/stable : echo "{\"productVersion\":\"1.139.1\",\"sha256hash\":\"cc8e35cf69ff4c7e515e19fa981bf6aba41f61ddb61c79370e9fe460c5dbaf8b\"}"'
+
+  run --separate-stderr get_vscode_checksum "1.139.1"
   assert_success
-  assert_output "abc123"
-  
+  assert_output "cc8e35cf69ff4c7e515e19fa981bf6aba41f61ddb61c79370e9fe460c5dbaf8b"
+  unstub curl
+}
+
+@test "get_vscode_checksum requests metadata for the selected RPM architecture" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  stub curl '-fsSL --connect-timeout 10 --max-time 30 https://update.code.visualstudio.com/api/versions/1.139.1/linux-rpm-arm64/stable : echo "{\"productVersion\":\"1.139.1\",\"sha256hash\":\"d067f5cd1b4f9a94e0921cb869ede08db9cb1e289121f2f4657aec3822fd3f5e\"}"'
+
+  run --separate-stderr get_vscode_checksum "1.139.1" "linux-rpm-arm64"
+  assert_success
+  assert_output "d067f5cd1b4f9a94e0921cb869ede08db9cb1e289121f2f4657aec3822fd3f5e"
+  unstub curl
+}
+
+@test "get_vscode_checksum rejects another release or an invalid digest" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+
+  local response
+  for response in \
+    '{"productVersion":"1.140.0","sha256hash":"cc8e35cf69ff4c7e515e19fa981bf6aba41f61ddb61c79370e9fe460c5dbaf8b"}' \
+    '{"productVersion":"1.139.1","sha256hash":"abc123"}' \
+    '{"productVersion":"1.139.1","sha256hash":null}'; do
+    # shellcheck disable=SC2329
+    curl() { printf '%s\n' "$response"; }
+    run get_vscode_checksum "1.139.1"
+    assert_failure
+    assert_output ""
+  done
 }
 
 @test "get_vscode_checksum fails when jq not available" {
@@ -497,10 +523,10 @@ _capture_bootstrap_gum_url() {
 
 @test "bootstrap_gum requests the published v2 deb asset name" {
   _capture_bootstrap_gum_url ubuntu amd64 x86_64
-  assert_output --partial "/v2.0.0/gum_2.0.0_amd64.deb"
+  assert_output --partial "/v2.0.1/gum_2.0.1_amd64.deb"
 }
 
 @test "bootstrap_gum requests the published v2 arm64 rpm asset name" {
   _capture_bootstrap_gum_url fedora arm64 aarch64
-  assert_output --partial "/v2.0.0/gum-2.0.0-1.aarch64.rpm"
+  assert_output --partial "/v2.0.1/gum-2.0.1-1.aarch64.rpm"
 }

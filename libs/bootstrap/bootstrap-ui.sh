@@ -101,7 +101,7 @@ bootstrap_gum() {
   show_progress step "Installing gum for interactive setup..."
 
   # Version and architecture
-  local version="2.0.0" # renovate: datasource=github-releases depName=charmbracelet/gum
+  local version="2.0.1" # renovate: datasource=github-releases depName=charmbracelet/gum
   local arch
   arch=$(get_deb_arch) || {
     show_progress warning "Could not find TUI component gum (unsupported architecture: $(uname -m)), using whiptail as backup"
