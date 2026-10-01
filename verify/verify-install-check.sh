@@ -210,8 +210,6 @@ readonly -a TOOL_CONFIG_DIRS=(
   "$CONFIG_HOME/fish/conf.d"
   "$CONFIG_HOME/mise"
   "$CONFIG_HOME/git"
-  "$CONFIG_HOME/nvim/lua/plugins"
-  "$CONFIG_HOME/starship"
   "$CONFIG_HOME/zellij"
   "$CONFIG_HOME/containers"
 )
@@ -219,7 +217,7 @@ readonly -a TOOL_CONFIG_DIRS=(
 # Expected permissions for sensitive directories
 declare -A DIR_PERMISSIONS=(
   ["$HOME/.ssh"]="700"
-  ["$HOME/.config/ssh"]="755"
+  ["$CONFIG_HOME/ssh"]="700"
 )
 
 # Expected permissions for sensitive files
@@ -769,15 +767,22 @@ check_config_files() {
 
   # Development tools configs
   printf "\n  %bDevelopment Tools:%b\n" "${BOLD}" "${NC}"
+  local starship_config="${STARSHIP_CONFIG:-}"
+  if [[ -z "$starship_config" ]]; then
+    if [[ -e "$CONFIG_HOME/starship.toml" ]]; then
+      starship_config="$CONFIG_HOME/starship.toml"
+    else
+      starship_config="$CONFIG_HOME/starship/starship.toml"
+    fi
+  fi
   local dev_files=(
     "$GIT_CONFIG"
     "$CONFIG_HOME/git/.gitignore"
     "$MISE_CONFIG"
     "$TESTCONTAINERS_PROPERTIES"
-    "$CONFIG_HOME/nvim/lua/plugins/colorscheme.lua"
     "$CONFIG_HOME/lazygit/config.yml"
     "$CONFIG_HOME/delta/themes.config"
-    "$CONFIG_HOME/starship/starship.toml"
+    "$starship_config"
     "$CONFIG_HOME/btop/btop.conf"
   )
 
@@ -818,7 +823,6 @@ check_config_files() {
   print_subheader "Tool Configs"
   local tool_configs=(
     "$HOME/.config/git/config"
-    "$HOME/.config/starship/starship.toml"
     "$HOME/.config/btop/btop.conf"
     "$HOME/.config/lazygit/config.yml"
     "$HOME/.config/delta/themes.config"
@@ -973,7 +977,7 @@ check_mise_tools() {
     # versions and arbitrary commands on PATH do not verify the selected tool.
     local installed_tools
     installed_tools=$(mise --cd "$HOME" list --current --installed --no-header 2>/dev/null |
-      awk '{tool=$1; sub(/^.*:/, "", tool); sub(/^.*\//, "", tool); sub(/\[.*/, "", tool); print tool "@" $2}')
+      awk '{tool=$1; sub(/\[.*/, "", tool); print tool "@" $2}')
 
     # Collect all tools first for sorting
     declare -A tool_info
@@ -1010,12 +1014,8 @@ check_mise_tools() {
       # Clean up version_spec (handle quotes and comments)
       local expected_version=$(echo "$version_spec" | tr -d '"' | awk '{print $1}' | sed 's/^[[:space:]]*//')
 
-      # Extract short name from aqua/github prefixes
-      # "aqua:org/tool" -> "tool"
-      # "github:org/tool[options]" -> "tool"
-      if [[ "$tool" =~ : ]]; then
-        tool=$(echo "$tool" | sed 's/.*://' | sed 's/.*\///' | sed 's/\[.*//')
-      fi
+      # Keep backend and namespace: Tekton and GitLab both end in /cli.
+      tool="${tool%%\[*}"
 
       # Skip empty or invalid entries
       [[ -z "$tool" ]] && continue
@@ -1146,12 +1146,14 @@ check_custom_tools() {
 
   # LazyVim
   custom_total=$((custom_total + 1))
-  if [[ -f "${HOME}/.config/nvim/lua/config/lazy.lua" ]] &&
-    grep -q "LazyVim/LazyVim" "${HOME}/.config/nvim/lua/config/lazy.lua" 2>/dev/null; then
+  if [[ -f "${CONFIG_HOME}/nvim/lua/config/lazy.lua" ]] &&
+    grep -q "LazyVim/LazyVim" "${CONFIG_HOME}/nvim/lua/config/lazy.lua" 2>/dev/null; then
     print_check "pass" "LazyVim (Neovim starter config)"
     custom_installed=$((custom_installed + 1))
+  elif [[ -e "${CONFIG_HOME}/nvim" || -L "${CONFIG_HOME}/nvim" ]]; then
+    print_check "info" "Personal Neovim configuration preserved"
   else
-    print_check "fail" "LazyVim (Neovim starter config)"
+    print_check "info" "LazyVim (optional, not installed)"
   fi
 
   # JDK Mission Control
@@ -1883,6 +1885,8 @@ main() {
   return 0
 }
 
-# Just run main directly
-main "$@"
-exit $?
+# Allow individual checks to be sourced without running system-wide checks.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+  exit $?
+fi
