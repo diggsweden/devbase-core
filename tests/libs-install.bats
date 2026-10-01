@@ -167,6 +167,7 @@ teardown() {
 
   run bash -c "
     source '${DEVBASE_ROOT}/libs/install-phases.sh'
+    rotate_backup_directories() { :; }
     start_installation_progress() { :; }
     stop_installation_progress() { echo stopped; }
     show_phase() { :; }
@@ -178,6 +179,186 @@ teardown() {
 
   assert_failure
   assert_output --partial "stopped"
+}
+
+_load_backup_rotation() {
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/utils.sh"
+  source <(sed -n '/^rotate_backup_directories()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
+  export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
+  mkdir -p "$DEVBASE_BACKUP_DIR" "${DEVBASE_BACKUP_DIR}.old"
+  echo "current" > "$DEVBASE_BACKUP_DIR/preimage"
+  echo "previous" > "${DEVBASE_BACKUP_DIR}.old/preimage"
+}
+
+@test "rotate_backup_directories retains current as previous and preserves timestamped backups" {
+  _load_backup_rotation
+  mkdir -p "${HOME}/.devbase_backup_20250101"
+  echo "historical" > "${HOME}/.devbase_backup_20250101/preimage"
+
+  run --separate-stderr rotate_backup_directories
+
+  assert_success
+  assert_dir_not_exists "$DEVBASE_BACKUP_DIR"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "current"
+  assert_equal "$(cat "${HOME}/.devbase_backup_20250101/preimage")" "historical"
+}
+
+@test "rotate_backup_directories keeps previous when no current backup exists" {
+  _load_backup_rotation
+  rm -r "$DEVBASE_BACKUP_DIR"
+
+  run --separate-stderr rotate_backup_directories
+
+  assert_success
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+}
+
+@test "rotate_backup_directories aborts on rm failure without moving current" {
+  _load_backup_rotation
+  rm() { return 1; }
+
+  run --separate-stderr rotate_backup_directories
+
+  unset -f rm
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+  assert_dir_not_exists "${DEVBASE_BACKUP_DIR}.old/backup"
+  assert_regex "$stderr$output" "Failed to remove previous backup"
+}
+
+@test "rotate_backup_directories propagates mv failure and retains current" {
+  _load_backup_rotation
+  mv() { return 1; }
+
+  run --separate-stderr rotate_backup_directories
+
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_regex "$stderr$output" "Failed to rotate current backup"
+}
+
+@test "rotate_backup_directories refuses a symlink instead of deleting its target" {
+  _load_backup_rotation
+  mv "${DEVBASE_BACKUP_DIR}.old" "${HOME}/outside"
+  ln -s "${HOME}/outside" "${DEVBASE_BACKUP_DIR}.old"
+
+  run --separate-stderr rotate_backup_directories
+
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${HOME}/outside/preimage")" "previous"
+  assert_symlink_to "${HOME}/outside" "${DEVBASE_BACKUP_DIR}.old"
+}
+
+@test "rotate_backup_directories refuses an unexpected previous backup file" {
+  _load_backup_rotation
+  rm -r "${DEVBASE_BACKUP_DIR}.old"
+  echo "unexpected" > "${DEVBASE_BACKUP_DIR}.old"
+
+  run --separate-stderr rotate_backup_directories
+
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old")" "unexpected"
+}
+
+_load_backup_phases() {
+  _load_backup_rotation
+  source "${DEVBASE_ROOT}/libs/install-phases.sh"
+  source <(sed -n '/^main()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
+  set_default_values() { :; }
+  init_install_context() { :; }
+  validate_environment() { :; }
+  validate_source_repository() { :; }
+  setup_installation_paths() { :; }
+  tui_blank_line() { :; }
+  run_preflight_checks() { :; }
+  bootstrap_for_configuration() { :; }
+  collect_user_configuration() { :; }
+  display_configuration_summary() { :; }
+  start_installation_progress() { :; }
+  stop_installation_progress() { :; }
+  show_phase() { :; }
+  prepare_system() { echo "prepared"; }
+  perform_installation() { echo "installed"; }
+  write_installation_summary() { echo "summary"; }
+  run_finalize_phase() { echo "finalized"; }
+}
+
+@test "run_preflight_phase leaves both backup generations intact" {
+  _load_backup_phases
+
+  run --separate-stderr run_preflight_phase
+
+  assert_success
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+}
+
+@test "failed preflight checks leave both backup generations intact" {
+  _load_backup_phases
+  run_preflight_checks() { return 1; }
+
+  run --separate-stderr main
+
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+  refute_output --partial "prepared"
+}
+
+@test "cancelled configuration leaves both backup generations intact" {
+  _load_backup_phases
+  collect_user_configuration() { return 1; }
+
+  run --separate-stderr main
+
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+  refute_output --partial "prepared"
+}
+
+@test "installation rotates after confirmation and before preparation writes" {
+  _load_backup_phases
+  collect_user_configuration() {
+    [[ "$(cat "$DEVBASE_BACKUP_DIR/preimage")" == current ]] || return 1
+    [[ "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" == previous ]] || return 1
+    echo "confirmed"
+  }
+  prepare_system() {
+    [[ ! -e "$DEVBASE_BACKUP_DIR" ]] || return 1
+    [[ "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" == current ]] || return 1
+    mkdir -p "$DEVBASE_BACKUP_DIR"
+    echo "new preimage" > "$DEVBASE_BACKUP_DIR/preimage"
+    echo "prepared"
+  }
+
+  run --separate-stderr main
+
+  assert_success
+  assert_output $'confirmed\nprepared\ninstalled\nsummary\nfinalized'
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "new preimage"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "current"
+}
+
+@test "run_installation_phase propagates rotation failure before progress or installation" {
+  _load_backup_phases
+  rm() { return 1; }
+  start_installation_progress() { echo "started"; }
+
+  run --separate-stderr run_installation_phase
+
+  unset -f rm
+  assert_failure
+  assert_equal "$(cat "$DEVBASE_BACKUP_DIR/preimage")" "current"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
+  refute_output --partial "started"
+  refute_output --partial "prepared"
+  refute_output --partial "installed"
+  refute_output --partial "summary"
 }
 
 @test "validate_source_repository checks required directories" {

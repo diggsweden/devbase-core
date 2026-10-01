@@ -369,9 +369,213 @@ SCRIPT
 
   run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
 
-  assert_success
+  assert_failure
   # The backup must be the link itself, not a copy of what it pointed at.
   assert_symlink_to "${TEST_DIR}/outside" "${TEST_DIR}/backup/dot_backup/.linkrc"
+  assert_symlink_to "${TEST_DIR}/outside" "$target/.linkrc"
+  assert_equal "$(cat "${TEST_DIR}/outside")" "secret"
+  assert_regex "$stderr$output" "Refusing to overwrite dotfile symlink"
+}
+
+@test "merge_dotfiles_with_backup preserves dangling destination symlinks" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "$target"
+  ln -s "${TEST_DIR}/missing" "$target/.linkrc"
+  echo "replacement" > "$src/.linkrc"
+  echo "fresh" > "$src/.newrc"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_failure
+  assert_symlink_to "${TEST_DIR}/missing" "$target/.linkrc"
+  assert_symlink_to "${TEST_DIR}/missing" "${DEVBASE_BACKUP_DIR}/dot_backup/.linkrc"
+  assert_file_not_exists "${TEST_DIR}/missing"
+  assert_file_not_exists "$target/.newrc"
+}
+
+@test "merge_dotfiles_with_backup refuses linked destination directories before copying" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src/.config/app" "$target" "${TEST_DIR}/outside"
+  echo "new" > "$src/.config/app/settings"
+  echo "original" > "${TEST_DIR}/outside/settings"
+  mkdir -p "$target/.config"
+  ln -s "${TEST_DIR}/outside" "$target/.config/app"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_failure
+  assert_symlink_to "${TEST_DIR}/outside" "$target/.config/app"
+  assert_symlink_to "${TEST_DIR}/outside" "${DEVBASE_BACKUP_DIR}/dot_backup/.config/app"
+  assert_equal "$(cat "${TEST_DIR}/outside/settings")" "original"
+}
+
+@test "merge_dotfiles_with_backup refuses a symlink in the target root path" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "${TEST_DIR}/outside/app"
+  echo "new" > "$src/settings"
+  ln -s "${TEST_DIR}/outside" "$target"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target/app"
+
+  assert_failure
+  assert_file_not_exists "${TEST_DIR}/outside/app/settings"
+  assert_regex "$stderr$output" "Refusing dotfile merge through symlink"
+}
+
+@test "merge_dotfiles_with_backup backs up deep files and source symlink destinations" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  local deep=".config/app/one/two/three/four/five"
+  mkdir -p "$src/$deep" "$target/$deep"
+  echo "new" > "$src/$deep/settings"
+  echo "original" > "$target/$deep/settings"
+  echo "previous link config" > "$target/$deep/link"
+  ln -s settings "$src/$deep/link"
+  ln -s missing "$src/$deep/dangling"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src/" "$target"
+
+  assert_success
+  assert_equal "$(cat "$target/$deep/settings")" "new"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}/dot_backup/$deep/settings")" "original"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}/dot_backup/$deep/link")" "previous link config"
+  assert_symlink_to "$target/$deep/settings" "$target/$deep/link"
+  assert_equal "$(readlink "$target/$deep/link")" "settings"
+  assert_symlink_to "$target/$deep/missing" "$target/$deep/dangling"
+  assert_equal "$(readlink "$target/$deep/dangling")" "missing"
+}
+
+@test "merge_dotfiles_with_backup retains the first preimage across successive merges" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "$target"
+  echo "core" > "$src/settings"
+  echo "original" > "$target/settings"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  merge_dotfiles_with_backup "$src" "$target"
+  echo "custom" > "$src/settings"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_success
+  assert_equal "$(cat "$target/settings")" "custom"
+  assert_equal "$(cat "${DEVBASE_BACKUP_DIR}/dot_backup/settings")" "original"
+}
+
+@test "merge_dotfiles_with_backup does not follow or overwrite a saved dangling preimage" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  mkdir -p "$src" "$target" "${DEVBASE_BACKUP_DIR}/dot_backup"
+  echo "new" > "$src/settings"
+  echo "intermediate" > "$target/settings"
+  ln -s "${TEST_DIR}/missing" "${DEVBASE_BACKUP_DIR}/dot_backup/settings"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_success
+  assert_symlink_to "${TEST_DIR}/missing" "${DEVBASE_BACKUP_DIR}/dot_backup/settings"
+  assert_file_not_exists "${TEST_DIR}/missing"
+  assert_equal "$(cat "$target/settings")" "new"
+}
+
+@test "merge_dotfiles_with_backup refuses symlinked backup parents" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  mkdir -p "$src/.config" "$target/.config" "${DEVBASE_BACKUP_DIR}/dot_backup" "${TEST_DIR}/outside"
+  echo "new" > "$src/.config/settings"
+  echo "original" > "$target/.config/settings"
+  ln -s "${TEST_DIR}/outside" "${DEVBASE_BACKUP_DIR}/dot_backup/.config"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_failure
+  assert_file_not_exists "${TEST_DIR}/outside/settings"
+  assert_equal "$(cat "$target/.config/settings")" "original"
+}
+
+@test "merge_dotfiles_with_backup aborts all copying when the backup root cannot be created" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "$target"
+  echo "new" > "$src/settings"
+  echo "fresh" > "$src/new-file"
+  echo "original" > "$target/settings"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  echo "blocking file" > "$DEVBASE_BACKUP_DIR"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_failure
+  assert_equal "$(cat "$target/settings")" "original"
+  assert_file_not_exists "$target/new-file"
+  assert_regex "$stderr$output" "Failed to create dotfile backup directory"
+}
+
+@test "merge_dotfiles_with_backup aborts all copying on a real nested backup mkdir failure" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  mkdir -p "$src/.config/app" "$target/.config/app" "${DEVBASE_BACKUP_DIR}/dot_backup"
+  echo "new" > "$src/.config/app/settings"
+  echo "fresh" > "$src/new-file"
+  echo "original" > "$target/.config/app/settings"
+  echo "blocking file" > "${DEVBASE_BACKUP_DIR}/dot_backup/.config"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  assert_failure
+  assert_equal "$(cat "$target/.config/app/settings")" "original"
+  assert_file_not_exists "$target/new-file"
+  assert_regex "$stderr$output" "Failed to create dotfile backup parent"
+}
+
+@test "merge_dotfiles_with_backup aborts all copying on a real backup cp failure" {
+  [[ "$(id -u)" -ne 0 ]] || skip "root can read mode-000 files"
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "$target"
+  echo "new" > "$src/settings"
+  echo "fresh" > "$src/new-file"
+  echo "original" > "$target/settings"
+  chmod 000 "$target/settings"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  chmod 600 "$target/settings"
+  assert_failure
+  assert_equal "$(cat "$target/settings")" "original"
+  assert_file_not_exists "$target/new-file"
+  assert_regex "$stderr$output" "Failed to back up dotfile"
+}
+
+@test "merge_dotfiles_with_backup propagates a destination copy failure" {
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src" "$target"
+  echo "new" > "$src/settings"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+  echo "blocking file" > "$target/blocked"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target/blocked/child"
+
+  assert_failure
+  assert_regex "$stderr$output" "Failed to copy dotfiles"
+}
+
+@test "merge_dotfiles_with_backup aborts copying after an incomplete source traversal" {
+  [[ "$(id -u)" -ne 0 ]] || skip "root can traverse mode-000 directories"
+  local src="${TEST_DIR}/src" target="${TEST_DIR}/target"
+  mkdir -p "$src/blocked" "$target"
+  echo "new" > "$src/settings"
+  echo "original" > "$target/settings"
+  chmod 000 "$src/blocked"
+  export DEVBASE_BACKUP_DIR="${TEST_DIR}/backup"
+
+  run --separate-stderr merge_dotfiles_with_backup "$src" "$target"
+
+  chmod 700 "$src/blocked"
+  assert_failure
+  assert_equal "$(cat "$target/settings")" "original"
+  assert_regex "$stderr$output" "Failed to inspect dotfiles"
 }
 
 @test "merge_dotfiles_with_backup fails when the source directory is missing" {

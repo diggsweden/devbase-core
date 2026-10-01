@@ -73,27 +73,37 @@ fi
 # Brief: Rotate backup directories to keep only one previous backup
 # Params: None
 # Uses: DEVBASE_BACKUP_DIR, HOME, show_progress (globals/functions)
-# Returns: 0 always
-# Side-effects: Removes old backups, renames current backup to .old
+# Returns: 0 on success, 1 on rotation failure
+# Side-effects: Removes previous backup, renames current backup to .old
 rotate_backup_directories() {
-  # Rotate old backup if it exists (keep only one previous backup)
-  if [[ -d "${DEVBASE_BACKUP_DIR:-}" ]]; then
-    if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
-      safe_rm_rf "$HOME" "${DEVBASE_BACKUP_DIR}.old" || true
-    fi
-    mv "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old"
+  if [[ -z "${DEVBASE_BACKUP_DIR:-}" ]]; then
+    show_progress error "Backup directory is not configured"
+    return 1
   fi
 
-  # Clean up old timestamped backups
-  for old_backup in "${HOME}"/.devbase_backup_*; do
-    if [[ -d "$old_backup" ]]; then
-      if [[ "$old_backup" =~ ^${HOME}/\.devbase_backup_[0-9]+$ ]]; then
-        safe_rm_rf "$HOME" "$old_backup" || true
-      else
-        show_progress warning "Skipping unexpected backup path: $old_backup"
-      fi
+  # Rotation owns directories, not links or unexpected files. In particular,
+  # safe_rm_rf resolves links, which must not delete an unrelated backup tree.
+  local backup_path
+  for backup_path in "$DEVBASE_BACKUP_DIR" "${DEVBASE_BACKUP_DIR}.old"; do
+    if [[ -L "$backup_path" || (-e "$backup_path" && ! -d "$backup_path") ]]; then
+      show_progress error "Cannot rotate backup directory: $backup_path"
+      return 1
     fi
   done
+
+  # Rotate old backup if it exists (keep only one previous backup)
+  if [[ -d "${DEVBASE_BACKUP_DIR}" ]]; then
+    if [[ -d "${DEVBASE_BACKUP_DIR}.old" ]]; then
+      safe_rm_rf "$HOME" "${DEVBASE_BACKUP_DIR}.old" || {
+        show_progress error "Failed to remove previous backup: ${DEVBASE_BACKUP_DIR}.old"
+        return 1
+      }
+    fi
+    mv -T "${DEVBASE_BACKUP_DIR}" "${DEVBASE_BACKUP_DIR}.old" || {
+      show_progress error "Failed to rotate current backup: ${DEVBASE_BACKUP_DIR}"
+      return 1
+    }
+  fi
 
   return 0
 }
@@ -799,7 +809,7 @@ bootstrap_for_configuration() {
 # Returns: 0 always (dies on failure)
 # Side-effects: Prompts for sudo password, clones repos, creates user directories, configures sudo for proxy
 prepare_system() {
-  # PHASE 1: System Preparation (first actual changes)
+  # System preparation follows configuration-tool bootstrap and confirmation.
   # Sudo access was already obtained in run_preflight_checks
   # Just refresh the sudo timestamp to keep it alive
   if ! sudo -n true 2>/dev/null; then

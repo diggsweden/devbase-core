@@ -36,7 +36,6 @@ readonly _TIMEOUT_STANDARD=30
 readonly _TIMEOUT_TRANSFER=60
 readonly _RETRY_ATTEMPTS=3
 readonly _RETRY_DELAY=5
-readonly _FIND_DEPTH=5
 
 # System limits (only used locally)
 readonly _ULIMIT_NOFILE=65536 # Max open files
@@ -341,9 +340,9 @@ _calculate_safe_relative_path() {
 
 # Brief: Merge source dotfiles into target with backup of existing files
 # Params: $1 - src_dir, $2 - target_dir (default: $HOME)
-# Uses: DEVBASE_BACKUP_DIR, _FIND_DEPTH, _calculate_safe_relative_path (globals/functions)
+# Uses: DEVBASE_BACKUP_DIR, _calculate_safe_relative_path (globals/functions)
 # Returns: 0 on success, 1 on error
-# Side-effects: Creates backups, copies files
+# Side-effects: Creates backups, copies files; refuses destination symlinks
 merge_dotfiles_with_backup() {
   local src_dir="$1"
   local target_dir="${2:-$HOME}"
@@ -354,21 +353,72 @@ merge_dotfiles_with_backup() {
   validate_path "$target_dir" "true" || return 1
 
   local dotfiles_backup="${DEVBASE_BACKUP_DIR}/dot_backup"
-  mkdir -p "$dotfiles_backup"
+  local parent
+  # Neither the destination nor the backup may write through linked parents.
+  for parent in "$target_dir" "$dotfiles_backup"; do
+    parent="${parent%/}"
+    while [[ -n "$parent" && "$parent" != / && "$parent" != . ]]; do
+      if [[ -L "$parent" ]]; then
+        show_progress error "Refusing dotfile merge through symlink: $parent"
+        return 1
+      fi
+      parent=$(dirname "$parent")
+    done
+  done
+  mkdir -p "$dotfiles_backup" || {
+    show_progress error "Failed to create dotfile backup directory: $dotfiles_backup"
+    return 1
+  }
 
-  while IFS= read -r -d '' file; do
+  # Enumerate the same full tree that cp copies, including symlinks and empty
+  # directories. Wait for find so an incomplete traversal cannot permit copying.
+  local -a source_paths=()
+  mapfile -d '' -t source_paths < <(find "$src_dir/." -mindepth 1 -print0)
+  wait "$!" || {
+    show_progress error "Failed to inspect dotfiles in $src_dir"
+    return 1
+  }
+
+  local file rel_path target_file backup_path
+  for file in "${source_paths[@]}"; do
     # Use pure logic function to calculate safe path
-    local rel_path
-    rel_path=$(_calculate_safe_relative_path "$file" "$src_dir") || continue
-
-    local target_file="$target_dir/$rel_path"
-    [[ -e "$target_file" ]] && {
-      local backup_path="${dotfiles_backup}/${rel_path}"
-      mkdir -p "$(dirname "$backup_path")"
-      # Symlink protection
-      cp --no-dereference -r "$target_file" "$backup_path"
+    rel_path=$(_calculate_safe_relative_path "$file" "$src_dir/.") || {
+      show_progress error "Unsafe dotfile path: $file"
+      return 1
     }
-  done < <(find "$src_dir" -maxdepth "$_FIND_DEPTH" -type f -print0)
+
+    target_file="$target_dir/$rel_path"
+    backup_path="${dotfiles_backup}/${rel_path}"
+    # Existing directories are merged, not overwritten. Reject linked backup
+    # directories before visiting their children (find walks parents first).
+    if [[ -d "$file" && ! -L "$file" ]]; then
+      if [[ -L "$backup_path" ]]; then
+        show_progress error "Refusing dotfile backup through symlink: $backup_path"
+        return 1
+      fi
+      [[ -d "$target_file" && ! -L "$target_file" ]] && continue
+    fi
+
+    if [[ -e "$target_file" || -L "$target_file" ]]; then
+      # The first preimage wins when multiple layers merge during one run.
+      if [[ ! -e "$backup_path" && ! -L "$backup_path" ]]; then
+        mkdir -p "$(dirname "$backup_path")" || {
+          show_progress error "Failed to create dotfile backup parent: $backup_path"
+          return 1
+        }
+        cp --no-dereference -rT "$target_file" "$backup_path" || {
+          show_progress error "Failed to back up dotfile: $target_file"
+          return 1
+        }
+      fi
+      # cp would otherwise follow a destination link and overwrite an external
+      # file. Preserve the link and require the conflict to be resolved instead.
+      if [[ -L "$target_file" ]]; then
+        show_progress error "Refusing to overwrite dotfile symlink: $target_file"
+        return 1
+      fi
+    fi
+  done
 
   # Now copy new dotfiles. cp -r copies symlinks met during recursion as
   # symlinks rather than dereferencing them, so shipped symlinks stay links.

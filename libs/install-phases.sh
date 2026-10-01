@@ -7,7 +7,6 @@
 run_preflight_phase() {
   set_default_values
   init_install_context
-  rotate_backup_directories
   validate_environment
   validate_source_repository
   setup_installation_paths
@@ -32,6 +31,10 @@ run_configuration_phase() {
 }
 
 run_installation_phase() {
+  # Preferences have been confirmed. Rotate before installation-phase writes
+  # so failed checks and cancelled preferences keep the dotfile backups.
+  rotate_backup_directories || return 1
+
   # Start persistent progress display for whiptail mode
   # This keeps a gauge on screen throughout installation to prevent terminal flicker
   start_installation_progress

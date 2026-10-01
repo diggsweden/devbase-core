@@ -155,7 +155,7 @@ install_dotfiles_to_target() {
   validate_dir_exists "$temp_dotfiles" "Temp dotfiles directory" || return 1
 
   show_progress info "Installing configuration files..."
-  merge_dotfiles_with_backup "${temp_dotfiles}"
+  merge_dotfiles_with_backup "${temp_dotfiles}" || return 1
 
   find "${XDG_CONFIG_HOME}" -name "*.template" -type f -delete 2>/dev/null || true
   install_wsl_terminal_themes
@@ -181,7 +181,7 @@ process_and_copy_dotfiles() {
   msg="${msg}, theme: ${DEVBASE_THEME})"
   show_progress success "$msg"
 
-  install_dotfiles_to_target "$temp_dotfiles"
+  install_dotfiles_to_target "$temp_dotfiles" || return 1
   apply_custom_configs
 
   local backup_dir="${XDG_DATA_HOME}/devbase/backup/dot_backup"
