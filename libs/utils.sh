@@ -338,6 +338,26 @@ _calculate_safe_relative_path() {
   printf '%s\n' "$rel_path"
 }
 
+# Brief: Seed a personal file without replacing an existing file or symlink
+# Params: $1 - source file, $2 - destination, $3 - mode (default: 600)
+# Returns: 0 if created or already present, 1 on a copy/publication failure
+install_file_if_missing() (
+  local source_file="$1" target_file="$2" mode="${3:-600}"
+  [[ -e "$target_file" || -L "$target_file" ]] && return 0
+  mkdir -p "$(dirname "$target_file")" || return 1
+
+  local candidate
+  candidate=$(mktemp "${target_file}.devbase.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate"' EXIT
+  cp -- "$source_file" "$candidate" || return 1
+  chmod "$mode" "$candidate" || return 1
+  # A hard link publishes the complete file atomically and never replaces a
+  # destination created in the meantime (including a dangling symlink).
+  if ! ln -T -- "$candidate" "$target_file"; then
+    [[ -e "$target_file" || -L "$target_file" ]] || return 1
+  fi
+)
+
 # Brief: Merge source dotfiles into target with backup of existing files
 # Params: $1 - src_dir, $2 - target_dir (default: $HOME)
 # Uses: DEVBASE_BACKUP_DIR, _calculate_safe_relative_path (globals/functions)
@@ -467,7 +487,6 @@ ensure_user_dirs() {
     "$XDG_CONFIG_HOME/fish/conf.d"
     "$XDG_CONFIG_HOME/mise"
     "$XDG_CONFIG_HOME/git"
-    "$XDG_CONFIG_HOME/nvim/lua/plugins"
   )
 
   # ===== SSH directories =====

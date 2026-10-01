@@ -133,98 +133,306 @@ teardown() {
   assert_failure
 }
 
-@test "install_lazyvim skips when user preference is false" {
-  export DEVBASE_INSTALL_LAZYVIM="false"
-  export DEVBASE_THEME="everforest-dark"
-  export DEVBASE_DOT="${TEST_DIR}/dot"
-  export DEVBASE_SELECTED_PACKS=""
-  
-  # Create minimal packages.yaml for parser
-  mkdir -p "${DEVBASE_DOT}/.config/devbase"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
-core:
-  custom:
-    lazyvim: { version: "main", installer: "install_lazyvim" }
-packs: {}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  
-  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
+_setup_lazyvim_test() {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
+  export DEVBASE_INSTALL_LAZYVIM="true"
+  export DEVBASE_THEME="everforest-dark"
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
+  TOOL_VERSIONS[lazyvim]="test-pin"
+
+  # shellcheck disable=SC2329
+  git() { _mock_lazyvim_git "$@"; }
+}
+
+_mock_lazyvim_git() {
+  printf '%s\n' "$*" >>"${TEST_DIR}/lazyvim-git.log"
+  case "$1" in
+    clone)
+      mkdir -p "$4/.git" "$4/lua/plugins"
+      printf '%s\n' 'unconfigured main' >"$4/init.lua"
+      ;;
+    -C)
+      [[ "$3 $4 $5" == "checkout --quiet test-pin" ]] || return 1
+      printf '%s\n' 'pinned starter' >"$2/init.lua"
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+_assert_lazyvim_staging_clean() {
+  run find "$XDG_CONFIG_HOME" -mindepth 1 -maxdepth 1 ! -name nvim
+  assert_success
+  assert_output ""
+}
+
+_assert_lazyvim_not_published() {
+  [[ ! -e "${XDG_CONFIG_HOME}/nvim" && ! -L "${XDG_CONFIG_HOME}/nvim" ]]
+  _assert_lazyvim_staging_clean
+}
+
+@test "install_lazyvim skips when user preference is false or unset" {
+  _setup_lazyvim_test
+  unset DEVBASE_THEME DEVBASE_DOT
+  export DEVBASE_INSTALL_LAZYVIM="false"
+
   run install_lazyvim
   assert_success
   assert_output --partial "skipped by user preference"
+  _assert_lazyvim_not_published
+
+  unset DEVBASE_INSTALL_LAZYVIM
+  run install_lazyvim
+  assert_success
+  assert_output --partial "skipped by user preference"
+  _assert_lazyvim_not_published
+  assert_not_exists "${TEST_DIR}/lazyvim-git.log"
 }
 
-@test "install_lazyvim backs up existing nvim config" {
-  export DEVBASE_INSTALL_LAZYVIM="true"
-  export DEVBASE_THEME="everforest-dark"
-  export DEVBASE_DOT="${TEST_DIR}/dot"
-  export DEVBASE_SELECTED_PACKS=""
-  
-  # Create minimal packages.yaml for parser
-  mkdir -p "${DEVBASE_DOT}/.config/devbase"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
-core:
-  custom:
-    lazyvim: { version: "main", installer: "install_lazyvim" }
-packs: {}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  
-  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
-  source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
-  # Create test template
-  mkdir -p "${DEVBASE_DOT}/.config/nvim/lua/plugins"
-  echo 'background=${THEME_BACKGROUND}' > "${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
-  
+@test "install_lazyvim preserves existing nvim config without backup or initialization" {
+  _setup_lazyvim_test
   mkdir -p "${XDG_CONFIG_HOME}/nvim"
   echo "existing config" > "${XDG_CONFIG_HOME}/nvim/init.lua"
-  
-  stub git \
-    'clone * : mkdir -p "${XDG_CONFIG_HOME}/nvim/lua/plugins"'
-  
-  install_lazyvim
-  
-  run ls "${XDG_CONFIG_HOME}"/nvim.bak.*
+  unset DEVBASE_THEME DEVBASE_DOT
+
+  run install_lazyvim
   assert_success
-  
-  unstub git
+  assert_output --partial "Existing nvim configuration preserved"
+  run cat "${XDG_CONFIG_HOME}/nvim/init.lua"
+  assert_output "existing config"
+  assert_not_exists "${XDG_CONFIG_HOME}/nvim/lua"
+  assert_not_exists "${TEST_DIR}/lazyvim-git.log"
+  _assert_lazyvim_staging_clean
 }
 
-@test "install_lazyvim configures light theme background" {
-  export DEVBASE_INSTALL_LAZYVIM="true"
-  export DEVBASE_THEME="everforest-light"
-  export DEVBASE_DOT="${TEST_DIR}/dot"
-  export DEVBASE_SELECTED_PACKS=""
-  
-  # Create minimal packages.yaml for parser
-  mkdir -p "${DEVBASE_DOT}/.config/devbase"
-  cat > "${DEVBASE_DOT}/.config/devbase/packages.yaml" << 'EOF'
-core:
-  custom:
-    lazyvim: { version: "main", installer: "install_lazyvim" }
-packs: {}
-EOF
-  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
-  
-  source "${DEVBASE_ROOT}/libs/parse-packages.sh"
-  source "${DEVBASE_ROOT}/libs/install-custom.sh"
-  
-  stub git \
-    'clone --quiet * : mkdir -p "$4/lua/plugins"'
-  
-  mkdir -p "${DEVBASE_DOT}/.config/nvim/lua/plugins"
-  echo 'background=${THEME_BACKGROUND}' > "${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
-  
-  install_lazyvim
-  
-  [[ -f "${XDG_CONFIG_HOME}/nvim/lua/plugins/colorscheme.lua" ]]
-  grep -q "background=light" "${XDG_CONFIG_HOME}/nvim/lua/plugins/colorscheme.lua"
-  
-  unstub git
+@test "install_lazyvim preserves an empty nvim directory" {
+  _setup_lazyvim_test
+  mkdir -p "${XDG_CONFIG_HOME}/nvim"
+
+  run install_lazyvim
+  assert_success
+  assert_output --partial "Existing nvim configuration preserved"
+  run find "${XDG_CONFIG_HOME}/nvim" -mindepth 1
+  assert_success
+  assert_output ""
+  assert_not_exists "${TEST_DIR}/lazyvim-git.log"
+  _assert_lazyvim_staging_clean
+}
+
+@test "install_lazyvim preserves a file at the nvim path" {
+  _setup_lazyvim_test
+  echo "existing file" >"${XDG_CONFIG_HOME}/nvim"
+
+  run install_lazyvim
+  assert_success
+  run cat "${XDG_CONFIG_HOME}/nvim"
+  assert_output "existing file"
+  assert_not_exists "${TEST_DIR}/lazyvim-git.log"
+  _assert_lazyvim_staging_clean
+}
+
+@test "install_lazyvim preserves nvim symlinks to directories files and missing targets" {
+  _setup_lazyvim_test
+  mkdir -p "${TEST_DIR}/existing-config"
+  echo "existing config" >"${TEST_DIR}/existing-config/init.lua"
+  echo "existing file" >"${TEST_DIR}/existing-file"
+
+  local target
+  for target in existing-config existing-file missing-config; do
+    export XDG_CONFIG_HOME="${TEST_DIR}/config-${target}"
+    mkdir -p "$XDG_CONFIG_HOME"
+    ln -s "${TEST_DIR}/${target}" "${XDG_CONFIG_HOME}/nvim"
+
+    run install_lazyvim
+    assert_success
+    assert_output --partial "Existing nvim configuration preserved"
+    [[ -L "${XDG_CONFIG_HOME}/nvim" ]]
+    [[ "$(readlink "${XDG_CONFIG_HOME}/nvim")" == "${TEST_DIR}/${target}" ]]
+    _assert_lazyvim_staging_clean
+  done
+
+  run cat "${TEST_DIR}/existing-config/init.lua"
+  assert_output "existing config"
+  assert_not_exists "${TEST_DIR}/existing-config/lua"
+  run cat "${TEST_DIR}/existing-file"
+  assert_output "existing file"
+  assert_not_exists "${TEST_DIR}/missing-config"
+  assert_not_exists "${TEST_DIR}/lazyvim-git.log"
+}
+
+@test "install_lazyvim publishes a pinned starter with dark theme and treesitter" {
+  _setup_lazyvim_test
+  # The config root itself may be absent and may contain spaces.
+  export XDG_CONFIG_HOME="${TEST_DIR}/fresh config"
+
+  run install_lazyvim
+  assert_success
+  assert_output --partial "LazyVim starter installed (test-pin)"
+  run cat "${XDG_CONFIG_HOME}/nvim/init.lua"
+  assert_output "pinned starter"
+  assert_file_contains "${XDG_CONFIG_HOME}/nvim/lua/plugins/colorscheme.lua" "vim.opt.background = 'dark'"
+  cmp "${DEVBASE_DOT}/.config/nvim/lua/plugins/treesitter.lua" "${XDG_CONFIG_HOME}/nvim/lua/plugins/treesitter.lua"
+  assert_not_exists "${XDG_CONFIG_HOME}/nvim/.git"
+  _assert_lazyvim_staging_clean
+}
+
+@test "install_lazyvim configures every light theme background" {
+  _setup_lazyvim_test
+  local theme
+  for theme in everforest-light catppuccin-latte tokyonight-day gruvbox-light solarized-light; do
+    export DEVBASE_THEME="$theme" XDG_CONFIG_HOME="${TEST_DIR}/config-${theme}"
+    run install_lazyvim
+    assert_success
+    assert_file_contains "${XDG_CONFIG_HOME}/nvim/lua/plugins/colorscheme.lua" "vim.opt.background = 'light'"
+    _assert_lazyvim_staging_clean
+  done
+}
+
+@test "install_lazyvim cleans a partial failed clone without publishing" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  git() {
+    _mock_lazyvim_git "$@" || return 1
+    return 1
+  }
+
+  run install_lazyvim
+  assert_failure
+  assert_output --partial "Failed to clone LazyVim starter"
+  _assert_lazyvim_not_published
+}
+
+@test "install_lazyvim aborts a failed checkout instead of publishing main" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  git() {
+    [[ "$1" != "-C" ]] || return 1
+    _mock_lazyvim_git "$@"
+  }
+
+  run install_lazyvim
+  assert_failure
+  assert_output --partial "Failed to checkout LazyVim starter test-pin"
+  _assert_lazyvim_not_published
+}
+
+@test "install_lazyvim cleans a partial failed render without publishing" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  envsubst_preserve_undefined() {
+    echo "partial render" >"$2"
+    return 1
+  }
+
+  run install_lazyvim
+  assert_failure
+  assert_output --partial "Failed to configure LazyVim colorscheme"
+  _assert_lazyvim_not_published
+}
+
+@test "install_lazyvim cleans a partial failed treesitter copy without publishing" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  cp() {
+    echo "partial copy" >"${@: -1}"
+    return 1
+  }
+
+  run install_lazyvim
+  assert_failure
+  assert_output --partial "Failed to configure LazyVim treesitter"
+  _assert_lazyvim_not_published
+}
+
+@test "install_lazyvim fails without publishing when staged git metadata cannot be removed" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  git() {
+    _mock_lazyvim_git "$@" || return 1
+    if [[ "$1" == "-C" ]]; then
+      rmdir "$2/.git"
+      ln -s "${TEST_DIR}/protected-git" "$2/.git"
+    fi
+  }
+  mkdir -p "${TEST_DIR}/protected-git"
+  echo "keep" >"${TEST_DIR}/protected-git/config"
+
+  run install_lazyvim
+  assert_failure
+  _assert_lazyvim_not_published
+  run cat "${TEST_DIR}/protected-git/config"
+  assert_output "keep"
+}
+
+@test "install_lazyvim cleans staging when publication fails" {
+  _setup_lazyvim_test
+  # shellcheck disable=SC2329
+  mv() { return 1; }
+
+  run install_lazyvim
+  assert_failure
+  assert_output --partial "Failed to publish LazyVim starter"
+  _assert_lazyvim_not_published
+}
+
+@test "install_lazyvim preserves targets created just before publication" {
+  _setup_lazyvim_test
+  local target_type
+  for target_type in empty-directory directory file symlink dangling-symlink; do
+    export XDG_CONFIG_HOME="${TEST_DIR}/race-${target_type}"
+    # Inject the race immediately before the real GNU mv, after preparation.
+    # shellcheck disable=SC2329
+    mv() {
+      local target="${XDG_CONFIG_HOME}/nvim"
+      case "$target_type" in
+        empty-directory) mkdir "$target" ;;
+        directory)
+          mkdir "$target"
+          echo "race config" >"$target/init.lua"
+          ;;
+        file) echo "race config" >"$target" ;;
+        symlink)
+          mkdir -p "${TEST_DIR}/race-config"
+          echo "race config" >"${TEST_DIR}/race-config/init.lua"
+          ln -s "${TEST_DIR}/race-config" "$target"
+          ;;
+        dangling-symlink) ln -s "${TEST_DIR}/race-missing" "$target" ;;
+      esac
+      command mv "$@"
+    }
+
+    run install_lazyvim
+    assert_success
+    assert_output --partial "Existing nvim configuration preserved"
+    refute_output --partial "LazyVim starter installed"
+    case "$target_type" in
+      empty-directory)
+        run find "${XDG_CONFIG_HOME}/nvim" -mindepth 1
+        assert_success
+        assert_output ""
+        ;;
+      directory|symlink)
+        run cat "${XDG_CONFIG_HOME}/nvim/init.lua"
+        assert_output "race config"
+        assert_not_exists "${XDG_CONFIG_HOME}/nvim/lua"
+        assert_not_exists "${XDG_CONFIG_HOME}/nvim/nvim"
+        ;;
+      file)
+        run cat "${XDG_CONFIG_HOME}/nvim"
+        assert_output "race config"
+        ;;
+      dangling-symlink)
+        [[ -L "${XDG_CONFIG_HOME}/nvim" ]]
+        [[ "$(readlink "${XDG_CONFIG_HOME}/nvim")" == "${TEST_DIR}/race-missing" ]]
+        assert_not_exists "${TEST_DIR}/race-missing"
+        ;;
+    esac
+    if [[ "$target_type" == "symlink" ]]; then
+      [[ -L "${XDG_CONFIG_HOME}/nvim" ]]
+      [[ "$(readlink "${XDG_CONFIG_HOME}/nvim")" == "${TEST_DIR}/race-config" ]]
+    fi
+    _assert_lazyvim_staging_clean
+  done
 }
 
 @test "_determine_font_details returns correct font info" {
@@ -398,6 +606,33 @@ EOF
   run cat "$vmoptions"
   assert_output --partial "-Dawt.toolkit.name=WLToolkit"
   assert_output --partial "-Dsun.awt.wl.Shadow=false"
+}
+
+@test "_configure_intellij_vmoptions preserves personal settings and dangling links" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  export XDG_SESSION_TYPE=wayland
+  local target="${XDG_CONFIG_HOME}/JetBrains/IntelliJIdea2025.2/idea64.vmoptions"
+  mkdir -p "$(dirname "$target")"
+  echo '-Xmx8192m' >"$target"
+  run _configure_intellij_vmoptions "2025.2" "${DEVBASE_ROOT}/dot/.config/devbase/intellij-vmoptions.template"
+  assert_success
+  assert_equal "$(cat "$target")" '-Xmx8192m'
+  run _configure_intellij_vmoptions "2025.2" "${TEST_DIR}/missing.template"
+  assert_success
+  assert_equal "$(cat "$target")" '-Xmx8192m'
+
+  rm "$target"
+  touch "$target"
+  run _configure_intellij_vmoptions "2025.2" "${TEST_DIR}/missing.template"
+  assert_success
+  assert [ ! -s "$target" ]
+
+  rm "$target"
+  ln -s "${TEST_DIR}/missing.vmoptions" "$target"
+  run _configure_intellij_vmoptions "2025.2" "${TEST_DIR}/missing.template"
+  assert_success
+  assert_symlink_to "${TEST_DIR}/missing.vmoptions" "$target"
+  assert_file_not_exists "${TEST_DIR}/missing.vmoptions"
 }
 
 # get_oc_checksum, get_vscode_checksum and get_gum_checksum are each tested on

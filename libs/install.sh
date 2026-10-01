@@ -257,8 +257,6 @@ cleanup() {
     fi
   fi
 
-  backup_if_exists "${XDG_CONFIG_HOME}/nvim/.git" "nvim-git-old"
-
   pkg_cleanup
 
   show_progress success "Cleanup complete"

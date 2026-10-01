@@ -74,6 +74,8 @@ teardown() {
   assert_dir_exists "${test_home}/.config"
   assert_dir_exists "${test_home}/.local/share"
   assert_dir_exists "${test_home}/.local/bin"
+  # LazyVim is create-only; directory setup must not make it look installed.
+  assert_dir_not_exists "${test_home}/.config/nvim"
 }
 
 @test "backup_if_exists creates backup of existing file" {

@@ -19,11 +19,33 @@ setup() {
 
   export PATH="${TEST_DIR}/bin:/usr/bin:/bin"
   source_core_libs
+  # shellcheck disable=SC2153 # DEVBASE_ROOT is set by common_setup_isolated
+  source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/configure-ssh-git.sh"
+  export _DEVBASE_CUSTOM_TEMPLATES=''
+  export _DEVBASE_CUSTOM_SSH=''
 }
 
 teardown() {
   common_teardown
+}
+
+# Exercise the real dotfile deployment before SSH setup, as installation does.
+deploy_ssh_configuration() {
+  source "${DEVBASE_ROOT}/libs/utils.sh"
+  source "${DEVBASE_ROOT}/libs/process-templates.sh"
+  export USER="$(id -un)"
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export _DEVBASE_TEMP="$(mktemp -d "${TEST_DIR}/staging.XXXXXX")"
+  export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
+  export DEVBASE_SSH_KEY_ACTION='keep'
+  export DEVBASE_SSH_KEY_TYPE='ed25519'
+  export DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  local temp_dotfiles
+  temp_dotfiles=$(prepare_temp_dotfiles_directory) || return 1
+  merge_dotfiles_with_backup "$temp_dotfiles" || return 1
+  configure_ssh
 }
 
 @test "configure_git_user sets git config when values differ" {
@@ -124,7 +146,179 @@ SCRIPT
   assert_output "700"
 }
 
-@test "setup_ssh_config_includes appends known_hosts.append to known_hosts" {
+@test "SSH installation creates a personal config when missing" {
+  run --separate-stderr deploy_ssh_configuration
+
+  assert_success
+  assert_file_exists "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_equal "$(stat -c %a "${XDG_CONFIG_HOME}/ssh/user.config")" "600"
+  run cat "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_output --partial "# Personal SSH Configuration"
+}
+
+@test "SSH installation and reinstallation preserve personal config" {
+  mkdir -p "${XDG_CONFIG_HOME}/ssh"
+  printf 'Host personal\n  HostName personal.example.com\n' >"${TEST_DIR}/expected.config"
+  cp "${TEST_DIR}/expected.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  chmod 600 "${XDG_CONFIG_HOME}/ssh/user.config"
+
+  run --separate-stderr deploy_ssh_configuration
+
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+
+  printf '\nHost added-later\n  User personal\n' >>"${XDG_CONFIG_HOME}/ssh/user.config"
+  cp "${XDG_CONFIG_HOME}/ssh/user.config" "${TEST_DIR}/expected.config"
+
+  run --separate-stderr deploy_ssh_configuration
+
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_equal "$(stat -c %a "${XDG_CONFIG_HOME}/ssh/user.config")" "600"
+}
+
+@test "SSH deployment preserves learned and revoked hosts across both organization seed paths" {
+  mkdir -p "${HOME}/.ssh" "${TEST_DIR}/custom_ssh" "${TEST_DIR}/templates"
+  cat >"${TEST_DIR}/expected_hosts" <<'EOF'
+# Personal trust decisions
+|1|hashed-host|hashed-name ssh-ed25519 personal-key
+@revoked old.example.com ssh-ed25519 revoked-key
+@cert-authority *.example.com ssh-ed25519 trusted-ca
+EOF
+  cp "${TEST_DIR}/expected_hosts" "${HOME}/.ssh/known_hosts"
+  echo 'old.example.com ssh-ed25519 revoked-key' >"${TEST_DIR}/custom_ssh/known_hosts.append"
+  echo 'new.example.com ssh-ed25519 new-key' >"${TEST_DIR}/templates/known_hosts.append"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+  export _DEVBASE_CUSTOM_TEMPLATES="${TEST_DIR}/templates"
+
+  run deploy_ssh_configuration
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected_hosts" "${HOME}/.ssh/known_hosts"
+  run deploy_ssh_configuration
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected_hosts" "${HOME}/.ssh/known_hosts"
+}
+
+@test "SSH fresh initialization collects both organization known_hosts sources once" {
+  mkdir -p "${TEST_DIR}/custom_ssh" "${TEST_DIR}/templates"
+  echo 'ssh.example.com ssh-ed25519 ssh-key' >"${TEST_DIR}/custom_ssh/known_hosts.append"
+  printf 'template.example.com ssh-ed25519 template-key' >"${TEST_DIR}/templates/known_hosts.append"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+  export _DEVBASE_CUSTOM_TEMPLATES="${TEST_DIR}/templates"
+
+  run deploy_ssh_configuration
+  assert_success
+  assert_equal "$(stat -c %a "${HOME}/.ssh/known_hosts")" "600"
+  run cat "${HOME}/.ssh/known_hosts"
+  assert_output --partial 'github.com ssh-ed25519'
+  assert_output --partial 'ssh.example.com ssh-ed25519 ssh-key'
+  assert_output --partial 'template.example.com ssh-ed25519 template-key'
+
+  cp "${HOME}/.ssh/known_hosts" "${TEST_DIR}/expected_hosts"
+  echo 'later.example.com ssh-ed25519 later-key' >>"${TEST_DIR}/custom_ssh/known_hosts.append"
+  run deploy_ssh_configuration
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected_hosts" "${HOME}/.ssh/known_hosts"
+}
+
+@test "SSH known_hosts preserves empty files and symlinks" {
+  mkdir -p "${HOME}/.ssh"
+  touch "${HOME}/.ssh/known_hosts"
+  run setup_ssh_config_includes
+  assert_success
+  assert [ ! -s "${HOME}/.ssh/known_hosts" ]
+
+  rm "${HOME}/.ssh/known_hosts"
+  ln -s "${TEST_DIR}/personal_hosts" "${HOME}/.ssh/known_hosts"
+  run setup_ssh_config_includes
+  assert_success
+  assert_symlink_to "${TEST_DIR}/personal_hosts" "${HOME}/.ssh/known_hosts"
+  assert_file_not_exists "${TEST_DIR}/personal_hosts"
+
+  echo '# Personal trust' >"${TEST_DIR}/personal_hosts"
+  run setup_ssh_config_includes
+  assert_success
+  assert_equal "$(cat "${TEST_DIR}/personal_hosts")" '# Personal trust'
+}
+
+@test "setup_ssh_config_includes preserves personal config while updating organization config" {
+  mkdir -p "${XDG_CONFIG_HOME}/ssh" "${TEST_DIR}/custom_ssh"
+  printf 'Host personal\n  User personal\n' >"${TEST_DIR}/expected.config"
+  cp "${TEST_DIR}/expected.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  echo '# Old organization config' >"${XDG_CONFIG_HOME}/ssh/custom.config"
+  echo '# Organization personal defaults' >"${TEST_DIR}/custom_ssh/user.config"
+  echo '# Updated organization config' >"${TEST_DIR}/custom_ssh/custom.config"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_files_equal "${TEST_DIR}/expected.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_files_equal "${TEST_DIR}/custom_ssh/custom.config" "${XDG_CONFIG_HOME}/ssh/custom.config"
+}
+
+@test "setup_ssh_config_includes seeds missing personal config from organization defaults" {
+  mkdir -p "${TEST_DIR}/custom_ssh"
+  echo '# Organization personal defaults' >"${TEST_DIR}/custom_ssh/user.config"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_files_equal "${TEST_DIR}/custom_ssh/user.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_equal "$(stat -c %a "${XDG_CONFIG_HOME}/ssh/user.config")" "600"
+}
+
+@test "setup_ssh_config_includes preserves an intentionally empty personal config" {
+  mkdir -p "${XDG_CONFIG_HOME}/ssh" "${TEST_DIR}/custom_ssh"
+  touch "${XDG_CONFIG_HOME}/ssh/user.config"
+  echo '# Organization personal defaults' >"${TEST_DIR}/custom_ssh/user.config"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_file_exists "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert [ ! -s "${XDG_CONFIG_HOME}/ssh/user.config" ]
+}
+
+@test "setup_ssh_config_includes preserves symlinked personal config and its contents" {
+  mkdir -p "${XDG_CONFIG_HOME}/ssh" "${TEST_DIR}/custom_ssh"
+  printf 'Host personal\n  User personal\n' >"${TEST_DIR}/expected.config"
+  cp "${TEST_DIR}/expected.config" "${TEST_DIR}/linked.config"
+  ln -s "${TEST_DIR}/linked.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  echo '# Organization personal defaults' >"${TEST_DIR}/custom_ssh/user.config"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_symlink_to "${TEST_DIR}/linked.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_files_equal "${TEST_DIR}/expected.config" "${TEST_DIR}/linked.config"
+}
+
+@test "setup_ssh_config_includes preserves a dangling personal config symlink" {
+  mkdir -p "${XDG_CONFIG_HOME}/ssh" "${TEST_DIR}/custom_ssh"
+  ln -s "${TEST_DIR}/missing.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  export _DEVBASE_CUSTOM_SSH=''
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_symlink_to "${TEST_DIR}/missing.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_file_not_exists "${TEST_DIR}/missing.config"
+
+  echo '# Organization personal defaults' >"${TEST_DIR}/custom_ssh/user.config"
+  export _DEVBASE_CUSTOM_SSH="${TEST_DIR}/custom_ssh"
+
+  run --separate-stderr setup_ssh_config_includes
+
+  assert_success
+  assert_symlink_to "${TEST_DIR}/missing.config" "${XDG_CONFIG_HOME}/ssh/user.config"
+  assert_file_not_exists "${TEST_DIR}/missing.config"
+}
+
+@test "setup_ssh_config_includes seeds missing known_hosts with organization entries" {
   local custom_ssh="${TEST_DIR}/custom_ssh"
   mkdir -p "${HOME}/.ssh"
   mkdir -p "${custom_ssh}"

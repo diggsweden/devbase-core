@@ -46,8 +46,8 @@ SPDX-License-Identifier = "LGPL-2.1-or-later"
 [[annotations]]
 path = [
   "dot/.ssh/config",
-  "dot/.config/ssh/user.config",
-  "dot/.ssh/known_hosts",
+  "devbase_files/ssh/known_hosts",
+  "devbase_files/ssh/user.config",
   "LICENSE",
 ]
 precedence = "aggregate"

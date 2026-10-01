@@ -9,6 +9,30 @@ if [[ -z "${DEVBASE_ROOT:-}" ]]; then
   return 1
 fi
 
+# Brief: Initialize host trust once, including both organization seed locations
+setup_ssh_known_hosts() (
+  local target_file="${HOME}/.ssh/known_hosts"
+  local -a sources=("${DEVBASE_FILES:-${DEVBASE_ROOT}/devbase_files}/ssh/known_hosts")
+  [[ -n "${_DEVBASE_CUSTOM_TEMPLATES:-}" && -f "${_DEVBASE_CUSTOM_TEMPLATES}/known_hosts.append" ]] && sources+=("${_DEVBASE_CUSTOM_TEMPLATES}/known_hosts.append")
+  [[ -n "${_DEVBASE_CUSTOM_SSH:-}" && -f "${_DEVBASE_CUSTOM_SSH}/known_hosts.append" ]] && sources+=("${_DEVBASE_CUSTOM_SSH}/known_hosts.append")
+  if [[ -e "$target_file" || -L "$target_file" ]]; then
+    if [[ ${#sources[@]} -gt 1 ]]; then
+      show_progress info "Preserving SSH known_hosts; review organization host-key changes manually"
+    fi
+    return 0
+  fi
+
+  local candidate source_file
+  candidate=$(mktemp "${HOME}/.ssh/.known_hosts.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate"' EXIT
+  for source_file in "${sources[@]}"; do
+    [[ -f "$source_file" ]] || continue
+    cat "$source_file" >>"$candidate" || return 1
+    printf '\n' >>"$candidate" || return 1
+  done
+  install_file_if_missing "$candidate" "$target_file"
+)
+
 # Brief: Setup SSH config includes (user.config and custom.config)
 # Params: None
 # Uses: _DEVBASE_CUSTOM_SSH (global, optional), HOME, XDG_CONFIG_HOME (globals)
@@ -19,8 +43,9 @@ setup_ssh_config_includes() {
   validate_var_set "XDG_CONFIG_HOME" || return 1
 
   local ssh_config_dir="${XDG_CONFIG_HOME}/ssh"
-  mkdir -p "${HOME}/.ssh" "$ssh_config_dir"
-  chmod 700 "${HOME}/.ssh" "$ssh_config_dir"
+  mkdir -p "${HOME}/.ssh" "$ssh_config_dir" || return 1
+  chmod 700 "${HOME}/.ssh" "$ssh_config_dir" || return 1
+  setup_ssh_known_hosts || return 1
 
   if validate_custom_dir "_DEVBASE_CUSTOM_SSH" "Custom SSH directory"; then
     require_env _DEVBASE_CUSTOM_SSH || return 1
@@ -34,9 +59,17 @@ setup_ssh_config_includes() {
       README.md | README*)
         continue
         ;;
+      user.config)
+        # Organization defaults may seed a personal config, never replace one.
+        install_file_if_missing "$file" "${ssh_config_dir}/user.config" || return 1
+        ;;
       *.config)
-        cp "$file" "${ssh_config_dir}/${filename}"
-        chmod 600 "${ssh_config_dir}/${filename}"
+        cp "$file" "${ssh_config_dir}/${filename}" || return 1
+        chmod 600 "${ssh_config_dir}/${filename}" || return 1
+        ;;
+      known_hosts.append)
+        # Both organization locations were included during first initialization.
+        continue
         ;;
       *.append)
         local target_name="${filename%.append}"
@@ -65,21 +98,8 @@ setup_ssh_config_includes() {
     done
   fi
 
-  if [[ ! -f "${ssh_config_dir}/user.config" ]]; then
-    cat >"${ssh_config_dir}/user.config" <<'EOF'
-# Personal SSH Configuration
-# This file is NEVER modified by DevBase - safe to edit
-#
-# You can add new hosts or override settings from custom.config
-#
-# Example:
-# Host personal-server
-#   HostName 192.168.1.100
-#   User myuser
-#   IdentityFile ~/.ssh/id_ed25519_personal
-EOF
-    chmod 600 "${ssh_config_dir}/user.config"
-  fi
+  # Personal config is initialized here, not deployed with managed dotfiles.
+  install_file_if_missing "${DEVBASE_FILES:-${DEVBASE_ROOT}/devbase_files}/ssh/user.config" "${ssh_config_dir}/user.config"
 }
 
 # Brief: Configure SSH keys and config

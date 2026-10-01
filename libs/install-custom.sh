@@ -152,56 +152,45 @@ get_oc_checksum() {
   return 1
 }
 
-# Brief: Install LazyVim Neovim configuration with theme integration
+# Brief: Initialize LazyVim only when no Neovim configuration exists
 # Params: None
-# Uses: XDG_CONFIG_HOME, DEVBASE_THEME, DEVBASE_DOT, TOOL_VERSIONS, validate_var_set, show_progress, envsubst_preserve_undefined (globals/functions)
-# Returns: 0 on success, 1 on failure
-# Side-effects: Clones LazyVim repo, backs up existing nvim config, configures colorscheme
-install_lazyvim() {
-  validate_var_set "XDG_CONFIG_HOME" || return 1
-  validate_var_set "DEVBASE_THEME" || return 1
-  validate_var_set "DEVBASE_DOT" || return 1
-
-  if [[ "$DEVBASE_INSTALL_LAZYVIM" != "true" ]]; then
+# Uses: XDG_CONFIG_HOME, DEVBASE_INSTALL_LAZYVIM, DEVBASE_THEME, DEVBASE_DOT, TOOL_VERSIONS, validate_var_set, show_progress, envsubst_preserve_undefined, safe_rm_rf (globals/functions)
+# Returns: 0 on success/skip, 1 on failure
+# Side-effects: Stages a configured starter and publishes it without replacing existing paths
+install_lazyvim() (
+  if [[ "${DEVBASE_INSTALL_LAZYVIM:-}" != "true" ]]; then
     show_progress info "LazyVim installation skipped by user preference"
     return 0
   fi
 
-  show_progress info "Installing LazyVim..."
-
+  validate_var_set "XDG_CONFIG_HOME" || return 1
   local nvim_config="${XDG_CONFIG_HOME}/nvim"
-  local backup_dir
-  backup_dir="${XDG_CONFIG_HOME}/nvim.bak.$(date +%Y%m%d_%H%M%S)"
-  local lazyvim_version="${TOOL_VERSIONS[lazyvim]:-main}"
-
-  if [[ -d "$nvim_config" ]] && [[ ! -L "$nvim_config" ]]; then
-    show_progress info "Backing up existing nvim config to $backup_dir"
-    mv "$nvim_config" "$backup_dir"
+  # Even an empty directory, a file, or a dangling symlink belongs to the user.
+  if [[ -e "$nvim_config" || -L "$nvim_config" ]]; then
+    show_progress info "Existing nvim configuration preserved; skipping LazyVim initialization"
+    return 0
   fi
+
+  validate_var_set "DEVBASE_THEME" || return 1
+  validate_var_set "DEVBASE_DOT" || return 1
 
   if ! command -v git &>/dev/null; then
     show_progress error "git not found, cannot install LazyVim"
     return 1
   fi
 
+  # A private sibling keeps publication on the same filesystem. The subshell's
+  # EXIT trap cleans only our staging directory and leaves caller traps intact.
+  mkdir -p -- "$XDG_CONFIG_HOME" || return 1
+  local staging_dir
+  staging_dir=$(mktemp -d "${XDG_CONFIG_HOME}/.nvim.XXXXXX") || return 1
+  trap 'safe_rm_rf "$XDG_CONFIG_HOME" "$staging_dir" || exit 1' EXIT
+  local staged_config="${staging_dir}/nvim"
+  local lazyvim_version="${TOOL_VERSIONS[lazyvim]:-main}"
+
   show_progress info "Cloning LazyVim starter (version: $lazyvim_version)..."
   local git_output
-  if git_output=$(git clone --quiet "$DEVBASE_URL_LAZYVIM_STARTER" "$nvim_config" 2>&1); then
-    # Use subshell to avoid changing the caller's working directory
-    (
-      cd "$nvim_config" || exit 1
-
-      # Checkout specific version (commit SHA or tag) if not main
-      if [[ "$lazyvim_version" != "main" ]]; then
-        git checkout --quiet "$lazyvim_version" 2>/dev/null || {
-          add_install_warning "Failed to checkout $lazyvim_version, using main"
-        }
-      fi
-
-      safe_rm_rf "$nvim_config" "$nvim_config/.git"
-    )
-    show_progress success "LazyVim starter installed ($lazyvim_version)"
-  else
+  if ! git_output=$(git clone --quiet "$DEVBASE_URL_LAZYVIM_STARTER" "$staged_config" 2>&1); then
     show_progress error "Failed to clone LazyVim starter"
     if [[ -n "$git_output" ]]; then
       show_progress info "Error details: $git_output"
@@ -209,35 +198,53 @@ install_lazyvim() {
     return 1
   fi
 
-  local theme_background="dark"
-  if [[ "${DEVBASE_THEME}" == "everforest-light" ]]; then
-    theme_background="light"
+  # A failed pin must never publish the default branch instead.
+  if [[ "$lazyvim_version" != "main" ]]; then
+    if ! git -C "$staged_config" checkout --quiet "$lazyvim_version"; then
+      show_progress error "Failed to checkout LazyVim starter $lazyvim_version"
+      return 1
+    fi
   fi
+  safe_rm_rf "$staged_config" "$staged_config/.git" || return 1
+
+  source "${DEVBASE_ROOT}/libs/theme-registry.sh" || return 1
+  local theme_info="${THEME_CONFIGS[${DEVBASE_THEME//-/_}]:-dark}"
+  local theme_background="${theme_info%%|*}"
 
   local colorscheme_template="${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
-  local colorscheme_target="$nvim_config/lua/plugins/colorscheme.lua"
+  local colorscheme_target="$staged_config/lua/plugins/colorscheme.lua"
 
-  if [[ -f "$colorscheme_template" ]]; then
-    mkdir -p "$(dirname "$colorscheme_target")"
-    THEME_BACKGROUND="$theme_background" envsubst_preserve_undefined "$colorscheme_template" "$colorscheme_target"
-    show_progress success "LazyVim colorscheme configured (${DEVBASE_THEME})"
-  else
-    add_install_warning "Colorscheme template not found"
+  mkdir -p -- "$staged_config/lua/plugins" || return 1
+  if ! THEME_BACKGROUND="$theme_background" envsubst_preserve_undefined "$colorscheme_template" "$colorscheme_target"; then
+    show_progress error "Failed to configure LazyVim colorscheme"
+    return 1
   fi
 
   # Copy treesitter config to prevent compilation issues in VSCode
   local treesitter_source="${DEVBASE_DOT}/.config/nvim/lua/plugins/treesitter.lua"
-  local treesitter_target="$nvim_config/lua/plugins/treesitter.lua"
+  local treesitter_target="$staged_config/lua/plugins/treesitter.lua"
 
-  if [[ -f "$treesitter_source" ]]; then
-    cp "$treesitter_source" "$treesitter_target"
-    show_progress success "LazyVim treesitter configured (VSCode-compatible)"
-  else
-    add_install_warning "Treesitter config not found"
+  if ! cp -- "$treesitter_source" "$treesitter_target"; then
+    show_progress error "Failed to configure LazyVim treesitter"
+    return 1
   fi
 
+  # GNU mv -T treats the target as a path, and -n never replaces a race-created
+  # target. Skip exit codes vary by coreutils version; inspect the paths too.
+  local publish_status=0
+  mv -T -n -- "$staged_config" "$nvim_config" || publish_status=$?
+  if [[ -d "$staged_config" && (-e "$nvim_config" || -L "$nvim_config") ]]; then
+    show_progress info "Existing nvim configuration preserved; skipping LazyVim initialization"
+    return 0
+  fi
+  if [[ "$publish_status" -ne 0 || -d "$staged_config" ]]; then
+    show_progress error "Failed to publish LazyVim starter"
+    return 1
+  fi
+
+  show_progress success "LazyVim starter installed ($lazyvim_version) with colorscheme (${DEVBASE_THEME}) and VSCode-compatible treesitter"
   return 0
-}
+)
 
 # Brief: Install Oracle JDK Mission Control (JMC) for Java profiling
 # Params: None
@@ -1138,40 +1145,46 @@ _is_wayland_session() {
 
 # Brief: Configure IntelliJ VM options from template
 # Params: $1 - version, $2 - vmoptions template path
-# Returns: 0 always
-_configure_intellij_vmoptions() {
+# Returns: 0 if initialized or already present, 1 on failure
+_configure_intellij_vmoptions() (
   local version="$1"
   local vmoptions_template="$2"
 
   local idea_version_short
   idea_version_short=$(echo "$version" | grep -oP '^\d+\.\d+')
-  local idea_config_dir="$HOME/.config/JetBrains/IntelliJIdea${idea_version_short}"
+  local idea_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/JetBrains/IntelliJIdea${idea_version_short}"
   local vmoptions_file="${idea_config_dir}/idea64.vmoptions"
 
-  mkdir -p "$idea_config_dir"
+  [[ -e "$vmoptions_file" || -L "$vmoptions_file" ]] && return 0
+  mkdir -p "$idea_config_dir" || return 1
+  local candidate
+  candidate=$(mktemp "${idea_config_dir}/.vmoptions.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate"' EXIT
 
   if [[ -f "$vmoptions_template" ]]; then
     show_progress info "Configuring IntelliJ VM options for optimal performance..."
 
     if _is_wayland_session; then
-      sed 's|# WAYLAND_PLACEHOLDER|-Dawt.toolkit.name=WLToolkit|' "$vmoptions_template" >"$vmoptions_file"
+      sed 's|# WAYLAND_PLACEHOLDER|-Dawt.toolkit.name=WLToolkit|' "$vmoptions_template" >"$candidate" || return 1
       # Disable Wayland shadow rendering to avoid shadow artifacts (IJPL-203429)
-      echo "-Dsun.awt.wl.Shadow=false" >>"$vmoptions_file"
+      echo "-Dsun.awt.wl.Shadow=false" >>"$candidate" || return 1
       show_progress info "Wayland support enabled"
     else
-      sed '/# WAYLAND_PLACEHOLDER/d' "$vmoptions_template" >"$vmoptions_file"
+      sed '/# WAYLAND_PLACEHOLDER/d' "$vmoptions_template" >"$candidate" || return 1
     fi
 
     show_progress success "IntelliJ VM options configured (Xmx=4GB, optimized for medium projects)"
   else
     if _is_wayland_session; then
       show_progress info "Detected Wayland session - enabling Wayland support for IntelliJ"
-      printf '%s\n' "-Dawt.toolkit.name=WLToolkit" "-Dsun.awt.wl.Shadow=false" >"$vmoptions_file"
+      printf '%s\n' "-Dawt.toolkit.name=WLToolkit" "-Dsun.awt.wl.Shadow=false" >"$candidate" || return 1
+    else
+      return 0
     fi
   fi
 
-  return 0
-}
+  install_file_if_missing "$candidate" "$vmoptions_file"
+)
 
 # Brief: Create IntelliJ IDEA desktop file
 # Params: $1 - install directory path

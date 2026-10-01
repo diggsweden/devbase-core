@@ -132,8 +132,7 @@ teardown() {
   assert_success
 }
 
-# validate_custom_template decides whether a template supplied by the
-# organisation's config repo may overwrite a shipped one.
+# Organization overrides replace staging copies, not their source templates.
 
 _source_templates() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
@@ -141,33 +140,6 @@ _source_templates() {
   source "${DEVBASE_ROOT}/libs/validation.sh" >/dev/null 2>&1
   source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh" >/dev/null 2>&1
   source "${DEVBASE_ROOT}/libs/process-templates.sh" >/dev/null 2>&1
-}
-
-@test "validate_custom_template accepts a template that overrides a shipped one" {
-  _source_templates
-  mkdir -p "${TEST_DIR}/vanilla/.config/git"
-  touch "${TEST_DIR}/vanilla/.config/git/config.template"
-
-  run validate_custom_template "config.template" "${TEST_DIR}/vanilla"
-  assert_success
-}
-
-@test "validate_custom_template rejects a template with no shipped counterpart" {
-  _source_templates
-  mkdir -p "${TEST_DIR}/vanilla"
-
-  run validate_custom_template "attacker-supplied.template" "${TEST_DIR}/vanilla"
-  assert_failure
-  assert_output --partial "not found in vanilla"
-}
-
-@test "validate_custom_template marks allowlisted custom-only templates" {
-  _source_templates
-  mkdir -p "${TEST_DIR}/vanilla"
-
-  # Return code 2 means "custom-only": handled by process_custom_templates
-  # rather than overwriting a shipped file.
-  run -2 validate_custom_template "registries.conf.template" "${TEST_DIR}/vanilla"
 }
 
 @test "copy_custom_templates_to_temp ignores a template with no shipped counterpart" {

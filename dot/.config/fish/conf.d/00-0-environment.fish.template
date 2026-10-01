@@ -58,7 +58,13 @@ set -gx DEVBASE_THEME "${DEVBASE_THEME}"
 # set above (BAT_THEME, FZF_DEFAULT_OPTS)
 
 # Starship prompt
-set -gx STARSHIP_CONFIG "$XDG_CONFIG_HOME/starship/starship.toml"
+if not set -q STARSHIP_CONFIG
+    if test -e "$XDG_CONFIG_HOME/starship.toml"
+        set -gx STARSHIP_CONFIG "$XDG_CONFIG_HOME/starship.toml"
+    else
+        set -gx STARSHIP_CONFIG "$XDG_CONFIG_HOME/starship/starship.toml"
+    end
+end
 
 # Runtime theme variables (for apps that read from environment)
 set -gx BAT_THEME "${BAT_THEME}"
