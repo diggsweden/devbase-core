@@ -45,6 +45,15 @@ bats -tap tests/
 bats -f "verify" tests/
 ```
 
+The native mise checks use an explicitly selected binary and isolated test
+directories. Set `DEVBASE_TEST_MISE_BIN` to the absolute path of the pinned mise
+version to include them; otherwise those checks are skipped:
+
+```bash
+DEVBASE_TEST_MISE_BIN=/absolute/path/to/mise bats \
+  tests/libs-install-mise.bats tests/libs-parse-packages.bats
+```
+
 ### Testing Techniques Used
 
 - **Isolated environments**: All tests use `temp_make`/`temp_del` for safe temp directories
@@ -58,7 +67,7 @@ Follow BATS best practices:
 1. Use `bats_require_minimum_version 1.13.0`
 2. Load helper libraries: `bats-support`, `bats-assert`, `bats-file`, `bats-mock`
 3. Use `setup()` and `teardown()` with `temp_make`/`temp_del` for isolated test environments
-4. Use `mock_create` from bats-mock to mock external commands
+4. Use `stub` and `unstub` from bats-mock to mock external commands and verify calls
 5. Use descriptive test names
 6. Add comments for complex assertions
 
@@ -100,24 +109,16 @@ teardown() {
 load "${BATS_TEST_DIRNAME}/libs/bats-mock/stub.bash"
 
 @test "function calls expected command" {
-  # Mock the 'git' command
-  git="$(mock_create)"
-  mock_set_output "${git}" "main" 1  # First call returns "main"
-
-  export PATH="${BATS_TEST_BINDIR}:${PATH}"
-  ln -s "${git}" "${BATS_TEST_BINDIR}/git"
-
-  run bash -c "
-    export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    source '${DEVBASE_ROOT}/libs/myscript.sh'
-    get_default_branch
-  "
+  stub git 'rev-parse --abbrev-ref HEAD : echo main'
+  run git rev-parse --abbrev-ref HEAD
 
   assert_success
   assert_output "main"
+  unstub git
 }
 ```
 
 ## CI Integration
 
-Tests are automatically run in CI via GitHub Actions (see `.github/workflows/test.yml`).
+Tests run in GitHub Actions via `.github/workflows/test-unit-ubuntu.yml` and
+`.github/workflows/test-unit-fedora.yml`.

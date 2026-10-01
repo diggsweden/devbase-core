@@ -246,20 +246,24 @@ Host *.internal.company.com
 - Keep minimal - users need flexibility
 - Users can override these settings in their personal `user.config`
 
+`~/.config/ssh/user.config` is create-only. Organization `ssh/user.config` can seed an absent file, but existing personal files and symlinks are preserved.
+
+To seed host keys, provide `templates/known_hosts.append`, `ssh/known_hosts.append`, or both. On first initialization, DevBase combines these with its bundled `devbase_files/ssh/known_hosts` into `~/.ssh/known_hosts`. An existing destination is preserved byte-for-byte, including an empty file or symlink. Later organization key changes require users to verify the keys through a trusted channel and update their known hosts manually.
+
 == Templates
 
-Place files in `devbase-custom-config/templates/`. DevBase processes different file types automatically.
+Place files directly in `devbase-custom-config/templates/`. DevBase processes the recognized file types below; this is not a recursive home-directory overlay. Paths shown use the default XDG locations.
 
 === Overriding DevBase Templates
 
 DevBase ships with default templates.
-Override any template by creating a file with the same name in `devbase-custom-config/templates/`:
+Override a staged template by creating a file with the same basename in `devbase-custom-config/templates/`:
 
 **Available DevBase templates:**
 
 Shell & Terminal:
 
-- `00-environment.fish.template` (Fish)
+- `00-0-environment.fish.template` (Fish)
 - `01-keybindings.fish.template` (Fish)
 - `02-aliases.fish.template` (Fish)
 - `starship.toml.template` (Starship)
@@ -269,25 +273,28 @@ Development Tools:
 
 - `config.template` (Git)
 - `config.yml.template` (LazyGit)
-- `colorscheme.lua.template` (Neovim)
 - `btop.conf.template` (btop)
 
 To see all available templates: `find dot/ -name "*.template" -type f`
 
 **How overrides work:**
 
-1. DevBase validates: custom template filename matches a vanilla template
-2. If match found: custom template replaces vanilla
-3. If no match: warning shown, template skipped
+1. DevBase matches the custom basename against templates in its staging tree. Multiple matches are rejected as ambiguous.
+2. A matching override is copied into staging *before* rendering. The rendered file follows the destination's ownership rule: managed files are updated; personal Starship config is create-only.
+3. Templates without a staged match are handled by the dedicated or generic routes below.
+
+Matched core templates are not also installed as generic home dotfiles. Only staging copies are cleaned up; organization source templates and unrelated user `.template` files are retained. Neovim is excluded from bulk staging: the fresh LazyVim installer uses the core Neovim sources directly, and an existing `nvim` path is preserved.
+
+Raw `.fish` files can replace a same-named staged core `.fish` file. Unmatched raw `.fish` extras are skipped; use a personal `.fish.template` for the generic Fish route below.
 
 === Custom Templates (Organization-Specific)
 
-Create organization-specific templates to override DevBase defaults or add new configurations.
+Dedicated and generic personal-config routes initialize absent destinations only. Existing files, including empty files and symlinks, are preserved; later organization changes to those files require manual review and application.
 
 **Built-in Templates** (automatically configured from `devbase-core`):
 
-Maven (YAML-based, conditionally processed based on registry/proxy configuration):
-- Generated from YAML fragments → `~/.m2/settings.xml`
+Maven (YAML-based, when proxy, registry or custom repository configuration applies):
+- Initializes absent `~/.m2/settings.xml` from YAML fragments
 - Base fragments in `devbase_files/maven-templates/yaml/`
 - Custom repositories via `maven-repos.yaml` in templates/ (optional)
 
@@ -304,7 +311,10 @@ How it works:
 1. Fragments selected based on environment variables
 2. Environment variables substituted using `envsubst`
 3. YAML fragments merged using `yq eval-all`
-4. Merged YAML converted to XML with `yq -o=xml`
+4. Merged YAML converted to XML in private staging with `yq -o=xml`
+5. XML is parsed back to check for a `settings` root, then installed with mode `0600` only if the destination is still absent
+
+Existing `settings.xml` is preserved without merging. With no applicable proxy, registry or custom YAML, no file is generated. Generation or validation failures leave an absent destination absent.
 
 Benefits:
 - ✓ No duplication - Each setting defined once
@@ -341,40 +351,48 @@ activeProfiles:
 
 Requirements: `yq` (mikefarah/yq) version 4.x or later with XML output support (installed via mise)
 
-Fallback: If custom XML templates exist in `devbase-custom-config/templates/`, the legacy XML-based approach is used instead
+Only YAML fragments are supported for Maven generation. Legacy XML template names are skipped; there is no XML-template fallback or generic XML merge.
 
 Gradle (only if registry configured):
-- `init.gradle.template` → `~/.gradle/init.gradle`
+- `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`), create-only
+- Custom templates take precedence over the core seed. This initializes the personal init script, not an additional `init.d` fragment.
 
 Container Registry (only if registry configured):
-- `registries.conf.template` → `~/.config/containers/registries.conf`
+- `registries.conf.template` → `~/.config/containers/registries.conf`, create-only
+- Custom templates take precedence over the core seed. No later-loading registry fragment is added to override personal settings.
+
+Testcontainers (independent of registry configuration):
+- Initializes absent `~/.testcontainers.properties`, choosing organization `.testcontainers.properties.template`, then raw `.testcontainers.properties`, then the core file
 
 **Custom Configuration Templates** (`.template` suffix - variable substitution with `envsubst`):
 
-You can override built-in templates or add your own:
+These routes initialize personal configs only when absent:
 
-- `maven-repos.yaml` → Merged into `~/.m2/settings.xml` (organization-specific Maven repositories)
-- `init.gradle.template` → `~/.gradle/init.gradle` (override built-in)
-- `registries.conf.template` → `~/.config/containers/registries.conf` (override built-in)
-- `.testcontainers.properties` → `~/.testcontainers.properties` (Testcontainers configuration, overrides built-in)
+- `maven-repos.yaml` → Included in first-time `~/.m2/settings.xml` generation (organization-specific Maven repositories)
+- `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`)
+- `registries.conf.template` → `~/.config/containers/registries.conf`
+- `.testcontainers.properties.template` or `.testcontainers.properties` → `~/.testcontainers.properties`
 - `npmrc.template` → `~/.npmrc` (NPM registry configuration)
-- `gradle.properties.template` → `~/.gradle/gradle.properties` (Gradle properties)
+- `gradle.properties.template` → `$GRADLE_USER_HOME/gradle.properties` (default `~/.gradle/gradle.properties`)
+- `{name}.fish.template` → `~/.config/fish/conf.d/{name}.fish` (when not a core-template override)
 
 Generic:
 
-- `{name}.template` → `~/.{name}` (Any other dotfile - uses filename as-is)
+- `{name}.template` → `~/.{name}` (other personal dotfiles; supply the name without a leading dot)
 
-**Append Files** (`.append` suffix - content appended to existing files):
+**Supported Append Files:**
 
-- `known_hosts.append` → `~/.ssh/known_hosts` (SSH known hosts)
-- `bashrc.append` → `~/.bashrc` (Bash configuration)
+- `known_hosts.append` → Collected with the other first-time SSH seeds described above; existing trust is preserved.
+- `bashrc.append` → Adds its complete text block to `~/.bashrc` before DevBase's Fish-launch marker, or at the end if no marker exists. The block is skipped if already present before the handoff; an unreachable copy after it does not count. Existing content and permissions are preserved, and the original is backed up under `devbase/backup/append/` before replacement. Missing `.bashrc` files are initialized; empty append files do nothing. Linked `.bashrc` files are preserved with a message to apply the block manually.
 
-**Other File Types:**
+Changing the supplied Bash block appends the new block once; older blocks are not removed or rewritten. Other `.append` targets are skipped with a warning. Use a dedicated template or installation hook for other file formats.
+
+**Other Recognized File Types** (copied as-is, only if the destination is absent):
 
 - `*.service` → `~/.config/systemd/user/` (systemd user services)
 - `*.conf` or `*.config` → `~/.config/{filename}` (config files, copied as-is)
-- Files with extensions → `~/.{filename}` (dotfiles, copied as-is)
-- Files without extensions → `~/.local/bin/{filename}` (executable scripts)
+
+Unknown file types and extensionless files are skipped. Use an installation hook if you need other file installation behavior.
 
 === Variable Substitution
 

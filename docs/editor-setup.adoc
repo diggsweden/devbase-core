@@ -58,6 +58,10 @@ DevBase installs LazyVim starter configuration with:
 
 Config: `~/.config/nvim/`
 
+Setup preserves the entire existing path, including an empty directory or symlink. A fresh install is staged and published only after the clone, configured pinned checkout and initial configuration succeed; Neovim templates are excluded from the bulk dotfile copy.
+
+Explicitly running `devbase-theme` can still update `~/.config/nvim/lua/plugins/colorscheme.lua`.
+
 Add personal configs to:
 - `~/.config/nvim/lua/plugins/` - Custom plugin configurations
 - `~/.config/nvim/after/` - Personal overrides
@@ -65,6 +69,8 @@ Add personal configs to:
 See link:https://www.lazyvim.org/configuration[LazyVim documentation] for customization options.
 
 == IntelliJ IDEA
+
+Version-specific user VM options at `~/.config/JetBrains/IntelliJIdea<major.minor>/idea64.vmoptions` are initialized only when absent. Existing files, including empty files and symlinks, are preserved; `XDG_CONFIG_HOME` is respected.
 
 Import code styles from devbase-core installation directory:
 - Java: `.config/devtools/formatting/java/eclipse-java-google-style.xml`

@@ -465,7 +465,7 @@ Replaces the default prompt with more useful information while remaining fast an
 
 #### Starship Key Commands
 
-- **Config file**: `~/.config/starship.toml`
+- **Active config file**: `$STARSHIP_CONFIG` (DevBase default: `~/.config/starship/starship.toml`)
 - **Create config**: `starship config`
 - **Explain prompt**: `starship explain`
 - **Install to shell**: `starship init fish | source`
@@ -478,7 +478,8 @@ Replaces the default prompt with more useful information while remaining fast an
 
 - Automatically initialized in Fish
 - Shows git status, tool versions, execution time
-- Configurable via `~/.config/starship.toml`
+- Initializes `~/.config/starship/starship.toml` only when absent
+- Fish keeps an already-set `STARSHIP_CONFIG`; otherwise it prefers an existing `~/.config/starship.toml`, then the nested DevBase path
 
 **Learn more**:
 
@@ -998,6 +999,8 @@ Preconfigured Neovim setup that includes LSP, completion, file navigation, and I
 Turns Neovim into a fully functional code editor without manually configuring dozens of plugins.
 Provides a modern development environment while keeping Neovim's modal editing and speed.
 DevBase includes LazyVim as the default Neovim configuration.
+
+Setup initializes only an absent `~/.config/nvim` path and preserves existing configurations, including empty directories and symlinks. Explicit `devbase-theme` commands can still update the colorscheme.
 
 #### Key Mappings (Leader key is usually Space)
 
@@ -2260,6 +2263,8 @@ DevBase uses mise as the primary tool version manager across all environments.
 
 **Configuration:**
 
+- **Generated global config**: `$XDG_CONFIG_HOME/mise/config.toml` (normally `~/.config/mise/config.toml`), regenerated during setup and updates
+- **Project selections**: Use a project `mise.toml` for versions that persist independently of DevBase
 - **Experimental features**: Enabled
 - **Legacy version files**: Disabled (.nvmrc, .python-version)
 - **ASDF compatibility**: Disabled (native mode)
@@ -2268,6 +2273,8 @@ DevBase uses mise as the primary tool version manager across all environments.
 - **HTTP timeout**: 90s (for corporate proxies)
 - **Pre-configured tools**: All devbase tools managed via mise
 - **Backend support**: aqua, ubi, core plugins
+
+Direct edits and global selections can be replaced by DevBase setup. The old global config is backed up before regeneration. A custom `MISE_GLOBAL_CONFIG_FILE` may bypass the generated file; see the [mise configuration guidance](personalization.adoc#_mise_tool_versions).
 
 **Learn more**:
 

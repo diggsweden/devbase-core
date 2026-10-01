@@ -16,7 +16,7 @@ See link:tools-matrix.adoc[Tools Matrix] - ~90+ development tools.
 
 === Can I run this multiple times?
 
-Yes. One-time backs up configs, preserves SSH keys and git settings, respects numbered config files (10-99).
+Yes. Personal create-only configs are preserved, while managed dotfiles are updated. The bulk copy backs up replaced files, retaining the current and previous run; archive backups before repeated installs if you need longer history. See the link:personalization.adoc[Personalization Guide] for ownership and backup details.
 
 === How often should I run updates?
 
@@ -65,9 +65,9 @@ Run devbase-theme and find out
 
 === How do I personalize without losing changes on update?
 
-Add your customizations to separate files: `~/.config/fish/conf.d/10-personal.fish`
+Add your Fish customizations to a separate file such as `~/.config/fish/conf.d/50-personal.fish` whose name does not collide with a shipped file.
 
-Devbase provides 00-09 system files. User files 10-99 won't be overwritten since they don't exist in the template.
+Numbers control load order, not preservation: DevBase ships `10-ulimits.fish` too. Shipped Fish files and functions are updated on reinstall. Git retains unrelated personal keys, but setup still writes selected global settings such as identity, proxy and signing.
 
 === Can I skip certain components?
 
@@ -95,9 +95,11 @@ git pull --rebase
 
 [source,bash]
 ----
-mise global python@3.11 # System-wide
+mise use -g python@3.11 # Global selection; setup can regenerate this
 mise list              # Show installed versions
 ----
+
+DevBase regenerates `~/.config/mise/config.toml` during setup and updates. Use project-specific `mise use` selections when you need versions that persist independently of the installer. See the link:personalization.adoc[Personalization Guide] for details.
 
 === How do I check my installation?
 

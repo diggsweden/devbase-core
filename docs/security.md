@@ -65,14 +65,14 @@ SPDX-License-Identifier: CC0-1.0
 
 ### Minimum Release Age
 
-Newly published versions are not installed until they are at least 7 days old,
-so a compromised release has time to be detected and pulled before it reaches a
-workstation.
+DevBase's update defaults use a 7-day minimum release age, allowing time for a
+compromised release to be detected and pulled. Personal mise and npm settings
+can override these defaults.
 
 | Layer | Control |
 |-------|---------|
 | Renovate | `minimumReleaseAge: "7 days"` in the shared base config, governing when pins in `packages.yaml` move |
-| mise | `minimum_release_age = "7d"` in the generated `~/.config/mise/config.toml`, so `mise upgrade` cannot outrun the policy after install |
+| mise | `minimum_release_age = "7d"` in generated `~/.config/mise/config.toml`; mise settings can override this default |
 | npm | `min-release-age=7` set at user scope during install (requires npm 11.10.0+, shipped with node 24.14.1+) |
 
 Not covered: snap, flatpak, apt/dnf and VS Code extensions provide no equivalent

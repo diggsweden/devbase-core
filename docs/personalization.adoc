@@ -6,9 +6,41 @@
 
 == Preserving Customizations
 
-DevBase ships config files with names starting with `00-`, `01-`, and `02-` (e.g., `00-environment.fish`, `01-keybindings.fish`, `02-aliases.fish`). These files are overwritten during reinstalls.
+DevBase updates managed defaults and initializes personal configs only when absent. Paths below use the default XDG locations; create-only files are preserved even when empty or symlinked.
 
-To preserve your personal customizations, create files with different names like `50-personal.fish` or `60-work.fish`. These won't conflict with DevBase files and will be preserved across reinstalls.
+[cols="2,3",options="header"]
+|===
+|Configuration |Installation behavior
+
+|SSH `~/.config/ssh/user.config` and `~/.ssh/known_hosts`
+|Create-only. Known hosts are seeded from bundled and organization entries together; later host-key changes require manual verification.
+
+|Maven `~/.m2/settings.xml`
+|Create-only, from applicable proxy, registry or custom YAML fragments. No applicable configuration means no file is generated.
+
+|Neovim `~/.config/nvim/`
+|The entire existing path is preserved, including an empty directory or symlink. LazyVim initializes only an absent path when selected.
+
+|Starship `~/.config/starship/starship.toml`, Testcontainers `~/.testcontainers.properties`, IntelliJ version-specific `idea64.vmoptions`
+|Create-only personal defaults.
+
+|Gradle `init.gradle` and `gradle.properties`; containers `~/.config/containers/registries.conf`
+|Create-only when applicable. Gradle uses `GRADLE_USER_HOME`, defaulting to `~/.gradle`.
+
+|Organization templates for personal paths, `.conf`, `.config` and `.service` files
+|Initialize absent destinations only. See link:customization.adoc[Custom Configuration] for routes and managed-template overrides.
+
+|Organization `bashrc.append`
+|Appends the supplied block once, preserving existing content and permissions and keeping a backup. Linked `.bashrc` files are left for manual review.
+
+|mise `~/.config/mise/config.toml`
+|DevBase-managed global config, regenerated from package selections. Existing contents are backed up before replacement; use project configs for persistent project-specific selections.
+
+|Fish `config.fish`, shipped `conf.d/` files and functions; `~/.config/git/config`; Zellij and other managed dotfiles
+|Updated on reinstall. Personal files with noncolliding names survive; managed destination symlink conflicts stop the bulk copy, preserving the link and its target.
+|===
+
+For Fish customizations, use separate files such as `50-personal.fish` or `60-work.fish` whose names do not collide with shipped files. Numbering controls load order, not preservation: DevBase also ships `10-ulimits.fish`.
 
 == Fish Shell
 
@@ -63,7 +95,7 @@ end
 
 == Git Configuration
 
-Personal git config in `~/.gitconfig` (preserved):
+Add personal Git settings in `~/.gitconfig`:
 
 [source,bash]
 ----
@@ -72,13 +104,15 @@ git config --global alias.co checkout
 git config --global pull.rebase true
 ----
 
+Unrelated keys are retained, but setup explicitly configures selected identity, proxy, signing, certificate and hook settings with `git config --global`. The managed `~/.config/git/config` is also updated on reinstall.
+
 == SSH Configuration
 
 DevBase uses a layered SSH configuration system:
 
-1. **System defaults** (`~/.ssh/config`) - DevBase-managed base settings
+1. **User config** (`~/.config/ssh/user.config`) - Your personal hosts (included first, highest priority)
 2. **Organization config** (`~/.config/ssh/custom.config`) - Organization-provided hosts
-3. **User config** (`~/.config/ssh/user.config`) - Your personal hosts (highest priority)
+3. **Base defaults** (`~/.ssh/config`) - DevBase-managed settings after the includes
 
 === Adding Personal Hosts
 
@@ -99,7 +133,7 @@ Host github-work
 
 === Overriding Organization Settings
 
-User config is loaded last and wins:
+SSH uses the first obtained value for most settings, so user config is loaded first:
 
 [source,ssh]
 ----
@@ -112,7 +146,9 @@ Host github.com
   ProxyCommand none  # Direct connection without proxy
 ----
 
-NOTE: `user.config` is never modified by DevBase - safe to edit and changes persist across reinstalls.
+NOTE: DevBase creates `user.config` only when absent. Existing contents, empty files and symlinks are preserved across reinstalls.
+
+`~/.ssh/known_hosts` is also initialized only when absent, combining `devbase_files/ssh/known_hosts` with organization `templates/known_hosts.append` and `ssh/known_hosts.append`. Existing files remain byte-for-byte unchanged, including empty files; symlinks are preserved. Verify later organization host-key changes through a trusted channel and update your file manually.
 
 == Language/Locale Configuration
 
@@ -289,7 +325,7 @@ This automatic integration only applies to WSL. On native Ubuntu, terminal emula
 
 == Neovim
 
-DevBase installs LazyVim. Add custom configurations:
+DevBase installs LazyVim only when selected and `~/.config/nvim` is absent. Existing configurations, including empty directories and symlinks, are preserved. For a LazyVim installation, add custom configurations:
 
 [source,lua]
 ----
@@ -307,13 +343,13 @@ vim.keymap.set('n', '<leader>q', ':qa<CR>')
 vim.opt.relativenumber = false
 ----
 
-NOTE: LazyVim creates default config files during installation. Edit existing files rather than creating new ones.
+NOTE: Fresh installation is staged; cloning, the configured pinned checkout and initial configuration must succeed before publication. Explicitly running `devbase-theme` can still update `lua/plugins/colorscheme.lua`.
 
 See link:https://www.lazyvim.org/configuration[LazyVim documentation] for more customization options.
 
 == Starship Prompt
 
-Edit `~/.config/starship/starship.toml` to customize your prompt:
+DevBase initializes `~/.config/starship/starship.toml` only when absent. Fish respects an already-set `STARSHIP_CONFIG`; otherwise it prefers `~/.config/starship.toml` if present, then the DevBase-initialized nested path. Edit the active file to customize your prompt:
 
 [source,toml]
 ----
@@ -330,6 +366,8 @@ Changes take effect in new terminal sessions.
 
 == mise Tool Versions
 
+DevBase generates `$XDG_CONFIG_HOME/mise/config.toml` (normally `~/.config/mise/config.toml`) from its package selections. This global file is managed by the installer: direct edits and global selections can be replaced on setup or update. Project configuration files are not rewritten by DevBase.
+
 Project-specific:
 [source,bash]
 ----
@@ -338,12 +376,16 @@ mise use node@18
 mise use python@3.11
 ----
 
-Global:
+Global selections (can be replaced by the next DevBase setup):
 [source,bash]
 ----
-mise global node@20
-mise global python@3.12
+mise use -g node@20
+mise use -g python@3.12
 ----
+
+Use `mise current` to check the effective versions. Setup validates the generated TOML and backs up the existing global configuration before replacement; invalid package definitions, invalid TOML and failed writes leave it intact.
+
+NOTE: A custom `MISE_GLOBAL_CONFIG_FILE` may bypass DevBase's generated global config. Review that file and the effective configuration when using this override.
 
 == Zellij Terminal Multiplexer
 
@@ -417,24 +459,7 @@ set -g fish_greeting ''
 
 == Backup Before Reinstall
 
-[source,bash]
-----
-# Backup personal configs
-tar czf ~/devbase-backup-$(date +%Y%m%d).tar.gz \
-    ~/.config/fish/conf.d/[1-9]*.fish \
-    ~/.config/fish/functions/ \
-    ~/.config/starship/starship.toml \
-    ~/.config/nvim/lua/plugins/ \
-    ~/.config/nvim/lua/config/ \
-    ~/.config/nvim/after/ \
-    ~/.config/ssh/user.config \
-    ~/.gitconfig \
-    2>/dev/null
-
-echo "Backup saved to ~/devbase-backup-$(date +%Y%m%d).tar.gz"
-----
-
-NOTE: DevBase automatically backs up files before overwriting them to `~/.local/share/devbase/backup/`.
+The managed dotfile bulk copy backs up existing destinations under `$XDG_DATA_HOME/devbase/backup/dot_backup/` (normally `~/.local/share/devbase/backup/dot_backup/`), covering the full copied tree and preserving symlinks as links. A failed backup blocks bulk replacement. Backup rotation happens after preferences are confirmed, when the installation phase begins: `backup/` holds the current run and `backup.old/` the previous run. Archive these directories and your personal configs before repeated installs if you need longer history. Historical `~/.devbase_backup_*` directories are not automatically deleted. This is not a backup of every configuration writer; many personal paths are preserved in place instead.
 
 == Configuration File Locations
 
@@ -444,15 +469,12 @@ DevBase configuration files are located in:
 - Main config: `~/.config/fish/config.fish`
 - Custom functions: `~/.config/fish/functions/`
 - Configuration directory: `~/.config/fish/conf.d/`
-  * `00-*.fish` - DevBase managed (overwritten on reinstall)
-  * `01-*.fish` - DevBase managed (overwritten on reinstall)
-  * `02-*.fish` - DevBase managed (overwritten on reinstall)
-  * `50-*.fish` - Your personal configs (preserved)
-  * `20-*.fish` - Your personal configs (preserved)
+  * Shipped filenames, including `10-ulimits.fish`, are managed and updated on reinstall.
+  * Personal files with noncolliding names, such as `50-personal.fish`, are preserved.
 
 === Git
 - Global config: `~/.config/git/config` (DevBase managed)
-- Personal overrides: `~/.gitconfig` (preserved)
+- Personal settings: `~/.gitconfig` (unrelated keys retained; setup writes selected settings)
 - Global gitignore: `~/.config/git/.gitignore`
 - Allowed signers: `~/.config/ssh/allowed_signers`
 
@@ -460,6 +482,7 @@ DevBase configuration files are located in:
 - Main config: `~/.ssh/config` (DevBase managed)
 - Organization config: `~/.config/ssh/custom.config` (organization provided)
 - User config: `~/.config/ssh/user.config` (your personal hosts, preserved)
+- Known hosts: `~/.ssh/known_hosts` (create-only seed, then personally maintained)
 - Allowed signers: `~/.config/ssh/allowed_signers`
 
 === Neovim
@@ -470,17 +493,17 @@ DevBase configuration files are located in:
 - After directory: `~/.config/nvim/after/` (for personal overrides)
 
 === Terminal & Shell Tools
-- Starship: `~/.config/starship/starship.toml`
+- Starship: `$STARSHIP_CONFIG` (normally `~/.config/starship/starship.toml`; conventional `~/.config/starship.toml` takes precedence if present)
 - Zellij: `~/.config/zellij/config.kdl`
 - btop: `~/.config/btop/btop.conf`
 - Delta themes: `~/.config/delta/themes.config`
 
 === Development Tools
-- mise: `~/.config/mise/config.toml`
+- mise global config: `~/.config/mise/config.toml` (DevBase managed)
 - Lazygit: `~/.config/lazygit/config.yml`
-- Podman/Containers: `~/.config/containers/registries.conf` (created from custom templates if provided)
+- Podman/Containers: `~/.config/containers/registries.conf` (create-only when a registry is configured)
 
 === User Binaries
 - Personal scripts: `~/.local/bin/` (in PATH)
 
-TIP: Files in `~/.config/fish/conf.d/` with names `50-*` through `99-*` are never touched by DevBase - perfect for personal customizations.
+TIP: Check shipped filenames when naming personal Fish configs; no numeric range is reserved against collisions.

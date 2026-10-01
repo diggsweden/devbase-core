@@ -301,30 +301,33 @@ configure-services.sh         # Systemd user services
 setup-vscode.sh               # VSCode/Cursor configuration
 ----
 
-=== Configurations (dot/)
+=== Installed Configuration Layout
+
+Most managed dotfiles come from `dot/`. Personal configs below are initialized only when absent; the global mise config is generated from package selections.
 
 [source]
 ----
 .config/
 ├── devbase/            # DevBase metadata (packages.yaml - unified package configuration)
 ├── fish/               # Fish shell configuration
-│   ├── config.fish     # Main configuration
+│   ├── config.fish     # Managed main configuration
 │   ├── conf.d/         # Configuration directory
 │   │   ├── 00-*.fish   # DevBase managed (overwritten)
 │   │   ├── 01-*.fish   # DevBase managed (overwritten)
 │   │   ├── 02-*.fish   # DevBase managed (overwritten)
-│   │   └── 10-*.fish   # User personal configs (preserved)
-│   └── functions/      # Fish functions
+│   │   └── 10-ulimits.fish # Also DevBase managed; numbers do not protect files
+│   └── functions/      # Shipped names updated; noncolliding personal files preserved
 ├── git/                # Git global config
 │   ├── config          # Global git configuration
 │   └── .gitignore      # Global gitignore
 ├── ssh/                # SSH config layering
 │   ├── custom.config   # Organization-provided hosts
-│   └── user.config     # User personal hosts (highest priority)
-├── nvim/               # Neovim/LazyVim configuration
-├── starship/           # Starship prompt theme
+│   └── user.config     # Personal hosts, create-only (included first)
+├── nvim/               # LazyVim initializes only an absent path
+├── starship/           # starship.toml is create-only
 ├── zellij/             # Terminal multiplexer config
-├── mise/               # Tool version management (config.toml)
+├── mise/
+│   └── config.toml     # Generated global tool configuration (DevBase managed)
 ├── btop/               # System monitor theme
 ├── delta/              # Git diff viewer themes
 ├── eza/                # Modern ls replacement config
@@ -336,18 +339,24 @@ setup-vscode.sh               # VSCode/Cursor configuration
 ├── bin/                # User binaries (in PATH)
 └── share/
     └── devbase/
-        └── backup/     # Automatic backups before overwriting
+        ├── backup/     # Current run; dot_backup/ covers the managed bulk copy
+        └── backup.old/ # Previous run; rotation starts after confirmation
 
 .ssh/
-├── config              # SSH client main config (includes custom.config, user.config)
-└── known_hosts         # Pre-populated known hosts
+├── config              # Managed SSH client config (user include before organization)
+└── known_hosts         # Create-only seed, then personally maintained
 ----
+
+Neovim sources remain in `dot/.config/nvim/` for fresh LazyVim initialization but are excluded from bulk copying. SSH seeds (`known_hosts` and `user.config`) live in `devbase_files/ssh/`, outside `dot/`. See link:personalization.adoc[Personalization Guide] for ownership and backup details.
 
 === Additional Resources (devbase_files/)
 
 [source]
 ----
 devbase_files/
+├── ssh/
+│   ├── known_hosts     # First-time seed combined with organization host keys
+│   └── user.config     # Personal config starter, installed only when missing
 ├── systemd/            # Systemd unit files
 │   └── user/           # User services (podman, wayland-socket-symlink)
 ├── fish-functions/     # Conditionally installed Fish functions
@@ -371,11 +380,13 @@ devbase-custom-config/  # Optional organization overlay
 ├── certificates/       # Organization CA certificates
 │   ├── *.crt           # Certificate files
 │   └── README.md       # Installation instructions
-├── templates/          # Configuration overrides
-│   ├── .config/        # XDG config overrides
-│   └── .ssh/           # SSH config overrides
-├── ssh/                # SSH keys and config
-│   └── custom.config   # Organization SSH hosts
+├── templates/          # Flat, recognized template/config routes
+│   ├── config.kdl.template # Managed core-template override, rendered in staging
+│   ├── maven-repos.yaml # Repositories for first-time Maven settings
+│   └── known_hosts.append # First-time SSH host-key seed
+├── ssh/                # SSH configuration
+│   ├── custom.config   # Organization SSH hosts
+│   └── known_hosts.append # Additional first-time host-key seed
 └── hooks/              # Lifecycle hooks
     ├── pre-install.sh        # Before installation
     ├── post-configuration.sh # After config, before tools
