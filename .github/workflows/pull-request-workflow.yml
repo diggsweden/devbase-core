@@ -11,15 +11,17 @@ concurrency:
   cancel-in-progress: true
 jobs:
   pr-checks:
-    uses: diggsweden/reusable-ci/.github/workflows/pullrequest-orchestrator.yml@617cb32268cb6aefdfa4117b4159d37e3b47d7b3 # v2.8.3
+    uses: diggsweden/reusable-ci/.github/workflows/pullrequest-orchestrator.yml@997d7dc2238b40c79798fda309d8061b0707a3e5 # v3.0.0
     permissions:
       contents: read
       packages: read
-      security-events: write
-    # No `secrets:` block on purpose: reusable-ci declares no
-    # `on.workflow_call.secrets` and its jobs run on the automatic GITHUB_TOKEN.
+    # reusable-ci v3 takes explicit secret mappings only. The jobs run on the
+    # automatic GITHUB_TOKEN; CODE_SCANNING_TOKEN is optional and only enables
+    # the SARIF upload to Code Scanning.
+    secrets:
+      CODE_SCANNING_TOKEN: ${{ secrets.CODE_SCANNING_TOKEN }}
     with:
-      reusable-ci-ref: 617cb32268cb6aefdfa4117b4159d37e3b47d7b3
+      reusable-ci-ref: 997d7dc2238b40c79798fda309d8061b0707a3e5
       project-type: maven
       linters.devbasecheck: true
       linters.commitlint: false
