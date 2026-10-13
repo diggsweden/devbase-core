@@ -444,11 +444,11 @@ install_keystore_explorer() {
   local pkg_format
   pkg_format=$(_get_custom_pkg_format)
 
-  # KeyStore Explorer only provides deb, but it's architecture-independent Java
-  # For RPM systems, we can use alien or download the tarball instead
+  # Upstream names the deb kse_<version>-1_all.deb (package revision suffix
+  # since v5.7.0) and the zip kse-<version without dots>.zip.
   local kse_url kse_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}_all.deb"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}-1_all.deb"
     cache_name="kse-${kse_version}.deb"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -464,7 +464,8 @@ install_keystore_explorer() {
     fi
   else
     # For RPM systems, download the zip/tarball and install manually
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse-${kse_version#v}.zip"
+    local kse_zip_name="kse-${kse_version//[v.]/}"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/${kse_zip_name}.zip"
     cache_name="kse-${kse_version}.zip"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -477,7 +478,7 @@ install_keystore_explorer() {
       local kse_dir="${XDG_DATA_HOME:-$HOME/.local/share}/keystore-explorer"
       mkdir -p "$kse_dir"
       unzip -q -o "$kse_pkg" -d "$kse_dir"
-      ln -sf "$kse_dir/kse-${kse_version#v}/kse.sh" "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
+      ln -sf "$kse_dir/${kse_zip_name}/kse.sh" "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
       chmod +x "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
       show_progress success "KeyStore Explorer installed"
     else

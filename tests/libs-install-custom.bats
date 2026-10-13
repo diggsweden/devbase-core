@@ -693,6 +693,22 @@ _capture_download_args() {
   assert_output --partial "/26.1.4/dbeaver-ce-26.1.4-linux-x86_64.rpm"
 }
 
+@test "install_keystore_explorer requests the published deb asset name" {
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 1; }" \
+    "install_keystore_explorer"
+
+  assert_output --partial "/v5.7.0/kse_5.7.0-1_all.deb"
+}
+
+@test "install_keystore_explorer requests the published zip asset name" {
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo rpm; }; command_exists() { return 1; }" \
+    "install_keystore_explorer"
+
+  assert_output --partial "/v5.7.0/kse-570.zip"
+}
+
 @test "install_k3s forwards a pinned installer checksum to the download" {
   # Unlike the other installers, k3s does not fetch a digest; it only honours
   # DEVBASE_K3S_INSTALL_SHA256.
