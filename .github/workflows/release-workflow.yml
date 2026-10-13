@@ -16,21 +16,24 @@ permissions:
   contents: read
 jobs:
   release:
-    uses: diggsweden/reusable-ci/.github/workflows/release-orchestrator.yml@617cb32268cb6aefdfa4117b4159d37e3b47d7b3 # v2.8.3
+    uses: diggsweden/reusable-ci/.github/workflows/release-orchestrator.yml@997d7dc2238b40c79798fda309d8061b0707a3e5 # v3.0.0
     permissions:
       contents: write
       packages: write
       id-token: write
       actions: read
-      security-events: write
       attestations: write
-    # reusable-ci relies on `inherit` end to end: it declares no
-    # `on.workflow_call.secrets` but forwards the store to its nested jobs,
-    # which need OSPO_BOT_GPG_* and RELEASE_BOT_TOKEN.
-    # nosemgrep: yaml.github-actions.security.secrets-inherit.secrets-inherit
-    secrets: inherit
+      pull-requests: read
+    # reusable-ci v3 takes explicit secret mappings only (no `inherit`) and
+    # uses the canonical RELEASE_* secret names.
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+      RELEASE_GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+      RELEASE_GPG_PUBLIC_KEY: ${{ secrets.RELEASE_GPG_PUBLIC_KEY }}
+      CODE_SCANNING_TOKEN: ${{ secrets.CODE_SCANNING_TOKEN }}
     with:
-      reusable-ci-ref: 617cb32268cb6aefdfa4117b4159d37e3b47d7b3
+      reusable-ci-ref: 997d7dc2238b40c79798fda309d8061b0707a3e5
       artifacts-config: .github/artifacts.yml
       changelog-creator: git-cliff
       release-publisher: github-cli

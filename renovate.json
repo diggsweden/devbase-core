@@ -21,6 +21,11 @@
       "matchPackageNames": ["rvben/rumdl"],
       "allowedVersions": "!=v0.1.72",
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "JetBrains versions can have four parts (2025.3.6.1), which semver cannot order",
+      "matchDatasources": ["custom.jetbrains"],
+      "versioning": "loose"
     }
   ],
   "customManagers": [
@@ -91,6 +96,13 @@
       "format": "plain",
       "transformTemplates": [
         "{\"releases\": [$map($distinct($match($join(releases.version, \"\\n\"), /icaclient(?:-gcc-8)?_([0-9.]+)_amd64\\.deb/).groups[0]), function($v) { {\"version\": $v} })]}"
+      ]
+    },
+    "jetbrains": {
+      "defaultRegistryUrlTemplate": "https://data.services.jetbrains.com/products/releases?code={{packageName}}&type=release",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [*.{\"version\": version, \"releaseTimestamp\": date}]}"
       ]
     },
     "openshift-oc": {
