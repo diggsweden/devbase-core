@@ -124,6 +124,11 @@ mise doctor                    # Check mise setup
 
 Fish for interactive shells. Fall back to bash with: `bash`.
 
+Ubuntu installations use the distribution Fish package. Before updating APT,
+setup backs up and removes dedicated source files for the old Fish release-4
+PPA under `DEVBASE_BACKUP_DIR/apt/`. Shared source files require manual cleanup;
+other repositories, signing keys and the installed Fish package are left alone.
+
 === How do I see what's happening during installation?
 
 Most output is shown in the terminal. Use `DEBUG=1 ./setup.sh` for additional details.
