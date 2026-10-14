@@ -30,14 +30,36 @@ configure_fish_interactive() {
       printf "%s\n" "$fish_path" | sudo tee -a "$shells_file" &>/dev/null
     fi
 
-    if ! grep -q "Launch Fish for interactive sessions (added by devbase)" "${HOME}/.bashrc"; then
-      cat >>"${HOME}/.bashrc" <<'EOF'
-
-# Launch Fish for interactive sessions (added by devbase)
-if [[ $- == *i* ]] && command -v fish &>/dev/null; then
+    # The marker line must stay unchanged: append_bashrc_once inserts
+    # organization blocks before it.
+    local marker='# Launch Fish for interactive sessions (added by devbase)'
+    local legacy_block="${marker}
+if [[ \$- == *i* ]] && command -v fish &>/dev/null; then
     exec fish
-fi
-EOF
+fi"
+    local handoff_block="${marker}
+# Skipped when the parent is Fish, so running \`bash\` from Fish stays in Bash.
+if [[ \$- == *i* ]] && [[ \"\$(cat /proc/\$PPID/comm 2>/dev/null)\" != fish ]] &&
+    command -v fish &>/dev/null; then
+    if shopt -q login_shell; then
+        exec fish --login
+    fi
+    exec fish
+fi"
+
+    if ! grep -qF "$marker" "${HOME}/.bashrc" 2>/dev/null; then
+      printf '\n%s\n' "$handoff_block" >>"${HOME}/.bashrc"
+    else
+      # Upgrade the handoff written by earlier releases in place.
+      local content
+      content=$(
+        cat "${HOME}/.bashrc"
+        printf x
+      ) || return 1
+      content=${content%x}
+      if [[ "$content" == *"$legacy_block"* ]]; then
+        printf '%s' "${content/"$legacy_block"/"$handoff_block"}" >"${HOME}/.bashrc"
+      fi
     fi
     show_progress success "Fish shell configured (interactive mode)"
   else

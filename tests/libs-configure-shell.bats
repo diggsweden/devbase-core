@@ -147,6 +147,88 @@ SCRIPT
   assert_success
 }
 
+_stub_fish_reporting_args() {
+  cat >"${TEST_DIR}/bin/fish" <<'SCRIPT'
+#!/usr/bin/env bash
+echo "fish started $*"
+SCRIPT
+}
+
+_run_bash_under_parent() {
+  local parent_name="$1"
+  _stub_fish_reporting_args
+  mkdir -p "${TEST_DIR}/parent"
+  cp /bin/bash "${TEST_DIR}/parent/${parent_name}"
+  # The trailing command stops bash from exec-ing the child in place, so the
+  # child's parent process keeps the copied name.
+  run --separate-stderr "${TEST_DIR}/parent/${parent_name}" -c \
+    "bash --noprofile --rcfile '${TEST_HOME}/.bashrc' -i -c 'echo bash kept'; true"
+}
+
+@test "bashrc handoff starts fish from a non-fish parent" {
+  configure_fish_interactive >/dev/null 2>&1
+
+  _run_bash_under_parent terminal
+
+  assert_success
+  assert_output "fish started "
+}
+
+@test "bashrc handoff keeps login status for fish" {
+  configure_fish_interactive >/dev/null 2>&1
+  _stub_fish_reporting_args
+
+  # --noprofile keeps the host's /etc/profile out; a login shell ignores
+  # --rcfile, so source .bashrc the way ~/.profile does.
+  run --separate-stderr bash -c \
+    "bash --login --noprofile -i -c 'source \"\$HOME/.bashrc\"; echo bash kept'; true"
+
+  assert_success
+  assert_output "fish started --login"
+}
+
+@test "bashrc handoff keeps bash when started from fish" {
+  configure_fish_interactive >/dev/null 2>&1
+
+  _run_bash_under_parent fish
+
+  assert_success
+  assert_output "bash kept"
+}
+
+@test "configure_fish_interactive upgrades the handoff from earlier releases" {
+  cat >"${TEST_HOME}/.bashrc" <<'EOF'
+# Personal before
+
+# Launch Fish for interactive sessions (added by devbase)
+if [[ $- == *i* ]] && command -v fish &>/dev/null; then
+    exec fish
+fi
+# Personal after
+EOF
+  chmod 640 "${TEST_HOME}/.bashrc"
+
+  configure_fish_interactive >/dev/null 2>&1
+
+  assert_equal "$(stat -c %a "${TEST_HOME}/.bashrc")" 640
+  assert_equal "$(head -n 1 "${TEST_HOME}/.bashrc")" '# Personal before'
+  assert_equal "$(tail -n 1 "${TEST_HOME}/.bashrc")" '# Personal after'
+  run grep -c 'PPID' "${TEST_HOME}/.bashrc"
+  assert_output "1"
+  cp "${TEST_HOME}/.bashrc" "${TEST_DIR}/after"
+  configure_fish_interactive >/dev/null 2>&1
+  assert_files_equal "${TEST_DIR}/after" "${TEST_HOME}/.bashrc"
+}
+
+@test "configure_fish_interactive leaves an edited handoff alone" {
+  printf '%s\n' '# Launch Fish for interactive sessions (added by devbase)' 'exec fish' >"${TEST_HOME}/.bashrc"
+  cp "${TEST_HOME}/.bashrc" "${TEST_DIR}/before"
+
+  configure_fish_interactive >/dev/null 2>&1
+
+  assert_files_equal "${TEST_DIR}/before" "${TEST_HOME}/.bashrc"
+}
+
 @test "configure_fish_interactive validates HOME variable" {
   run bash -c "
     unset HOME
