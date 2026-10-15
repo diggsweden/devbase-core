@@ -52,22 +52,37 @@ _pkg_apt_configure_mirror() (
   done
   candidate=$(mktemp "${_DEVBASE_TEMP:?}/apt-mirror.XXXXXX") || return 1
   trap 'rm -f -- "$candidate" "$staged"' EXIT
-  local ubuntu_uri='https?://(([[:alnum:]-]+\.)?archive\.ubuntu\.com|security\.ubuntu\.com)/ubuntu/?([[:blank:]]|$)'
-  local mirror="${DEVBASE_APT_REGISTRY%/}/"
-  # Escape replacement metacharacters; the URL validation above excludes '#'.
-  mirror="${mirror//\\/\\\\}"
-  mirror="${mirror//&/\\&}"
+  local last_byte
   for file in "$apt_dir/sources.list" "$apt_dir/sources.list.d/"*.list "$apt_dir/sources.list.d/"*.sources; do
     [[ -f "$file" ]] || continue
-    # deb822 URI continuations end at the next field or blank line.
-    # Legacy deb/deb-src lines are handled separately; comments stay intact.
-    sed -E "
-      /^URIs:/,/^([^[:blank:]#][^:]*:|[[:blank:]]*$)/ {
-        /^[[:blank:]]*#/b
-        /^(URIs:|[[:blank:]])/s#${ubuntu_uri}#${mirror}\\3#g
+    last_byte=$(tail -c 1 -- "$file") || return 1
+    # ENVIRON and concatenation preserve ampersands and backslashes in the URL.
+    _DEVBASE_APT_MIRROR="${DEVBASE_APT_REGISTRY%/}/" awk '
+      BEGIN { mirror = ENVIRON["_DEVBASE_APT_MIRROR"] }
+      function rewrite(line,    result, matched, suffix) {
+        result = ""
+        while (match(line, /https?:\/\/(([[:alnum:]-]+\.)?archive\.ubuntu\.com|security\.ubuntu\.com)\/ubuntu\/?([[:blank:]]|$)/)) {
+          matched = substr(line, RSTART, RLENGTH)
+          suffix = matched ~ /[[:blank:]]$/ ? substr(matched, length(matched), 1) : ""
+          result = result substr(line, 1, RSTART - 1) mirror suffix
+          line = substr(line, RSTART + RLENGTH)
+        }
+        return result line
       }
-      /^[[:blank:]]*deb(-src)?[[:blank:]]/s#${ubuntu_uri}#${mirror}\\3#g
-    " "$file" >"$candidate" || return 1
+
+      # deb822 continuations belong to the preceding field until a blank line.
+      /^[^[:blank:]#][^:]*:/ { in_uris = ($0 ~ /^URIs:/) }
+      /^[[:blank:]]*$/ { in_uris = 0 }
+      {
+        if ($0 !~ /^[[:blank:]]*#/ && (in_uris || /^[[:blank:]]*deb(-src)?[[:blank:]]/))
+          $0 = rewrite($0)
+        print
+      }
+    ' "$file" >"$candidate" || return 1
+    # awk adds a newline to the final record; retain the original file ending.
+    if [[ -n "$last_byte" ]]; then
+      truncate -s -1 -- "$candidate" || return 1
+    fi
     cmp -s "$file" "$candidate" && continue
     if [[ -L "$file" ]]; then
       show_progress error "Refusing to rewrite linked APT source: $file"
