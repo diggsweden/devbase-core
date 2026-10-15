@@ -711,6 +711,51 @@ _capture_download_args() {
   assert_output --partial "/v5.6.1/kse_5.6.1_all.deb"
 }
 
+@test "install_keystore_explorer upgrades an older installed Debian package" {
+  command -v dpkg >/dev/null || skip "dpkg not available"
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 0; }; dpkg-query() { echo 'installed 5.6.1'; }" \
+    "install_keystore_explorer"
+
+  assert_success
+  assert_output --partial "Updating KeyStore Explorer from 5.6.1 to 5.7.0"
+  assert_output --partial "/v5.7.0/kse_5.7.0-1_all.deb"
+}
+
+@test "install_keystore_explorer keeps matching and newer Debian packages" {
+  command -v dpkg >/dev/null || skip "dpkg not available"
+  local version
+  for version in 5.7.0-1 5.8.0-1; do
+    _capture_download_args \
+      "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 0; }; dpkg-query() { echo 'installed $version'; }" \
+      "install_keystore_explorer"
+
+    assert_success
+    assert_output --partial "KeyStore Explorer already installed ($version)"
+    refute_output --partial "ARGS:"
+  done
+}
+
+@test "install_keystore_explorer preserves an existing command with no package version" {
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 0; }; dpkg-query() { return 1; }" \
+    "install_keystore_explorer"
+
+  assert_success
+  assert_output --partial "package version unavailable"
+  refute_output --partial "ARGS:"
+}
+
+@test "install_keystore_explorer does not mistake residual package config for an installed package" {
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 0; }; dpkg-query() { echo 'config-files 5.6.1'; }" \
+    "install_keystore_explorer"
+
+  assert_success
+  assert_output --partial "package version unavailable"
+  refute_output --partial "ARGS:"
+}
+
 @test "install_keystore_explorer requests the published zip asset name" {
   _capture_download_args \
     "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo rpm; }; command_exists() { return 1; }" \

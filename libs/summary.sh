@@ -68,6 +68,17 @@ XDG_DATA_HOME: ${XDG_DATA_HOME:-~/.local/share}
 EOF
 }
 
+# Query the selected mise environment without installing tools or dependencies.
+_summary_maven_version() {
+  local output
+  if output=$(MISE_AUTO_INSTALL=false run_mise_from_home_dir exec --no-deps -- mvn -B -Dstyle.color=never --version 2>/dev/null) &&
+    [[ "$output" =~ Apache[[:space:]]Maven[[:space:]]([^[:space:]]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+  else
+    printf 'unavailable\n'
+  fi
+}
+
 _summary_development_languages() {
   cat <<EOF
 
@@ -79,7 +90,7 @@ DEVELOPMENT LANGUAGES (mise-managed)
   • Ruby: $(command -v ruby >/dev/null && ruby --version | cut -d' ' -f2 || echo "not found")
   • Rust: $(command -v rustc >/dev/null && rustc --version | cut -d' ' -f2 || echo "not found")
   • Java: $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo "not found")
-  • Maven: $(command -v mvn >/dev/null && mvn --version 2>&1 | head -1 | cut -d' ' -f3 || echo "not found")
+  • Maven: $(_summary_maven_version)
   • Gradle: $(command -v gradle >/dev/null && gradle --version 2>&1 | grep Gradle | cut -d' ' -f2 || echo "not found")
 EOF
 }
@@ -164,7 +175,7 @@ _summary_optional_tools() {
 OPTIONAL TOOLS
 ==============
   • DBeaver: $([ -f ~/.local/bin/dbeaver ] && echo "installed" || echo "not installed")
-  • KeyStore Explorer: $([ -f ~/.local/bin/kse ] && echo "installed" || echo "not installed")
+  • KeyStore Explorer: $(command -v kse &>/dev/null && echo "installed" || echo "not installed")
   • IntelliJ IDEA: ${intellij_status}
   • JMC: $(command -v jmc &>/dev/null && echo "installed" || echo "not installed")
 EOF

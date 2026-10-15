@@ -185,7 +185,7 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 
 | `DEVBASE_GITHUB_REGISTRY`
 | _(none)_
-| GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap.
+| HTTPS GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap. Non-HTTPS mirror URLs are rejected before invoking curl or wget.
 
 | `DEVBASE_MISE_URL_REPLACEMENTS`
 | _(none)_
@@ -205,7 +205,7 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 
 | `DEVBASE_CARGO_REGISTRY`, `DEVBASE_RUBYGEMS_REGISTRY`
 | _(none)_
-| URLs used by optional custom `cargo-config.toml.template` and `bundle-config.template`. Seed native user config files without replacing existing files.
+| URLs used by optional custom `cargo-config.toml.template` and `bundle-config.template`. Seed native user config files without replacing existing files. Respect `CARGO_HOME` (including legacy `config` precedence) and Bundler's `BUNDLE_CONFIG`, `BUNDLE_USER_CONFIG`, `BUNDLE_USER_HOME` precedence.
 
 | `DEVBASE_EXTRA_FORGES`
 | _(none)_

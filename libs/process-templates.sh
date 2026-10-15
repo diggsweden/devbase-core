@@ -553,15 +553,25 @@ EOF
   return 0
 }
 
-# Render new personal defaults privately; never write through an existing link.
-seed_config_template() (
-  local source_file="$1" target_file="$2"
-  [[ -e "$target_file" || -L "$target_file" ]] && return 0
+# Render privately. Create-only unless an organisation-owned backup path is given.
+install_config_template() (
+  local source_file="$1" target_file="$2" backup_path="${3:-}"
+  if [[ -z "$backup_path" && (-e "$target_file" || -L "$target_file") ]]; then
+    show_progress info "Preserving existing config: $target_file"
+    return 0
+  fi
   local candidate
   candidate=$(mktemp "${_DEVBASE_TEMP}/config-seed.XXXXXX") || return 1
   trap 'rm -f -- "$candidate"' EXIT
-  envsubst_preserve_undefined "$source_file" "$candidate" || return 1
-  install_file_if_missing "$candidate" "$target_file"
+  envsubst_preserve_undefined "$source_file" "$candidate" || {
+    show_progress error "Failed to render config for $target_file; existing config retained"
+    return 1
+  }
+  if [[ -n "$backup_path" ]]; then
+    publish_managed_config "$candidate" "$target_file" "$backup_path"
+  else
+    install_file_if_missing "$candidate" "$target_file"
+  fi
 )
 
 process_template_file() {
@@ -569,6 +579,7 @@ process_template_file() {
   local filename="$2"
   local template_name="${filename%.template}"
   local target_file=""
+  local registry_client=""
 
   # Vanilla overrides were applied in staging. Never route them a second time
   # to a guessed home path, or delete the organization's source template.
@@ -586,11 +597,19 @@ process_template_file() {
   case "$template_name" in
   cargo-config.toml)
     [[ -n "${DEVBASE_CARGO_REGISTRY:-}" ]] || return 0
+    local -x DEVBASE_CARGO_REGISTRY="$DEVBASE_CARGO_REGISTRY"
     target_file="${CARGO_HOME:-${HOME}/.cargo}/config.toml"
+    # Cargo prefers the extensionless config when both names exist.
+    if [[ -e "${target_file%.toml}" || -L "${target_file%.toml}" ]]; then
+      target_file="${target_file%.toml}"
+    fi
+    registry_client=Cargo
     ;;
   bundle-config)
     [[ -n "${DEVBASE_RUBYGEMS_REGISTRY:-}" ]] || return 0
-    target_file="${BUNDLE_USER_HOME:-${HOME}/.bundle}/config"
+    local -x DEVBASE_RUBYGEMS_REGISTRY="$DEVBASE_RUBYGEMS_REGISTRY"
+    target_file="${BUNDLE_CONFIG:-${BUNDLE_USER_CONFIG:-${BUNDLE_USER_HOME:-${HOME}/.bundle}/config}}"
+    registry_client=Bundler
     ;;
   gradle.properties)
     target_file="${GRADLE_USER_HOME:-${HOME}/.gradle}/gradle.properties"
@@ -603,7 +622,11 @@ process_template_file() {
     ;;
   esac
 
-  seed_config_template "$file" "$target_file"
+  if [[ -n "$registry_client" && (-e "$target_file" || -L "$target_file") ]]; then
+    show_progress info "Preserving existing $registry_client config: $target_file; apply registry changes manually"
+    return 0
+  fi
+  install_config_template "$file" "$target_file"
 }
 
 # Add an organization shell block once, before the Fish handoff when present.
@@ -863,42 +886,57 @@ _process_maven_yaml_to_xml() {
   fi
 }
 
-# Publish organisation-managed Maven settings with the first preimage saved in
-# the normal Devbase backup rotation. Never write through personal symlinks.
-_process_maven_yaml_publish_managed() (
-  local candidate="$1" target="$2" backup_dir backup_file staged=''
+# Publish managed settings with the first preimage saved in the normal backup
+# rotation. Maven, Gradle and containers share the same replacement policy.
+publish_managed_config() (
+  local candidate="$1" target="$2" backup_path="$3" backup_dir backup_file parent staged=''
+  umask 077
   trap '[[ -z "$staged" ]] || rm -f -- "$staged"' EXIT
-  if [[ -L "$(dirname "$target")" || -L "$target" ]]; then
-    show_progress error "Refusing to replace linked Maven settings: $target"
-    return 1
-  fi
+  # Check every component, including linked ancestors of custom/XDG homes.
+  for parent in "$target" "${DEVBASE_BACKUP_DIR:-}/$backup_path"; do
+    while [[ -n "$parent" && "$parent" != / && "$parent" != . ]]; do
+      if [[ -L "$parent" ]]; then
+        show_progress error "Refusing managed config through symlink: $parent; use a regular file/directory or apply changes manually"
+        return 1
+      fi
+      parent=$(dirname "$parent")
+    done
+  done
   if [[ -e "$target" ]]; then
-    [[ -f "$target" ]] || return 1
+    [[ -f "$target" ]] || {
+      show_progress error "Cannot manage config: expected a regular file at $target"
+      return 1
+    }
     if cmp -s "$candidate" "$target"; then
       chmod 600 "$target"
       return
     fi
     validate_var_set "DEVBASE_BACKUP_DIR" || return 1
-    backup_dir="${DEVBASE_BACKUP_DIR}/maven"
-    backup_file="${backup_dir}/settings.xml"
-    if [[ -L "$DEVBASE_BACKUP_DIR" || -L "$backup_dir" || -L "$backup_file" ]]; then
-      show_progress error "Refusing linked Maven backup: $backup_file"
+    backup_file="${DEVBASE_BACKUP_DIR}/$backup_path"
+    backup_dir=$(dirname "$backup_file")
+    [[ ! -e "$backup_file" || -f "$backup_file" ]] || {
+      show_progress error "Cannot save config backup: expected a regular file at $backup_file"
       return 1
-    fi
-    [[ ! -e "$backup_file" || -f "$backup_file" ]] || return 1
+    }
     mkdir -p "$backup_dir" || return 1
+    chmod 700 "$backup_dir" || return 1
     if [[ ! -e "$backup_file" ]]; then
       staged=$(mktemp "${backup_file}.XXXXXX") || return 1
       cp -- "$target" "$staged" || return 1
       chmod 600 "$staged" || return 1
       mv -T -- "$staged" "$backup_file" || return 1
     fi
+    show_progress info "Original config backup retained at: $backup_file"
   fi
   mkdir -p "$(dirname "$target")" || return 1
   staged=$(mktemp "${target}.devbase.XXXXXX") || return 1
   cp -- "$candidate" "$staged" || return 1
   chmod 600 "$staged" || return 1
-  mv -fT -- "$staged" "$target"
+  mv -fT -- "$staged" "$target" || {
+    show_progress error "Failed to publish config: $target; existing config retained"
+    return 1
+  }
+  show_progress success "Updated managed config: $target"
 )
 
 # Brief: Process Maven YAML templates into settings.xml
@@ -911,7 +949,7 @@ process_maven_templates_yaml() (
   local target_file="${HOME}/.m2/settings.xml"
   local managed=false
   [[ -z "${DEVBASE_CUSTOM_DIR:-}${_DEVBASE_CUSTOM_TEMPLATES:-}" ]] || managed=true
-  if [[ "$managed" == false && ( -e "$target_file" || -L "$target_file" ) ]]; then
+  if [[ "$managed" == false && (-e "$target_file" || -L "$target_file") ]]; then
     show_progress info "Preserving personal Maven settings.xml"
     return 0
   fi
@@ -942,7 +980,7 @@ process_maven_templates_yaml() (
   _process_maven_yaml_to_xml "$merged_yaml" "$candidate" || return 1
   yq -p=xml -o=yaml -e '.settings != null' "$candidate" >/dev/null || return 1
   if [[ "$managed" == true ]]; then
-    _process_maven_yaml_publish_managed "$candidate" "$target_file"
+    publish_managed_config "$candidate" "$target_file" maven/settings.xml
   else
     install_file_if_missing "$candidate" "$target_file"
   fi
@@ -955,11 +993,13 @@ process_gradle_templates() {
   local gradle_templates_dir="${DEVBASE_FILES}/gradle-templates"
   local target_file="${GRADLE_USER_HOME:-${HOME}/.gradle}/init.gradle"
   local template_to_use=""
+  local backup_path=""
 
   # Check custom first, then core
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "init.gradle.template" "Custom Gradle template"; then
     require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/init.gradle.template"
+    backup_path=gradle/init.gradle
     show_progress info "Configuring Gradle with custom repository settings"
   elif [[ -f "${gradle_templates_dir}/init.gradle.template" ]]; then
 
@@ -968,7 +1008,7 @@ process_gradle_templates() {
   fi
 
   if [[ -n "$template_to_use" ]] && [[ -f "$template_to_use" ]]; then
-    seed_config_template "$template_to_use" "$target_file" || return 1
+    install_config_template "$template_to_use" "$target_file" "$backup_path" || return 1
   fi
 }
 
@@ -976,9 +1016,7 @@ process_container_templates() {
   local container_templates_dir="${DEVBASE_FILES}/container-templates"
   local target_file="${XDG_CONFIG_HOME}/containers/registries.conf"
   local template_to_use=""
-
-  # Always create containers config directory (used by podman/buildah/skopeo)
-  mkdir -p "$(dirname "$target_file")"
+  local backup_path=""
 
   # Skip registries.conf generation if no registry configured
   if [[ -z "${DEVBASE_REGISTRY_HOST:-}" || -z "${DEVBASE_REGISTRY_PORT:-}" ]]; then
@@ -992,6 +1030,7 @@ process_container_templates() {
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" "registries.conf.template" "Custom registry template"; then
     require_env _DEVBASE_CUSTOM_TEMPLATES || return 1
     template_to_use="${_DEVBASE_CUSTOM_TEMPLATES}/registries.conf.template"
+    backup_path=containers/registries.conf
     show_progress info "Configuring container registry with custom settings"
   elif [[ -f "${container_templates_dir}/registries.conf.template" ]]; then
 
@@ -1000,7 +1039,7 @@ process_container_templates() {
   fi
 
   if [[ -n "$template_to_use" ]] && [[ -f "$template_to_use" ]]; then
-    seed_config_template "$template_to_use" "$target_file" || return 1
+    install_config_template "$template_to_use" "$target_file" "$backup_path" || return 1
   fi
 }
 
@@ -1012,7 +1051,7 @@ process_testcontainers_properties() {
   [[ -e "$target_file" || -L "$target_file" ]] && return 0
 
   if validate_custom_file "_DEVBASE_CUSTOM_TEMPLATES" ".testcontainers.properties.template" "Custom Testcontainers template"; then
-    seed_config_template "${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties.template" "$target_file"
+    install_config_template "${_DEVBASE_CUSTOM_TEMPLATES}/.testcontainers.properties.template" "$target_file"
     return $?
   fi
 

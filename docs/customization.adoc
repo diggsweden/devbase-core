@@ -289,7 +289,7 @@ Raw `.fish` files can replace a same-named staged core `.fish` file. Unmatched r
 
 === Custom Templates (Organization-Specific)
 
-Dedicated and generic personal-config routes initialize absent destinations only. Existing files, including empty files and symlinks, are preserved; later organization changes to those files require manual review and application. Maven is an exception when custom-config is active, as described below.
+Personal-config routes initialize absent destinations only. Existing files, including empty files and symlinks, are preserved; later organization changes require manual review and application. Exceptions are Maven with active custom-config, and Gradle/container settings with an organization template, as described below.
 
 **Built-in Templates** (automatically configured from `devbase-core`):
 
@@ -315,7 +315,9 @@ How it works:
 4. Merged YAML converted to XML in private staging with `yq -o=xml`
 5. XML is parsed back to check for a `settings` root, then installed with mode `0600`. Without custom-config, publication is create-only; with custom-config, replacement is atomic and requires a successful backup first.
 
-With custom-config, existing settings are replaced without merging, including personal servers and comments. The first preimage is retained within the normal Devbase backup rotation. Linked settings or a linked `.m2` directory are rejected rather than followed. Without custom-config, existing files are preserved. With no applicable proxy, registry or custom YAML, no file is generated. Generation, validation, backup or publication failures preserve the existing file.
+With custom-config, existing settings are replaced without merging, including personal servers and comments. The first preimage is retained within the normal Devbase backup rotation. Linked settings or parent directories are rejected rather than followed. Without custom-config, existing files are preserved. With no applicable proxy, registry or custom YAML, no file is generated. Generation, validation, backup or publication failures preserve the existing file.
+
+Any active custom-config enables this ownership behavior; a `maven-repos.yaml` file is not required. For example, a custom-config that supplies only proxy settings still manages `settings.xml`.
 
 Benefits:
 - ✓ No duplication - Each setting defined once
@@ -355,19 +357,21 @@ Requirements: `yq` (mikefarah/yq) version 4.x or later with XML output support (
 Only YAML fragments are supported for Maven generation. Legacy XML template names are skipped; there is no XML-template fallback or generic XML merge.
 
 Gradle (only if registry configured):
-- `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`), create-only
-- Custom templates take precedence over the core seed. This initializes the personal init script, not an additional `init.d` fragment.
+- `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`)
+- An organization template manages this file, retaining the first previous contents at `DEVBASE_BACKUP_DIR/gradle/init.gradle`. The core template is create-only. No additional `init.d` fragment is installed.
 
 Container Registry (only if registry configured):
-- `registries.conf.template` → `~/.config/containers/registries.conf`, create-only
-- Custom templates take precedence over the core seed. No later-loading registry fragment is added to override personal settings.
+- `registries.conf.template` → `$XDG_CONFIG_HOME/containers/registries.conf` (default `~/.config/containers/registries.conf`)
+- An organization template manages this file, retaining the first previous contents at `DEVBASE_BACKUP_DIR/containers/registries.conf`. The core template is create-only. No later-loading registry fragment is added.
+
+Organization-managed Gradle and container files follow the Maven replacement policy: personal edits are replaced, not merged; files and backups use mode `0600`; publication is atomic and requires a successful backup before replacing existing contents. Linked destinations, parent directories and backup paths are rejected. Setup reports backup paths, and unchanged contents do not create another backup. Backups participate in the normal DevBase backup rotation. Keep organization changes in the source templates, or remove the applicable template to return the file to personal ownership.
 
 Testcontainers (independent of registry configuration):
 - Initializes absent `~/.testcontainers.properties`, choosing organization `.testcontainers.properties.template`, then raw `.testcontainers.properties`, then the core file
 
 **Custom Configuration Templates** (`.template` suffix - variable substitution with `envsubst`):
 
-These routes initialize personal configs only when absent, except custom-managed Maven settings:
+These routes initialize personal configs only when absent, except the managed Maven, Gradle and container files above:
 
 - `maven-repos.yaml` → Included in `~/.m2/settings.xml` generation and replacement when custom-config is active (organization-specific Maven repositories)
 - `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`)
@@ -375,7 +379,11 @@ These routes initialize personal configs only when absent, except custom-managed
 - `.testcontainers.properties.template` or `.testcontainers.properties` → `~/.testcontainers.properties`
 - `npmrc.template` → `~/.npmrc` (NPM registry configuration)
 - `gradle.properties.template` → `$GRADLE_USER_HOME/gradle.properties` (default `~/.gradle/gradle.properties`)
+- `cargo-config.toml.template` → `$CARGO_HOME/config.toml` (default `~/.cargo/config.toml`), only with `DEVBASE_CARGO_REGISTRY`. An existing extensionless `config` takes precedence and is preserved; no ignored `config.toml` is created alongside it.
+- `bundle-config.template` → `$BUNDLE_CONFIG`, then `$BUNDLE_USER_CONFIG`, otherwise `$BUNDLE_USER_HOME/config` (default `~/.bundle/config`), only with `DEVBASE_RUBYGEMS_REGISTRY`. Empty overrides fall through to the next location.
 - `{name}.fish.template` → `~/.config/fish/conf.d/{name}.fish` (when not a core-template override)
+
+Cargo and Bundler remain personal configs. Existing files (including empty files and symlinks) are preserved with a message to apply registry changes manually.
 
 Generic:
 

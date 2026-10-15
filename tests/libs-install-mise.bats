@@ -1029,7 +1029,9 @@ SCRIPT
 
 @test "install_mise_tools retries effective runtime selections and warns without activating defaults" {
   _setup_managed_mise_install
+  # shellcheck disable=SC2329 # Called indirectly by install_mise_tools.
   get_core_runtimes() { printf 'node\n'; }
+  # shellcheck disable=SC2329 # Called indirectly by install_mise_tools.
   run_mise_from_home_dir() {
     printf '%s\n' "$*" >>"${TEST_DIR}/mise-calls"
     case "$1" in
@@ -1051,6 +1053,44 @@ SCRIPT
   assert_line "trust ${XDG_CONFIG_HOME}/mise/config.toml"
   refute_output --partial 'use -g'
   refute_output --partial 'trust --all'
+}
+
+@test "mise installation logs stay private and survive temporary cleanup" {
+  _setup_managed_mise_install
+  set -o pipefail
+  export XDG_STATE_HOME="${TEST_DIR}/state with'quote"
+  get_core_runtimes() { printf 'node\n'; }
+  run_mise_from_home_dir() {
+    case "$1" in
+      install) printf 'fixture install failure\n'; return 1 ;;
+      list) printf 'node 24.1.0\n' ;;
+      *) return 0 ;;
+    esac
+  }
+  _wt_gauge_is_running() { return 1; }
+  run_with_spinner() { shift; "$@"; }
+
+  local mode
+  for mode in none whiptail; do
+    export DEVBASE_TUI_MODE="$mode"
+    run install_mise_tools
+    assert_success
+    assert_output --partial "See log: ${XDG_STATE_HOME}/devbase/"
+  done
+  rm -rf "$_DEVBASE_TEMP"
+
+  local -a log_dirs=("${XDG_STATE_HOME}"/devbase/mise-install.*)
+  assert_equal "${#log_dirs[@]}" 2
+  local log_dir log_file
+  for log_dir in "${log_dirs[@]}"; do
+    assert_equal "$(stat -c %a "$log_dir")" 700
+    for log_file in "$log_dir"/*.log; do
+      assert_file_exists "$log_file"
+      assert_equal "$(stat -c %a "$log_file")" 600
+      run cat "$log_file"
+      assert_output --partial 'fixture install failure'
+    done
+  done
 }
 
 _load_mise_verification() {

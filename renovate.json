@@ -11,6 +11,21 @@
   },
   "packageRules": [
     {
+      "description": "Allow current and announced Java LTS lines, requiring Adoptium's LTS marker",
+      "matchDatasources": ["java-version"],
+      "matchPackageNames": ["java-temurin"],
+      "ignoreUnstable": true,
+      "allowedVersions": "/^(25|29)\\..*\\.LTS$/"
+    },
+    {
+      "description": "Allow approved Node lines only after upstream promotes them to LTS",
+      "matchDatasources": ["node-version"],
+      "matchPackageNames": ["node"],
+      "versioning": "node",
+      "ignoreUnstable": true,
+      "allowedVersions": "/^v?(24|26|27|28)\\./"
+    },
+    {
       "description": "Keep the Aqua yq tool, package manifest and parser bootstrap pins together",
       "matchPackageNames": ["mikefarah/yq"],
       "groupName": "yq"
@@ -47,8 +62,9 @@
       "managerFilePatterns": [
         "/(^|/)dot/\\.config/devbase/packages\\.yaml$/"
       ],
+      "description": "Track package pins while preserving the Temurin selector outside the Java version",
       "matchStrings": [
-        "(?m)^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
+        "(?m)^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?:temurin-)?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
       ]
     },
     {

@@ -120,6 +120,19 @@ mise doctor                    # Check mise setup
 - Language versions: `~/.local/share/mise/`
 - Configurations: `~/.config/`
 
+Java and Node developer runtimes use exact version pins. Renovate may advance
+Java through LTS lines 25 and 29, and Node through lines 24, 26, 27 and 28.
+Java updates require Adoptium's LTS version marker; Node uses Renovate's
+LTS-aware `node` versioning with `ignoreUnstable`, so a future major is eligible
+only after upstream promotes it to LTS. Once the update is merged, setup
+installs the new pin through mise.
+
+These lines follow the https://www.oracle.com/java/technologies/java-se-support-roadmap.html[Java roadmap]
+and https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule[Node release roadmap].
+Node 27 and later follow an annual schedule in which every major eventually
+becomes LTS. System Java packages remain on the Java 25 LTS baseline available
+in the supported distributions; mise manages the developer JDK independently.
+
 === Which shell is set as default?
 
 Fish for interactive shells. Fall back to bash with: `bash`.
@@ -131,7 +144,12 @@ other repositories, signing keys and the installed Fish package are left alone.
 
 === How do I see what's happening during installation?
 
-Most output is shown in the terminal. Use `DEBUG=1 ./setup.sh` for additional details.
+Most output is shown in the terminal. Use `DEVBASE_DEBUG=1 ./setup.sh` for additional details.
+
+Mise installation logs are retained per run under
+`${XDG_STATE_HOME:-~/.local/state}/devbase/mise-install.*/`, with owner-only
+directory and file permissions. Installation warnings link to the relevant log;
+the logs remain available after setup cleans its temporary directory.
 
 === What's the difference between mise and asdf?
 

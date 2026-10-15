@@ -21,6 +21,7 @@ setup() {
   unset DEVBASE_MISE_PYTHON_COMPILE
   unset DEVBASE_GO_REGISTRY DEVBASE_GO_SUMDB DEVBASE_RUSTUP_DIST_SERVER DEVBASE_RUSTUP_UPDATE_ROOT
   unset DEVBASE_NPM_REGISTRY DEVBASE_CYPRESS_REGISTRY DEVBASE_CARGO_REGISTRY DEVBASE_RUBYGEMS_REGISTRY
+  unset CARGO_HOME BUNDLE_CONFIG BUNDLE_USER_HOME BUNDLE_USER_CONFIG
   source "${DEVBASE_LIBS}/bootstrap/bootstrap-apply.sh"
   source "${DEVBASE_LIBS}/handle-network.sh"
   source "${DEVBASE_LIBS}/pkg/pkg-apt.sh"
@@ -169,6 +170,21 @@ teardown() {
     assert_output 'https://github.com.example.org/jdx/mise/releases/download/v1/file'
     run "$client" 'https://api.github.com/repos/jdx/mise/releases'
     assert_output 'https://api.github.com/repos/jdx/mise/releases'
+  done
+}
+
+@test "GitHub mirrors require HTTPS before invoking either download client" {
+  curl() { touch "$TEST_DIR/client-invoked"; }
+  wget() { touch "$TEST_DIR/client-invoked"; }
+  local mirror client
+  for mirror in 'http://registry.example/github' 'file:///tmp/github'; do
+    export DEVBASE_GITHUB_REGISTRY="$mirror"
+    for client in devbase_curl devbase_wget; do
+      run "$client" 'https://github.com/jdx/mise/releases/download/v1/SHASUMS256.txt'
+      assert_failure
+      assert_output --partial 'DEVBASE_GITHUB_REGISTRY must be an HTTPS repository URL'
+      assert_file_not_exists "$TEST_DIR/client-invoked"
+    done
   done
 }
 
@@ -322,6 +338,72 @@ EOF
   assert_output --partial 'HTTPS repository URL'
 }
 
+@test "APT rejects linked and non-regular backups before changing sources" {
+  export DEVBASE_APT_REGISTRY='https://registry.example/ubuntu'
+  local apt_dir="$TEST_DIR/apt" backup="$DEVBASE_BACKUP_DIR/apt/sources.list"
+  mkdir -p "$apt_dir" "$DEVBASE_BACKUP_DIR/apt"
+  printf 'deb https://archive.ubuntu.com/ubuntu resolute main\n' >"$apt_dir/sources.list"
+  cp "$apt_dir/sources.list" "$TEST_DIR/previous.list"
+  ln -s "$TEST_DIR/missing-backup" "$backup"
+
+  run _pkg_apt_configure_mirror "$apt_dir"
+  assert_failure
+  assert_output --partial 'Refusing invalid APT backup'
+  assert_files_equal "$TEST_DIR/previous.list" "$apt_dir/sources.list"
+  assert_symlink_to "$TEST_DIR/missing-backup" "$backup"
+  assert_file_not_exists "$TEST_DIR/missing-backup"
+
+  rm "$backup"
+  mkdir "$backup"
+  run _pkg_apt_configure_mirror "$apt_dir"
+  assert_failure
+  assert_output --partial 'Refusing invalid APT backup'
+  assert_files_equal "$TEST_DIR/previous.list" "$apt_dir/sources.list"
+  assert_dir_exists "$backup"
+}
+
+@test "APT preserves active sources and cleans staging after a real write failure" {
+  export DEVBASE_APT_REGISTRY='https://registry.example/ubuntu'
+  local apt_dir="$TEST_DIR/apt"
+  mkdir -p "$apt_dir"
+  printf 'deb https://archive.ubuntu.com/ubuntu resolute main\n' >"$apt_dir/sources.list"
+  cp "$apt_dir/sources.list" "$TEST_DIR/previous.list"
+  sudo() {
+    if [[ "$1" == install ]]; then
+      # Fail the real copy after backup succeeds, using an OS file-size limit.
+      (trap '' XFSZ; ulimit -f 0; "$@")
+    else
+      "$@"
+    fi
+  }
+
+  run _pkg_apt_configure_mirror "$apt_dir"
+  assert_failure
+  assert_files_equal "$TEST_DIR/previous.list" "$apt_dir/sources.list"
+  assert_files_equal "$TEST_DIR/previous.list" "$DEVBASE_BACKUP_DIR/apt/sources.list"
+  run find "$apt_dir" -name '.devbase-apt.*'
+  assert_output ''
+}
+
+@test "APT preserves active sources and cleans staging when publication fails" {
+  export DEVBASE_APT_REGISTRY='https://registry.example/ubuntu'
+  local apt_dir="$TEST_DIR/apt"
+  mkdir -p "$apt_dir"
+  printf 'deb https://archive.ubuntu.com/ubuntu resolute main\n' >"$apt_dir/sources.list"
+  cp "$apt_dir/sources.list" "$TEST_DIR/previous.list"
+  sudo() {
+    [[ "$1" != mv ]] || return 1
+    "$@"
+  }
+
+  run _pkg_apt_configure_mirror "$apt_dir"
+  assert_failure
+  assert_files_equal "$TEST_DIR/previous.list" "$apt_dir/sources.list"
+  assert_files_equal "$TEST_DIR/previous.list" "$DEVBASE_BACKUP_DIR/apt/sources.list"
+  run find "$apt_dir" -name '.devbase-apt.*'
+  assert_output ''
+}
+
 @test "APT interrupted backup cannot be mistaken for a complete backup on retry" {
   export DEVBASE_APT_REGISTRY='https://registry.example/ubuntu'
   local apt_dir="$TEST_DIR/apt"
@@ -376,15 +458,15 @@ EOF
 }
 
 @test "Cargo and Bundler templates are opt-in and preserve existing user files" {
-  unset CARGO_HOME BUNDLE_USER_HOME
   printf 'registry = "${DEVBASE_CARGO_REGISTRY}"\n' >"$TEST_DIR/cargo-config.toml.template"
   printf 'mirror: "${DEVBASE_RUBYGEMS_REGISTRY}"\n' >"$TEST_DIR/bundle-config.template"
   process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
   process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
   assert_file_not_exists "$HOME/.cargo/config.toml"
   assert_file_not_exists "$HOME/.bundle/config"
-  export DEVBASE_CARGO_REGISTRY='https://registry.example/cargo'
-  export DEVBASE_RUBYGEMS_REGISTRY='https://registry.example/gems'
+  # org.env is sourced, so ordinary assignments must work without export.
+  DEVBASE_CARGO_REGISTRY='https://registry.example/cargo'
+  DEVBASE_RUBYGEMS_REGISTRY='https://registry.example/gems'
   process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
   process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
   assert_equal "$(cat "$HOME/.cargo/config.toml")" 'registry = "https://registry.example/cargo"'
@@ -395,4 +477,148 @@ EOF
   process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
   assert_equal "$(cat "$HOME/.cargo/config.toml")" '# personal Cargo config'
   assert_equal "$(cat "$HOME/.bundle/config")" '# personal Bundler config'
+}
+
+_setup_native_registry_templates() {
+  DEVBASE_CARGO_REGISTRY='https://registry.example/cargo'
+  DEVBASE_RUBYGEMS_REGISTRY='https://registry.example/gems'
+  printf 'registry = "${DEVBASE_CARGO_REGISTRY}"\n' >"$TEST_DIR/cargo-config.toml.template"
+  printf 'mirror: "${DEVBASE_RUBYGEMS_REGISTRY}"\n' >"$TEST_DIR/bundle-config.template"
+}
+
+@test "Cargo preserves legacy config precedence in default and custom homes" {
+  _setup_native_registry_templates
+  local home
+  for home in "$HOME/.cargo" "$TEST_DIR/custom cargo"; do
+    export CARGO_HOME="$home"
+    mkdir -p "$home"
+    printf '# personal legacy config without final newline' >"$home/config"
+    chmod 640 "$home/config"
+    run process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
+    assert_success
+    assert_output --partial "Preserving existing Cargo config: $home/config"
+    assert_output --partial 'apply registry changes manually'
+    assert_file_not_exists "$home/config.toml"
+    assert_equal "$(cat "$home/config")" '# personal legacy config without final newline'
+    assert_equal "$(stat -c %a "$home/config")" 640
+    printf '# personal modern config\n' >"$home/config.toml"
+    run process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
+    assert_success
+    assert_equal "$(cat "$home/config")" '# personal legacy config without final newline'
+    assert_equal "$(cat "$home/config.toml")" '# personal modern config'
+  done
+}
+
+@test "Cargo preserves legacy symlinks including dangling links" {
+  _setup_native_registry_templates
+  mkdir -p "$HOME/.cargo"
+  printf '# personal linked config\n' >"$TEST_DIR/linked-config"
+  local destination
+  for destination in "$TEST_DIR/linked-config" "$TEST_DIR/missing-config"; do
+    ln -s "$destination" "$HOME/.cargo/config"
+    run process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
+    assert_success
+    assert_symlink_to "$destination" "$HOME/.cargo/config"
+    assert_file_not_exists "$HOME/.cargo/config.toml"
+    rm "$HOME/.cargo/config"
+  done
+  assert_equal "$(cat "$TEST_DIR/linked-config")" '# personal linked config'
+  assert_file_not_exists "$TEST_DIR/missing-config"
+}
+
+@test "Cargo and Bundler seed their configured homes without writing default locations" {
+  _setup_native_registry_templates
+  export CARGO_HOME="$TEST_DIR/cargo home" BUNDLE_USER_HOME="$TEST_DIR/bundle home"
+  run process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
+  assert_success
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_equal "$(cat "$CARGO_HOME/config.toml")" 'registry = "https://registry.example/cargo"'
+  assert_equal "$(cat "$BUNDLE_USER_HOME/config")" 'mirror: "https://registry.example/gems"'
+  assert_file_not_exists "$CARGO_HOME/config"
+  assert_dir_not_exists "$HOME/.cargo"
+  assert_dir_not_exists "$HOME/.bundle"
+}
+
+@test "Bundler explicit config takes precedence over its home and preserves personal edits" {
+  _setup_native_registry_templates
+  export BUNDLE_CONFIG=''
+  export BUNDLE_USER_HOME="$TEST_DIR/bundle home" BUNDLE_USER_CONFIG="$TEST_DIR/explicit config/settings"
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_equal "$(cat "$BUNDLE_USER_CONFIG")" 'mirror: "https://registry.example/gems"'
+  assert_equal "$(stat -c %a "$BUNDLE_USER_CONFIG")" 600
+  printf '# personal Bundler settings\n' >"$BUNDLE_USER_CONFIG"
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_output --partial "Preserving existing Bundler config: $BUNDLE_USER_CONFIG"
+  assert_equal "$(cat "$BUNDLE_USER_CONFIG")" '# personal Bundler settings'
+  : >"$BUNDLE_USER_CONFIG"
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert [ ! -s "$BUNDLE_USER_CONFIG" ]
+  assert_dir_not_exists "$BUNDLE_USER_HOME"
+  assert_dir_not_exists "$HOME/.bundle"
+}
+
+@test "Bundler BUNDLE_CONFIG takes precedence and preserves existing files and links" {
+  _setup_native_registry_templates
+  export BUNDLE_CONFIG="$TEST_DIR/active config" BUNDLE_USER_CONFIG="$TEST_DIR/unused config"
+  export BUNDLE_USER_HOME="$TEST_DIR/bundle home"
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_equal "$(cat "$BUNDLE_CONFIG")" 'mirror: "https://registry.example/gems"'
+  assert_equal "$(stat -c %a "$BUNDLE_CONFIG")" 600
+  printf '# personal Bundler settings\n' >"$BUNDLE_CONFIG"
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_output --partial "Preserving existing Bundler config: $BUNDLE_CONFIG"
+  assert_equal "$(cat "$BUNDLE_CONFIG")" '# personal Bundler settings'
+  rm "$BUNDLE_CONFIG"
+  printf '# linked settings\n' >"$TEST_DIR/linked-config"
+  local destination
+  for destination in "$TEST_DIR/linked-config" "$TEST_DIR/missing-config"; do
+    ln -s "$destination" "$BUNDLE_CONFIG"
+    run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+    assert_success
+    assert_symlink_to "$destination" "$BUNDLE_CONFIG"
+    rm "$BUNDLE_CONFIG"
+  done
+  assert_equal "$(cat "$TEST_DIR/linked-config")" '# linked settings'
+  assert_file_not_exists "$TEST_DIR/missing-config"
+  assert_file_not_exists "$BUNDLE_USER_CONFIG"
+  assert_dir_not_exists "$BUNDLE_USER_HOME"
+  assert_dir_not_exists "$HOME/.bundle"
+}
+
+@test "Bundler preserves an explicit config symlink without falling back to its home" {
+  _setup_native_registry_templates
+  export BUNDLE_USER_HOME="$TEST_DIR/bundle home" BUNDLE_USER_CONFIG="$TEST_DIR/bundler-settings"
+  printf '# personal linked settings\n' >"$TEST_DIR/linked-config"
+  local destination
+  for destination in "$TEST_DIR/linked-config" "$TEST_DIR/missing-config"; do
+    ln -s "$destination" "$BUNDLE_USER_CONFIG"
+    run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+    assert_success
+    assert_symlink_to "$destination" "$BUNDLE_USER_CONFIG"
+    rm "$BUNDLE_USER_CONFIG"
+  done
+  assert_equal "$(cat "$TEST_DIR/linked-config")" '# personal linked settings'
+  assert_file_not_exists "$TEST_DIR/missing-config"
+  assert_dir_not_exists "$BUNDLE_USER_HOME"
+  assert_dir_not_exists "$HOME/.bundle"
+}
+
+@test "Native registry config overrides remain opt-in" {
+  _setup_native_registry_templates
+  unset DEVBASE_CARGO_REGISTRY DEVBASE_RUBYGEMS_REGISTRY
+  export CARGO_HOME="$TEST_DIR/cargo home" BUNDLE_USER_HOME="$TEST_DIR/bundle home" BUNDLE_USER_CONFIG="$TEST_DIR/bundle-settings" BUNDLE_CONFIG="$TEST_DIR/active-bundle-settings"
+  run process_template_file "$TEST_DIR/cargo-config.toml.template" cargo-config.toml.template
+  assert_success
+  run process_template_file "$TEST_DIR/bundle-config.template" bundle-config.template
+  assert_success
+  assert_dir_not_exists "$CARGO_HOME"
+  assert_dir_not_exists "$BUNDLE_USER_HOME"
+  assert_file_not_exists "$BUNDLE_USER_CONFIG"
+  assert_file_not_exists "$BUNDLE_CONFIG"
 }

@@ -382,7 +382,7 @@ devbase-custom-config/  # Optional organization overlay
 │   └── README.md       # Installation instructions
 ├── templates/          # Flat, recognized template/config routes
 │   ├── config.kdl.template # Managed core-template override, rendered in staging
-│   ├── maven-repos.yaml # Repositories for first-time Maven settings
+│   ├── maven-repos.yaml # Repositories for generated Maven settings
 │   └── known_hosts.append # First-time SSH host-key seed
 ├── ssh/                # SSH configuration
 │   ├── custom.config   # Organization SSH hosts

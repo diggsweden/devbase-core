@@ -434,15 +434,30 @@ install_keystore_explorer() {
     return 0
   fi
 
-  if command_exists kse; then
-    show_progress success "KeyStore Explorer already installed"
-    return 0
-  fi
-
-  show_progress info "Installing KeyStore Explorer..."
   local kse_version="${TOOL_VERSIONS[keystore_explorer]}"
   local pkg_format
   pkg_format=$(_get_custom_pkg_format)
+
+  if command_exists kse; then
+    local installed_version="" package_info
+    if [[ "$pkg_format" == "deb" ]]; then
+      if package_info=$(dpkg-query -W -f='${db:Status-Status} ${Version}' kse 2>/dev/null) &&
+        [[ "$package_info" == installed\ * ]]; then
+        installed_version="${package_info#installed }"
+      fi
+    fi
+    if [[ -z "$installed_version" ]]; then
+      show_progress info "Keeping existing KeyStore Explorer (package version unavailable)"
+      return 0
+    fi
+    if dpkg --compare-versions "$installed_version" ge "${kse_version#v}"; then
+      show_progress success "KeyStore Explorer already installed (${installed_version})"
+      return 0
+    fi
+    show_progress info "Updating KeyStore Explorer from ${installed_version} to ${kse_version#v}..."
+  fi
+
+  show_progress info "Installing KeyStore Explorer..."
 
   # Upstream names the deb kse_<version>-1_all.deb (package revision suffix
   # since v5.7.0) and the zip kse-<version without dots>.zip.

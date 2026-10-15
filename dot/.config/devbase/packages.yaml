@@ -214,15 +214,16 @@ core:
 # ==============================================================================
 packs:
   java:
+    # System apps use distro-supported Java 25 LTS; mise tracks approved LTS lines.
     description: "(temurin / maven / gradle / pmd)"
     common:
       visualvm: {}
     apt:
-      default-jdk: {}
-      default-jre: {}
+      openjdk-25-jdk: {}
+      openjdk-25-jre: {}
     dnf:
-      java-latest-openjdk: {}
-      java-latest-openjdk-devel: {}
+      java-25-openjdk: {}
+      java-25-openjdk-devel: {}
     mise:
       java: {version: "temurin-25.0.4+7.0.LTS"} # renovate: datasource=java-version depName=java-temurin
       maven: {version: "3.9.16"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
@@ -242,6 +243,7 @@ packs:
       vscjava.vscode-java-pack: {version: "0.29.0"} # renovate: datasource=npm
 
   node:
+    # Keep an exact install pin; Renovate advances only to approved LTS releases.
     description: "(node / eslint / prettier / tailwindcss)"
     mise:
       node: {version: "24.21.0"} # renovate: datasource=node-version depName=node

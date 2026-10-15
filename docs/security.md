@@ -435,20 +435,25 @@ DevBase implements multi-layered automatic updates for both system packages and 
 
 - **Location**: `/etc/apt/apt.conf.d/50unattended-upgrades`
 - **Source**: `devbase_files/unattended-upgrades-debian/50unattended-upgrades`
-- **Installed by**: `libs/install.sh:182`
+- **Installed by**: `cleanup()` in `libs/install.sh`
 
 **Key Settings**:
 
-```bash
+```text
 # Only update on AC power (laptops)
-Unattended-Upgrade::OnlyOnACPower "true"
+Unattended-Upgrade::OnlyOnACPower "true";
 
 # Auto-remove new unused dependencies
-Unattended-Upgrade::Remove-New-Unused-Dependencies "true"
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
 
-# Skip development releases
-Unattended-Upgrade::DevRelease "false"
+# Skip automatic package updates on development releases
+Unattended-Upgrade::DevRelease "false";
 ```
+
+`DevRelease` controls package updates while running a development release.
+LTS-to-LTS release upgrade prompts are controlled separately by `Prompt=lts`
+in `/etc/update-manager/release-upgrades`. DevBase leaves that policy file
+unchanged; unattended-upgrades does not perform distribution release upgrades.
 
 **Verification**:
 

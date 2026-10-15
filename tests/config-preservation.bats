@@ -420,12 +420,53 @@ YAML
   assert_equal "$(cat "$HOME/.managed")" old
 }
 
-@test "personal Gradle and container settings survive organization templates" {
+_setup_managed_repository_template() {
   export DEVBASE_REGISTRY_URL=https://registry.example.com DEVBASE_REGISTRY_HOST=registry.example.com DEVBASE_REGISTRY_PORT=443
   export _DEVBASE_CUSTOM_TEMPLATES="$TEST_DIR/custom" GRADLE_USER_HOME="$TEST_DIR/gradle"
   mkdir -p "$_DEVBASE_CUSTOM_TEMPLATES" "$GRADLE_USER_HOME" "$XDG_CONFIG_HOME/containers"
-  echo '// New org settings' >"$_DEVBASE_CUSTOM_TEMPLATES/init.gradle.template"
-  echo '# New org settings' >"$_DEVBASE_CUSTOM_TEMPLATES/registries.conf.template"
+  printf '// repository ${DEVBASE_REGISTRY_URL}\n' >"$_DEVBASE_CUSTOM_TEMPLATES/init.gradle.template"
+  printf '# repository ${DEVBASE_REGISTRY_URL}\n' >"$_DEVBASE_CUSTOM_TEMPLATES/registries.conf.template"
+  if [[ "$1" == gradle ]]; then
+    REPO_TARGET="$GRADLE_USER_HOME/init.gradle"
+    REPO_BACKUP="$DEVBASE_BACKUP_DIR/gradle/init.gradle"
+    REPO_PROCESS=process_gradle_templates
+  else
+    REPO_TARGET="$XDG_CONFIG_HOME/containers/registries.conf"
+    REPO_BACKUP="$DEVBASE_BACKUP_DIR/containers/registries.conf"
+    REPO_PROCESS=process_container_templates
+  fi
+}
+
+@test "organization Gradle and container templates refresh existing files with private first backups" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf '# previous personal settings\n' >"$REPO_TARGET"
+    cp "$REPO_TARGET" "$TEST_DIR/previous-$kind"
+    run "$REPO_PROCESS"
+    assert_success
+    assert_output --partial "$REPO_BACKUP"
+    assert_files_equal "$TEST_DIR/previous-$kind" "$REPO_BACKUP"
+    assert_equal "$(stat -c %a "$REPO_TARGET")" 600
+    assert_equal "$(stat -c %a "$REPO_BACKUP")" 600
+    run grep -F 'https://registry.example.com' "$REPO_TARGET"
+    assert_success
+    export DEVBASE_REGISTRY_URL=https://new-registry.example.com
+    run "$REPO_PROCESS"
+    assert_success
+    run "$REPO_PROCESS"
+    assert_success
+    assert_files_equal "$TEST_DIR/previous-$kind" "$REPO_BACKUP"
+    assert_file_not_exists "$REPO_BACKUP.~1~"
+    run grep -F 'https://new-registry.example.com' "$REPO_TARGET"
+    assert_success
+  done
+}
+
+@test "core Gradle and container defaults preserve personal settings even with unrelated custom config" {
+  export DEVBASE_REGISTRY_URL=https://registry.example.com DEVBASE_REGISTRY_HOST=registry.example.com DEVBASE_REGISTRY_PORT=443
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/custom" _DEVBASE_CUSTOM_TEMPLATES="$TEST_DIR/custom/templates" GRADLE_USER_HOME="$TEST_DIR/gradle"
+  mkdir -p "$_DEVBASE_CUSTOM_TEMPLATES" "$GRADLE_USER_HOME" "$XDG_CONFIG_HOME/containers"
   echo '// Personal settings' >"$GRADLE_USER_HOME/init.gradle"
   echo '# Personal settings' >"$XDG_CONFIG_HOME/containers/registries.conf"
   run process_gradle_templates
@@ -434,6 +475,144 @@ YAML
   assert_success
   assert_equal "$(cat "$GRADLE_USER_HOME/init.gradle")" '// Personal settings'
   assert_equal "$(cat "$XDG_CONFIG_HOME/containers/registries.conf")" '# Personal settings'
+  assert_dir_not_exists "$DEVBASE_BACKUP_DIR/gradle"
+  assert_dir_not_exists "$DEVBASE_BACKUP_DIR/containers"
+}
+
+@test "managed repository rendering failures preserve existing files" {
+  envsubst_preserve_undefined() {
+    printf 'partial' >"$2"
+    return 1
+  }
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf 'original\n' >"$REPO_TARGET"
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_equal "$(cat "$REPO_TARGET")" original
+    assert_file_not_exists "$REPO_BACKUP"
+  done
+}
+
+@test "organization repository templates seed missing files privately and skip without a registry" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    export DEVBASE_REGISTRY_URL='' DEVBASE_REGISTRY_HOST='' DEVBASE_REGISTRY_PORT=''
+    run "$REPO_PROCESS"
+    assert_success
+    assert_file_not_exists "$REPO_TARGET"
+    _setup_managed_repository_template "$kind"
+    run "$REPO_PROCESS"
+    assert_success
+    assert_file_exists "$REPO_TARGET"
+    assert_equal "$(stat -c %a "$REPO_TARGET")" 600
+    assert_file_not_exists "$REPO_BACKUP"
+  done
+}
+
+@test "interrupted managed repository backups preserve originals and retry safely" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf 'original\n' >"$REPO_TARGET"
+    cp() {
+      local source_file="${*: -2:1}" destination="${*: -1}"
+      if [[ "$source_file" == "$REPO_TARGET" ]]; then
+        printf 'partial' >"$destination"
+        return 1
+      fi
+      command cp "$@"
+    }
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_equal "$(cat "$REPO_TARGET")" original
+    assert_file_not_exists "$REPO_BACKUP"
+    unset -f cp
+    run "$REPO_PROCESS"
+    assert_success
+    assert_equal "$(cat "$REPO_BACKUP")" original
+  done
+}
+
+@test "managed repository publication failures retain originals and remove staging files" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf 'original\n' >"$REPO_TARGET"
+    mv() {
+      local destination="${*: -1}"
+      [[ "$destination" != "$REPO_TARGET" ]] || return 1
+      command mv "$@"
+    }
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_equal "$(cat "$REPO_TARGET")" original
+    assert_equal "$(cat "$REPO_BACKUP")" original
+    assert_equal "$(find "$(dirname "$REPO_TARGET")" -name '*.devbase.*' -type f | wc -l)" 0
+    unset -f mv
+  done
+}
+
+@test "managed repository files reject linked targets and linked parent directories" {
+  local kind destination
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf 'personal target\n' >"$TEST_DIR/linked-$kind"
+    for destination in "$TEST_DIR/linked-$kind" "$TEST_DIR/missing-$kind"; do
+      ln -s "$destination" "$REPO_TARGET"
+      run "$REPO_PROCESS"
+      assert_failure
+      assert_symlink_to "$destination" "$REPO_TARGET"
+      assert_file_not_exists "$REPO_BACKUP"
+      rm "$REPO_TARGET"
+    done
+    assert_equal "$(cat "$TEST_DIR/linked-$kind")" 'personal target'
+    assert_file_not_exists "$TEST_DIR/missing-$kind"
+    mkdir -p "$TEST_DIR/linked-parent-$kind"
+    rmdir "$(dirname "$REPO_TARGET")"
+    ln -s "$TEST_DIR/linked-parent-$kind" "$(dirname "$REPO_TARGET")"
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_symlink_to "$TEST_DIR/linked-parent-$kind" "$(dirname "$REPO_TARGET")"
+    assert_file_not_exists "$TEST_DIR/linked-parent-$kind/$(basename "$REPO_TARGET")"
+  done
+}
+
+@test "managed repository files reject linked backups without replacing existing settings" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    printf 'original\n' >"$REPO_TARGET"
+    printf 'personal backup\n' >"$TEST_DIR/linked-backup-$kind"
+    mkdir -p "$(dirname "$REPO_BACKUP")"
+    ln -s "$TEST_DIR/linked-backup-$kind" "$REPO_BACKUP"
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_equal "$(cat "$REPO_TARGET")" original
+    assert_symlink_to "$TEST_DIR/linked-backup-$kind" "$REPO_BACKUP"
+    assert_equal "$(cat "$TEST_DIR/linked-backup-$kind")" 'personal backup'
+  done
+}
+
+@test "managed repository files reject non-regular targets and backups" {
+  local kind
+  for kind in gradle containers; do
+    _setup_managed_repository_template "$kind"
+    mkdir "$REPO_TARGET"
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_dir_exists "$REPO_TARGET"
+    assert_file_not_exists "$REPO_BACKUP"
+    rmdir "$REPO_TARGET"
+    printf 'original\n' >"$REPO_TARGET"
+    mkdir -p "$REPO_BACKUP"
+    run "$REPO_PROCESS"
+    assert_failure
+    assert_equal "$(cat "$REPO_TARGET")" original
+    assert_dir_exists "$REPO_BACKUP"
+  done
 }
 
 @test "create-only publication cannot overwrite a destination created during copying" {

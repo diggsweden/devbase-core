@@ -53,6 +53,15 @@ _ensure_progress_logger
 declare -ag DEVBASE_CURL_PROXY_ARGS=()
 declare -ag DEVBASE_WGET_PROXY_ARGS=()
 
+# Bootstrap checksums come from this mirror too, so require authenticated transport.
+_validate_github_registry() {
+  if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" && ! "$DEVBASE_GITHUB_REGISTRY" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
+    show_progress error "DEVBASE_GITHUB_REGISTRY must be an HTTPS repository URL" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Brief: Wrapper for curl with proxy-safe options
 # Params: $@ - curl arguments
 # Returns: curl exit code
@@ -60,6 +69,7 @@ declare -ag DEVBASE_WGET_PROXY_ARGS=()
 # Note: Some corporate proxies have problems with persistent connections
 #       These options avoid connection reuse when proxies are configured.
 devbase_curl() {
+  _validate_github_registry || return 1
   local arg
   local -a args=()
   for arg in "$@"; do
@@ -77,6 +87,7 @@ devbase_curl() {
 # Returns: wget exit code
 # Side-effects: None
 devbase_wget() {
+  _validate_github_registry || return 1
   local arg
   local -a args=()
   for arg in "$@"; do

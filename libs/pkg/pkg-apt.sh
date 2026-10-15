@@ -25,7 +25,7 @@ _pkg_apt_update() {
 # The optional directory argument lets callers verify this against fixture files.
 _pkg_apt_configure_mirror() (
   [[ -n "${DEVBASE_APT_REGISTRY:-}" ]] || return 0
-  local apt_dir="${1:-/etc/apt}" file candidate backup_path staged=''
+  local apt_dir="${1:-/etc/apt}" file candidate backup_path staged='' source_staged=''
   if [[ ! "$DEVBASE_APT_REGISTRY" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
     show_progress error "DEVBASE_APT_REGISTRY must be an HTTPS repository URL"
     return 1
@@ -51,7 +51,7 @@ _pkg_apt_configure_mirror() (
     sudo rm -- "$file" || return 1
   done
   candidate=$(mktemp "${_DEVBASE_TEMP:?}/apt-mirror.XXXXXX") || return 1
-  trap 'rm -f -- "$candidate" "$staged"' EXIT
+  trap 'rm -f -- "$candidate" "$staged"; [[ -z "$source_staged" ]] || sudo rm -f -- "$source_staged"' EXIT
   local last_byte
   for file in "$apt_dir/sources.list" "$apt_dir/sources.list.d/"*.list "$apt_dir/sources.list.d/"*.sources; do
     [[ -f "$file" ]] || continue
@@ -89,13 +89,21 @@ _pkg_apt_configure_mirror() (
       return 1
     fi
     backup_path="${backup_dir}/${file#"$apt_dir"/}"
+    if [[ -L "$backup_path" || (-e "$backup_path" && ! -f "$backup_path") ]]; then
+      show_progress error "Refusing invalid APT backup: $backup_path"
+      return 1
+    fi
     # Preserve the first preimage within this backup rotation, like dotfiles.
-    if [[ ! -e "$backup_path" && ! -L "$backup_path" ]]; then
+    if [[ ! -e "$backup_path" ]]; then
       staged=$(mktemp "${backup_path}.XXXXXX") || return 1
       cp -pT -- "$file" "$staged" || return 1
       mv -T -- "$staged" "$backup_path" || return 1
     fi
-    sudo install -m 644 -- "$candidate" "$file" || return 1
+    # Keep the active source intact until its root-owned replacement is complete.
+    source_staged=$(sudo mktemp "$(dirname "$file")/.devbase-apt.XXXXXX") || return 1
+    sudo install -m 644 -- "$candidate" "$source_staged" || return 1
+    sudo mv -fT -- "$source_staged" "$file" || return 1
+    source_staged=''
     show_progress success "Configured Ubuntu mirror in $file"
   done
 )
