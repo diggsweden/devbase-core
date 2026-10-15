@@ -138,6 +138,10 @@ Rootless by default, no daemon, Docker-compatible.
 
 === Why am I being asked about MISE_GITHUB_TOKEN during installation?
 
+When your custom configuration routes `https://api.github.com/` through a mirror
+using `DEVBASE_MISE_URL_REPLACEMENTS`, this prompt is skipped. The mirror handles
+any upstream authentication; no shared client token is needed.
+
 Without a GitHub token, mise downloads may be rate limited by GitHub's API (60 requests/hour for unauthenticated requests). This can cause installation failures or stalls.
 
 To avoid this issue:

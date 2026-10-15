@@ -106,7 +106,7 @@ verify_mise_checksum() {
   local checksums_url="${DEVBASE_URL_MISE_RELEASES}/v${version}/SHASUMS256.txt"
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
-  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
+  if ! retry_command devbase_curl -fsSL "$checksums_url" -o "$checksums_file"; then
     add_install_warning "Could not download checksums for mise v${version}"
     return 0
   fi
@@ -259,11 +259,11 @@ _run_mise_installer() {
   local tarball="${_DEVBASE_TEMP}/${asset}"
   local checksums_file="${_DEVBASE_TEMP}/mise-shasums-v${version}.txt"
 
-  # Fetch the checksums manifest with raw curl: this file is the trust anchor
+  # Fetch the checksums manifest with the curl wrapper: this is the trust anchor
   # for the tarball below, so it cannot itself be checksum-verified (would be
-  # circular). Trust comes from HTTPS + the github.com domain pin. Same pattern
+  # circular). Trust comes from HTTPS to GitHub or the configured mirror. Same pattern
   # used by verify_mise_checksum and get_oc_checksum.
-  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
+  if ! retry_command devbase_curl -fsSL "$checksums_url" -o "$checksums_file"; then
     die "Failed to download mise SHASUMS256.txt for v${version}"
   fi
 

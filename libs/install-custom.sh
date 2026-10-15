@@ -448,7 +448,7 @@ install_keystore_explorer() {
   # For RPM systems, we can use alien or download the tarball instead
   local kse_url kse_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}_all.deb"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}-1_all.deb"
     cache_name="kse-${kse_version}.deb"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 

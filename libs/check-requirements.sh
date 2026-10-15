@@ -361,12 +361,23 @@ check_path_writable() {
   return 0
 }
 
+# The standard API-prefix rule routes public GitHub metadata to the org mirror.
+mise_uses_github_api_mirror() {
+  local rule='"https://api.github.com/"[[:space:]]*:[[:space:]]*"(https://[^"[:space:]]+)"'
+  [[ "${DEVBASE_MISE_URL_REPLACEMENTS:-}" =~ $rule ]] &&
+    [[ "${BASH_REMATCH[1]}" != https://api.github.com/* ]]
+}
+
 # Brief: Check if MISE_GITHUB_TOKEN is set to avoid GitHub API rate limiting
 # Params: None
 # Uses: MISE_GITHUB_TOKEN, NON_INTERACTIVE, show_progress (globals)
 # Returns: 0 if token set or user continues, 1 if user declines to continue
 # Side-effects: Prompts user if token not set (unless NON_INTERACTIVE), reads stdin
 check_mise_github_token() {
+  if mise_uses_github_api_mirror; then
+    show_progress success "Mise uses the configured GitHub API mirror (no client token required)"
+    return 0
+  fi
   if [[ -n "${MISE_GITHUB_TOKEN}" ]]; then
     show_progress success "GitHub token (MISE_GITHUB_TOKEN) configured"
     return 0
@@ -569,7 +580,9 @@ run_preflight_checks() {
   check_results+=("✓ Home directory writable")
 
   check_mise_github_token || return 1
-  if [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
+  if mise_uses_github_api_mirror; then
+    check_results+=("✓ Mise GitHub API mirror configured")
+  elif [[ -n "${MISE_GITHUB_TOKEN:-}" ]]; then
     check_results+=("✓ MISE_GITHUB_TOKEN configured")
   else
     check_results+=("⚠ MISE_GITHUB_TOKEN not set (continuing anyway)")
@@ -653,6 +666,7 @@ export -f detect_environment
 export -f check_ubuntu_version
 export -f validate_required_vars
 export -f check_mise_github_token
+export -f mise_uses_github_api_mirror
 export -f get_secure_boot_mode
 export -f check_secure_boot
 export -f run_preflight_checks

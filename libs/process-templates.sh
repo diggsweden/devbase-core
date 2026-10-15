@@ -298,7 +298,8 @@ process_all_templates() {
 
   # Generate registry config if any registry is configured
   if [[ -n "${DEVBASE_PYPI_REGISTRY:-}" ]] || [[ -n "${DEVBASE_NPM_REGISTRY:-}" ]] ||
-    [[ -n "${DEVBASE_CYPRESS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX:-}" ]]; then
+    [[ -n "${DEVBASE_CYPRESS_REGISTRY:-}" ]] || [[ -n "${DEVBASE_TESTCONTAINERS_PREFIX:-}" ]] ||
+    [[ -n "${DEVBASE_GO_REGISTRY:-}${DEVBASE_GO_SUMDB:-}${DEVBASE_RUSTUP_DIST_SERVER:-}${DEVBASE_RUSTUP_UPDATE_ROOT:-}" ]]; then
     local registry_target="${temp_dir}/.config/fish/conf.d/00-registry.fish"
     mkdir -p "$(dirname "$registry_target")"
     generate_fish_registry_config "$registry_target"
@@ -515,6 +516,23 @@ EOF
     has_config=true
   fi
 
+  # Native Go/rustup settings also apply to commands run outside mise.
+  local mapping source_var target_var value
+  for mapping in \
+    DEVBASE_GO_REGISTRY:GOPROXY \
+    DEVBASE_GO_SUMDB:GOSUMDB \
+    DEVBASE_RUSTUP_DIST_SERVER:RUSTUP_DIST_SERVER \
+    DEVBASE_RUSTUP_UPDATE_ROOT:RUSTUP_UPDATE_ROOT; do
+    source_var="${mapping%%:*}"
+    target_var="${mapping#*:}"
+    value="${!source_var:-}"
+    [[ -n "$value" ]] || continue
+    value="${value//\\/\\\\}"
+    value="${value//\'/\\\'}"
+    printf "set -gx %s '%s'\n" "$target_var" "$value" >>"$target"
+    has_config=true
+  done
+
   # If no config was set, add documentation
   if [[ "$has_config" == "false" ]]; then
     cat >>"$target" <<'EOF'
@@ -566,6 +584,14 @@ process_template_file() {
   esac
 
   case "$template_name" in
+  cargo-config.toml)
+    [[ -n "${DEVBASE_CARGO_REGISTRY:-}" ]] || return 0
+    target_file="${CARGO_HOME:-${HOME}/.cargo}/config.toml"
+    ;;
+  bundle-config)
+    [[ -n "${DEVBASE_RUBYGEMS_REGISTRY:-}" ]] || return 0
+    target_file="${BUNDLE_USER_HOME:-${HOME}/.bundle}/config"
+    ;;
   gradle.properties)
     target_file="${GRADLE_USER_HOME:-${HOME}/.gradle}/gradle.properties"
     ;;
@@ -737,7 +763,17 @@ _process_maven_yaml_add_proxy() {
 
   if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]] && [[ -f "${maven_yaml_dir}/proxy.yaml" ]]; then
     local proxy_processed="${temp_dir}/proxy.yaml"
-    envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed" || return 1
+    # HTTP clients accept user:password@host; Maven requires separate fields.
+    # Keep the original value intact for curl/npm and other URL-based clients.
+    DEVBASE_PROXY_HOST="${DEVBASE_PROXY_HOST##*@}" \
+      envsubst_preserve_undefined "${maven_yaml_dir}/proxy.yaml" "$proxy_processed" || return 1
+    if [[ "$DEVBASE_PROXY_HOST" == *@* ]]; then
+      local userinfo="${DEVBASE_PROXY_HOST%@*}" password=""
+      [[ "$userinfo" != *:* ]] || password="${userinfo#*:}"
+      _DEVBASE_MAVEN_PROXY_USERNAME="${userinfo%%:*}" _DEVBASE_MAVEN_PROXY_PASSWORD="$password" \
+        yq -i '.proxies.proxy[] |= (.username = (strenv(_DEVBASE_MAVEN_PROXY_USERNAME) | @urid) |
+          .password = (strenv(_DEVBASE_MAVEN_PROXY_PASSWORD) | @urid))' "$proxy_processed" || return 1
+    fi
     fragments+=("$proxy_processed")
     desc="proxy"
   fi
@@ -827,15 +863,55 @@ _process_maven_yaml_to_xml() {
   fi
 }
 
+# Publish organisation-managed Maven settings with the first preimage saved in
+# the normal Devbase backup rotation. Never write through personal symlinks.
+_process_maven_yaml_publish_managed() (
+  local candidate="$1" target="$2" backup_dir backup_file staged=''
+  trap '[[ -z "$staged" ]] || rm -f -- "$staged"' EXIT
+  if [[ -L "$(dirname "$target")" || -L "$target" ]]; then
+    show_progress error "Refusing to replace linked Maven settings: $target"
+    return 1
+  fi
+  if [[ -e "$target" ]]; then
+    [[ -f "$target" ]] || return 1
+    if cmp -s "$candidate" "$target"; then
+      chmod 600 "$target"
+      return
+    fi
+    validate_var_set "DEVBASE_BACKUP_DIR" || return 1
+    backup_dir="${DEVBASE_BACKUP_DIR}/maven"
+    backup_file="${backup_dir}/settings.xml"
+    if [[ -L "$DEVBASE_BACKUP_DIR" || -L "$backup_dir" || -L "$backup_file" ]]; then
+      show_progress error "Refusing linked Maven backup: $backup_file"
+      return 1
+    fi
+    [[ ! -e "$backup_file" || -f "$backup_file" ]] || return 1
+    mkdir -p "$backup_dir" || return 1
+    if [[ ! -e "$backup_file" ]]; then
+      staged=$(mktemp "${backup_file}.XXXXXX") || return 1
+      cp -- "$target" "$staged" || return 1
+      chmod 600 "$staged" || return 1
+      mv -T -- "$staged" "$backup_file" || return 1
+    fi
+  fi
+  mkdir -p "$(dirname "$target")" || return 1
+  staged=$(mktemp "${target}.devbase.XXXXXX") || return 1
+  cp -- "$candidate" "$staged" || return 1
+  chmod 600 "$staged" || return 1
+  mv -fT -- "$staged" "$target"
+)
+
 # Brief: Process Maven YAML templates into settings.xml
 # Params: None
 # Uses: DEVBASE_FILES, _DEVBASE_TEMP (globals)
 # Returns: 0 on success, 1 on error
-# Side-effects: Creates Maven settings.xml from YAML fragments
+# Side-effects: Seeds personal settings, or replaces custom-managed settings with backup
 process_maven_templates_yaml() (
   local maven_yaml_dir="${DEVBASE_FILES}/maven-templates/yaml"
   local target_file="${HOME}/.m2/settings.xml"
-  if [[ -e "$target_file" || -L "$target_file" ]]; then
+  local managed=false
+  [[ -z "${DEVBASE_CUSTOM_DIR:-}${_DEVBASE_CUSTOM_TEMPLATES:-}" ]] || managed=true
+  if [[ "$managed" == false && ( -e "$target_file" || -L "$target_file" ) ]]; then
     show_progress info "Preserving personal Maven settings.xml"
     return 0
   fi
@@ -865,7 +941,11 @@ process_maven_templates_yaml() (
   local candidate="${temp_dir}/settings.xml"
   _process_maven_yaml_to_xml "$merged_yaml" "$candidate" || return 1
   yq -p=xml -o=yaml -e '.settings != null' "$candidate" >/dev/null || return 1
-  install_file_if_missing "$candidate" "$target_file"
+  if [[ "$managed" == true ]]; then
+    _process_maven_yaml_publish_managed "$candidate" "$target_file"
+  else
+    install_file_if_missing "$candidate" "$target_file"
+  fi
 )
 
 process_gradle_templates() {

@@ -744,6 +744,7 @@ _capture_download_args() {
 _capture_bootstrap_gum_url() {
   _capture_download_args \
     "source '${DEVBASE_ROOT}/libs/bootstrap/bootstrap-ui.sh'
+     source '${DEVBASE_ROOT}/libs/handle-network.sh'
      NON_INTERACTIVE=false
      _DEVBASE_ENV='${1}'
      get_deb_arch() { echo '${2}'; }

@@ -16,8 +16,63 @@
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 _pkg_apt_update() {
+  _pkg_apt_configure_mirror || return 1
   run_with_spinner "Updating package lists" sudo apt-get -qq update
 }
+
+# Rewrite only official Ubuntu archive URIs, preserving suites and Signed-By.
+# The optional directory argument lets callers verify this against fixture files.
+_pkg_apt_configure_mirror() (
+  [[ -n "${DEVBASE_APT_REGISTRY:-}" ]] || return 0
+  local apt_dir="${1:-/etc/apt}" file candidate rc backup_path staged=''
+  if [[ ! "$DEVBASE_APT_REGISTRY" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
+    show_progress error "DEVBASE_APT_REGISTRY must be an HTTPS repository URL"
+    return 1
+  fi
+  validate_var_set "DEVBASE_BACKUP_DIR" || return 1
+  local backup_dir="${DEVBASE_BACKUP_DIR}/apt"
+  apt_dir="${apt_dir%/}"
+  for file in "$DEVBASE_BACKUP_DIR" "$backup_dir" "$backup_dir/sources.list.d"; do
+    if [[ -L "$file" ]]; then
+      show_progress error "Refusing APT backup through symlink: $file"
+      return 1
+    fi
+  done
+  mkdir -p "$backup_dir/sources.list.d" || return 1
+
+  # Keep APT backups with the other DevBase backups, outside APT's source scan.
+  # Move earlier adjacent backups even when the sources are already mirrored.
+  for file in "$apt_dir/sources.list.devbase-backup" "$apt_dir/sources.list.d/"*.list.devbase-backup "$apt_dir/sources.list.d/"*.sources.devbase-backup; do
+    [[ -f "$file" ]] || continue
+    backup_path="${file#"$apt_dir"/}"
+    backup_path="${backup_dir}/${backup_path%.devbase-backup}"
+    cp -pT --backup=numbered -- "$file" "$backup_path" || return 1
+    sudo rm -- "$file" || return 1
+  done
+  candidate=$(mktemp "${_DEVBASE_TEMP:?}/apt-mirror.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate" "$staged"' EXIT
+  for file in "$apt_dir/sources.list" "$apt_dir/sources.list.d/"*.list "$apt_dir/sources.list.d/"*.sources; do
+    [[ -f "$file" ]] || continue
+    rc=0
+    awk -v mirror="${DEVBASE_APT_REGISTRY%/}/" -f "${DEVBASE_ROOT}/devbase_files/apt-mirror.awk" "$file" >"$candidate" || rc=$?
+    [[ "$rc" == 3 ]] && continue # No matching Ubuntu URIs; leave bytes untouched.
+    [[ "$rc" == 0 ]] || return 1
+    cmp -s "$file" "$candidate" && continue
+    if [[ -L "$file" ]]; then
+      show_progress error "Refusing to rewrite linked APT source: $file"
+      return 1
+    fi
+    backup_path="${backup_dir}/${file#"$apt_dir"/}"
+    # Preserve the first preimage within this backup rotation, like dotfiles.
+    if [[ ! -e "$backup_path" && ! -L "$backup_path" ]]; then
+      staged=$(mktemp "${backup_path}.XXXXXX") || return 1
+      cp -pT -- "$file" "$staged" || return 1
+      mv -T -- "$staged" "$backup_path" || return 1
+    fi
+    sudo install -m 644 -- "$candidate" "$file" || return 1
+    show_progress success "Configured Ubuntu mirror in $file"
+  done
+)
 
 # Brief: Install APT packages with real-time progress (whiptail only)
 # Params: $@ - package names
