@@ -694,11 +694,21 @@ _capture_download_args() {
 }
 
 @test "install_keystore_explorer requests the published deb asset name" {
+  command -v dpkg >/dev/null || skip "dpkg not available"
   _capture_download_args \
     "TOOL_VERSIONS[keystore_explorer]='v5.7.0'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 1; }" \
     "install_keystore_explorer"
 
   assert_output --partial "/v5.7.0/kse_5.7.0-1_all.deb"
+}
+
+@test "install_keystore_explorer preserves the deb asset name for older pins" {
+  command -v dpkg >/dev/null || skip "dpkg not available"
+  _capture_download_args \
+    "TOOL_VERSIONS[keystore_explorer]='v5.6.1'; _get_custom_pkg_format() { echo deb; }; command_exists() { return 1; }" \
+    "install_keystore_explorer"
+
+  assert_output --partial "/v5.6.1/kse_5.6.1_all.deb"
 }
 
 @test "install_keystore_explorer requests the published zip asset name" {

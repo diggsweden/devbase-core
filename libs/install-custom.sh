@@ -448,7 +448,11 @@ install_keystore_explorer() {
   # since v5.7.0) and the zip kse-<version without dots>.zip.
   local kse_url kse_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}-1_all.deb"
+    local kse_deb_version="${kse_version#v}"
+    if dpkg --compare-versions "$kse_deb_version" ge "5.7.0"; then
+      kse_deb_version+="-1"
+    fi
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_deb_version}_all.deb"
     cache_name="kse-${kse_version}.deb"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 

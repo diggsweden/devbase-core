@@ -16,9 +16,10 @@ setup() {
   common_setup_isolated
   TEST_HOME="$HOME"
   export TEST_HOME
+  export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
 
   mkdir -p "${TEST_DIR}/bin"
-  cat > "${TEST_DIR}/bin/fish" << 'SCRIPT'
+  command cat > "${TEST_DIR}/bin/fish" << 'SCRIPT'
 #!/usr/bin/env bash
 echo "/usr/bin/fish"
 SCRIPT
@@ -26,7 +27,7 @@ SCRIPT
 
   # Record the arguments rather than swallowing them, and run tee for real
   # against the injected file.
-  cat > "${TEST_DIR}/bin/sudo" << 'SCRIPT'
+  command cat > "${TEST_DIR}/bin/sudo" << 'SCRIPT'
 #!/usr/bin/env bash
 echo "$*" >> "${TEST_DIR}/sudo.log"
 if [[ "$1" == "tee" ]]; then
@@ -96,7 +97,7 @@ teardown() {
   done
   ln -sf /bin/bash "${TEST_DIR}/nofish/bash"
 
-  cat > "${TEST_DIR}/nofish/sudo" << 'SCRIPT'
+  command cat > "${TEST_DIR}/nofish/sudo" << 'SCRIPT'
 #!/usr/bin/env bash
 exit 0
 SCRIPT
@@ -148,7 +149,7 @@ SCRIPT
 }
 
 _stub_fish_reporting_args() {
-  cat >"${TEST_DIR}/bin/fish" <<'SCRIPT'
+  command cat >"${TEST_DIR}/bin/fish" <<'SCRIPT'
 #!/usr/bin/env bash
 echo "fish started $*"
 SCRIPT
@@ -196,8 +197,8 @@ _run_bash_under_parent() {
   assert_output "bash kept"
 }
 
-@test "configure_fish_interactive upgrades the handoff from earlier releases" {
-  cat >"${TEST_HOME}/.bashrc" <<'EOF'
+_setup_legacy_handoff() {
+  command cat >"${TEST_HOME}/.bashrc" <<'EOF'
 # Personal before
 
 # Launch Fish for interactive sessions (added by devbase)
@@ -207,10 +208,16 @@ fi
 # Personal after
 EOF
   chmod 640 "${TEST_HOME}/.bashrc"
+  cp "${TEST_HOME}/.bashrc" "${TEST_DIR}/before"
+}
+
+@test "configure_fish_interactive upgrades the handoff from earlier releases" {
+  _setup_legacy_handoff
 
   configure_fish_interactive >/dev/null 2>&1
 
   assert_equal "$(stat -c %a "${TEST_HOME}/.bashrc")" 640
+  assert_files_equal "${TEST_DIR}/before" "${DEVBASE_BACKUP_DIR}/shell/bashrc"
   assert_equal "$(head -n 1 "${TEST_HOME}/.bashrc")" '# Personal before'
   assert_equal "$(tail -n 1 "${TEST_HOME}/.bashrc")" '# Personal after'
   run grep -c 'PPID' "${TEST_HOME}/.bashrc"
@@ -218,6 +225,94 @@ EOF
   cp "${TEST_HOME}/.bashrc" "${TEST_DIR}/after"
   configure_fish_interactive >/dev/null 2>&1
   assert_files_equal "${TEST_DIR}/after" "${TEST_HOME}/.bashrc"
+  assert_file_not_exists "${DEVBASE_BACKUP_DIR}/shell/bashrc.~1~"
+}
+
+@test "configure_fish_interactive preserves bashrc after a partial read failure" {
+  _setup_legacy_handoff
+  # shellcheck disable=SC2120 # Called indirectly by _upgrade_fish_handoff.
+  cat() {
+    # Include the complete handoff, then fail before the personal footer.
+    head -n 6 "$1"
+    return 1
+  }
+
+  run configure_fish_interactive
+
+  assert_failure
+  refute_output --partial "Fish shell configured"
+  assert_files_equal "${TEST_DIR}/before" "${TEST_HOME}/.bashrc"
+  run compgen -G "${TEST_HOME}/.bashrc.devbase.*"
+  assert_failure
+}
+
+@test "configure_fish_interactive preserves bashrc when the backup fails" {
+  _setup_legacy_handoff
+  mkdir -p "$DEVBASE_BACKUP_DIR"
+  echo 'blocking file' >"${DEVBASE_BACKUP_DIR}/shell"
+
+  run configure_fish_interactive
+
+  assert_failure
+  refute_output --partial "Fish shell configured"
+  assert_files_equal "${TEST_DIR}/before" "${TEST_HOME}/.bashrc"
+  run compgen -G "${TEST_HOME}/.bashrc.devbase.*"
+  assert_failure
+}
+
+@test "configure_fish_interactive preserves bashrc after a partial write failure" {
+  _setup_legacy_handoff
+  printf() {
+    if [[ "$1" == '%s' ]]; then
+      builtin printf 'partial write'
+      return 1
+    fi
+    # shellcheck disable=SC2059 # Forward the original printf arguments.
+    builtin printf "$@"
+  }
+
+  run configure_fish_interactive
+
+  assert_failure
+  refute_output --partial "Fish shell configured"
+  assert_files_equal "${TEST_DIR}/before" "${TEST_HOME}/.bashrc"
+  assert_files_equal "${TEST_DIR}/before" "${DEVBASE_BACKUP_DIR}/shell/bashrc"
+  run compgen -G "${TEST_HOME}/.bashrc.devbase.*"
+  assert_failure
+}
+
+@test "configure_fish_interactive preserves bashrc when publication fails" {
+  _setup_legacy_handoff
+  mv() { return 1; }
+
+  run configure_fish_interactive
+
+  assert_failure
+  refute_output --partial "Fish shell configured"
+  assert_files_equal "${TEST_DIR}/before" "${TEST_HOME}/.bashrc"
+  assert_files_equal "${TEST_DIR}/before" "${DEVBASE_BACKUP_DIR}/shell/bashrc"
+  run compgen -G "${TEST_HOME}/.bashrc.devbase.*"
+  assert_failure
+}
+
+@test "configure_fish_interactive preserves linked bashrc and dangling links" {
+  _setup_legacy_handoff
+  mv "${TEST_HOME}/.bashrc" "${TEST_DIR}/personal-bashrc"
+  ln -s "${TEST_DIR}/personal-bashrc" "${TEST_HOME}/.bashrc"
+
+  run configure_fish_interactive
+
+  assert_success
+  assert_output --partial "Preserving linked .bashrc"
+  assert_symlink_to "${TEST_DIR}/personal-bashrc" "${TEST_HOME}/.bashrc"
+  assert_files_equal "${TEST_DIR}/before" "${TEST_DIR}/personal-bashrc"
+
+  rm "${TEST_DIR}/personal-bashrc"
+  run configure_fish_interactive
+
+  assert_success
+  assert_symlink_to "${TEST_DIR}/personal-bashrc" "${TEST_HOME}/.bashrc"
+  assert_file_not_exists "${TEST_DIR}/personal-bashrc"
 }
 
 @test "configure_fish_interactive leaves an edited handoff alone" {
