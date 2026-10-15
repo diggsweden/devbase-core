@@ -747,6 +747,7 @@ check_config_files() {
     "$HOME/.config/fish/conf.d/02-aliases.fish"
     "$HOME/.config/fish/conf.d/04-ls-colors.fish"
     "$HOME/.config/fish/conf.d/06-go-config.fish"
+    "$HOME/.config/fish/conf.d/06-node-config.fish"
     "$HOME/.config/fish/conf.d/08-fzf-integration.fish"
     "$HOME/.config/fish/conf.d/09-terminal-title.fish"
     "$HOME/.config/fish/conf.d/10-ulimits.fish"
@@ -1469,6 +1470,7 @@ check_dev_language_env() {
   print_subheader "Development Language Settings"
 
   check_env_var "JAVA_HOME" "$MAX_VALUE_LENGTH" || true
+  check_env_var "NODE_USE_ENV_PROXY" "$MAX_VALUE_LENGTH" || true
 
   # Special handling for JAVA_TOOL_OPTIONS
   [[ -z "${JAVA_TOOL_OPTIONS:-}" ]] && {

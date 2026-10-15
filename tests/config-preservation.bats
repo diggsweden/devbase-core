@@ -20,6 +20,7 @@ setup() {
   export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
   export _DEVBASE_TEMP="${TEST_DIR}/work"
   export _DEVBASE_CUSTOM_TEMPLATES=''
+  export DEVBASE_CUSTOM_DIR=''
   export DEVBASE_PROXY_HOST='' DEVBASE_PROXY_PORT='' DEVBASE_REGISTRY_URL=''
   export DEVBASE_REGISTRY_HOST='' DEVBASE_REGISTRY_PORT=''
   export DEVBASE_PYPI_REGISTRY='' DEVBASE_NPM_REGISTRY='' DEVBASE_CYPRESS_REGISTRY=''
@@ -280,6 +281,128 @@ EOF
   run process_maven_templates_yaml
   assert_failure
   assert_file_not_exists "$HOME/.m2/settings.xml"
+}
+
+@test "Maven splits authenticated proxies without changing URL-based clients" {
+  export DEVBASE_PROXY_HOST='test-user%40example:pa%3Ass%26word@proxy.example.com'
+  export DEVBASE_PROXY_PORT=8080
+  run process_maven_templates_yaml
+  assert_success
+  assert_equal "$DEVBASE_PROXY_HOST" 'test-user%40example:pa%3Ass%26word@proxy.example.com'
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.proxies.proxy[0].host' "$HOME/.m2/settings.xml")" proxy.example.com
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.proxies.proxy[0].username' "$HOME/.m2/settings.xml")" 'test-user@example'
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.proxies.proxy[0].password' "$HOME/.m2/settings.xml")" 'pa:ss&word'
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.proxies.proxy[1].host' "$HOME/.m2/settings.xml")" proxy.example.com
+  refute_output --partial 'pa:ss'
+}
+
+@test "Maven custom compatibility properties preserve existing mirror and repository policies" {
+  export DEVBASE_REGISTRY_URL='https://registry.example'
+  export _DEVBASE_CUSTOM_TEMPLATES="$TEST_DIR/custom"
+  mkdir -p "$_DEVBASE_CUSTOM_TEMPLATES"
+  cat >"$_DEVBASE_CUSTOM_TEMPLATES/maven-repos.yaml" <<'YAML'
+profiles:
+  profile:
+    - id: org-repos
+      properties:
+        aether.remoteRepositoryFilter.prefixes.resolvePrefixFiles: "false"
+activeProfiles:
+  activeProfile:
+    - org-repos
+YAML
+  run process_maven_templates_yaml
+  assert_success
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.profiles.profile[1].properties."aether.remoteRepositoryFilter.prefixes.resolvePrefixFiles"' "$HOME/.m2/settings.xml")" false
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.mirrors.mirror.mirrorOf' "$HOME/.m2/settings.xml")" central
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.profiles.profile[0].repositories.repository[0].snapshots.enabled' "$HOME/.m2/settings.xml")" true
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.activeProfiles.activeProfile[1]' "$HOME/.m2/settings.xml")" org-repos
+}
+
+@test "Maven verification does not display stored credentials" {
+  mkdir -p "$HOME/.m2"
+  printf '<settings><proxies><proxy><password>private-fixture</password></proxy></proxies></settings>\n' >"$HOME/.m2/settings.xml"
+  run bash -c 'source "$1/verify/verify-base-lib.sh"; check_maven_proxy' _ "$DEVBASE_ROOT"
+  assert_success
+  assert_output --partial 'Maven proxy configured'
+  refute_output --partial 'private-fixture'
+  refute_output --partial '<password>'
+}
+
+@test "Maven custom configuration replaces existing settings and preserves the first backup" {
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/custom"
+  export DEVBASE_REGISTRY_URL='https://registry.example'
+  mkdir -p "$DEVBASE_CUSTOM_DIR" "$HOME/.m2"
+  printf '<settings><!-- previous personal settings --></settings>\n' >"$HOME/.m2/settings.xml"
+  cp "$HOME/.m2/settings.xml" "$TEST_DIR/previous.xml"
+  run process_maven_templates_yaml
+  assert_success
+  assert_files_equal "$TEST_DIR/previous.xml" "$DEVBASE_BACKUP_DIR/maven/settings.xml"
+  assert_equal "$(stat -c %a "$DEVBASE_BACKUP_DIR/maven/settings.xml")" 600
+  assert_equal "$(stat -c %a "$HOME/.m2/settings.xml")" 600
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.mirrors.mirror.url' "$HOME/.m2/settings.xml")" 'https://registry.example/repository/maven-public/'
+  export DEVBASE_REGISTRY_URL='https://new-registry.example'
+  run process_maven_templates_yaml
+  assert_success
+  assert_files_equal "$TEST_DIR/previous.xml" "$DEVBASE_BACKUP_DIR/maven/settings.xml"
+  assert_equal "$(yq -p=xml -o=yaml -r '.settings.mirrors.mirror.url' "$HOME/.m2/settings.xml")" 'https://new-registry.example/repository/maven-public/'
+}
+
+@test "Maven custom settings preserve the original when backup or publication fails" {
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/custom"
+  export DEVBASE_PROXY_HOST=proxy.example.com DEVBASE_PROXY_PORT=8080
+  mkdir -p "$DEVBASE_CUSTOM_DIR" "$HOME/.m2" "$(dirname "$DEVBASE_BACKUP_DIR")"
+  printf '<settings><!-- original --></settings>\n' >"$HOME/.m2/settings.xml"
+  cp "$HOME/.m2/settings.xml" "$TEST_DIR/previous.xml"
+  printf 'blocking backup directory\n' >"$DEVBASE_BACKUP_DIR"
+  run process_maven_templates_yaml
+  assert_failure
+  assert_files_equal "$TEST_DIR/previous.xml" "$HOME/.m2/settings.xml"
+  rm "$DEVBASE_BACKUP_DIR"
+  mv() {
+    local destination="${*: -1}"
+    [[ "$destination" != "$HOME/.m2/settings.xml" ]] || return 1
+    command mv "$@"
+  }
+  run process_maven_templates_yaml
+  assert_failure
+  assert_files_equal "$TEST_DIR/previous.xml" "$HOME/.m2/settings.xml"
+  assert_files_equal "$TEST_DIR/previous.xml" "$DEVBASE_BACKUP_DIR/maven/settings.xml"
+}
+
+@test "Maven custom configuration does not write through linked settings" {
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/custom"
+  export DEVBASE_PROXY_HOST=proxy.example.com DEVBASE_PROXY_PORT=8080
+  mkdir -p "$DEVBASE_CUSTOM_DIR" "$HOME/.m2"
+  printf '<settings><!-- linked original --></settings>\n' >"$TEST_DIR/linked.xml"
+  ln -s "$TEST_DIR/linked.xml" "$HOME/.m2/settings.xml"
+  run process_maven_templates_yaml
+  assert_failure
+  assert_symlink_to "$TEST_DIR/linked.xml" "$HOME/.m2/settings.xml"
+  assert_equal "$(cat "$TEST_DIR/linked.xml")" '<settings><!-- linked original --></settings>'
+}
+
+@test "Maven interrupted backup cannot be mistaken for a complete backup on retry" {
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/custom"
+  export DEVBASE_PROXY_HOST=proxy.example.com DEVBASE_PROXY_PORT=8080
+  mkdir -p "$DEVBASE_CUSTOM_DIR" "$HOME/.m2"
+  printf '<settings><!-- original --></settings>\n' >"$HOME/.m2/settings.xml"
+  cp "$HOME/.m2/settings.xml" "$TEST_DIR/previous.xml"
+  cp() {
+    local source_file="${*: -2:1}" destination="${*: -1}"
+    if [[ "$source_file" == "$HOME/.m2/settings.xml" ]]; then
+      printf '<partial' >"$destination"
+      return 1
+    fi
+    command cp "$@"
+  }
+  run process_maven_templates_yaml
+  assert_failure
+  assert_files_equal "$TEST_DIR/previous.xml" "$HOME/.m2/settings.xml"
+  assert_file_not_exists "$DEVBASE_BACKUP_DIR/maven/settings.xml"
+  unset -f cp
+  run process_maven_templates_yaml
+  assert_success
+  assert_files_equal "$TEST_DIR/previous.xml" "$DEVBASE_BACKUP_DIR/maven/settings.xml"
 }
 
 @test "rendering and backup failures stop configuration deployment" {

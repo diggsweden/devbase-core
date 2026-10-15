@@ -326,7 +326,7 @@ check_maven_proxy() {
 
   if grep -q "<proxy>" "$maven_settings" 2>/dev/null; then
     print_check "pass" "Maven proxy configured (~/.m2/settings.xml)"
-    display_file_box "$maven_settings" "$BOX_WIDTH_WIDE" "^[[:space:]]*\<\!--\|^[[:space:]]*--\>"
+    # settings.xml may contain proxy passwords and repository credentials.
   else
     print_check "info" "Maven settings exists but no proxy configured"
   fi

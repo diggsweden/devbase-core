@@ -289,12 +289,13 @@ Raw `.fish` files can replace a same-named staged core `.fish` file. Unmatched r
 
 === Custom Templates (Organization-Specific)
 
-Dedicated and generic personal-config routes initialize absent destinations only. Existing files, including empty files and symlinks, are preserved; later organization changes to those files require manual review and application.
+Dedicated and generic personal-config routes initialize absent destinations only. Existing files, including empty files and symlinks, are preserved; later organization changes to those files require manual review and application. Maven is an exception when custom-config is active, as described below.
 
 **Built-in Templates** (automatically configured from `devbase-core`):
 
 Maven (YAML-based, when proxy, registry or custom repository configuration applies):
-- Initializes absent `~/.m2/settings.xml` from YAML fragments
+- Without custom-config: initializes absent `~/.m2/settings.xml` from YAML fragments
+- With custom-config: regenerates settings during installation, backing up existing contents to `DEVBASE_BACKUP_DIR/maven/settings.xml`
 - Base fragments in `devbase_files/maven-templates/yaml/`
 - Custom repositories via `maven-repos.yaml` in templates/ (optional)
 
@@ -312,9 +313,9 @@ How it works:
 2. Environment variables substituted using `envsubst`
 3. YAML fragments merged using `yq eval-all`
 4. Merged YAML converted to XML in private staging with `yq -o=xml`
-5. XML is parsed back to check for a `settings` root, then installed with mode `0600` only if the destination is still absent
+5. XML is parsed back to check for a `settings` root, then installed with mode `0600`. Without custom-config, publication is create-only; with custom-config, replacement is atomic and requires a successful backup first.
 
-Existing `settings.xml` is preserved without merging. With no applicable proxy, registry or custom YAML, no file is generated. Generation or validation failures leave an absent destination absent.
+With custom-config, existing settings are replaced without merging, including personal servers and comments. The first preimage is retained within the normal Devbase backup rotation. Linked settings or a linked `.m2` directory are rejected rather than followed. Without custom-config, existing files are preserved. With no applicable proxy, registry or custom YAML, no file is generated. Generation, validation, backup or publication failures preserve the existing file.
 
 Benefits:
 - ✓ No duplication - Each setting defined once
@@ -366,9 +367,9 @@ Testcontainers (independent of registry configuration):
 
 **Custom Configuration Templates** (`.template` suffix - variable substitution with `envsubst`):
 
-These routes initialize personal configs only when absent:
+These routes initialize personal configs only when absent, except custom-managed Maven settings:
 
-- `maven-repos.yaml` → Included in first-time `~/.m2/settings.xml` generation (organization-specific Maven repositories)
+- `maven-repos.yaml` → Included in `~/.m2/settings.xml` generation and replacement when custom-config is active (organization-specific Maven repositories)
 - `init.gradle.template` → `$GRADLE_USER_HOME/init.gradle` (default `~/.gradle/init.gradle`)
 - `registries.conf.template` → `~/.config/containers/registries.conf`
 - `.testcontainers.properties.template` or `.testcontainers.properties` → `~/.testcontainers.properties`

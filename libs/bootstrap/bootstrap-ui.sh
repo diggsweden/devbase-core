@@ -145,7 +145,7 @@ bootstrap_gum() {
     cp "${cache_dir}/${package_name}" "$gum_pkg"
   else
     # Download gum
-    if ! curl -fL --progress-bar "$gum_url" -o "$gum_pkg" 2>/dev/null; then
+    if ! devbase_curl -fL --progress-bar "$gum_url" -o "$gum_pkg" 2>/dev/null; then
       show_progress warning "Could not find TUI component gum (download failed), using whiptail as backup"
       return 1
     fi
