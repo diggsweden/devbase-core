@@ -56,18 +56,51 @@ teardown() {
 
 @test "existing Fisher still installs missing pinned fzf.fish" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
   TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
   export _DEVBASE_TEMP="$TEST_DIR"
+  # shellcheck disable=SC2329 # Called by install_fisher.
   fish() {
-    case "$3" in
-      'type -q fisher') return 0 ;;
-      'fisher list |'*) return 1 ;;
-      'fisher install'*) printf '%s\n' "$4" >"$TEST_DIR/plugin" ;;
+    # Every call sources the installed fisher function before using it.
+    # Plain `fish -c`: --no-config would drop the universal variable with the plugin list
+    [[ "$1" == "-c" && "$2" == 'test -f $argv[1]; and source $argv[1]; functions -q fisher'* ]] || return 1
+    [[ "$3" == "${XDG_CONFIG_HOME}/fish/functions/fisher.fish" ]] || return 1
+    case "$2" in
+      *'functions -q fisher') return 0 ;;
+      *'fisher list |'*) return 1 ;;
+      *'fisher install'*) printf '%s\n' "$4" >"$TEST_DIR/plugin" ;;
       *) return 1 ;;
     esac
   }
   run install_fisher
   assert_success
+  assert_equal "$(cat "$TEST_DIR/plugin")" 'PatrickF1/fzf.fish@v11.0'
+}
+
+@test "install_fisher sources the installed fisher function instead of relying on autoload" {
+  # Real fish with an isolated HOME: the fake fisher in the config directory is
+  # found because install_fisher sources it explicitly.
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR"
+  mkdir -p "${XDG_CONFIG_HOME}/fish/functions"
+  cat >"${XDG_CONFIG_HOME}/fish/functions/fisher.fish" <<'FISH'
+function fisher
+    switch $argv[1]
+        case list
+            printf '%s\n' jorgebucaran/fisher
+            test -f "$TEST_DIR/plugin"; and string lower <"$TEST_DIR/plugin"
+        case install
+            printf '%s\n' $argv[2] >>"$TEST_DIR/plugin"
+    end
+end
+FISH
+  # shellcheck disable=SC2329
+  git() { return 1; }
+
+  run install_fisher
+  assert_success
+  assert_output --partial "Fisher already installed"
   assert_equal "$(cat "$TEST_DIR/plugin")" 'PatrickF1/fzf.fish@v11.0'
 }
 

@@ -14,7 +14,7 @@ k9s:
   maxConnRetry: 5
   
   # Skip latest revision check
-  skipLatestRevCheck: false
+  skipLatestRevCheck: true
   
   # Disable pod counting
   disablePodCounting: false
@@ -29,6 +29,8 @@ k9s:
     
     # Skin/theme name (references files in ~/.config/k9s/skins/)
     skin: ${K9S_SKIN}
+    # Reload the skin when devbase-theme rewrites this file
+    reactive: true
   
   # Logger configuration
   logger:
@@ -40,7 +42,7 @@ k9s:
   
   # Shell pod command (default)
   shellPod:
-    image: busybox:1.35.0
+    image: docker.io/library/busybox:1.35.0
     command: []
     args: []
     namespace: default

@@ -105,3 +105,21 @@ _render_colorscheme() {
   run grep -x 'set vicmd=nano' "${rendered}/vifmrc"
   assert_success
 }
+
+@test "IntelliJ vmoptions template keeps the launcher's USER_HOME token" {
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/validation.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/utils.sh"
+  local var
+  for var in "${DEVBASE_REQUIRED_TEMPLATE_VARS[@]}"; do
+    export "$var=placeholder"
+  done
+  local rendered="${BATS_TEST_TMPDIR}/idea64.vmoptions"
+
+  run envsubst_preserve_undefined "${DEVBASE_ROOT}/dot/.config/devbase/intellij-vmoptions.template" "$rendered"
+  assert_success
+  refute_output --partial "Unknown variable"
+  run grep -x -- '-XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof' "$rendered"
+  assert_success
+}

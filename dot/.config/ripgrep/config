@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# ripgrep defaults (RIPGREP_CONFIG_PATH). One flag per line.
+# Case-insensitive unless the pattern has uppercase letters
+--smart-case
+# Search hidden files but never inside .git
+--hidden
+--glob=!.git/*
+# Keep very long lines readable
+--max-columns=150
+--max-columns-preview

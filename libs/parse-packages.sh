@@ -461,12 +461,13 @@ generate_mise_config() {
   else
     cat >>"$output_file" <<'EOF' || return 1
 [settings]
-experimental = true
-legacy_version_file = false
-asdf_compat = false
+idiomatic_version_file_enable_tools = []
+disable_update_warning = true
 jobs = 6
 yes = true
 http_timeout = "90s"
+minimum_release_age = "7d"
+paranoid = true
 
 [env]
 HTTP_PROXY = "{{ get_env(name='HTTP_PROXY', default='') }}"

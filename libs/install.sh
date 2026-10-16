@@ -582,7 +582,7 @@ apply_configurations() {
 
 # Brief: Configure system services, shell, and Windows Terminal themes (WSL)
 # Params: None
-# Uses: configure_podman_service, configure_podman_compose_provider, configure_clamav_service, configure_ufw, configure_wayland_service, disable_kubernetes_services, set_system_limits, configure_fish_interactive, configure_completions, DEVBASE_LIBS, die, show_progress (functions/globals)
+# Uses: configure_podman_service, configure_podman_compose_provider, configure_clamav_service, configure_ufw, configure_wayland_service, disable_kubernetes_services, set_system_limits, configure_fish_interactive, configure_completions, seed_tldr_cache, DEVBASE_LIBS, die, show_progress (functions/globals)
 # Returns: 0 always (critical failures call die)
 # Side-effects: Enables services, configures shell, installs WT themes on WSL
 configure_system_and_shell() {
@@ -603,6 +603,7 @@ configure_system_and_shell() {
 
   configure_fish_interactive || die "Failed to setup fish for interactive use"
   configure_completions || die "Failed to configure shell completions"
+  seed_tldr_cache || show_progress warning "tldr page cache not seeded; run 'tldr --update' later (continuing)"
 
   # Install all Windows Terminal themes if in WSL
   if uname -r | grep -qi microsoft; then

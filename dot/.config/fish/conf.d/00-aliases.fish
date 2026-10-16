@@ -17,16 +17,7 @@
 # Aliases for command behavior changes
 # Auto-sourced by Fish on startup
 
-# Neovim as default editor (fallback to vim if missing)
-if command -q nvim
-    alias vi="nvim"
-    alias vim="nvim"
-    alias vimbare="nvim -u NONE -N"
-else if command -q vim
-    alias vi="vim"
-    alias vim="vim"
-    alias vimbare="vim -u NONE -N"
-end
+# Editor aliases (vi, vim, vimbare, e, ...) live in 02-aliases.fish.
 
 # Better ls with eza
 # Value must be attached: a bare --icons swallows the next argument (eza 0.23.5+)
@@ -44,11 +35,6 @@ end
 alias grep="grep --color=auto"
 alias fgrep="fgrep --color=auto"
 alias egrep="egrep --color=auto"
-
-# TLDR pages (tlrc is the Rust client)
-if type -q tlrc
-    alias tldr="tlrc"
-end
 
 # Podman desktop (uncomment if using flatpak)
 # alias podman-desktop='flatpak run io.podman_desktop.PodmanDesktop'

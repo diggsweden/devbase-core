@@ -32,6 +32,23 @@ set -gx GPG_TTY (tty)
 set -gx EDITOR "${EDITOR}"
 set -gx VISUAL "${VISUAL}"
 
+# Syntax-highlighted man pages (bat --list-themes for the theme)
+if command -q bat
+    set -gx MANPAGER "bat -plman"
+end
+
+# ripgrep reads defaults from this file only when the variable is set
+set -gx RIPGREP_CONFIG_PATH "$XDG_CONFIG_HOME/ripgrep/config"
+
+# gh and glab never fall back to Git's pager; route their diffs through delta too
+if command -q delta
+    set -gx GH_PAGER delta
+    set -gx GLAB_PAGER delta
+end
+
+# pipx: ignore packages uploaded less than 7 days ago (same quarantine as npm and mise)
+set -gx PIPX_COOLDOWN 7
+
 # User UID for various tools
 set -gx USER_UID (id -u)
 
@@ -42,6 +59,9 @@ set -gx DOCKER_HOST "unix:///run/user/$USER_UID/podman/podman.sock"
 # This is set during installation if custom cert directory exists
 if test -n "${DEVBASE_CUSTOM_CERTS}"
     # Node.js certificate configuration - use system certs including custom CAs
+    # NODE_USE_SYSTEM_CA (node 24.6+) reads the system store; NODE_EXTRA_CA_CERTS
+    # stays for Electron-based tools such as VS Code
+    set -gx NODE_USE_SYSTEM_CA 1
     set -gx NODE_EXTRA_CA_CERTS "/etc/ssl/certs/ca-certificates.crt"
     
     # Java certificate configuration - use system cacerts including custom CAs

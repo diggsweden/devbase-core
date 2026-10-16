@@ -57,8 +57,11 @@ style = "bright-black"
 
 [kubernetes]
 disabled=false
+symbol = "⎈ "
 format = "[$symbol$context/$namespace]($style)"
 detect_extensions = ['yaml', 'yml']
+detect_env_vars = ['KUBECONFIG']
+detect_folders = ['k8s', 'charts', 'kustomize', 'manifests']
 
 [[kubernetes.contexts]]
 # Use capture groups to extract cluster and username to shorten display

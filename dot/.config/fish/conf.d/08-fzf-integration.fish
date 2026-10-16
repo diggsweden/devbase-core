@@ -22,5 +22,13 @@ end
 # Fish lists pass each option as a separate argument to fzf.
 set -gx fzf_directory_opts --bind 'ctrl-/:change-preview-window(down|hidden|)'
 
+# Directory previews with eza and git diffs with delta (both installed by DevBase)
+if command -q eza
+    set -gx fzf_preview_dir_cmd eza --all --color=always --icons=auto
+end
+if command -q delta
+    set -gx fzf_diff_highlighter delta --paging=never --width=20
+end
+
 # Note: FZF_DEFAULT_OPTS for theme colors is set in 00-environment.fish
 # based on DEVBASE_THEME variable

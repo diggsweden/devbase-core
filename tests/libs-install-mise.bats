@@ -151,7 +151,7 @@ EOF
 
   cat > "${TEST_DIR}/dot/.config/mise/config.toml" << 'EOF'
 [settings]
-experimental = true
+disable_update_warning = true
 
 [env]
 HTTP_PROXY = "{{ get_env(name='HTTP_PROXY', default='') }}"

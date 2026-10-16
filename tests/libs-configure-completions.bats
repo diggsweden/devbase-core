@@ -18,7 +18,10 @@ setup() {
   mkdir -p "${TEST_DIR}/bin"
 
   export PATH="${TEST_DIR}/bin:/usr/bin:/bin"
+  export XDG_CACHE_HOME="${TEST_DIR}/cache"
   source_core_libs
+  # run_mise_from_home_dir, used for the mise fallback, lives in utils.sh
+  source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/configure-completions.sh"
 }
 
@@ -42,18 +45,62 @@ SCRIPT
   assert_output "# kubectl completion"
 }
 
-@test "configure_single_fish_completion creates helm completion" {
-  cat > "${TEST_DIR}/bin/helm" << 'SCRIPT'
+_mock_completion_tool() {
+  # $1 = tool name, $2 = expected arguments, $3 = output
+  cat > "${TEST_DIR}/bin/$1" << SCRIPT
 #!/usr/bin/env bash
-if [[ "$1" == "completion" && "$2" == "fish" ]]; then
-  echo "# helm completion"
-fi
+[[ "\$*" == "$2" ]] || { echo "unexpected arguments: \$*" >&2; exit 1; }
+[[ -n "$3" ]] && printf '%s\n' "$3"
+exit 0
 SCRIPT
-  chmod +x "${TEST_DIR}/bin/helm"
+  chmod +x "${TEST_DIR}/bin/$1"
+}
 
-  configure_single_fish_completion 'helm' >/dev/null 2>&1
+@test "configure_single_fish_completion passes each tool its own generator arguments" {
+  _mock_completion_tool gh "completion -s fish" "# gh completion"
+  _mock_completion_tool zellij "setup --generate-completion fish" "# zellij completion"
+  _mock_completion_tool rg "--generate complete-fish" "# rg completion"
+  _mock_completion_tool syft "completion fish" "# syft completion"
 
-  assert_file_exists "${XDG_CONFIG_HOME}/fish/completions/helm.fish"
+  for tool in gh zellij rg syft; do
+    run --separate-stderr configure_single_fish_completion "$tool"
+    assert_success
+    run cat "${XDG_CONFIG_HOME}/fish/completions/${tool}.fish"
+    assert_output "# ${tool} completion"
+  done
+}
+
+@test "configure_single_fish_completion writes the just completion loader" {
+  _mock_completion_tool just "--completions fish" "JUST_COMPLETE=fish just | source"
+
+  run --separate-stderr configure_single_fish_completion just
+
+  assert_success
+  run cat "${XDG_CONFIG_HOME}/fish/completions/just.fish"
+  assert_output "JUST_COMPLETE=fish just | source"
+}
+
+@test "configure_single_fish_completion keeps an existing file when the tool prints nothing" {
+  _mock_completion_tool gh "completion -s fish" ""
+  printf '%s\n' "# previous gh completion" > "${XDG_CONFIG_HOME}/fish/completions/gh.fish"
+
+  run --separate-stderr configure_single_fish_completion gh
+
+  assert_failure
+  run cat "${XDG_CONFIG_HOME}/fish/completions/gh.fish"
+  assert_output "# previous gh completion"
+  run find "${XDG_CONFIG_HOME}/fish/completions" -name '.gh.*'
+  assert_output ""
+}
+
+@test "configure_single_fish_completion creates the completion directory" {
+  rm -rf "${XDG_CONFIG_HOME}/fish/completions"
+  _mock_completion_tool kubectl "completion fish" "# kubectl completion"
+
+  run --separate-stderr configure_single_fish_completion kubectl
+
+  assert_success
+  assert_file_exists "${XDG_CONFIG_HOME}/fish/completions/kubectl.fish"
 }
 
 @test "configure_single_fish_completion requires tool name" {
@@ -98,8 +145,84 @@ SCRIPT
 
     configure_fish_completions
     test -f '${fish_dir}/completions/kubectl.fish' && echo 'KUBECTL_EXISTS'
+    test -e '${fish_dir}/completions/gh.fish' || echo 'GH_ABSENT'
   "
 
   assert_success
   assert_output --partial "KUBECTL_EXISTS"
+  assert_output --partial "GH_ABSENT"
+  # Other tools on the host PATH may be listed too; kubectl must be among them.
+  assert_output --regexp "Shell completions configured \\([0-9]+ tools: .*kubectl"
+}
+
+@test "seed_tldr_cache updates the cache when tldr is installed" {
+  cat > "${TEST_DIR}/bin/tldr" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "tldr $*" >> "${TEST_DIR}/tldr.log"
+exit 0
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/tldr"
+
+  run seed_tldr_cache
+  assert_success
+  assert_output --partial "tldr page cache seeded"
+  run cat "${TEST_DIR}/tldr.log"
+  assert_output "tldr --update --quiet"
+}
+
+@test "seed_tldr_cache is a no-op without tldr" {
+  run seed_tldr_cache
+  assert_success
+  assert_output ""
+}
+
+@test "seed_tldr_cache reports a failed update" {
+  cat > "${TEST_DIR}/bin/tldr" << 'SCRIPT'
+#!/usr/bin/env bash
+exit 1
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/tldr"
+
+  run seed_tldr_cache
+  assert_failure
+}
+
+@test "configure_single_fish_completion finds mise tools that are not on PATH" {
+  # The installer shell may lack the mise tool directories; `mise which` resolves them.
+  mkdir -p "${TEST_DIR}/misebin"
+  cat > "${TEST_DIR}/misebin/gh" << 'SCRIPT'
+#!/usr/bin/env bash
+[[ "$*" == "completion -s fish" ]] && echo "# gh completion from mise"
+SCRIPT
+  chmod +x "${TEST_DIR}/misebin/gh"
+  cat > "${TEST_DIR}/bin/mise" << SCRIPT
+#!/usr/bin/env bash
+[[ "\$1 \$2" == "which gh" ]] && { echo "${TEST_DIR}/misebin/gh"; exit 0; }
+exit 1
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/mise"
+
+  run --separate-stderr configure_single_fish_completion gh
+  assert_success
+  run cat "${XDG_CONFIG_HOME}/fish/completions/gh.fish"
+  assert_output "# gh completion from mise"
+}
+
+@test "configure_single_fish_completion fails quietly for a known tool that is absent" {
+  run --separate-stderr configure_single_fish_completion gh
+  assert_failure
+  assert_not_exists "${XDG_CONFIG_HOME}/fish/completions/gh.fish"
+}
+
+@test "seed_tldr_cache leaves an existing cache alone" {
+  cat > "${TEST_DIR}/bin/tldr" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "tldr $*" >> "${TEST_DIR}/tldr.log"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/tldr"
+  mkdir -p "${XDG_CACHE_HOME}/tlrc/pages"
+
+  run seed_tldr_cache
+  assert_success
+  assert_not_exists "${TEST_DIR}/tldr.log"
 }

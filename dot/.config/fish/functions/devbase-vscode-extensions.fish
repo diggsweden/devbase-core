@@ -147,7 +147,7 @@ function __vscode_ext_configure_neovim_settings --description "Merge neovim sett
         end
     end
     set -l neovim_json (jq -n --arg nvim "$nvim_path" --argjson remote "$remote" \
-        '{"vscode-neovim.useWSL": false, "vscode-neovim.neovimExecutablePaths.linux": $nvim} +
+        '{"vscode-neovim.useWSL": false, "vscode-neovim.neovimExecutablePaths.linux": $nvim, "extensions.experimental.affinity": {"asvetliakov.vscode-neovim": 1}} +
         (if $remote then {"remote.extensionKind": {"asvetliakov.vscode-neovim": ["workspace"]}} else {} end)')
 
     if test -f $settings_file

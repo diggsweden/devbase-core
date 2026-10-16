@@ -17,9 +17,6 @@
 # Code Cache
 -XX:ReservedCodeCacheSize=1024m
 
-# Compiler threads
--XX:CICompilerCount=2
-
 # String deduplication (reduces memory for duplicate strings)
 -XX:+UseStringDeduplication
 
@@ -34,17 +31,13 @@
 
 # Disable specific JVM optimizations that can cause issues
 -XX:+HeapDumpOnOutOfMemoryError
--XX:HeapDumpPath=$HOME/java_error_in_idea.hprof
+# $USER_HOME is expanded by the IDE launcher (a plain $HOME is not)
+-XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
+-XX:ErrorFile=$USER_HOME/java_error_in_idea_%p.log
 
-# Prevent IDE from stealing focus
+# Allow the JVM to attach to itself (profilers, JMC)
 -Djdk.attach.allowAttachSelf=true
 
 # Better font rendering on Linux
 -Dawt.useSystemAAFontSettings=lcd
 -Dswing.aatext=true
-
-# Increase maximum file size that IDE can open (in KB)
--Didea.max.intellisense.filesize=2500
-
-# Performance optimizations
--Djava.net.preferIPv4Stack=true

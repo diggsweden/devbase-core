@@ -573,8 +573,17 @@ install_fisher() {
     return 1
   fi
 
+  # Fisher keeps its plugin list in a universal variable, which `fish
+  # --no-config` does not load, so these calls use a normal non-interactive
+  # fish: config.fish runs, but its hooks are all guarded by `status
+  # is-interactive`. The installed function is still sourced explicitly in
+  # case the user's config does not autoload it.
+  local fisher_function="${XDG_CONFIG_HOME:-$HOME/.config}/fish/functions/fisher.fish"
+  # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
+  local load_fisher='test -f $argv[1]; and source $argv[1]; functions -q fisher'
+
   # Preserve an existing plugin manager, but still reconcile required plugins.
-  if fish --no-config -c 'type -q fisher' 2>/dev/null; then
+  if fish -c "$load_fisher" "$fisher_function" 2>/dev/null; then
     show_progress success "Fisher already installed"
   else
     local fisher_version="${TOOL_VERSIONS[fisher]}"
@@ -584,7 +593,7 @@ install_fisher() {
       return 1
     fi
     # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
-    if ! fish --no-config -c 'source $argv[1]; and fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
+    if ! fish -c 'source $argv[1]; and fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
       "$fisher_dir/functions/fisher.fish" "jorgebucaran/fisher@${fisher_version}" >/dev/null 2>&1; then
       show_progress error "Fisher installation failed"
       return 1
@@ -593,7 +602,8 @@ install_fisher() {
   fi
 
   # Existing plugin versions are personal choices; seed a pinned plugin if absent.
-  if fish --no-config -c 'fisher list | string match -rqi "^patrickf1/fzf[.]fish(@.*)?\$"' 2>/dev/null; then
+  if fish -c "$load_fisher"'; or exit 1; fisher list | string match -rqi "^patrickf1/fzf[.]fish(@.*)?\$"' \
+    "$fisher_function" 2>/dev/null; then
     show_progress success "fzf.fish already installed"
     return 0
   fi
@@ -601,8 +611,8 @@ install_fisher() {
   [[ -n "$fzf_fish_version" ]] || return 1
   show_progress info "Installing fzf.fish plugin ($fzf_fish_version)..."
   # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
-  if ! fish --no-config -c 'fisher install $argv[1]; and contains -- (string lower $argv[1]) (fisher list)' \
-    "PatrickF1/fzf.fish@${fzf_fish_version}" >/dev/null 2>&1; then
+  if ! fish -c "$load_fisher"'; or exit 1; fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
+    "$fisher_function" "PatrickF1/fzf.fish@${fzf_fish_version}" >/dev/null 2>&1; then
     add_install_warning "fzf.fish plugin installation failed"
     return 1
   fi

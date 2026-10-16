@@ -3,16 +3,12 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [settings]
-# Enable experimental features (new backends, tools, etc.)
-experimental = true
+# Project version files such as .nvmrc or .python-version are ignored unless a
+# tool is listed here, e.g. ["node", "python"]
+idiomatic_version_file_enable_tools = []
 
-# Disable reading legacy version files like .nvmrc, .python-version
-# Set to true if you want mise to read these files automatically
-legacy_version_file = false
-
-# Disable asdf compatibility mode - mise runs in native mode
-# Set to true if you need compatibility with asdf plugins
-asdf_compat = false
+# DevBase pins the mise version; do not nag about `mise self-update`
+disable_update_warning = true
 
 # Number of parallel jobs for installations (6 cores)
 # Adjust based on your system capabilities
@@ -61,3 +57,7 @@ NPM_CONFIG_MIN_RELEASE_AGE = "7"
 
 # Configure ruby-build to use system OpenSSL instead of compiling from source
 RUBY_CONFIGURE_OPTS = "--with-openssl-dir=/usr"
+
+# Only the mise-pinned Go toolchain runs; GOTOOLCHAIN=auto would download newer
+# toolchains outside the minimum_release_age quarantine.
+GOTOOLCHAIN = "local"

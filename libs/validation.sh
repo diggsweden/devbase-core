@@ -50,6 +50,8 @@ if ! [[ -v DEVBASE_REQUIRED_TEMPLATE_VARS ]]; then
   readonly -a DEVBASE_RUNTIME_TEMPLATE_VARS=(
     "XDG_RUNTIME_DIR"
     "USER_UID"
+    # Expanded by the IntelliJ launcher, not by setup
+    "USER_HOME"
   )
 fi
 
