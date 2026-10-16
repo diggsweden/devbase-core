@@ -728,6 +728,14 @@ collect_user_configuration() {
     return 0
   fi
 
+  # Updates reuse the saved answers; a first install still asks
+  if [[ "${DEVBASE_KEEP_PREFERENCES:-}" == "true" ]]; then
+    keep_saved_preferences && return 0
+    show_progress info "Asking for configuration"
+    # Someone is answering now, so later prompts (token, fonts) apply again
+    export DEVBASE_KEEP_PREFERENCES=false
+  fi
+
   # Check gum availability
   if ! command -v gum &>/dev/null; then
     echo "ERROR: gum is required but not found." >&2

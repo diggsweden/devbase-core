@@ -121,6 +121,13 @@ run_with_spinner() {
   fi
 }
 
+# Brief: True when setup must not wait for an answer
+# Uses: NON_INTERACTIVE, DEVBASE_KEEP_PREFERENCES (globals)
+# Returns: 0 in --non-interactive or --keep-preferences mode
+is_unattended() {
+  [[ "${NON_INTERACTIVE:-}" == "true" || "${DEVBASE_KEEP_PREFERENCES:-}" == "true" ]]
+}
+
 # Brief: Ask yes/no question and return user response
 # Params: $1 - question text, $2 - default ("Y" or "N", default: "N")
 # Uses: DEVBASE_TUI_MODE (global)

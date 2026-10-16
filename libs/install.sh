@@ -301,13 +301,15 @@ _show_completion_message_gum() {
   fi
 
   gum style --foreground 240 "Useful Commands"
+  echo "  devbase-update             Update devbase, keeping your preferences"
+  echo "  devbase-reconfigure        Change editor, theme, packs or tools"
   echo "  devbase-theme <name>       Change color theme"
-  echo "  devbase-update             Update devbase installation"
+  echo "  devbase-font <name>        Change terminal font"
   if [[ "${DEVBASE_VSCODE_EXTENSIONS:-}" == "true" ]]; then
     echo "  devbase-vscode-extensions  Install VS Code extensions"
   fi
-  echo "  devbase-smartcard          Configure smart card support"
-  echo "  devbase-citrix             Configure Citrix Workspace"
+  echo "  devbase-firefox-opensc     Configure Firefox smart card support"
+  echo "  devbase-citrix             Install Citrix Workspace"
   echo
 
   gum style --foreground 240 "Next Steps"
@@ -358,13 +360,15 @@ _show_completion_message_whiptail() {
   fi
 
   message+="Useful Commands:\n"
+  message+="  devbase-update             Update devbase, keep preferences\n"
+  message+="  devbase-reconfigure        Change preferences\n"
   message+="  devbase-theme <name>       Change color theme\n"
-  message+="  devbase-update             Update devbase\n"
+  message+="  devbase-font <name>        Change terminal font\n"
   if [[ "${DEVBASE_VSCODE_EXTENSIONS:-}" == "true" ]]; then
     message+="  devbase-vscode-extensions  Install VS Code extensions\n"
   fi
-  message+="  devbase-smartcard          Configure smart card\n"
-  message+="  devbase-citrix             Configure Citrix\n"
+  message+="  devbase-firefox-opensc     Firefox smart card support\n"
+  message+="  devbase-citrix             Install Citrix\n"
   message+="\n"
 
   message+="Next Steps:\n"
@@ -458,6 +462,12 @@ configure_fonts_post_install() {
   fi
 
   # ===== Prompt user to configure font =====
+  # Nobody answers during devbase-update or CI runs; devbase-font does this later
+  if is_unattended; then
+    show_progress info "Font configuration skipped (run devbase-font to configure the terminal)"
+    return 0
+  fi
+
   # In whiptail mode, use dialog; in gum mode, use terminal output
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && command -v whiptail &>/dev/null; then
     if whiptail --backtitle "$WT_BACKTITLE" --title "Terminal Font" \

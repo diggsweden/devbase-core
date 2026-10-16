@@ -570,10 +570,11 @@ SCRIPT
 
   git -C "$core_dir" tag -a "v2.0.0" -m "Release v2.0.0"
   
-  # Create a mock setup.sh that just succeeds
+  # Create a mock setup.sh that records its arguments and, like the real one, knows the flag
   cat > "$core_dir/setup.sh" << 'SCRIPT'
 #!/usr/bin/env bash
-echo "Setup completed"
+# accepts: --keep-preferences
+echo "Setup completed with: $*"
 exit 0
 SCRIPT
   chmod +x "$core_dir/setup.sh"
@@ -621,7 +622,9 @@ SCRIPT
   assert_output --partial "devbase-core:"
   assert_output --partial "v2.0.0"
   assert_output --partial "Non-interactive mode"
-  assert_output --partial "Setup completed"
+  # Updates reuse the saved preferences instead of asking again, and say how to change them
+  assert_output --partial "run devbase-reconfigure afterwards"
+  assert_output --partial "Setup completed with: --keep-preferences"
   
   # Verify checkout was called
   run cat "${TEST_DIR}/logs/git_calls.log"
@@ -1269,3 +1272,4 @@ SCRIPT
   refute_output --partial "Update now?"
   refute_output --partial "DevBase Update Available"
 }
+

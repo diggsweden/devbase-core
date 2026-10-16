@@ -263,6 +263,7 @@ NEXT STEPS
 ==========
 1. Restart your shell or run: exec fish
 2. Verify installation: ./verify/verify-install-check.sh
+3. Change a preference later: devbase-reconfigure (devbase-update keeps them)
 
 For help and documentation: https://github.com/diggsweden/devbase-core
 EOF

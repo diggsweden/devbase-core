@@ -203,6 +203,9 @@ parse_arguments() {
       export NON_INTERACTIVE=true
       export DEBIAN_FRONTEND=noninteractive
       ;;
+    --keep-preferences)
+      export DEVBASE_KEEP_PREFERENCES=true
+      ;;
     --tui=*)
       local tui_value="${1#--tui=}"
       case "$tui_value" in
@@ -233,6 +236,8 @@ parse_arguments() {
       printf "\n"
       printf "Options:\n"
       printf "  --non-interactive  Run in non-interactive mode (for CI/automation)\n"
+      printf "  --keep-preferences Reuse the saved preferences without asking again\n"
+      printf "                     (used by devbase-update; asks when none are saved)\n"
       printf "  --dry-run          Print planned steps without installing\n"
       printf "  --tui=<mode>       Set TUI mode: gum (default), whiptail\n"
       printf "  --ref <ref>        Track a branch or tag for updates, instead of the\n"

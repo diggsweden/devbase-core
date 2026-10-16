@@ -95,6 +95,47 @@ setup_non_interactive_mode() {
 }
 
 # =============================================================================
+# KEEP SAVED PREFERENCES (devbase-update, setup.sh --keep-preferences)
+# =============================================================================
+
+# Brief: Print the preferences setup will apply, in plain text
+# Uses: DEVBASE_* preference variables, EDITOR (globals)
+print_saved_preferences_summary() {
+  printf "  Git:      %s <%s>\n" "$DEVBASE_GIT_AUTHOR" "$DEVBASE_GIT_EMAIL"
+  printf "  Theme:    %s\n  Font:     %s\n  Editor:   %s\n" "$DEVBASE_THEME" "${DEVBASE_FONT:-N/A}" "$EDITOR"
+  if [[ -f "${HOME}/.ssh/${DEVBASE_SSH_KEY_NAME}" ]]; then
+    printf "  SSH key:  %s (kept)\n" "$DEVBASE_SSH_KEY_NAME"
+  else
+    printf "  SSH key:  none (run devbase-reconfigure to generate one)\n"
+  fi
+  printf "  Tools:    %s VS Code, %s extensions, %s LazyVim, %s IntelliJ, %s JMC\n" \
+    "$(_bool_to_symbol "$DEVBASE_VSCODE_INSTALL")" "$(_bool_to_symbol "$DEVBASE_VSCODE_EXTENSIONS")" \
+    "$(_bool_to_symbol "$DEVBASE_INSTALL_LAZYVIM")" "$(_bool_to_symbol "$DEVBASE_INSTALL_INTELLIJ")" \
+    "$(_bool_to_symbol "$DEVBASE_INSTALL_JMC")"
+  printf "            %s Zellij autostart, %s Git hooks\n" \
+    "$(_bool_to_symbol "$DEVBASE_ZELLIJ_AUTOSTART")" "$(_bool_to_symbol "$DEVBASE_ENABLE_GIT_HOOKS")"
+  printf "  Packs:    %s\n" "${DEVBASE_SELECTED_PACKS// /, }"
+}
+
+# Brief: Apply the saved preferences without asking any question
+# Uses: DEVBASE_CONFIG_DIR, load_saved_preferences, write_user_preferences (globals/functions)
+# Returns: 0 when saved preferences were applied, 1 when there are none
+# Side-effects: Exports the preference variables and rewrites preferences.yaml
+keep_saved_preferences() {
+  load_saved_preferences >/dev/null 2>&1 || return 1
+  # An old or partial file must not blank the Git identity; ask instead
+  if [[ -z "${DEVBASE_GIT_AUTHOR:-}" || -z "${DEVBASE_GIT_EMAIL:-}" ]]; then
+    show_progress info "Saved preferences have no Git name or email"
+    return 1
+  fi
+  printf "\n%bKeeping saved preferences (run devbase-reconfigure to change them)%b\n" \
+    "${DEVBASE_COLORS[BOLD_BLUE]}" "${DEVBASE_COLORS[NC]}"
+  print_saved_preferences_summary
+  write_user_preferences
+  return 0
+}
+
+# =============================================================================
 # LOAD SAVED PREFERENCES
 # =============================================================================
 

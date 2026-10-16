@@ -823,3 +823,58 @@ _run_non_interactive() {
 
   assert_failure
 }
+
+@test "keep-preferences mode applies saved preferences without prompting" {
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir" DEVBASE_KEEP_PREFERENCES=true NON_INTERACTIVE=false
+  cat > "${prefs_dir}/preferences.yaml" << 'EOF'
+theme: nord
+font: monaspace
+git:
+  author: Kept User
+  email: kept@example.com
+editor:
+  default: nano
+packs: [go]
+EOF
+  # Any prompt reaching the TUI is a failure
+  # shellcheck disable=SC2329 # Called by collect_user_configuration.
+  _check_whiptail() { echo "PROMPTED" >&2; return 1; }
+  _wt_infobox() { echo "PROMPTED" >&2; return 1; }
+
+  run --separate-stderr collect_user_configuration
+  assert_success
+  refute_output --partial "PROMPTED"
+  assert_output --partial "Keeping saved preferences"
+  assert_output --partial "Kept User <kept@example.com>"
+  assert_output --partial "Theme:    nord"
+  assert_output --partial "Packs:    go"
+  run yq '.theme' "${prefs_dir}/preferences.yaml"
+  assert_output "nord"
+}
+
+@test "keep-preferences mode asks when no preferences are saved" {
+  export DEVBASE_CONFIG_DIR="${HOME}/.config/devbase" DEVBASE_KEEP_PREFERENCES=true NON_INTERACTIVE=false
+  # The interactive flow starts with the TUI check; stop there to prove it was reached
+  # shellcheck disable=SC2329 # Called by collect_user_configuration.
+  _check_whiptail() { echo "INTERACTIVE_FLOW" >&2; return 1; }
+
+  run --separate-stderr collect_user_configuration
+  assert_failure
+  assert_output --partial "Asking for configuration"
+  [[ "$stderr" == *INTERACTIVE_FLOW* ]]
+}
+
+@test "keep-preferences mode asks when saved preferences lack a Git identity" {
+  local prefs_dir="${HOME}/.config/devbase"
+  mkdir -p "$prefs_dir"
+  export DEVBASE_CONFIG_DIR="$prefs_dir" DEVBASE_KEEP_PREFERENCES=true NON_INTERACTIVE=false
+  printf '%s\n' 'theme: nord' 'packs: [go]' > "${prefs_dir}/preferences.yaml"
+  _check_whiptail() { echo "INTERACTIVE_FLOW" >&2; return 1; }
+
+  run --separate-stderr collect_user_configuration
+  assert_failure
+  assert_output --partial "no Git name or email"
+  [[ "$stderr" == *INTERACTIVE_FLOW* ]]
+}

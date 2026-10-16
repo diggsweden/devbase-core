@@ -319,6 +319,7 @@ SCRIPT
   assert_success
   assert_output --partial "NEXT STEPS"
   assert_output --partial "Restart your shell"
+  assert_output --partial "devbase-reconfigure"
   assert_output --partial "Verify installation"
   assert_output --partial "https://github.com/diggsweden/devbase-core"
 }

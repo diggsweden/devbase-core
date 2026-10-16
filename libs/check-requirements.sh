@@ -387,9 +387,9 @@ check_mise_github_token() {
   show_progress info "Without this token, mise downloads MAY be rate limited or stalled"
   show_progress info "See: https://mise.jdx.dev/configuration.html#mise_github_token"
 
-  # In non-interactive mode, just warn and continue
-  if [[ "${NON_INTERACTIVE}" == "true" ]]; then
-    show_progress info "Continuing in non-interactive mode (token recommended but not required)"
+  # Unattended runs (CI, devbase-update) warn and continue
+  if is_unattended; then
+    show_progress info "Continuing without a GitHub token (recommended but not required)"
     return 0
   fi
 

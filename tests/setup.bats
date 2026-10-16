@@ -54,6 +54,17 @@ teardown() {
   assert_output "true"
 }
 
+@test "parse_arguments sets DEVBASE_KEEP_PREFERENCES for --keep-preferences" {
+  run bash -c "
+    eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"
+    parse_arguments --keep-preferences
+    echo \"\${DEVBASE_KEEP_PREFERENCES:-unset}\"
+  "
+
+  assert_success
+  assert_output "true"
+}
+
 @test "parse_arguments sets DEVBASE_TUI_MODE for --tui=whiptail" {
   run bash -c "
     eval \"\$(sed -n '/^parse_arguments()/,/^}/p' '${DEVBASE_ROOT}/setup.sh')\"

@@ -479,11 +479,18 @@ function __devbase_update_do_update --description "Perform the update"
     # Re-run installation to apply changes
     echo ""
     __devbase_update_print_info "Re-running setup to apply changes..."
+    __devbase_update_print_info "Saved preferences are kept; run devbase-reconfigure afterwards to change editor, theme, packs or tools"
     echo ""
 
     if test -f "$__devbase_core_dir/setup.sh"
         pushd "$__devbase_core_dir" >/dev/null
-        bash setup.sh
+        # Saved preferences are applied without prompting; devbase-reconfigure changes them.
+        # An older ref's setup.sh rejects the flag, so only pass it when supported.
+        if grep -q -- '--keep-preferences' setup.sh
+            bash setup.sh --keep-preferences
+        else
+            bash setup.sh
+        end
         set -l setup_status $status
         popd >/dev/null
         if test $setup_status -ne 0
