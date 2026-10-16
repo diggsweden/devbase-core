@@ -27,8 +27,8 @@ set smartcase
 " Show hidden files
 windo normal zo
 
-" Use Vim keybindings
-set vicmd=nvim
+" Open files for editing with the editor chosen during setup
+set vicmd=${EDITOR}
 
 " Open files in default editor
 filetype * xdg-open %f 2>/dev/null &

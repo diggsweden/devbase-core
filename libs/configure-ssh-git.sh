@@ -274,11 +274,45 @@ EOF
   return 0
 }
 
+# Brief: Match the signing requirement to the signing key that is available
+# Params: $1 - "true" when configure_git_signing set up a DevBase key
+# Uses: show_progress (function)
+# Returns: 0 always
+# Side-effects: Writes or removes commit.gpgsign/tag.gpgsign in ~/.gitconfig
+configure_git_signing_policy() {
+  local signing_configured="$1"
+
+  if [[ "$signing_configured" == true ]]; then
+    # Undo only a `false` that an earlier keyless run wrote; a user's own
+    # opt-out has no marker and stays.
+    if [[ "$(git config --global --get devbase.signingDisabled 2>/dev/null)" == "true" ]]; then
+      git config --global --fixed-value --unset-all commit.gpgsign false 2>/dev/null || true
+      git config --global --fixed-value --unset-all tag.gpgsign false 2>/dev/null || true
+      git config --global --unset devbase.signingDisabled 2>/dev/null || true
+    fi
+    return 0
+  fi
+
+  # A personal signing key that still exists satisfies the template's requirement.
+  local key
+  key=$(git config --global --get user.signingkey 2>/dev/null)
+  if [[ "$key" == key::* ]] || { [[ -n "$key" ]] && [[ -f "${key/#\~/$HOME}" ]]; }; then
+    return 0
+  fi
+
+  # The shipped template turns signing on; with no key every commit would fail.
+  git config --global commit.gpgsign false
+  git config --global tag.gpgsign false
+  git config --global devbase.signingDisabled true
+  show_progress warning "Commit signing disabled: no signing key configured (set user.signingkey and commit.gpgsign=true, or rerun setup with an SSH key)"
+  return 0
+}
+
 # Brief: Configure Git (user, proxy, signing)
 # Params: None
 # Uses: HOME (global)
 # Returns: 0 always
-# Side-effects: Calls configure_git_user, configure_git_proxy, configure_git_signing
+# Side-effects: Calls configure_git_user, configure_git_proxy, configure_git_signing, configure_git_signing_policy
 configure_git() {
   validate_var_set "HOME" || return 1
 
@@ -294,12 +328,17 @@ configure_git() {
 
   local signing_configured=false
   configure_git_signing && signing_configured=true
+  configure_git_signing_policy "$signing_configured"
 
   local msg="Git configured ("
   local details=()
   [[ "$user_status" == "true" ]] && details+=("user: ${DEVBASE_GIT_EMAIL}")
   [[ "$proxy_configured" == true ]] && details+=("proxy: enabled")
-  [[ "$signing_configured" == true ]] && details+=("SSH signing: enabled")
+  if [[ "$signing_configured" == true ]]; then
+    details+=("SSH signing: enabled")
+  elif [[ "$(git config --global --get commit.gpgsign 2>/dev/null)" == "false" ]]; then
+    details+=("signing: disabled, no key")
+  fi
 
   local joined=""
   local detail

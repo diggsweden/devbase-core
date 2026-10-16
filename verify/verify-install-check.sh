@@ -733,7 +733,7 @@ check_config_files() {
   fi
   local dev_files=(
     "$GIT_CONFIG"
-    "$CONFIG_HOME/git/.gitignore"
+    "$CONFIG_HOME/git/ignore"
     "$MISE_CONFIG"
     "$TESTCONTAINERS_PROPERTIES"
     "$CONFIG_HOME/lazygit/config.yml"

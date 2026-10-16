@@ -223,7 +223,7 @@ SCRIPT
   assert_output --partial "Name:"
   assert_output --partial "Email:"
   assert_output --partial "Default Branch:"
-  assert_output --partial "GPG Sign:"
+  assert_output --partial "Commit signing:"
   assert_output --partial "SSH Sign:"
 }
 

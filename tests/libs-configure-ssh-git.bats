@@ -528,6 +528,66 @@ SCRIPT
   assert_failure
 }
 
+# The shipped ~/.config/git/config template requires signatures. These tests
+# use the real git with an isolated HOME. `git config --global` reads only
+# ~/.gitconfig once that file exists, so effective values are read from $HOME.
+_write_git_template() {
+  mkdir -p "${XDG_CONFIG_HOME}/git"
+  printf '%s\n' '[commit]' '  gpgsign = true' '[tag]' '  gpgsign = true' '[gpg]' '  format = ssh' \
+    >"${XDG_CONFIG_HOME}/git/config"
+}
+
+@test "configure_git disables signing when no signing key exists" {
+  _write_git_template
+  export DEVBASE_GIT_AUTHOR='Test User' DEVBASE_GIT_EMAIL='test@example.com' DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  run configure_git
+  assert_success
+  assert_output --partial "signing: disabled, no key"
+  assert_output --partial "Commit signing disabled"
+  run git -C "$HOME" config --get commit.gpgsign
+  assert_output "false"
+  run git -C "$HOME" config --get tag.gpgsign
+  assert_output "false"
+}
+
+@test "configure_git keeps signing on for a personal signing key" {
+  _write_git_template
+  mkdir -p "${HOME}/.ssh"
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPersonal me@example.com" >"${HOME}/.ssh/id_ed25519_personal.pub"
+  git config --file "${HOME}/.gitconfig" user.signingkey "${HOME}/.ssh/id_ed25519_personal.pub"
+  export DEVBASE_GIT_AUTHOR='Test User' DEVBASE_GIT_EMAIL='test@example.com' DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  run configure_git
+  assert_success
+  refute_output --partial "signing disabled"
+  run git -C "$HOME" config --get commit.gpgsign
+  assert_output "true"
+  run git -C "$HOME" config --get user.signingkey
+  assert_output "${HOME}/.ssh/id_ed25519_personal.pub"
+}
+
+@test "configure_git re-enables signing once a DevBase key exists" {
+  _write_git_template
+  # A previous run without a key disabled signing in ~/.gitconfig and left its marker.
+  git config --file "${HOME}/.gitconfig" commit.gpgsign false
+  git config --file "${HOME}/.gitconfig" tag.gpgsign false
+  git config --file "${HOME}/.gitconfig" devbase.signingDisabled true
+  mkdir -p "${HOME}/.ssh"
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@example.com" > "${HOME}/.ssh/id_ed25519.pub"
+  export DEVBASE_GIT_AUTHOR='Test User' DEVBASE_GIT_EMAIL='test@example.com' DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  run configure_git
+  assert_success
+  assert_output --partial "SSH signing: enabled"
+  run git -C "$HOME" config --get commit.gpgsign
+  assert_output "true"
+  run git -C "$HOME" config --get tag.gpgsign
+  assert_output "true"
+  run git -C "$HOME" config --get user.signingkey
+  assert_output "${HOME}/.ssh/id_ed25519.pub"
+}
+
 @test "configure_git_signing does not duplicate key in allowed_signers" {
   mkdir -p "${HOME}/.ssh"
   mkdir -p "${XDG_CONFIG_HOME}/ssh"
@@ -610,4 +670,28 @@ SCRIPT
   # Existence and mode alone pass even if the fragment is copied empty.
   run cat "${XDG_CONFIG_HOME}/ssh/org.config"
   assert_output --partial "HostName internal.example"
+}
+
+@test "configure_git keeps a user's own commit.gpgsign=false when a DevBase key exists" {
+  _write_git_template
+  git config --file "${HOME}/.gitconfig" commit.gpgsign false
+  mkdir -p "${HOME}/.ssh"
+  echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@example.com" > "${HOME}/.ssh/id_ed25519.pub"
+  export DEVBASE_GIT_AUTHOR='Test User' DEVBASE_GIT_EMAIL='test@example.com' DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  run configure_git
+  assert_success
+  run git -C "$HOME" config --get commit.gpgsign
+  assert_output "false"
+}
+
+@test "configure_git disables signing when the configured signing key file is gone" {
+  _write_git_template
+  git config --file "${HOME}/.gitconfig" user.signingkey "${HOME}/.ssh/removed_key.pub"
+  export DEVBASE_GIT_AUTHOR='Test User' DEVBASE_GIT_EMAIL='test@example.com' DEVBASE_SSH_KEY_NAME='id_ed25519'
+
+  run configure_git
+  assert_success
+  run git -C "$HOME" config --get commit.gpgsign
+  assert_output "false"
 }

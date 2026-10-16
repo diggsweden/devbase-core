@@ -82,3 +82,26 @@ _render_colorscheme() {
     assert_success
   done
 }
+
+@test "git and vifm templates take the editor from the setup choice" {
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/validation.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
+  source "${DEVBASE_ROOT}/libs/utils.sh"
+  # The renderer validates every template variable; only the editor matters here.
+  local var
+  for var in "${DEVBASE_REQUIRED_TEMPLATE_VARS[@]}"; do
+    export "$var=placeholder"
+  done
+  export EDITOR=nano VISUAL=nano
+  local rendered="${BATS_TEST_TMPDIR}/rendered"
+  mkdir -p "$rendered"
+
+  envsubst_preserve_undefined "${DEVBASE_ROOT}/dot/.config/git/config.template" "${rendered}/gitconfig"
+  run grep -E '^\s*editor = ' "${rendered}/gitconfig"
+  assert_output --regexp 'editor = nano$'
+
+  envsubst_preserve_undefined "${DEVBASE_ROOT}/dot/.config/vifm/vifmrc.template" "${rendered}/vifmrc"
+  run grep -x 'set vicmd=nano' "${rendered}/vifmrc"
+  assert_success
+}

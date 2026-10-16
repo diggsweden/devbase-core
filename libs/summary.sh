@@ -189,7 +189,7 @@ GIT CONFIGURATION
   • Name: $(git config --global user.name 2>/dev/null || echo "not configured")
   • Email: $(git config --global user.email 2>/dev/null || echo "not configured")
   • Default Branch: $(git config --global init.defaultBranch 2>/dev/null || echo "not configured")
-  • GPG Sign: $(git config --global commit.gpgsign 2>/dev/null || echo "not configured")
+  • Commit signing: $(git -C "$HOME" config --get commit.gpgsign 2>/dev/null || echo "not configured")
   • SSH Sign: $(git config --global gpg.format 2>/dev/null || echo "not configured")
 EOF
 }
