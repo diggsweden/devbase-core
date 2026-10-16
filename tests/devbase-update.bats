@@ -440,6 +440,58 @@ SCRIPT
   assert_output --partial "Could not resolve host"
 }
 
+@test "__devbase_update_check_core gives up on a hanging remote" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+[[ "$*" == *"ls-remote"* ]] && sleep 10
+exec /usr/bin/git "$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    source '$DEVBASE_UPDATE_FISH'
+    set -g __devbase_update_net_timeout 1
+    __devbase_update_check_core
+  "
+
+  assert_failure
+  assert_output --partial "Timed out after 1 seconds"
+}
+
+@test "__devbase_update_check_core explains an SSH auth failure without an agent" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "git@github.com:diggsweden/devbase-core.git"
+
+  mkdir -p "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/git" << 'SCRIPT'
+#!/usr/bin/env bash
+if [[ "$*" == *"ls-remote"* ]]; then
+  echo "git@github.com: Permission denied (publickey)." >&2
+  exit 128
+fi
+exec /usr/bin/git "$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/git"
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '${TEST_DIR}/bin' \$PATH
+    set -gx SSH_AUTH_SOCK '${TEST_DIR}/no-agent.sock'
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_core
+  "
+
+  assert_failure
+  assert_output --partial "Permission denied (publickey)"
+  assert_output --partial "ssh-agent is not running or not reachable"
+}
+
 @test "devbase-update fails with the git reason when the check fails" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"

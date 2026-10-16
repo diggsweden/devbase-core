@@ -35,15 +35,52 @@ function __devbase_update_print_error
 end
 
 function __devbase_update_print_check_error --description "Print why an update check failed"
-    # argv[1] = summary, argv[2..] = captured git output (stdout+stderr)
+    # argv[1] = summary, argv[2..] = detail lines
     # Silenced via a flag: fish does not apply a caller's 2>/dev/null to
     # output from nested command substitutions
     set -q __devbase_update_quiet; and return 0
     __devbase_update_print_warning "$argv[1]" >&2
-    # git puts the reason last
-    for line in $argv[2..-1][-2..-1]
+    for line in $argv[2..-1]
         printf "    %s\n" "$line" >&2
     end
+end
+
+set -g __devbase_update_net_timeout 30
+
+function __devbase_update_git_net --description "Run a network git command that fails instead of prompting or hanging"
+    # Fail instead of waiting for a passphrase, and give up on unreachable hosts.
+    # Respect an SSH command the user configured.
+    if not set -q GIT_SSH_COMMAND; and not git config --get core.sshCommand >/dev/null
+        set -fx GIT_SSH_COMMAND "ssh -o BatchMode=yes -o ConnectTimeout=10 -o VisualHostKey=no"
+    end
+    set -fx GIT_TERMINAL_PROMPT 0
+    timeout $__devbase_update_net_timeout git $argv
+end
+
+function __devbase_update_print_net_error --description "Explain a failed network git command"
+    # argv[1] = summary, argv[2] = exit status, argv[3] = remote, argv[4..] = git output
+    set -l output (string match -rv '^\s*$' -- $argv[4..-1])
+    set -l details $output[1..3]
+    if test "$argv[2]" = 124
+        set details "Timed out after $__devbase_update_net_timeout seconds"
+    end
+
+    # SSH auth failures mostly come from ssh-agent, so say what state it is in.
+    # ssh-add -l exits 2 when no agent is reachable, 1 when it holds no keys.
+    if string match -q '*Permission denied (publickey*' -- $output
+        set -l host (string replace -r '^(ssh://)?([^/:]+).*' '$2' -- "$argv[3]")
+        ssh-add -l >/dev/null 2>&1
+        switch $status
+            case 2
+                set -a details "→ ssh-agent is not running or not reachable (SSH_AUTH_SOCK=$SSH_AUTH_SOCK)"
+            case 1
+                set -a details "→ ssh-agent has no keys loaded, add yours with: ssh-add ~/.ssh/<key>"
+            case '*'
+                set -a details "→ $host accepted none of the keys in ssh-agent, check: ssh-add -l; ssh -T $host"
+        end
+    end
+
+    __devbase_update_print_check_error "$argv[1]" $details
 end
 
 function __devbase_update_is_snoozed
@@ -87,9 +124,10 @@ function __devbase_update_get_latest_tag --description "Get latest tag from remo
     set -l remote_url $argv[1]
 
     # Get all tags from remote; on failure, print git's reason to stderr
-    set -l output (git ls-remote --tags "$remote_url" 2>&1)
-    if test $status -ne 0
-        __devbase_update_print_check_error "Could not list tags from $remote_url" $output
+    set -l output (__devbase_update_git_net ls-remote --tags "$remote_url" 2>&1)
+    set -l rc $status
+    if test $rc -ne 0
+        __devbase_update_print_net_error "Could not list tags from $remote_url" $rc "$remote_url" $output
         return 1
     end
 
@@ -189,9 +227,10 @@ function __devbase_update_check_custom --description "Check if custom config upd
     test -n "$CUSTOM_REMOTE"; or return 1
 
     # Fetch latest (shallow)
-    set -l fetch_output (git -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>&1)
-    if test $status -ne 0
-        __devbase_update_print_check_error "Could not fetch custom config from $CUSTOM_REMOTE" $fetch_output
+    set -l fetch_output (__devbase_update_git_net -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>&1)
+    set -l rc $status
+    if test $rc -ne 0
+        __devbase_update_print_net_error "Could not fetch custom config from $CUSTOM_REMOTE" $rc "$CUSTOM_REMOTE" $fetch_output
         return 1
     end
 
