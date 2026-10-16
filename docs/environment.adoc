@@ -67,7 +67,7 @@ set -gx VISUAL "nvim"
 
 == B) Non-Interactive Installation Variables
 
-For CI/automation, set these with `./setup.sh --non-interactive`:
+For CI/automation, set these with `./setup.sh --non-interactive`. This mode uses the defaults below and ignores saved preferences; a rerun on an installed machine should use `./setup.sh --keep-preferences` (what `devbase-update` does), which applies `~/.config/devbase/preferences.yaml` without prompting and falls back to the interactive questions when nothing is saved.
 
 [cols="2,2,3", options="header"]
 |===

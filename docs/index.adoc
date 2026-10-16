@@ -29,7 +29,8 @@ DevBase works in two modes:
 
 == User Guides
 
-* link:usage-guide.md[*Usage Guide*] - Usage guide for all devbase tools with commands and examples
+* link:usage-guide.md[*Usage Guide*] - What DevBase changes, how the tools fit together, workflows
+* link:keybindings.md[*Keybindings*] - Fish vi mode, fzf, Zellij, LazyVim, lazygit, k9s keys and the collisions between them
 * link:editor-setup.adoc[*Editor Setup*] - Configure VS Code, Neovim, and other editors
 * link:smart-card-setup.md[*Smart Card Setup*] - Configure smart card authentication for Citrix and Firefox
 * link:development.adoc[*Development Guide*] - Contributing to devbase-core
@@ -37,7 +38,7 @@ DevBase works in two modes:
 
 == Reference
 
-* link:tools-matrix.adoc[*Tools Matrix*] - Matrix with proxy/registry support and security scores
+* link:tools-matrix.adoc[*Tools Matrix*] - Every installed tool with install method, version pin and license, generated from the manifest
 * link:security.md[*Security Overview*] - Comprehensive security documentation and verification
 * https://canonical.com/academy/self-study[Ubuntu and Linux learning Resources] - If just learning, or a bit rusty in Linux basics
 

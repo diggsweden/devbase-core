@@ -109,6 +109,16 @@ git config --global pull.rebase true
 
 Unrelated keys are retained, but setup explicitly configures selected identity, proxy, signing, certificate and hook settings with `git config --global`. The managed `~/.config/git/config` is also updated on reinstall.
 
+Commit and tag signing follow the signing key: with a DevBase SSH key setup enables SSH signing, and without any key it writes `commit.gpgsign = false` to `~/.gitconfig` so commits keep working. To sign with your own key later:
+
+[source,bash]
+----
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519_personal.pub
+git config --global --unset commit.gpgsign   # the managed config requires signatures again
+git config --global --unset tag.gpgsign
+----
+
 == SSH Configuration
 
 DevBase uses a layered SSH configuration system:
@@ -413,23 +423,28 @@ TIP: To avoid duplicates, edit `50-personal.fish` directly instead of appending.
 
 == Editor Preference
 
-Change your default editor after installation:
+The editor choice made during setup (*Vim-style* = `nvim`, *Emacs-style* = `nano`) is written to
+`~/.config/fish/conf.d/00-0-environment.fish`. Two shipped files read `$EDITOR` when the shell starts:
+`01-keybindings.fish` selects vi or emacs key bindings, and `02-aliases.fish` defines the editor aliases.
+Fish loads `conf.d` in sorted order, so an override must sort before `01-keybindings.fish`.
 
 [source,bash]
 ----
-# Edit ~/.config/fish/conf.d/50-personal.fish and add:
-
-# For Neovim:
-set -gx EDITOR nvim
-set -gx VISUAL nvim
+# Create a personal file that sorts between 00-0-environment.fish and 01-keybindings.fish
+# (any name DevBase does not ship is preserved on reinstall)
+printf '%s\n' 'set -gx EDITOR nvim' 'set -gx VISUAL nvim' > ~/.config/fish/conf.d/00-9-editor.fish
 
 # For nano:
-set -gx EDITOR nano
-set -gx VISUAL nano
+# printf '%s\n' 'set -gx EDITOR nano' 'set -gx VISUAL nano' > ~/.config/fish/conf.d/00-9-editor.fish
 
 # Reload config
 exec fish
 ----
+
+Setting `EDITOR` in a file numbered 50-99 changes the editor for commands but leaves the key bindings and
+aliases from the earlier files unchanged. To switch bindings for the current session only, run
+`fish_vi_key_bindings` or `fish_default_key_bindings`. `devbase-reconfigure` changes the choice permanently.
+Git's `core.editor` and vifm's `vicmd` are rendered from the same choice when setup runs; `devbase-reconfigure` updates all of them at once.
 
 == Environment Variables
 
@@ -478,7 +493,7 @@ DevBase configuration files are located in:
 === Git
 - Global config: `~/.config/git/config` (DevBase managed)
 - Personal settings: `~/.gitconfig` (unrelated keys retained; setup writes selected settings)
-- Global gitignore: `~/.config/git/.gitignore`
+- Global gitignore: `~/.config/git/ignore` (Git's default location)
 - Allowed signers: `~/.config/ssh/allowed_signers`
 
 === SSH

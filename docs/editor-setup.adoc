@@ -33,15 +33,17 @@ The setup script detects your current user and provides tailored instructions.
 
 === Extensions
 
-Extensions installed automatically if VS Code detected:
-- GitLens
-- EditorConfig
-- Prettier
-- ESLint
-- Shellcheck
-- YAML
-- Docker
-- Remote Development
+Extensions come from `dot/.config/devbase/packages.yaml`. Setup installs them when VS Code is detected and the *VS Code extensions* preference is enabled; otherwise run `devbase-vscode-extensions` afterwards. Core set:
+- Asciidoctor
+- YAML (Red Hat)
+- SonarLint
+- SARIF Viewer
+- i18n Ally
+- Material Icon Theme
+- One theme extension per DevBase theme (Everforest, Catppuccin, Tokyo Night, Gruvbox, Nord, Dracula, Solarized)
+- Neovim (`asvetliakov.vscode-neovim`, optional, prompted by `devbase-vscode-extensions`)
+
+Selected language packs add their own extensions, for example the Java pack installs the Red Hat Java tooling and the Node pack installs ESLint, Prettier, Tailwind CSS and Volar. Run `devbase-vscode-extensions --list` to see the exact set for your selection.
 
 Settings applied:
 
@@ -53,14 +55,14 @@ Settings applied:
 DevBase installs LazyVim starter configuration with:
 - LSP support
 - Treesitter syntax
-- Everforest theme (matches terminal theme)
+- A colorscheme matching the selected DevBase theme (`lua/plugins/colorscheme.lua`, written by `devbase-theme`)
 - Leader key: `space`
 
 Config: `~/.config/nvim/`
 
 Setup preserves the entire existing path, including an empty directory or symlink. A fresh install is staged and published only after the clone, configured pinned checkout and initial configuration succeed; Neovim templates are excluded from the bulk dotfile copy.
 
-Explicitly running `devbase-theme` can still update `~/.config/nvim/lua/plugins/colorscheme.lua`.
+`devbase-theme <name>` rewrites `~/.config/nvim/lua/plugins/colorscheme.lua` with the same generator setup uses, but only when that LazyVim plugin directory exists; other Neovim configurations are left alone.
 
 Add personal configs to:
 - `~/.config/nvim/lua/plugins/` - Custom plugin configurations

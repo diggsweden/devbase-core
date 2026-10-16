@@ -20,7 +20,7 @@ Yes. Personal create-only configs are preserved, while managed dotfiles are upda
 
 === How often should I run updates?
 
-Monthly or as needed. Run `./setup.sh` to update everything.
+Monthly or as needed. `devbase-update` fetches the latest release and reruns setup with your saved preferences, so it asks nothing beyond the update confirmation and sudo. Use `devbase-reconfigure` when you want to change a preference.
 
 === Can I uninstall everything?
 
@@ -56,8 +56,9 @@ wsl --shutdown
 === Does the install create lots of custom shortcuts and aliases?
 
 No, everything is as standard as can be.
-There are a few small cases, like alt+y in fish shell.
-These are documented in the usage docs.
+There are a few small cases: `Alt+y` accepts the Fish autosuggestion, and `Alt+d` / `Alt+r` split Zellij panes.
+Choosing *Vim-style* during setup enables Fish's built-in vi key bindings (modal editing, `Esc` for normal mode, a mode indicator in the prompt); *Emacs-style* keeps the Fish defaults.
+All keys are listed in link:keybindings.md[Keybindings].
 
 === How do themes work on WSL?
 
@@ -85,10 +86,13 @@ No. This is a bootstrap script - not a package manager, not a CLI tool, maybe it
 
 [source,bash]
 ----
+devbase-update                 # latest release, saved preferences kept
+devbase-reconfigure            # rerun setup interactively to change preferences
 
+# From a checkout, for example when testing a branch:
 cd devbase-core
 git pull --rebase
-./setup.sh  # Safe to run multiple times
+./setup.sh --keep-preferences  # safe to run multiple times
 ----
 
 === How do I switch tool versions?

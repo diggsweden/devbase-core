@@ -23,7 +23,8 @@ Transforms a fresh Ubuntu installation into a opinionated configured development
 * **Container tools** - Podman, Docker Compose, k9s, kubectl.. and more 
 * **Smart shell** - Fish with autocompletions and syntax highlighting
 * **Modern terminal** - Zellij multiplexer, Ghostty and more
-* **Security** - ClamAV, fail2ban, automatic security updates, lynis, secure SSH key generation, checksum verification and more
+* **Security** - ClamAV, UFW firewall, automatic security updates, lynis, secret scanning (gitleaks), vulnerability and SAST scanning (trivy, osv-scanner, opengrep), SSH key generation and commit signing, checksum verification and more
+* **Code quality** - shellcheck, shfmt, hadolint, yamlfmt, rumdl, typos, taplo, lychee, editorconfig-checker and more
 
 == Requirements
 
@@ -71,9 +72,9 @@ just devbase-install-verify
 
 == Getting Started
 
-Your terminal will open in Zellij (terminal multiplexer) after installation. 
+Fish is your interactive shell after re-login; enable Zellij autostart during setup if you want the multiplexer on every terminal.
 
-* **Quick reference** → link:docs/usage-guide.md[Usage Guide] 
+* **Quick reference** → link:docs/usage-guide.md[Usage Guide] and link:docs/keybindings.md[Keybindings]
 * **Full documentation** → link:docs/index.adoc[Documentation Index]
 * **Svenska** → link:docs/l10n/sv/README.adoc[Swedish Version]
 

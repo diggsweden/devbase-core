@@ -633,7 +633,7 @@ Selected packs: java, node, python
 DevBase supports global git hooks using a dispatcher pattern.
 When enabled during installation, hooks are configured to run automatically on git operations.
 
-NOTE: Git hooks are **opt-in** during installation (default: No). Existing hooks are backed up to `${XDG_DATA_HOME}/devbase/backup/git-hooks/` before installation.
+NOTE: Git hooks are enabled by default and can be deselected during installation. Existing hooks are backed up to `${XDG_DATA_HOME}/devbase/backup/git-hooks/` before installation.
 
 === Architecture
 
@@ -646,6 +646,8 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 ├── pre-commit.d/
 │   └── 01-secrets-scan.sh        # Active: Gitleaks secret scanning
 ├── commit-msg                     # Dispatcher
+├── commit-msg.d/                  # (empty by default)
+├── post-commit                    # Dispatcher
 ├── post-commit.d/
 │   └── 01-conventional-commits.sh # Active: Conventional commits via gommitlint defaults
 ├── prepare-commit-msg             # Dispatcher
@@ -655,11 +657,11 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 └── pre-push.d/                     # (empty by default)
 ----
 
-DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) should be configured per-project using devbase-check or similar tooling.
+DevBase Core provides minimal hooks focused on security and workflow automation. Project-specific linting (shellcheck, hadolint, etc.) belongs in the project, for example through a project-level lint runner or pre-commit framework. The `commit-msg.d/` and `pre-push.d/` directories ship empty; their dispatchers run any scripts you or your organization add there.
 
 === Active Hooks
 
-* **01-secrets-scan.sh** - Scans staged files for secrets using gitleaks before commit. Prevents accidentally committing API keys, passwords, and tokens.
+* **01-secrets-scan.sh** - Scans staged changes for secrets with `gitleaks git --pre-commit --staged` before commit. Prevents accidentally committing API keys, passwords, and tokens.
 * **01-conventional-commits.sh** - Validates commit policy using gommitlint. Uses gommitlint defaults automatically, and applies project-specific rules from `.gommitlint.yaml` when present.
 * **01-add-issue-ref.sh** - Automatically adds `Refs: ISSUE-123` footer to commit messages when the branch name contains an issue reference (e.g., `feature/PROJ-456-add-feature`).
 
@@ -716,6 +718,8 @@ Scripts run in sorted alphabetical order. Use numeric prefixes:
 === Disabling Hooks
 
 **Globally:**
+Disable Git hooks in DevBase preferences and rerun setup to remove DevBase-owned
+hook paths. To remove a manually configured global override:
 [source,bash]
 ----
 git config --global --unset core.hooksPath
@@ -725,8 +729,11 @@ git config --global --unset core.hooksPath
 [source,bash]
 ----
 cd your-repo
-git config --unset core.hooksPath
+git config --local core.hooksPath /dev/null
 ----
+
+Unset this local value to inherit the global hooks again:
+`git config --local --unset core.hooksPath`.
 
 **Bypass once:**
 [source,bash]
