@@ -16,6 +16,7 @@ setup() {
   common_setup_isolated
   export DEVBASE_THEME_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-theme.fish"
   export DEVBASE_FONT_FISH="${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-font.fish"
+  export SSH_CONNECTION="fixture-remote-session"
   mkdir -p "${HOME}/.vscode-server/data/Machine"
 }
 

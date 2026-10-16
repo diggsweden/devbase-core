@@ -42,13 +42,10 @@ end
 
 function __devbase_vscode_get_settings_path --description "Get VS Code settings file path"
     set -l machine_dir "$HOME/.vscode-server/data/Machine"
-    if test -d "$machine_dir"
-        echo "$machine_dir/settings.json"
-        return 0
-    end
-
-    if __devbase_vscode_is_wsl; and test -d "$HOME/.vscode-server"
-        mkdir -p "$machine_dir"
+    # A leftover server directory does not imply this CLI is running remotely.
+    if test -d "$HOME/.vscode-server"; and begin
+            __devbase_vscode_is_wsl; or set -q SSH_CONNECTION; or string match -q '*/remote-cli/*' -- (command -s code)
+        end
         echo "$machine_dir/settings.json"
         return 0
     end
@@ -112,6 +109,7 @@ end
 function __devbase_vscode_merge_settings --description "Safely merge JSON into VS Code settings"
     set -l settings_file $argv[1]
     set -l update_json $argv[2]
+    set -l merge_mode "$argv[3]"
 
     if test -z "$settings_file" -o -z "$update_json"
         return 1
@@ -135,7 +133,7 @@ function __devbase_vscode_merge_settings --description "Safely merge JSON into V
             return 1
         end
 
-        if jq -s '.[0] * .[1]' "$settings_file" (echo "$update_json" | psub) > "$settings_file.tmp"
+        if jq -s --arg mode "$merge_mode" 'if $mode == "defaults" then .[1] * .[0] else .[0] * .[1] end' "$settings_file" (echo "$update_json" | psub) > "$settings_file.tmp"
             mv "$settings_file.tmp" "$settings_file"
             return 0
         end

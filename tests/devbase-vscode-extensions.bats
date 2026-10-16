@@ -23,6 +23,8 @@ setup() {
   # Both preferences.yaml and packages.yaml live in ~/.config/devbase/
   export MOCK_CONFIG_DIR="${TEST_DIR}/.config/devbase"
   mkdir -p "$MOCK_CONFIG_DIR"
+  printf '#!/bin/sh\nexit 0\n' >"$TEST_DIR/nvim"
+  chmod +x "$TEST_DIR/nvim"
 }
 
 teardown() {
@@ -39,7 +41,7 @@ run_fish_vscode_ext() {
 run_fish_vscode_ext_with_mock_home() {
   local yq_path
   yq_path=$(dirname "$(command -v yq)")
-  env HOME="$TEST_DIR" XDG_CONFIG_HOME="${TEST_DIR}/.config" PATH="${yq_path}:${PATH}" fish -c "source '$DEVBASE_VSCODE_EXT_FISH'; $*"
+  env HOME="$TEST_DIR" XDG_CONFIG_HOME="${TEST_DIR}/.config" PATH="${yq_path}:${PATH}" fish --no-config -c "function mise; printf '%s\\n' '$TEST_DIR/nvim'; end; source '$DEVBASE_VSCODE_EXT_FISH'; $*"
 }
 
 # Helper to create mock preferences.yaml
@@ -228,6 +230,7 @@ EOF
 }
 
 @test "__vscode_ext_configure_neovim_settings merges neovim keys into existing settings" {
+  export SSH_CONNECTION=fixture-remote-session
   if ! command -v jq &>/dev/null; then
     skip "jq is required for this test"
   fi
@@ -249,6 +252,8 @@ EOF
   # Verify existing theme was preserved
   run jq -r '.["workbench.colorTheme"]' "${settings_dir}/settings.json"
   assert_output "Nord"
+  run jq -r '.["remote.extensionKind"]["asvetliakov.vscode-neovim"][0], .["vscode-neovim.useWSL"], .["vscode-neovim.neovimExecutablePaths.linux"]' "${settings_dir}/settings.json"
+  assert_output "$(printf 'workspace\nfalse\n%s' "$TEST_DIR/nvim")"
 }
 
 @test "__vscode_ext_configure_neovim_settings creates new settings file" {
@@ -270,6 +275,7 @@ EOF
 }
 
 @test "__vscode_ext_configure_neovim_settings leaves invalid settings file unchanged" {
+  export SSH_CONNECTION=fixture-remote-session
   if ! command -v jq &>/dev/null; then
     skip "jq is required for this test"
   fi
@@ -288,6 +294,7 @@ EOF
 }
 
 @test "__vscode_ext_configure_neovim_settings leaves non-object settings file unchanged" {
+  export SSH_CONNECTION=fixture-remote-session
   if ! command -v jq &>/dev/null; then
     skip "jq is required for this test"
   fi
@@ -303,6 +310,27 @@ EOF
 
   run cat "${settings_dir}/settings.json"
   assert_output '[]'
+}
+
+@test "Neovim settings preserve personal paths and use the native host despite a stale server directory" {
+  unset SSH_CONNECTION WSL_DISTRO_NAME WSL_INTEROP
+  local settings_dir="${TEST_DIR}/.config/Code/User"
+  mkdir -p "$settings_dir" "$TEST_DIR/.vscode-server/data/Machine"
+  printf '%s\n' '{"vscode-neovim.neovimExecutablePaths.linux":"/personal/nvim","vscode-neovim.neovimInitVimPaths.linux":"/personal/init.lua"}' >"$settings_dir/settings.json"
+  run run_fish_vscode_ext_with_mock_home '__vscode_ext_configure_neovim_settings'
+  assert_success
+  assert_file_not_exists "$TEST_DIR/.vscode-server/data/Machine/settings.json"
+  run jq -r '.["vscode-neovim.neovimExecutablePaths.linux"], .["vscode-neovim.neovimInitVimPaths.linux"], has("remote.extensionKind")' "$settings_dir/settings.json"
+  assert_output $'/personal/nvim\n/personal/init.lua\nfalse'
+}
+
+@test "WSL Neovim runs in the workspace host without nested WSL invocation" {
+  export WSL_DISTRO_NAME=Fixture
+  mkdir -p "$TEST_DIR/.vscode-server/data/Machine"
+  run run_fish_vscode_ext_with_mock_home '__vscode_ext_configure_neovim_settings'
+  assert_success
+  run jq -r '.["vscode-neovim.useWSL"], .["remote.extensionKind"]["asvetliakov.vscode-neovim"][0]' "$TEST_DIR/.vscode-server/data/Machine/settings.json"
+  assert_output $'false\nworkspace'
 }
 
 @test "devbase-vscode-extensions --list shows extensions by pack" {

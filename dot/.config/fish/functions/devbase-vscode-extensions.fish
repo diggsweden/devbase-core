@@ -128,16 +128,39 @@ function __vscode_ext_configure_neovim_settings --description "Merge neovim sett
         return 0
     end
 
-    set -l use_wsl false
-    test -d ~/.vscode-server; and set use_wsl true
+    set -l nvim_path (mise --cd "$HOME" which nvim 2>/dev/null)
+    if test -z "$nvim_path"
+        set nvim_path (command -s nvim)
+    end
+    if not test -x "$nvim_path"
+        __vscode_ext_print_warning "Neovim executable not found; skipping settings"
+        return 0
+    end
 
-    set -l nvim_path "$HOME/.local/share/mise/installs/aqua-neovim-neovim/vlatest/nvim-linux-x86_64/bin/nvim"
-
-    set -l neovim_json (jq -n --arg wsl "$use_wsl" --arg nvim "$nvim_path" \
-        '{"vscode-neovim.useWSL": ($wsl == "true"), "vscode-neovim.neovimExecutablePaths.linux": $nvim, "vscode-neovim.neovimInitVimPaths.linux": ""}')
+    set -l remote false
+    if test "$settings_file" = "$HOME/.vscode-server/data/Machine/settings.json"
+        set remote true
+        # A personal UI-host override requires a local executable, not this one.
+        if test -f "$settings_file"; and jq -e '.["remote.extensionKind"]["asvetliakov.vscode-neovim"][0] == "ui"' "$settings_file" >/dev/null 2>&1
+            __vscode_ext_print_info "Neovim uses the UI host; configure its executable in local VS Code settings"
+            return 0
+        end
+    end
+    set -l neovim_json (jq -n --arg nvim "$nvim_path" --argjson remote "$remote" \
+        '{"vscode-neovim.useWSL": false, "vscode-neovim.neovimExecutablePaths.linux": $nvim} +
+        (if $remote then {"remote.extensionKind": {"asvetliakov.vscode-neovim": ["workspace"]}} else {} end)')
 
     if test -f $settings_file
-        __devbase_vscode_merge_settings "$settings_file" "$neovim_json"
+        # Personal keys win, except values DevBase itself wrote that are now
+        # wrong: useWSL is never right in a Linux-side settings file, and a
+        # mise install path from an earlier run goes stale on every upgrade.
+        set -l forced '{"vscode-neovim.useWSL": false}'
+        set -l current (jq -r '.["vscode-neovim.neovimExecutablePaths.linux"] // empty' "$settings_file" 2>/dev/null)
+        if test -n "$current"; and string match -q '*/mise/installs/*' -- "$current"; and not test -x "$current"
+            set forced (jq -n --arg nvim "$nvim_path" '{"vscode-neovim.useWSL": false, "vscode-neovim.neovimExecutablePaths.linux": $nvim}')
+        end
+        __devbase_vscode_merge_settings "$settings_file" "$neovim_json" defaults
+        and __devbase_vscode_merge_settings "$settings_file" "$forced"
         switch $status
             case 0
                 __vscode_ext_print_success "Neovim settings configured"
@@ -147,7 +170,7 @@ function __vscode_ext_configure_neovim_settings --description "Merge neovim sett
                 __vscode_ext_print_warning (__devbase_vscode_describe_merge_status 1)
         end
     else
-        if __devbase_vscode_merge_settings "$settings_file" "$neovim_json"
+        if __devbase_vscode_merge_settings "$settings_file" "$neovim_json" defaults
             __vscode_ext_print_success "Neovim settings configured (new settings file created)"
         else
             __vscode_ext_print_warning "Failed to create VS Code settings for neovim"
