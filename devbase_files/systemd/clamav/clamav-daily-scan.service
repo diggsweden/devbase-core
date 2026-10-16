@@ -17,10 +17,11 @@ ExecStartPre=/bin/mkdir -p /var/log/clamav
 ExecStart=/usr/bin/clamscan \
   --recursive \
   --infected \
-  --exclude-dir=.cache \
-  --exclude-dir=.local/share/Trash \
-  --exclude-dir=.git \
-  --exclude-dir=.vscode-server \
+  --cross-fs=no \
+  --exclude-dir=(^|/)[.]cache(/|$$) \
+  --exclude-dir=(^|/)[.]local/share/Trash(/|$$) \
+  --exclude-dir=(^|/)[.]git(/|$$) \
+  --exclude-dir=(^|/)[.]vscode-server(/|$$) \
   --log=/var/log/clamav/daily-scan.log \
   /home \
   /root \

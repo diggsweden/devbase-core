@@ -21,6 +21,12 @@ Unattended-Upgrade::Allowed-Origins {
 //	"${distro_id}:${distro_codename}-backports";
 };
 
+// Mozilla's Origin is an internal repository identifier, not "Mozilla".
+// Restrict automatic Firefox updates to the configured Mozilla site and suite.
+Unattended-Upgrade::Origins-Pattern {
+    "site=packages.mozilla.org,codename=mozilla";
+};
+
 // Python regular expressions, matching packages to exclude from upgrading
 Unattended-Upgrade::Package-Blacklist {
     // The following matches all packages starting with linux-
