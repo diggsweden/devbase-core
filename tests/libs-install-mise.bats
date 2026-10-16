@@ -1098,6 +1098,7 @@ _load_mise_verification() {
   MISE_CONFIG="${XDG_CONFIG_HOME}/mise/config.toml"
   GREEN='' RED='' NC='' DIM='' CHECK='+' CROSS='-'
   print_subheader() { :; }
+  print_check() { printf '%s: %s\n' "$1" "$2"; }
   file_exists() { [[ -f "$1" ]]; }
 }
 
@@ -1107,15 +1108,15 @@ _load_mise_verification() {
   _load_mise_verification
   # shellcheck disable=SC2329 # Called by the extracted verifier.
   mise() {
-    [[ "$*" == "--cd $HOME list --current --installed --no-header" ]] || return 1
-    printf 'node 22.0.0\n'
+    [[ "$*" == "--cd $HOME list --current --json" ]] || return 1
+    printf '%s\n' '{"node":[{"version":"22.0.0","installed":true}]}'
   }
 
   run check_mise_tools
 
   assert_success
   assert_output --partial 'node (effective: 22.0.0; DevBase default: 24.1.0)'
-  assert_output --partial 'jq (no installed effective version; DevBase default: 1.7)'
+  assert_output --partial 'jq (no installed effective version or incomplete selection; DevBase default: 1.7)'
 }
 
 @test "mise verification does not count an inactive cached version or an arbitrary PATH command" {
@@ -1126,7 +1127,7 @@ _load_mise_verification() {
   mise() {
     # A plain list would include the old cached version, which proves nothing
     # about whether the user's effective selection is installed.
-    [[ "$*" == "--cd $HOME list --current --installed --no-header" ]] && return 0
+    [[ "$*" == "--cd $HOME list --current --json" ]] && { printf '{}\n'; return 0; }
     printf 'node 24.1.0\n'
   }
   has_command() { return 0; }

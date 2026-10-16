@@ -297,6 +297,15 @@ _load_backup_phases() {
   assert_equal "$(cat "${DEVBASE_BACKUP_DIR}.old/preimage")" "previous"
 }
 
+@test "configuration initializes custom tool versions after preferences" {
+  _load_backup_phases
+  DEVBASE_SELECTED_PACKS=java
+  collect_user_configuration() { DEVBASE_SELECTED_PACKS=rust; }
+  _setup_custom_parser() { [[ "$DEVBASE_SELECTED_PACKS" == rust ]]; }
+  run run_configuration_phase
+  assert_success
+}
+
 @test "failed preflight checks leave both backup generations intact" {
   _load_backup_phases
   run_preflight_checks() { return 1; }

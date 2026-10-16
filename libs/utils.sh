@@ -301,9 +301,9 @@ retry_command() {
   while [[ $attempt -le $max_attempts ]]; do
     if "${command[@]}"; then
       return 0
+    else
+      exit_code=$?
     fi
-
-    exit_code=$?
 
     if [[ $attempt -eq $max_attempts ]]; then
       show_progress warning "Command failed after $max_attempts attempts"

@@ -30,6 +30,47 @@ teardown() {
   common_teardown
 }
 
+@test "custom parser replaces stale selections and versions" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export DEVBASE_LIBS="${DEVBASE_ROOT}/libs"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
+  TOOL_VERSIONS=([old_tool]="1")
+  export DEVBASE_SELECTED_PACKS="rust"
+  get_custom_packages() {
+    [[ "$SELECTED_PACKS" == rust ]] || return 1
+    printf 'new_tool|2|install_new_tool|\n'
+  }
+  _setup_custom_parser
+  [[ ! -v TOOL_VERSIONS[old_tool] ]]
+  assert_equal "${TOOL_VERSIONS[new_tool]}" 2
+}
+
+@test "native VS Code respects the user's opt-out before installation" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  export DEVBASE_VSCODE_INSTALL=false
+  run install_vscode
+  assert_success
+  assert_output --partial 'skipped by user preference'
+}
+
+@test "existing Fisher still installs missing pinned fzf.fish" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR"
+  fish() {
+    case "$3" in
+      'type -q fisher') return 0 ;;
+      'fisher list |'*) return 1 ;;
+      'fisher install'*) printf '%s\n' "$4" >"$TEST_DIR/plugin" ;;
+      *) return 1 ;;
+    esac
+  }
+  run install_fisher
+  assert_success
+  assert_equal "$(cat "$TEST_DIR/plugin")" 'PatrickF1/fzf.fish@v11.0'
+}
+
 @test "get_vscode_checksum fetches a pinned release checksum from versioned API" {
   source "${DEVBASE_ROOT}/libs/install-custom.sh"
 

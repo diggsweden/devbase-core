@@ -68,9 +68,6 @@ _install_pkg_file() {
 # Returns: 0 on success
 # Side-effects: Sources parse-packages.sh, populates TOOL_VERSIONS
 _setup_custom_parser() {
-  # Skip if already initialized (check array size safely with set -u)
-  [[ -v TOOL_VERSIONS[@] ]] && [[ ${#TOOL_VERSIONS[@]} -gt 0 ]] && return 0
-
   require_env DEVBASE_DOT DEVBASE_LIBS || return 1
 
   # Set up package configuration
@@ -93,10 +90,15 @@ _setup_custom_parser() {
 
   # Populate TOOL_VERSIONS array from packages.yaml
   # Format: "tool|version|installer|tags"
-  while IFS='|' read -r tool version installer tags; do
+  TOOL_VERSIONS=()
+  _MERGED_YAML=""
+  local packages
+  packages=$(get_custom_packages) || return 1
+  local tool version _installer _tags
+  while IFS='|' read -r tool version _installer _tags; do
     [[ -z "$tool" || -z "$version" ]] && continue
     TOOL_VERSIONS[$tool]="$version"
-  done < <(get_custom_packages)
+  done <<<"$packages"
 
   return 0
 }
@@ -568,47 +570,40 @@ install_fisher() {
     return 1
   fi
 
-  # Check if Fisher is already installed
-  if fish -c "type -q fisher" 2>/dev/null; then
+  # Preserve an existing plugin manager, but still reconcile required plugins.
+  if fish --no-config -c 'type -q fisher' 2>/dev/null; then
     show_progress success "Fisher already installed"
-    return 0
-  fi
-
-  # Install Fisher from versioned release
-  local fisher_version="${TOOL_VERSIONS[fisher]}"
-  local fisher_dir="${_DEVBASE_TEMP}/fisher"
-
-  local git_output
-  if git_output=$(git clone --quiet --depth 1 --branch "${fisher_version}" "$DEVBASE_URL_FISHER_REPO" "$fisher_dir" 2>&1); then
-    if fish -c "source $fisher_dir/functions/fisher.fish && fisher install jorgebucaran/fisher" >/dev/null 2>&1; then
-      show_progress success "Fisher installed ($fisher_version)"
-
-      # Install fzf.fish plugin, pinned to the version in packages.yaml.
-      # fisher supports "owner/repo@tag"; fall back to unpinned if the pin is
-      # missing, so a parse failure cannot break the install.
-      local fzf_fish_spec="PatrickF1/fzf.fish"
-      local fzf_fish_version="${TOOL_VERSIONS[fzf_fish]:-}"
-      [[ -n "$fzf_fish_version" ]] && fzf_fish_spec="${fzf_fish_spec}@${fzf_fish_version}"
-
-      show_progress info "Installing fzf.fish plugin (${fzf_fish_version:-latest})..."
-      if fish -c "fisher install $fzf_fish_spec" >/dev/null 2>&1; then
-        show_progress success "fzf.fish plugin installed (Ctrl+R for history, Ctrl+Alt+F for files)"
-      else
-        add_install_warning "fzf.fish plugin installation failed"
-        return 1
-      fi
-    else
+  else
+    local fisher_version="${TOOL_VERSIONS[fisher]}"
+    local fisher_dir="${_DEVBASE_TEMP}/fisher"
+    if ! git clone --quiet --depth 1 --branch "$fisher_version" "$DEVBASE_URL_FISHER_REPO" "$fisher_dir"; then
+      show_progress error "Failed to clone Fisher repository"
+      return 1
+    fi
+    # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
+    if ! fish --no-config -c 'source $argv[1]; and fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
+      "$fisher_dir/functions/fisher.fish" "jorgebucaran/fisher@${fisher_version}" >/dev/null 2>&1; then
       show_progress error "Fisher installation failed"
       return 1
     fi
-  else
-    show_progress error "Failed to clone Fisher repository"
-    if [[ -n "$git_output" ]]; then
-      show_progress info "Error details: $git_output"
-    fi
-    return 1
+    show_progress success "Fisher installed ($fisher_version)"
   fi
 
+  # Existing plugin versions are personal choices; seed a pinned plugin if absent.
+  if fish --no-config -c 'fisher list | string match -rqi "^patrickf1/fzf[.]fish(@.*)?\$"' 2>/dev/null; then
+    show_progress success "fzf.fish already installed"
+    return 0
+  fi
+  local fzf_fish_version="${TOOL_VERSIONS[fzf_fish]:-}"
+  [[ -n "$fzf_fish_version" ]] || return 1
+  show_progress info "Installing fzf.fish plugin ($fzf_fish_version)..."
+  # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
+  if ! fish --no-config -c 'fisher install $argv[1]; and contains -- (string lower $argv[1]) (fisher list)' \
+    "PatrickF1/fzf.fish@${fzf_fish_version}" >/dev/null 2>&1; then
+    add_install_warning "fzf.fish plugin installation failed"
+    return 1
+  fi
+  show_progress success "fzf.fish plugin installed (Ctrl+R for history, Ctrl+Alt+F for files)"
   return 0
 }
 
@@ -1032,6 +1027,10 @@ configure_terminal_fonts() {
 # Returns: 0 on success/skip, 1 on failure
 # Side-effects: Downloads and installs VS Code package (deb or rpm) with checksum verification
 install_vscode() {
+  if [[ "${DEVBASE_VSCODE_INSTALL:-true}" != "true" ]]; then
+    show_progress info "VS Code installation skipped by user preference"
+    return 0
+  fi
   validate_var_set "_DEVBASE_TEMP" || return 1
 
   # Skip VS Code installation on WSL - it should be installed on Windows

@@ -173,6 +173,14 @@ SCRIPT
   assert_output --partial "Success on attempt 3"
 }
 
+@test "retry_command preserves the final nonzero status after exhaustion" {
+  sleep() { :; }
+  always_fails() { return 42; }
+  run retry_command --attempts 3 --delay 0 -- always_fails
+  assert_failure 42
+  assert_output --partial 'failed after 3 attempts'
+}
+
 @test "safe_rm_file removes a regular file" {
   local target="${TEST_DIR}/file-to-remove"
   echo "content" > "$target"
