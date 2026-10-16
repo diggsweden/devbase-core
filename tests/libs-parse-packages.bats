@@ -744,6 +744,25 @@ python"
   grep -q 'java = "temurin-21"' "$output_file"
 }
 
+@test "shipped defaults align rumdl's backend and preserve the configured Python pin" {
+  export DEVBASE_DOT="${DEVBASE_ROOT}/dot"
+  export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"
+  export PACKAGES_CUSTOM_YAML=""
+  export SELECTED_PACKS="python"
+  _MERGED_YAML=""
+  source "${DEVBASE_LIBS}/parse-packages.sh"
+
+  local output_file="${TEST_DIR}/config.toml"
+  generate_mise_config "$output_file"
+
+  assert_equal "$(yq -r '.core.mise.rumdl.backend' "$PACKAGES_YAML")" 'aqua:rvben/rumdl'
+  assert_equal "$(yq -p=toml '.tools."aqua:rvben/rumdl" != null' "${DEVBASE_ROOT}/.mise.toml")" true
+  assert_equal "$(yq -p=toml '.tools."aqua:rvben/rumdl"' "$output_file")" "$(yq -r '.core.mise.rumdl.version' "$PACKAGES_YAML")"
+  assert_equal "$(yq -p=toml '.tools."github:rvben/rumdl"' "$output_file")" null
+  assert_equal "$(yq -p=toml '.tools.python' "$output_file")" "$(yq -r '.packs.python.mise.python.version' "$PACKAGES_YAML")"
+  assert_equal "$(yq -p=toml '.settings.paranoid' "$output_file")" true
+}
+
 @test "generate_mise_config includes environment section" {
   create_test_packages
   export PACKAGES_YAML="${DEVBASE_DOT}/.config/devbase/packages.yaml"

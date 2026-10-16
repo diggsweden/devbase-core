@@ -106,7 +106,7 @@ verify_mise_checksum() {
   local checksums_url="${DEVBASE_URL_MISE_RELEASES}/v${version}/SHASUMS256.txt"
   local checksums_file="${_DEVBASE_TEMP}/mise-checksums.txt"
 
-  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
+  if ! retry_command devbase_curl -fsSL "$checksums_url" -o "$checksums_file"; then
     add_install_warning "Could not download checksums for mise v${version}"
     return 0
   fi
@@ -259,11 +259,11 @@ _run_mise_installer() {
   local tarball="${_DEVBASE_TEMP}/${asset}"
   local checksums_file="${_DEVBASE_TEMP}/mise-shasums-v${version}.txt"
 
-  # Fetch the checksums manifest with raw curl: this file is the trust anchor
+  # Fetch the checksums manifest with the curl wrapper: this is the trust anchor
   # for the tarball below, so it cannot itself be checksum-verified (would be
-  # circular). Trust comes from HTTPS + the github.com domain pin. Same pattern
+  # circular). Trust comes from HTTPS to GitHub or the configured mirror. Same pattern
   # used by verify_mise_checksum and get_oc_checksum.
-  if ! retry_command curl -fsSL "$checksums_url" -o "$checksums_file"; then
+  if ! retry_command devbase_curl -fsSL "$checksums_url" -o "$checksums_file"; then
     die "Failed to download mise SHASUMS256.txt for v${version}"
   fi
 
@@ -579,7 +579,10 @@ _install_mise_tools_whiptail_gauge() {
   [[ $count -eq 0 ]] && [[ $tools_to_install -gt 0 ]] &&
     add_install_warning "Could not parse mise progress output"
   _check_mise_server_error "$full_install_log" && _gauge_server_error=true
-  [[ $install_exit_code -ne 0 ]] && add_install_warning "mise install returned non-zero exit code"
+  if [[ $install_exit_code -ne 0 ]]; then
+    add_install_warning "mise install returned non-zero exit code"
+    add_install_warning "See log: $full_install_log"
+  fi
 }
 
 # Brief: Run full mise install with whiptail spinner (no persistent gauge)
@@ -596,10 +599,11 @@ _install_mise_tools_whiptail_spinner() {
   # _wt_run_with_spinner then captures correctly via wait().
   if ! run_with_spinner "Installing development tools (mise)" \
     bash -c "set -o pipefail
-		         $(declare -f run_mise_from_home_dir)
-		         run_mise_from_home_dir install --yes 2>&1 | tee '${full_install_log}'"; then
+             $(declare -f run_mise_from_home_dir)
+             run_mise_from_home_dir install --yes 2>&1 | tee \"\$1\"" _ "$full_install_log"; then
     _check_mise_server_error "$full_install_log" && _spinner_server_error=true
     add_install_warning "mise install returned non-zero exit code"
+    add_install_warning "See log: $full_install_log"
   fi
 }
 
@@ -612,6 +616,7 @@ _install_mise_tools_gum() {
   show_progress info "Installing development tools..."
   if ! run_mise_from_home_dir install --yes 2>&1 | tee "$full_install_log"; then
     add_install_warning "mise install returned non-zero exit code"
+    add_install_warning "See log: $full_install_log"
   fi
   _check_mise_server_error "$full_install_log" && _gum_server_error=true
 }
@@ -619,6 +624,20 @@ _install_mise_tools_gum() {
 install_mise_tools() {
   show_progress info "Installing development tools..."
   tui_blank_line
+
+  # Keep diagnostics after the setup temporary directory is cleaned up.
+  local log_root="${XDG_STATE_HOME:-${HOME}/.local/state}/devbase"
+  local log_dir
+  mkdir -p "$log_root" || return 1
+  log_dir=$(mktemp -d "${log_root}/mise-install.XXXXXX") || return 1
+  local core_install_log="${log_dir}/mise-core-install.log"
+  local full_install_log="${log_dir}/mise-full-install.log"
+  local second_install_log="${log_dir}/mise-second-install.log"
+  (
+    umask 077
+    touch -- "$core_install_log" "$full_install_log" "$second_install_log"
+  ) || return 1
+  show_progress info "Mise installation logs: $log_dir"
 
   # Trust only DevBase's generated global config.
   run_mise_from_home_dir trust "${XDG_CONFIG_HOME}/mise/config.toml" 2>/dev/null || true
@@ -633,16 +652,18 @@ install_mise_tools() {
 
   local mise_server_error=false
   if [[ ${#core_runtimes[@]} -gt 0 ]]; then
-    local core_install_log="${_DEVBASE_TEMP}/mise-core-install.log"
-
     if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
       # Whiptail mode - use spinner with gauge; pass array via declare -p
       if ! run_with_spinner "Installing core language runtimes" \
-        bash -c "$(declare -p core_runtimes); $(declare -f run_mise_from_home_dir); run_mise_from_home_dir install \"\${core_runtimes[@]}\" --yes 2>&1 | tee '$core_install_log'"; then
+        bash -c "set -o pipefail
+                 $(declare -p core_runtimes)
+                 $(declare -f run_mise_from_home_dir)
+                 run_mise_from_home_dir install \"\${core_runtimes[@]}\" --yes 2>&1 | tee \"\$1\"" _ "$core_install_log"; then
         if _check_mise_server_error "$core_install_log"; then
           mise_server_error=true
         fi
         add_install_warning "Some core runtimes may have failed (will retry with full install)"
+        add_install_warning "See log: $core_install_log"
       fi
     else
       # Gum/other mode - show real-time output
@@ -652,6 +673,7 @@ install_mise_tools() {
           mise_server_error=true
         fi
         add_install_warning "Some core runtimes may have failed (will retry with full install)"
+        add_install_warning "See log: $core_install_log"
       fi
     fi
   fi
@@ -665,8 +687,6 @@ install_mise_tools() {
   tools_to_install=$(($(run_mise_from_home_dir list --not-installed 2>/dev/null | wc -l)))
 
   # Install all remaining tools via the appropriate TUI path
-  local full_install_log="${_DEVBASE_TEMP}/mise-full-install.log"
-
   if [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]] && _wt_gauge_is_running; then
     _install_mise_tools_whiptail_gauge "$full_install_log" "$tools_to_install" mise_server_error
   elif [[ "${DEVBASE_TUI_MODE:-}" == "whiptail" ]]; then
@@ -679,7 +699,6 @@ install_mise_tools() {
   # Only verify the core runtime for each selected pack
   # Retry the effective config to catch transient failures without rewriting
   # its version selections during recovery.
-  local second_install_log="${_DEVBASE_TEMP}/mise-second-install.log"
   if ! run_mise_from_home_dir install --yes &>"$second_install_log"; then
     add_install_warning "Second mise install pass failed"
     add_install_warning "See log: $second_install_log"

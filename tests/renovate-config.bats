@@ -38,6 +38,45 @@ _strip_char_classes() {
   assert_success
 }
 
+@test "Java and Node update rules allow approved LTS lines and reject unapproved releases" {
+  local dependency rule
+  for dependency in java-temurin node; do
+    rule=$(jq -r --arg dependency "$dependency" \
+      '.packageRules[] | select(.matchPackageNames == [$dependency]) | .allowedVersions' \
+      "${DEVBASE_ROOT}/renovate.json")
+    rule="${rule#/}"
+    rule="${rule%/}"
+    run jq -e --arg dependency "$dependency" \
+      '.packageRules[] | select(.matchPackageNames == [$dependency]) |
+       .ignoreUnstable == true and ($dependency != "node" or .versioning == "node")' \
+      "${DEVBASE_ROOT}/renovate.json"
+    assert_success
+    if [[ "$dependency" == java-temurin ]]; then
+      run jq -ne --arg rule "$rule" \
+        'all(["25.0.4+7.0.LTS", "25.0.5+8.0.LTS", "29.0.0+1.0.LTS"][]; test($rule)) and
+         all(["26.0.2+9", "27.0.0+35", "29.0.0+1", "33.0.0+1.0.LTS"][]; test($rule) | not)'
+    else
+      run jq -ne --arg rule "$rule" \
+        'all(["24.21.0", "v24.22.0", "v26.1.0", "v27.1.0", "v28.1.0"][]; test($rule)) and
+         all(["25.1.0", "v25.1.0", "v29.1.0"][]; test($rule) | not)'
+    fi
+    assert_success
+  done
+}
+
+@test "Java version extraction preserves the Temurin selector during updates" {
+  local regex line current updated
+  regex=$(jq -r '.customManagers[] |
+    select(any(.managerFilePatterns[]; contains("packages"))) | .matchStrings[0]' \
+    "${DEVBASE_ROOT}/renovate.json")
+  line=$(jq -Rr 'select(contains("datasource=java-version depName=java-temurin"))' \
+    "${DEVBASE_ROOT}/dot/.config/devbase/packages.yaml")
+  current=$(printf '%s\n' "$line" | jq -Rr --arg regex "$regex" 'capture($regex).currentValue')
+  updated="${line/"$current"/25.0.5+8.0.LTS}"
+
+  assert_equal "$(printf '%s\n' "$updated" | yq -r '.java.version')" 'temurin-25.0.5+8.0.LTS'
+}
+
 @test "every customManagers matchString with ^/\$ anchors also declares (?m)" {
   local offenders=()
   local total=0

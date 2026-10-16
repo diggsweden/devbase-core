@@ -434,21 +434,40 @@ install_keystore_explorer() {
     return 0
   fi
 
-  if command_exists kse; then
-    show_progress success "KeyStore Explorer already installed"
-    return 0
-  fi
-
-  show_progress info "Installing KeyStore Explorer..."
   local kse_version="${TOOL_VERSIONS[keystore_explorer]}"
   local pkg_format
   pkg_format=$(_get_custom_pkg_format)
 
-  # KeyStore Explorer only provides deb, but it's architecture-independent Java
-  # For RPM systems, we can use alien or download the tarball instead
+  if command_exists kse; then
+    local installed_version="" package_info
+    if [[ "$pkg_format" == "deb" ]]; then
+      if package_info=$(dpkg-query -W -f='${db:Status-Status} ${Version}' kse 2>/dev/null) &&
+        [[ "$package_info" == installed\ * ]]; then
+        installed_version="${package_info#installed }"
+      fi
+    fi
+    if [[ -z "$installed_version" ]]; then
+      show_progress info "Keeping existing KeyStore Explorer (package version unavailable)"
+      return 0
+    fi
+    if dpkg --compare-versions "$installed_version" ge "${kse_version#v}"; then
+      show_progress success "KeyStore Explorer already installed (${installed_version})"
+      return 0
+    fi
+    show_progress info "Updating KeyStore Explorer from ${installed_version} to ${kse_version#v}..."
+  fi
+
+  show_progress info "Installing KeyStore Explorer..."
+
+  # Upstream names the deb kse_<version>-1_all.deb (package revision suffix
+  # since v5.7.0) and the zip kse-<version without dots>.zip.
   local kse_url kse_pkg cache_name
   if [[ "$pkg_format" == "deb" ]]; then
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_version#v}_all.deb"
+    local kse_deb_version="${kse_version#v}"
+    if dpkg --compare-versions "$kse_deb_version" ge "5.7.0"; then
+      kse_deb_version+="-1"
+    fi
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse_${kse_deb_version}_all.deb"
     cache_name="kse-${kse_version}.deb"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -464,7 +483,8 @@ install_keystore_explorer() {
     fi
   else
     # For RPM systems, download the zip/tarball and install manually
-    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/kse-${kse_version#v}.zip"
+    local kse_zip_name="kse-${kse_version//[v.]/}"
+    kse_url="${DEVBASE_URL_KSE_RELEASES}/${kse_version}/${kse_zip_name}.zip"
     cache_name="kse-${kse_version}.zip"
     kse_pkg="${_DEVBASE_TEMP}/${cache_name}"
 
@@ -477,7 +497,7 @@ install_keystore_explorer() {
       local kse_dir="${XDG_DATA_HOME:-$HOME/.local/share}/keystore-explorer"
       mkdir -p "$kse_dir"
       unzip -q -o "$kse_pkg" -d "$kse_dir"
-      ln -sf "$kse_dir/kse-${kse_version#v}/kse.sh" "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
+      ln -sf "$kse_dir/${kse_zip_name}/kse.sh" "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
       chmod +x "${XDG_BIN_HOME:-$HOME/.local/bin}/kse"
       show_progress success "KeyStore Explorer installed"
     else

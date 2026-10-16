@@ -16,8 +16,97 @@
 # Returns: 0 on success, non-zero on failure
 # Side-effects: Updates APT cache
 _pkg_apt_update() {
+  migrate_fish_ppa || return 1
+  _pkg_apt_configure_mirror || return 1
   run_with_spinner "Updating package lists" sudo apt-get -qq update
 }
+
+# Rewrite only official Ubuntu archive URIs, preserving suites and Signed-By.
+# The optional directory argument lets callers verify this against fixture files.
+_pkg_apt_configure_mirror() (
+  [[ -n "${DEVBASE_APT_REGISTRY:-}" ]] || return 0
+  local apt_dir="${1:-/etc/apt}" file candidate backup_path staged='' source_staged=''
+  if [[ ! "$DEVBASE_APT_REGISTRY" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
+    show_progress error "DEVBASE_APT_REGISTRY must be an HTTPS repository URL"
+    return 1
+  fi
+  validate_var_set "DEVBASE_BACKUP_DIR" || return 1
+  local backup_dir="${DEVBASE_BACKUP_DIR}/apt"
+  apt_dir="${apt_dir%/}"
+  for file in "$DEVBASE_BACKUP_DIR" "$backup_dir" "$backup_dir/sources.list.d"; do
+    if [[ -L "$file" ]]; then
+      show_progress error "Refusing APT backup through symlink: $file"
+      return 1
+    fi
+  done
+  mkdir -p "$backup_dir/sources.list.d" || return 1
+
+  # Keep APT backups with the other DevBase backups, outside APT's source scan.
+  # Move earlier adjacent backups even when the sources are already mirrored.
+  for file in "$apt_dir/sources.list.devbase-backup" "$apt_dir/sources.list.d/"*.list.devbase-backup "$apt_dir/sources.list.d/"*.sources.devbase-backup; do
+    [[ -f "$file" ]] || continue
+    backup_path="${file#"$apt_dir"/}"
+    backup_path="${backup_dir}/${backup_path%.devbase-backup}"
+    cp -pT --backup=numbered -- "$file" "$backup_path" || return 1
+    sudo rm -- "$file" || return 1
+  done
+  candidate=$(mktemp "${_DEVBASE_TEMP:?}/apt-mirror.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate" "$staged"; [[ -z "$source_staged" ]] || sudo rm -f -- "$source_staged"' EXIT
+  local last_byte
+  for file in "$apt_dir/sources.list" "$apt_dir/sources.list.d/"*.list "$apt_dir/sources.list.d/"*.sources; do
+    [[ -f "$file" ]] || continue
+    last_byte=$(tail -c 1 -- "$file") || return 1
+    # ENVIRON and concatenation preserve ampersands and backslashes in the URL.
+    _DEVBASE_APT_MIRROR="${DEVBASE_APT_REGISTRY%/}/" awk '
+      BEGIN { mirror = ENVIRON["_DEVBASE_APT_MIRROR"] }
+      function rewrite(line,    result, matched, suffix) {
+        result = ""
+        while (match(line, /https?:\/\/(([[:alnum:]-]+\.)?archive\.ubuntu\.com|security\.ubuntu\.com)\/ubuntu\/?([[:blank:]]|$)/)) {
+          matched = substr(line, RSTART, RLENGTH)
+          suffix = matched ~ /[[:blank:]]$/ ? substr(matched, length(matched), 1) : ""
+          result = result substr(line, 1, RSTART - 1) mirror suffix
+          line = substr(line, RSTART + RLENGTH)
+        }
+        return result line
+      }
+
+      # deb822 continuations belong to the preceding field until a blank line.
+      /^[^[:blank:]#][^:]*:/ { in_uris = ($0 ~ /^URIs:/) }
+      /^[[:blank:]]*$/ { in_uris = 0 }
+      {
+        if ($0 !~ /^[[:blank:]]*#/ && (in_uris || /^[[:blank:]]*deb(-src)?[[:blank:]]/))
+          $0 = rewrite($0)
+        print
+      }
+    ' "$file" >"$candidate" || return 1
+    # awk adds a newline to the final record; retain the original file ending.
+    if [[ -n "$last_byte" ]]; then
+      truncate -s -1 -- "$candidate" || return 1
+    fi
+    cmp -s "$file" "$candidate" && continue
+    if [[ -L "$file" ]]; then
+      show_progress error "Refusing to rewrite linked APT source: $file"
+      return 1
+    fi
+    backup_path="${backup_dir}/${file#"$apt_dir"/}"
+    if [[ -L "$backup_path" || (-e "$backup_path" && ! -f "$backup_path") ]]; then
+      show_progress error "Refusing invalid APT backup: $backup_path"
+      return 1
+    fi
+    # Preserve the first preimage within this backup rotation, like dotfiles.
+    if [[ ! -e "$backup_path" ]]; then
+      staged=$(mktemp "${backup_path}.XXXXXX") || return 1
+      cp -pT -- "$file" "$staged" || return 1
+      mv -T -- "$staged" "$backup_path" || return 1
+    fi
+    # Keep the active source intact until its root-owned replacement is complete.
+    source_staged=$(sudo mktemp "$(dirname "$file")/.devbase-apt.XXXXXX") || return 1
+    sudo install -m 644 -- "$candidate" "$source_staged" || return 1
+    sudo mv -fT -- "$source_staged" "$file" || return 1
+    source_staged=''
+    show_progress success "Configured Ubuntu mirror in $file"
+  done
+)
 
 # Brief: Install APT packages with real-time progress (whiptail only)
 # Params: $@ - package names
@@ -133,41 +222,6 @@ _pkg_apt_add_repo() {
     ;;
   esac
 
-  return 0
-}
-
-# Brief: Add Fish shell PPA for version 4.x
-# Params: None
-# Returns: 0 on success, 1 on failure
-# Side-effects: Adds fish-shell/release-4 PPA
-# Brief: Major version of the fish package the distro itself offers
-# Returns: 0 with major version on stdout, 1 if no candidate is available
-_pkg_apt_fish_candidate_major() {
-  local candidate
-  candidate=$(apt-cache policy fish 2>/dev/null | awk '/Candidate:/ {print $2}')
-  [[ -z "$candidate" || "$candidate" == "(none)" ]] && return 1
-  printf '%s' "${candidate%%.*}"
-}
-
-_pkg_apt_add_fish_ppa() {
-  # Ubuntu 26.04 (resolute) ships fish 4.x in universe, and the PPA has no
-  # build for newer series - adding it there would leave apt pointing at a
-  # repository with no packages.
-  local fish_major
-  if fish_major=$(_pkg_apt_fish_candidate_major) &&
-    [[ "$fish_major" =~ ^[0-9]+$ ]] && ((fish_major >= 4)); then
-    show_progress success "Fish ${fish_major}.x available in distro repos - skipping PPA"
-    return 0
-  fi
-
-  show_progress info "Adding Fish shell 4.x PPA..."
-
-  if ! _pkg_apt_add_repo "ppa" "fish-shell/release-4"; then
-    show_progress warning "Failed to add Fish 4.x PPA (will use default version from Ubuntu repos)"
-    return 1
-  fi
-
-  show_progress success "Fish 4.x PPA added"
   return 0
 }
 

@@ -489,5 +489,41 @@ EOF
     else
       echo "$tool_key = \"$version\""
     fi
-  done <<<"$packages" >>"$output_file"
+  done <<<"$packages" >>"$output_file" || return 1
+
+  _apply_mise_registry_settings "$output_file"
 }
+
+# Persist opt-in org settings in the managed global config. Bootstrap uses the
+# same values through native environment variables, including --no-config calls.
+_apply_mise_registry_settings() (
+  local output_file="$1" expression='.'
+  if [[ -n "${DEVBASE_MISE_URL_REPLACEMENTS:-}" ]]; then
+    export DEVBASE_MISE_URL_REPLACEMENTS
+    printf '%s\n' "$DEVBASE_MISE_URL_REPLACEMENTS" | yq -p=json -e \
+      'tag == "!!map" and ([.[] | select(tag != "!!str")] | length == 0)' >/dev/null || return 1
+    expression+=' | .settings.url_replacements = (strenv(DEVBASE_MISE_URL_REPLACEMENTS) | from_json) | .settings.use_versions_host_track = false'
+  fi
+  if [[ -n "${DEVBASE_MISE_PYTHON_COMPILE:-}" ]]; then
+    [[ "$DEVBASE_MISE_PYTHON_COMPILE" == true || "$DEVBASE_MISE_PYTHON_COMPILE" == false ]] || return 1
+    export DEVBASE_MISE_PYTHON_COMPILE
+    expression+=' | .settings.python.compile = env(DEVBASE_MISE_PYTHON_COMPILE)'
+  fi
+  if [[ -n "${DEVBASE_RUSTUP_DIST_SERVER:-}" && -n "${DEVBASE_RUSTUP_UPDATE_ROOT:-}" ]]; then
+    export DEVBASE_RUSTUP_DIST_SERVER DEVBASE_RUSTUP_UPDATE_ROOT
+    # rustup is a subprocess: project/global [env] alone does not configure it.
+    local tool
+    for tool in rust core:rust; do
+      expression+=" | (.tools.\"$tool\" | select(. != null))"
+      expression+=' |= {"version": ., "install_env": {"RUSTUP_DIST_SERVER": strenv(DEVBASE_RUSTUP_DIST_SERVER), "RUSTUP_UPDATE_ROOT": strenv(DEVBASE_RUSTUP_UPDATE_ROOT)}}'
+    done
+  fi
+  [[ "$expression" != '.' ]] || return 0
+
+  local candidate
+  candidate=$(mktemp "${output_file}.XXXXXX") || return 1
+  trap 'rm -f -- "$candidate"' EXIT
+  printf '%s\n\n' '# Managed by DevBase - generated from packages.yaml; do not edit.' >"$candidate" || return 1
+  yq -p=toml -o=toml "$expression" "$output_file" >>"$candidate" || return 1
+  mv -T -- "$candidate" "$output_file"
+)

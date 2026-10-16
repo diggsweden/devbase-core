@@ -139,6 +139,82 @@ migrate_deployed_vscode_settings() {
   return 0
 }
 
+# Runs from _pkg_apt_update, before APT reads the obsolete source. Only remove
+# dedicated Fish release-4 source files; a shared file needs manual cleanup.
+# The optional APT directory is used by fixture tests, never the installed host.
+migrate_fish_ppa() (
+  local apt_dir="${1:-/etc/apt}" file rc backup_file path staged=''
+  trap '[[ -z "$staged" ]] || rm -f -- "$staged"' EXIT
+  for file in "$apt_dir/sources.list" "$apt_dir/sources.list.d/"*.list "$apt_dir/sources.list.d/"*.sources; do
+    [[ -f "$file" ]] || continue
+    rc=0
+    awk -v format="${file##*.}" '
+      function inspect(value,    words, n, i) {
+        n = split(value, words, /[[:blank:]]+/)
+        for (i = 1; i <= n; i++) {
+          if (words[i] == "") continue
+          if (words[i] ~ /^https?:\/\/ppa\.(launchpadcontent\.net|launchpad\.net)\/fish-shell\/release-4\/ubuntu\/?$/)
+            fish = 1
+          else
+            other = 1
+        }
+      }
+      /^[[:blank:]]*#/ { next }
+      /^[[:blank:]]*$/ { in_uris = 0; next }
+      format == "sources" {
+        if (/^[^[:blank:]#][^:]*:/) {
+          in_uris = (tolower($0) ~ /^uris:/)
+          if (in_uris) {
+            value = $0
+            sub(/^[^:]*:[[:blank:]]*/, "", value)
+            inspect(value)
+          }
+        } else if (in_uris && /^[[:blank:]]/) {
+          inspect($0)
+        }
+        next
+      }
+      /^[[:blank:]]*deb(-src)?[[:blank:]]/ {
+        value = $0
+        sub(/^[[:blank:]]*deb(-src)?[[:blank:]]+/, "", value)
+        sub(/^\[[^]]*\][[:blank:]]*/, "", value)
+        split(value, words, /[[:blank:]]+/)
+        inspect(words[1])
+        next
+      }
+      { other = 1 }
+      END { exit fish ? (other ? 2 : 0) : 3 }
+    ' "$file" || rc=$?
+    [[ "$rc" != 3 ]] || continue
+    if [[ "$rc" == 2 ]]; then
+      show_progress error "Fish PPA is in a shared APT source; remove that entry manually: $file"
+      return 1
+    fi
+    [[ "$rc" == 0 ]] || return 1
+    if [[ -L "$apt_dir" || -L "$(dirname "$file")" || -L "$file" ]]; then
+      show_progress error "Refusing linked Fish PPA source: $file"
+      return 1
+    fi
+    validate_var_set DEVBASE_BACKUP_DIR || return 1
+    backup_file="${DEVBASE_BACKUP_DIR}/apt/${file#"$apt_dir"/}"
+    for path in "$DEVBASE_BACKUP_DIR" "$DEVBASE_BACKUP_DIR/apt" "$(dirname "$backup_file")" "$backup_file"; do
+      if [[ -L "$path" ]]; then
+        show_progress error "Refusing linked Fish PPA backup: $path"
+        return 1
+      fi
+    done
+    [[ ! -e "$backup_file" || -f "$backup_file" ]] || return 1
+    mkdir -p "$(dirname "$backup_file")" || return 1
+    staged=$(mktemp "${backup_file}.XXXXXX") || return 1
+    cp -pT -- "$file" "$staged" || return 1
+    chmod 600 "$staged" || return 1
+    mv -T --backup=numbered -- "$staged" "$backup_file" || return 1
+    [[ ! -L "$file" ]] && cmp -s "$file" "$backup_file" || return 1
+    sudo rm -- "$file" || return 1
+    show_progress success "Removed legacy Fish PPA source (backup: $backup_file)"
+  done
+)
+
 # Brief: Run all migrations
 # Context: Called during setup.sh to ensure clean state
 run_migrations() {

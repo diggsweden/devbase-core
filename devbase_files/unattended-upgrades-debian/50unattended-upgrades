@@ -43,8 +43,8 @@ Unattended-Upgrade::Package-Blacklist {
     // https://docs.python.org/3/howto/regex.html
 };
 
-// This option controls whether the development release of Ubuntu will be
-// upgraded automatically. Valid values are "true", "false", and "auto".
+// Skip automatic package updates on Ubuntu development releases.
+// LTS release upgrade prompts are controlled by /etc/update-manager/release-upgrades.
 Unattended-Upgrade::DevRelease "false";
 
 // This option allows you to control if on a unclean dpkg exit

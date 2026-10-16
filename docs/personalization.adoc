@@ -6,7 +6,7 @@
 
 == Preserving Customizations
 
-DevBase updates managed defaults and initializes personal configs only when absent. Paths below use the default XDG locations; create-only files are preserved even when empty or symlinked.
+DevBase updates managed defaults and initializes personal configs only when absent. Maven settings and organization-provided Gradle/container templates are exceptions, as described below. Paths below use the default XDG locations; create-only files are preserved even when empty or symlinked.
 
 [cols="2,3",options="header"]
 |===
@@ -16,7 +16,7 @@ DevBase updates managed defaults and initializes personal configs only when abse
 |Create-only. Known hosts are seeded from bundled and organization entries together; later host-key changes require manual verification.
 
 |Maven `~/.m2/settings.xml`
-|Create-only, from applicable proxy, registry or custom YAML fragments. No applicable configuration means no file is generated.
+|Create-only without custom-config. With custom-config and applicable proxy, registry or custom YAML fragments, replaced on reinstall after backing up to `DEVBASE_BACKUP_DIR/maven/settings.xml`. Personal servers, credentials and comments are not merged; linked settings or parent directories are rejected. No applicable configuration means no file is generated.
 
 |Neovim `~/.config/nvim/`
 |The entire existing path is preserved, including an empty directory or symlink. LazyVim initializes only an absent path when selected.
@@ -24,11 +24,14 @@ DevBase updates managed defaults and initializes personal configs only when abse
 |Starship `~/.config/starship/starship.toml`, Testcontainers `~/.testcontainers.properties`, IntelliJ version-specific `idea64.vmoptions`
 |Create-only personal defaults.
 
-|Gradle `init.gradle` and `gradle.properties`; containers `~/.config/containers/registries.conf`
-|Create-only when applicable. Gradle uses `GRADLE_USER_HOME`, defaulting to `~/.gradle`.
+|Gradle `init.gradle`; containers `~/.config/containers/registries.conf`
+|Organization templates manage these files: personal edits are replaced after a private backup to `DEVBASE_BACKUP_DIR/gradle/init.gradle` or `DEVBASE_BACKUP_DIR/containers/registries.conf`. Linked destinations and parents are rejected. Core templates remain create-only. Gradle uses `GRADLE_USER_HOME`, defaulting to `~/.gradle`.
+
+|Gradle `gradle.properties`; Cargo and Bundler user configs
+|Create-only. Cargo respects `CARGO_HOME` and existing legacy `config`; Bundler respects `BUNDLE_CONFIG`, then `BUNDLE_USER_CONFIG`, then `BUNDLE_USER_HOME`. Registry changes to existing Cargo/Bundler files require manual application.
 
 |Organization templates for personal paths, `.conf`, `.config` and `.service` files
-|Initialize absent destinations only. See link:customization.adoc[Custom Configuration] for routes and managed-template overrides.
+|Initialize absent destinations only, except the managed Maven, Gradle and container settings above. See link:customization.adoc[Custom Configuration] for routes and managed-template overrides.
 
 |Organization `bashrc.append`
 |Appends the supplied block once, preserving existing content and permissions and keeping a backup. Linked `.bashrc` files are left for manual review.
@@ -501,7 +504,7 @@ DevBase configuration files are located in:
 === Development Tools
 - mise global config: `~/.config/mise/config.toml` (DevBase managed)
 - Lazygit: `~/.config/lazygit/config.yml`
-- Podman/Containers: `~/.config/containers/registries.conf` (create-only when a registry is configured)
+- Podman/Containers: `~/.config/containers/registries.conf` (organization-managed when a registry and organization template are configured; otherwise create-only)
 
 === User Binaries
 - Personal scripts: `~/.local/bin/` (in PATH)

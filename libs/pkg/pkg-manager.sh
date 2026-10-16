@@ -207,26 +207,6 @@ install_liberation_fonts() {
 # DISTRO-SPECIFIC FEATURES
 # =============================================================================
 
-# Brief: Add Fish shell repository for latest version
-# Params: None
-# Returns: 0 on success, 1 on failure
-add_fish_repo() {
-  case "$_PKG_MANAGER" in
-  apt)
-    _pkg_apt_add_fish_ppa
-    ;;
-  dnf)
-    # Fedora has recent Fish in default repos
-    show_progress info "Fish 4.x available in default repos"
-    return 0
-    ;;
-  *)
-    show_progress info "Fish repository not available for $_PKG_MANAGER"
-    return 0
-    ;;
-  esac
-}
-
 # Brief: Configure Firefox to use OpenSC PKCS#11 module for smart card support
 # Params: $1 - path to the OpenSC PKCS#11 library
 # Uses: HOME, show_progress (globals/functions)
@@ -290,9 +270,6 @@ install_firefox_native() {
 # Side-effects: Loads package list, installs packages, configures locale, cleans up
 install_system_packages() {
   show_progress info "Installing system packages..."
-
-  # Add distro-specific repos for latest versions
-  add_fish_repo
 
   # Load package list from file
   if ! load_system_packages; then

@@ -54,6 +54,7 @@ source_summary() {
   source "${DEVBASE_ROOT}/libs/validation.sh"
   source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
   source "${DEVBASE_ROOT}/libs/distro.sh"
+  source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/summary.sh"
 }
 
@@ -102,6 +103,36 @@ source_summary() {
   assert_output --partial "Java:"
   assert_output --partial "Maven:"
   assert_output --partial "Gradle:"
+}
+
+@test "Maven summary uses the mise environment and ignores launcher noise" {
+  source_summary
+  cat >"${TEST_DIR}/bin/mise" <<'SCRIPT'
+#!/usr/bin/env bash
+[[ "$PWD" == "$HOME" && "$MISE_AUTO_INSTALL" == false ]] || exit 1
+[[ "$*" == 'exec --no-deps -- mvn -B -Dstyle.color=never --version' ]] || exit 1
+printf 'Picked up JAVA_TOOL_OPTIONS: private-fixture\n' >&2
+printf 'Launcher notice\nApache Maven 3.9.16 (fixture)\nJava version: 25.0.4\n'
+SCRIPT
+
+  run _summary_maven_version
+
+  assert_success
+  assert_output '3.9.16'
+}
+
+@test "Maven summary reports a failed probe as unavailable" {
+  source_summary
+  cat >"${TEST_DIR}/bin/mise" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'The JAVA_HOME environment variable is not defined correctly\n' >&2
+exit 1
+SCRIPT
+
+  run _summary_maven_version
+
+  assert_success
+  assert_output 'unavailable'
 }
 
 @test "_summary_shell_terminal outputs shell and terminal info" {
@@ -170,6 +201,17 @@ source_summary() {
   assert_output --partial "KeyStore Explorer:"
   assert_output --partial "IntelliJ IDEA:"
   assert_output --partial "JMC:"
+}
+
+@test "KeyStore Explorer summary finds an executable outside the user bin directory" {
+  source_summary
+  printf '#!/bin/sh\nexit 0\n' >"${TEST_DIR}/bin/kse"
+  chmod +x "${TEST_DIR}/bin/kse"
+
+  run _summary_optional_tools
+
+  assert_success
+  assert_line '  • KeyStore Explorer: installed'
 }
 
 @test "_summary_git_config outputs git configuration" {

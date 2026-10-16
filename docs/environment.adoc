@@ -179,12 +179,44 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 | _(none)_
 | Internal package registry port
 
+| `DEVBASE_APT_REGISTRY`
+| _(none)_
+| Ubuntu archive mirror. Rewrites official archive/security URIs before APT update, preserving suites and signing keys. Original source files are saved under `DEVBASE_BACKUP_DIR/apt/`, following the standard backup rotation. Earlier adjacent `.devbase-backup` files are moved there automatically.
+
+| `DEVBASE_GITHUB_REGISTRY`
+| _(none)_
+| HTTPS GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap. Non-HTTPS mirror URLs are rejected before invoking curl or wget.
+
+| `DEVBASE_MISE_URL_REPLACEMENTS`
+| _(none)_
+| JSON map of upstream URL prefixes to mirrors. Exported as `MISE_URL_REPLACEMENTS` during bootstrap and persisted as global mise settings. Installation-statistics POSTs are disabled when configured.
+
+| `DEVBASE_MISE_PYTHON_COMPILE`
+| _(mise default)_
+| Optional `true`/`false` setting for Python builds. Set `false` with a precompiled Python mirror to avoid the pyenv Git/source fallback. Applied during bootstrap and in global mise settings.
+
+| `DEVBASE_RUSTUP_DIST_SERVER`, `DEVBASE_RUSTUP_UPDATE_ROOT`
+| _(none)_
+| Rust distribution and rustup update mirrors. Exported during installation and in Fish; when both are set, also supplied as the generated Rust tool's `install_env`.
+
+| `DEVBASE_GO_REGISTRY`, `DEVBASE_GO_SUMDB`
+| _(none)_
+| Native `GOPROXY` and `GOSUMDB` values for installation and Fish. Keep the checksum database identity, e.g. `sum.golang.org https://registry.example/repository/gosum`.
+
+| `DEVBASE_CARGO_REGISTRY`, `DEVBASE_RUBYGEMS_REGISTRY`
+| _(none)_
+| URLs used by optional custom `cargo-config.toml.template` and `bundle-config.template`. Seed native user config files without replacing existing files. Respect `CARGO_HOME` (including legacy `config` precedence) and Bundler's `BUNDLE_CONFIG`, `BUNDLE_USER_CONFIG`, `BUNDLE_USER_HOME` precedence.
+
 | `DEVBASE_EXTRA_FORGES`
 | _(none)_
 | Comma-separated list of extra code-forge hostnames to create under `~/development/` (e.g. `gitlab.mycompany.com,gitea.example.org`). The built-in forges (`gitlab.com`, `github.com`, `bitbucket.org`, `codeberg.org`, `code.europa.eu`) are always created.
 |===
 
-These variables affect installation but are NOT exported to your shell.
+These inputs configure installation; supported client settings are also written to generated configuration or exported under their native names in Fish.
+
+Registry integrations are opt-in independently: setting only `DEVBASE_REGISTRY_URL` does not redirect APT, mise or installer downloads. Without the specific settings, core retains its upstream behaviour. Put organization endpoints in `org.env`, not in core or project manifests.
+
+When the mise map contains an HTTPS replacement for `https://api.github.com/`, setup does not prompt for a GitHub token. Upstream authentication belongs on that mirror. Other installations retain the existing optional-token check.
 
 == Proxy Configuration
 
@@ -208,12 +240,20 @@ DevBase sets the following when a proxy is detected:
 
 | `devbase_curl` wrapper
 | Uses configured proxy-safe curl options
+
+| `NODE_USE_ENV_PROXY=1`
+| Enables Node.js built-in clients to use `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` (including lowercase variants); preserves any explicit value
 |===
 
-This configuration happens automatically:
+Curl/wget compatibility settings are applied automatically:
 
 - **During installation**: In `libs/handle-network.sh`
-- **At runtime**: Via `~/.config/fish/functions/configure-proxy-curl.fish` (loaded by Fish config)
+- **At runtime**: Via `~/.config/fish/functions/__devbase_configure_proxy_curl.fish` (loaded by Fish config)
+
+Node's proxy default is applied during installation in `libs/bootstrap/bootstrap-apply.sh` and at Fish startup in `~/.config/fish/conf.d/06-node-config.fish`, after `00-proxy.fish`.
+It is enabled when at least one HTTP or HTTPS proxy variable is nonempty, including inherited proxy settings.
+It uses https://nodejs.org/docs/latest-v24.x/api/cli.html#node_use_env_proxy1[Node's documented environment-proxy support], available in DevBase's Node 24; libraries with custom agents may handle proxies separately.
+To opt out, set `NODE_USE_ENV_PROXY=0` in the installation environment or add `set -gx NODE_USE_ENV_PROXY 0` to a personal Fish file such as `~/.config/fish/conf.d/50-personal.fish`.
 
 ==== Manual Testing
 
