@@ -170,7 +170,7 @@ check_file_content() {
 mask_url_credentials() {
   # Mask every userinfo occurrence on the line, with or without a password.
   # Excluding / from both classes keeps a path containing @ untouched.
-  sed -E 's#://[^:/@[:space:]]*:[^@/[:space:]]*@#://***:***@#g; s#://[^:/@[:space:]]+@#://***@#g'
+  sed -E 's#://[^:/@[:space:]]*:[^@/[:space:]]*@#://***:***@#g; s#://[^:/@[:space:]]+@#://***@#g; s#(://[^?[:space:]"<>]+)\?[^[:space:]"<>]*#\1?[redacted]#g'
 }
 
 check_env_var() {
@@ -182,7 +182,7 @@ check_env_var() {
     local value="${!var_name}"
 
     # Mask password in URLs if requested (e.g., proxy URLs with credentials)
-    if [[ "$mask_password" == "true" ]] && [[ "$value" =~ ://.*:.*@ ]]; then
+    if [[ "$mask_password" == "true" ]]; then
       value=$(echo "$value" | mask_url_credentials)
     fi
 
@@ -201,11 +201,21 @@ check_env_var() {
   fi
 }
 
+sanitize_diagnostic_line() {
+  local line="$1"
+  # Do not expose credentials in properties, environment exports or auth headers.
+  if [[ "${line,,}" =~ (token|password|passwd|secret|authorization|_auth)[[:alnum:]_.-]*[[:space:]]*[=:[:space:]] ]]; then
+    printf '%s\n' '[redacted credential setting]'
+  else
+    printf '%s\n' "$line" | mask_url_credentials
+  fi
+}
+
 display_file_box() {
   local file="$1"
   local width="${2:-$BOX_WIDTH_NARROW}"
   local skip_pattern="${3:-^[[:space:]]*#}"
-  local mask_tokens="${4:-false}"
+  # Argument 4 is retained for compatibility; credentials are always redacted.
   local preserve_indent="${5:-false}"
 
   local term_width=$(tput cols 2>/dev/null || echo 80)
@@ -215,10 +225,8 @@ display_file_box() {
   if [[ $max_box_width -lt $min_width ]]; then
     while IFS= read -r line; do
       if [[ -n "$line" ]] && [[ ! "$line" =~ $skip_pattern ]]; then
-        local display_line="$line"
-        if [[ "$mask_tokens" == "true" ]] && [[ "$line" =~ TOKEN ]]; then
-          display_line=$(echo "$line" | sed "s/=.*/='**********'/")
-        fi
+        local display_line
+        display_line=$(sanitize_diagnostic_line "$line")
         if [[ "$preserve_indent" != "true" ]]; then
           display_line=$(echo "$display_line" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
         fi
@@ -241,17 +249,8 @@ display_file_box() {
 
   while IFS= read -r line; do
     if [[ -n "$line" ]] && [[ ! "$line" =~ $skip_pattern ]]; then
-      local display_line="$line"
-
-      # Mask sensitive tokens (e.g., GITHUB_TOKEN=...)
-      if [[ "$mask_tokens" == "true" ]] && [[ "$line" =~ TOKEN ]]; then
-        display_line=$(echo "$line" | sed "s/=.*/='**********'/")
-      fi
-
-      # Always mask passwords in proxy URLs (e.g., http://user:pass@host)
-      if [[ "$display_line" =~ ://.*:.*@ ]]; then
-        display_line=$(echo "$display_line" | mask_url_credentials)
-      fi
+      local display_line
+      display_line=$(sanitize_diagnostic_line "$line")
 
       # Trim whitespace: leading and trailing, or just trailing
       if [[ "$preserve_indent" == "true" ]]; then

@@ -240,86 +240,38 @@ fi
 check_git_config() {
   print_header "5. Git Configuration"
 
-  # Check ~/.gitconfig first
-  if file_exists "$GITCONFIG"; then
-    printf "\n  %b~/.gitconfig:%b\n" "${BOLD}" "${NC}"
-    local gitconfig_output=$(git config --list --file="$GITCONFIG" 2>/dev/null | sort)
-
-    if [[ -n "$gitconfig_output" ]]; then
-      while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-
-        local key=$(echo "$line" | cut -d'=' -f1)
-        local value=$(echo "$line" | cut -d'=' -f2-)
-
-        # Handle special value types
-        if [[ "$value" =~ ^/ ]]; then
-          value=$(normalize_path "$value")
-        fi
-
-        # Truncate very long values
-        if [[ ${#value} -gt $MAX_VALUE_LENGTH ]]; then
-          if [[ "$value" =~ ^ssh- ]]; then
-            # SSH keys are long - show only key type (first field) and email (last field)
-            # Example: "ssh-ed25519 AAAA...long_key user@host" -> "ssh-ed25519 ...user@host"
-            local key_type=$(awk '{print $1}' <<<"$value")
-            local key_email=$(awk '{print $NF}' <<<"$value")
-            value="$key_type ...$key_email"
-          else
-            value=$(truncate_string "$value")
-          fi
-        fi
-
-        print_check "pass" "$key = $value"
-      done <<<"$gitconfig_output"
-    else
-      printf "  %b%s%b (empty)\n" "${GRAY}" "$INFO" "${NC}"
+  # Only display useful, known settings. Other keys (including URL subsections)
+  # and values may contain credentials, headers or shell credential helpers.
+  local safe_keys='^(user\.(name|email|signingkey)|core\.(hookspath|autocrlf)|init\.defaultbranch|commit\.gpgsign|gpg\.format|http\.proxy|https\.proxy)$'
+  local config line key value key_type key_email
+  for config in "$GITCONFIG" "$CONFIG_HOME/git/config"; do
+    printf '\n  %b%s:%b\n' "$BOLD" "$(normalize_path "$config")" "$NC"
+    if ! file_exists "$config"; then
+      print_check fail "File not found"
+      continue
     fi
-  else
-    printf "\n  %b~/.gitconfig:%b\n" "${BOLD}" "${NC}"
-    print_check "fail" "$(printf '%s not found or empty' "$HOME/.gitconfig")"
-  fi
-
-  # Check ~/.config/git/config
-  local git_config_dir="$CONFIG_HOME/git/config"
-  if file_exists "$git_config_dir"; then
-    printf "\n  %b~/.config/git/config:%b\n" "${BOLD}" "${NC}"
-    local config_output=$(git config --list --file="$git_config_dir" 2>/dev/null | sort)
-
-    if [[ -n "$config_output" ]]; then
-      while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-
-        local key=$(echo "$line" | cut -d'=' -f1)
-        local value=$(echo "$line" | cut -d'=' -f2-)
-
-        # Handle special value types
-        if [[ "$value" =~ ^/ ]]; then
-          value=$(normalize_path "$value")
+    # NUL records keep multiline values from being mistaken for other settings.
+    while IFS= read -r -d '' line; do
+      key="${line%%$'\n'*}"
+      if [[ "$line" == *$'\n'* ]]; then
+        value=$(sanitize_diagnostic_line "${line#*$'\n'}")
+      else
+        # A key without a value is Git shorthand for a true boolean
+        value="true"
+      fi
+      [[ "$value" =~ ^/ ]] && value=$(normalize_path "$value")
+      if [[ ${#value} -gt $MAX_VALUE_LENGTH ]]; then
+        if [[ "$value" =~ ^ssh- ]]; then
+          key_type=$(awk '{print $1}' <<<"$value")
+          key_email=$(awk '{print $NF}' <<<"$value")
+          value="$key_type ...$key_email"
+        else
+          value=$(truncate_string "$value")
         fi
-
-        # Truncate very long values
-        if [[ ${#value} -gt $MAX_VALUE_LENGTH ]]; then
-          if [[ "$value" =~ ^ssh- ]]; then
-            # SSH keys are long - show only key type (first field) and email (last field)
-            # Example: "ssh-ed25519 AAAA...long_key user@host" -> "ssh-ed25519 ...user@host"
-            local key_type=$(awk '{print $1}' <<<"$value")
-            local key_email=$(awk '{print $NF}' <<<"$value")
-            value="$key_type ...$key_email"
-          else
-            value=$(truncate_string "$value")
-          fi
-        fi
-
-        print_check "pass" "$key = $value"
-      done <<<"$config_output"
-    else
-      printf "  %b%s%b (empty)\n" "${GRAY}" "$INFO" "${NC}"
-    fi
-  else
-    printf "\n  %b~/.config/git/config:%b\n" "${BOLD}" "${NC}"
-    print_check "fail" "File not found"
-  fi
+      fi
+      print_check pass "$key = $value"
+    done < <(git config --null --file="$config" --get-regexp "$safe_keys" 2>/dev/null)
+  done
 }
 
 # Check SSH configuration
@@ -730,7 +682,10 @@ check_config_files() {
   local shell_files=(
     "$HOME/.config/fish/config.fish"
     "$HOME/.config/fish/functions/__devbase_configure_proxy_curl.fish"
-    "$HOME/.config/fish/functions/__devbase_update_nag.fish"
+    "$HOME/.config/fish/functions/__devbase_update_check.fish"
+    "$HOME/.config/fish/functions/__devbase_update_is_snoozed.fish"
+    "$HOME/.config/fish/functions/devbase-update.fish"
+    "$HOME/.config/fish/functions/devbase-reconfigure.fish"
     "$HOME/.config/fish/functions/__devbase_verify_with_retry.fish"
     "$HOME/.config/fish/functions/devbase-font.fish"
     "$HOME/.config/fish/functions/devbase-theme.fish"
@@ -757,12 +712,12 @@ check_config_files() {
 
   # Conditionally check proxy.fish if proxy is configured
   if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
-    if [[ -f "$HOME/.config/fish/functions/proxy.fish" ]]; then
+    if [[ -f "$HOME/.config/fish/functions/devbase-proxy.fish" ]]; then
       printf "  %b✓%b %s
-" "${GREEN}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
+" "${GREEN}" "${NC}" "$HOME/.config/fish/functions/devbase-proxy.fish"
     else
       printf "  %b✗%b %s (expected with DEVBASE_PROXY_HOST/PORT)
-" "${RED}" "${NC}" "$HOME/.config/fish/functions/proxy.fish"
+" "${RED}" "${NC}" "$HOME/.config/fish/functions/devbase-proxy.fish"
     fi
   fi
 
@@ -966,96 +921,57 @@ check_apt_packages() {
 check_mise_tools() {
   print_subheader "Mise Tools"
 
-  # Compare generated global settings with the effective installed versions.
-  # Do not inspect project pins here.
-  local mise_config="$MISE_CONFIG"
+  MISE_INSTALLED_COUNT=0
+  MISE_TOTAL_COUNT=0
+  local command
+  for command in mise yq jq; do
+    if ! command -v "$command" &>/dev/null; then
+      print_check fail "Cannot verify mise tools: $command is missing"
+      return 0
+    fi
+  done
 
-  local mise_installed=0
-  local mise_total=0
-
-  if file_exists "$mise_config" && command -v mise &>/dev/null; then
-    # Only count installed versions selected by the effective config. Old cached
-    # versions and arbitrary commands on PATH do not verify the selected tool.
-    local installed_tools
-    installed_tools=$(mise --cd "$HOME" list --current --installed --no-header 2>/dev/null |
-      awk '{tool=$1; sub(/\[.*/, "", tool); print tool "@" $2}')
-
-    # Collect all tools first for sorting
-    declare -A tool_info
-    declare -a tool_names
-
-    # Parse config.toml for expected tools
-    # Format: tool = "version" OR "prefix:org/tool" = "version"
-    local in_env_section=false
-    while IFS= read -r line; do
-      # Track if we're in [env] section
-      [[ "$line" =~ ^\[env\] ]] && in_env_section=true
-      [[ "$line" =~ ^\[tools\] ]] && in_env_section=false
-      [[ "$line" =~ ^\[settings\] ]] && in_env_section=false
-
-      # Skip env section, comments, empty lines, and config settings
-      [[ "$in_env_section" == true ]] && continue
-      [[ "$line" =~ ^#.*$ ]] && continue
-      [[ -z "$line" ]] && continue
-      [[ "$line" =~ ^(experimental|legacy_version_file|asdf_compat|jobs|yes|http_timeout) ]] && continue
-
-      # Split on " = " (the assignment operator, not = inside brackets)
-      # This handles cases like: "gitlab:gitlab-org/cli" = "v1.68.0"
-      if [[ "$line" =~ ^([^=]+)\"][[:space:]]*=[[:space:]]*\"(.+)$ ]]; then
-        local tool_spec="${BASH_REMATCH[1]}\""
-        local version_spec="\"${BASH_REMATCH[2]}"
-      else
-        # Fallback for simpler format: tool = "version"
-        local tool_spec="${line%% = *}"
-        local version_spec="${line#* = }"
-      fi
-
-      # Clean up tool_spec (handle quotes and brackets)
-      local tool=$(echo "$tool_spec" | tr -d '"' | sed 's/[[:space:]]*$//' | sed 's/^[[:space:]]*//')
-      # Clean up version_spec (handle quotes and comments)
-      local expected_version=$(echo "$version_spec" | tr -d '"' | awk '{print $1}' | sed 's/^[[:space:]]*//')
-
-      # Keep backend and namespace: Tekton and GitLab both end in /cli.
-      tool="${tool%%\[*}"
-
-      # Skip empty or invalid entries
-      [[ -z "$tool" ]] && continue
-      [[ -z "$expected_version" ]] && continue
-
-      # Only add if not already in the associative array (avoid duplicates)
-      if [[ -z "${tool_info[$tool]:-}" ]]; then
-        tool_info["$tool"]="$expected_version"
-        tool_names+=("$tool")
-      fi
-    done < <(awk '/^\[tools\]/{flag=1;next}/^\[/{flag=0}flag' "$mise_config" | grep -E "^[a-z\"]+.*=" | grep -v "^#")
-
-    # Sort tool names
-    local sorted_tools
-    mapfile -t sorted_tools < <(printf '%s\n' "${tool_names[@]}" | sort)
-
-    # Display sorted tools and count them
-    for tool in "${sorted_tools[@]}"; do
-      [[ -z "$tool" ]] && continue
-      local expected_version="${tool_info[$tool]}"
-      mise_total=$((mise_total + 1))
-
-      local actual_versions
-      actual_versions=$(awk -F@ -v tool="$tool" '$1 == tool {print $2}' <<<"$installed_tools" | paste -sd ', ')
-      if [[ -n "$actual_versions" ]]; then
-        mise_installed=$((mise_installed + 1))
-        printf "  %b%s%b %s %b(effective: %s; DevBase default: %s)%b\n" "${GREEN}" "$CHECK" "${NC}" "$tool" "${DIM}" "$actual_versions" "$expected_version" "${NC}"
-      else
-        printf "  %b%s%b %s %b(no installed effective version; DevBase default: %s)%b\n" "${RED}" "$CROSS" "${NC}" "$tool" "${DIM}" "$expected_version" "${NC}"
-      fi
-    done
-
-    # Store results for summary
-    MISE_INSTALLED_COUNT=$mise_installed
-    MISE_TOTAL_COUNT=$mise_total
-  else
-    MISE_INSTALLED_COUNT=0
-    MISE_TOTAL_COUNT=0
+  # Parse TOML, including tables such as [tools.rust], rather than matching lines.
+  local expected_tools current_tools jq_status tools_json
+  # A missing or unparsable config is a failure, not an empty tool table
+  if ! tools_json=$(yq -p=toml -o=json '.tools // {}' "$MISE_CONFIG" 2>/dev/null); then
+    print_check fail "Cannot read configured mise tools"
+    return 0
   fi
+  expected_tools=$(jq -er 'to_entries | sort_by(.key) | .[] |
+      [.key | split("[")[0]] +
+      [(.value | if type == "object" then .version else . end | tostring)] | @tsv' <<<"$tools_json")
+  jq_status=$?
+  # jq -e exits 4 when the table is empty; that is a valid, tool-less config
+  if [[ $jq_status -ne 0 && $jq_status -ne 4 ]]; then
+    print_check fail "Cannot read configured mise tools"
+    return 0
+  fi
+  if [[ -z "$expected_tools" ]]; then
+    print_check pass "No mise tools configured"
+    return 0
+  fi
+  # Run outside projects. Include missing selections so a cached older version
+  # or only one installed member of a multi-version selection cannot pass.
+  if ! current_tools=$(mise --cd "$HOME" list --current --json 2>/dev/null) ||
+    ! jq -e 'type == "object"' <<<"$current_tools" >/dev/null 2>&1; then
+    print_check fail "Cannot read effective mise tool state"
+    return 0
+  fi
+
+  local tool expected_version actual_versions
+  while IFS=$'\t' read -r tool expected_version; do
+    [[ -n "$tool" ]] || continue
+    MISE_TOTAL_COUNT=$((MISE_TOTAL_COUNT + 1))
+    if actual_versions=$(jq -er --arg tool "$tool" '
+      .[$tool] // [] | select(length > 0 and all(.installed == true)) |
+      map(.version) | join(", ")' <<<"$current_tools"); then
+      MISE_INSTALLED_COUNT=$((MISE_INSTALLED_COUNT + 1))
+      print_check pass "$tool (effective: $actual_versions; DevBase default: $expected_version)"
+    else
+      print_check fail "$tool (no installed effective version or incomplete selection; DevBase default: $expected_version)"
+    fi
+  done <<<"$expected_tools"
 }
 
 # Check snap packages

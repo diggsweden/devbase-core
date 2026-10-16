@@ -79,13 +79,107 @@ teardown() {
 "gitlab:gitlab-org/cli" = "v1.119.0"
 EOF
   mise() {
-    [[ "$*" == "--cd $HOME list --current --installed --no-header" ]] || return 1
-    printf 'aqua:tektoncd/cli v0.46.1\n'
+    [[ "$*" == "--cd $HOME list --current --json" ]] || return 1
+    printf '%s\n' '{"aqua:tektoncd/cli":[{"version":"v0.46.1","installed":true}],"gitlab:gitlab-org/cli":[{"version":"v1.119.0","installed":false}]}'
   }
   run run_verification_check check_mise_tools
   assert_success
   assert_line --regexp 'aqua:tektoncd/cli .*effective: v0.46.1; DevBase default: v0.46.1'
-  assert_line --regexp 'gitlab:gitlab-org/cli .*no installed effective version; DevBase default: v1.119.0'
+  assert_line --regexp 'gitlab:gitlab-org/cli .*no installed effective version.*DevBase default: v1.119.0'
+}
+
+@test "mise verification counts structured and incomplete selections as failures" {
+  mkdir -p "$(dirname "$MISE_CONFIG")"
+  cat >"$MISE_CONFIG" <<'EOF'
+[tools]
+node = ["24.0.0", "26.0.0"]
+[tools.rust]
+version = "1.90.0"
+components = "rust-analyzer"
+EOF
+  mise() {
+    printf '%s\n' '{"node":[{"version":"24.0.0","installed":true},{"version":"26.0.0","installed":false}],"rust":[{"version":"1.90.0","installed":false}]}'
+  }
+  check_counts() {
+    check_mise_tools
+    printf 'counts=%s/%s failed=%s\n' "$MISE_INSTALLED_COUNT" "$MISE_TOTAL_COUNT" "$FAILED_CHECKS"
+  }
+  run run_verification_check check_counts
+  assert_success
+  assert_output --partial 'rust (no installed effective version'
+  assert_output --partial 'counts=0/2 failed=2'
+}
+
+@test "Git diagnostics exclude sensitive values and URL subsection keys" {
+  mkdir -p "$CONFIG_HOME/git"
+  git config --file "$HOME/.gitconfig" user.name 'Fixture User'
+  git config --file "$HOME/.gitconfig" http.extraHeader 'Authorization: Bearer fixture-header-secret'
+  git config --file "$CONFIG_HOME/git/config" 'url.https://fixture-subsection-secret@example.test/.insteadOf' 'https://example.test/'
+  git config --file "$CONFIG_HOME/git/config" http.proxy 'https://fixture-url-token@example.test/'
+  run run_verification_check check_git_config
+  assert_success
+  assert_output --partial 'Fixture User'
+  assert_output --partial 'https://***@example.test/'
+  refute_output --partial fixture-header-secret
+  refute_output --partial fixture-subsection-secret
+  refute_output --partial fixture-url-token
+}
+
+@test "Git diagnostics show a value-less boolean key as true" {
+  mkdir -p "$CONFIG_HOME/git"
+  printf '[commit]\n\tgpgsign\n' >"$HOME/.gitconfig"
+  run run_verification_check check_git_config
+  assert_success
+  assert_output --partial 'commit.gpgsign = true'
+  refute_output --partial 'commit.gpgsign = commit.gpgsign'
+}
+
+@test "native mise reports missing structured runtimes and distinct backends to the verifier" {
+  [[ -x "${DEVBASE_TEST_MISE_BIN:-}" ]] || skip 'Set DEVBASE_TEST_MISE_BIN for native validation'
+  export MISE_DATA_DIR="$TEST_DIR/mise-data" MISE_CACHE_DIR="$TEST_DIR/mise-cache" MISE_STATE_DIR="$TEST_DIR/mise-state"
+  export MISE_CONFIG_DIR="$CONFIG_HOME/mise" MISE_OFFLINE=true MISE_YES=1
+  mkdir -p "$MISE_CONFIG_DIR"
+  cat >"$MISE_CONFIG" <<'EOF'
+[tools]
+"aqua:tektoncd/cli" = "0.46.1"
+"gitlab:gitlab-org/cli" = "1.119.0"
+[tools.rust]
+version = "1.90.0"
+components = "rust-analyzer"
+EOF
+  "$DEVBASE_TEST_MISE_BIN" --cd "$HOME" trust "$MISE_CONFIG"
+  mise() { "$DEVBASE_TEST_MISE_BIN" "$@"; }
+  check_counts() {
+    check_mise_tools
+    printf 'counts=%s/%s failed=%s\n' "$MISE_INSTALLED_COUNT" "$MISE_TOTAL_COUNT" "$FAILED_CHECKS"
+  }
+  run run_verification_check check_counts
+  assert_success
+  assert_output --partial 'rust (no installed effective version'
+  assert_output --partial 'aqua:tektoncd/cli (no installed effective version'
+  assert_output --partial 'gitlab:gitlab-org/cli (no installed effective version'
+  assert_output --partial 'counts=0/3 failed=3'
+}
+
+@test "diagnostics sanitize credentials before narrow and wide formatting" {
+  printf '%s\n' 'https://fixture-token@example.test/' 'systemProp.http.proxyPassword=fixture-password' >"$TEST_DIR/settings"
+  render_settings() {
+    tput() { printf '%s\n' "$width"; }
+    display_file_box "$TEST_DIR/settings"
+    display_file_box "$TEST_DIR/settings" 54 '^[[:space:]]*#' true
+    export FIXTURE_PROXY='https://fixture-user:fixture-long-password@example.test/'
+    check_env_var FIXTURE_PROXY 24 true
+  }
+  local width
+  for width in 30 120; do
+    run run_verification_check render_settings
+    assert_success
+    refute_output --partial fixture-token
+    refute_output --partial fixture-password
+    refute_output --partial fixture-user
+    refute_output --partial fixture-long-password
+    assert_output --partial 'https://***@example.test/'
+  done
 }
 
 @test "verification expects the SSH config directory permissions set by installation" {

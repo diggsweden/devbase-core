@@ -1157,9 +1157,34 @@ _load_mise_verification() {
   assert_output '22.0.0'
   cmp "${TEST_DIR}/personal-before" "${XDG_CONFIG_HOME}/mise/config.toml"
   _load_mise_verification
+  # shellcheck disable=SC2329 # Called by the extracted verifier.
   mise() { "$DEVBASE_TEST_MISE_BIN" "$@"; }
   run check_mise_tools
   assert_success
   assert_output --partial 'node (effective: 22.0.0; DevBase default: 22.0.0)'
   refute_output --partial 'effective: 24.1.0'
+}
+
+@test "mise verification fails when the config file is missing" {
+  _load_mise_verification
+  rm -f "$MISE_CONFIG"
+  # shellcheck disable=SC2329
+  mise() { printf '{}\n'; }
+
+  run check_mise_tools
+  assert_success
+  assert_output --partial "fail: Cannot read configured mise tools"
+  refute_output --partial "No mise tools configured"
+}
+
+@test "mise verification accepts an empty tools table" {
+  _load_mise_verification
+  mkdir -p "$(dirname "$MISE_CONFIG")"
+  printf '[settings]\njobs = 6\n' >"$MISE_CONFIG"
+  # shellcheck disable=SC2329
+  mise() { printf '{}\n'; }
+
+  run check_mise_tools
+  assert_success
+  assert_output --partial "No mise tools configured"
 }

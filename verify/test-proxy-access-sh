@@ -722,7 +722,9 @@ main() {
   if [[ "$NO_PROXY_MODE" == "true" ]]; then
     printf "Mode: ${YELLOW}Direct connection (no proxy)${NC}\n"
   elif [[ -n "$PROXY_URL" ]]; then
-    printf "Proxy: ${BLUE}%s${NC}\n" "$PROXY_URL"
+    local proxy_display
+    proxy_display=$(printf '%s\n' "$PROXY_URL" | sed -E 's#://[^/@[:space:]]*@#://***@#g')
+    printf "Proxy: ${BLUE}%s${NC}\n" "$proxy_display"
   else
     printf "Mode: Direct connection\n"
   fi
