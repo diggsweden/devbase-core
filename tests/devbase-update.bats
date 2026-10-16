@@ -380,62 +380,100 @@ SCRIPT
 }
 
 # =============================================================================
-# Network failure / offline handling
+# Network failure / check error handling
 # =============================================================================
 
-@test "__devbase_update_check_core returns failure when fetch fails (offline)" {
+@test "__devbase_update_check_core reports git error when remote is unreachable" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
-  
-  # Use helper to create git mock that fails on fetch (offline mode)
-  create_git_update_mock --fetch-fails
-  
+
+  create_git_update_mock --offline
+
   run fish -c "
     set -gx HOME '$HOME'
     set -gx PATH '$PATH'
     source '$DEVBASE_UPDATE_FISH'
     __devbase_update_check_core
   "
-  
+
   assert_failure
+  assert_output --partial "Could not list tags"
+  assert_output --partial "Could not resolve host"
 }
 
-@test "__devbase_update_check_custom returns failure when fetch fails (offline)" {
+@test "__devbase_update_check_core does not depend on fetch (tag moved upstream)" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  # fetch --tags fails when a tag was re-tagged upstream; ls-remote still works
+  create_git_update_mock --fetch-fails --new-core-tag v2.0.0
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$PATH'
+    source '$DEVBASE_UPDATE_FISH'
+    __devbase_update_check_core
+  "
+
+  assert_success
+  assert_output --partial "v1.0.0 → v2.0.0"
+}
+
+@test "__devbase_update_check_custom reports git error when fetch fails" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   local custom_dir="${XDG_DATA_HOME}/devbase/custom"
-  
+
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
   create_mock_git_repo "$custom_dir" "v0.1.0" "https://github.com/myorg/custom.git"
-  
-  # Use helper to create git mock that fails on fetch (offline mode)
-  create_git_update_mock --fetch-fails
-  
+
+  create_git_update_mock --offline
+
   run fish -c "
     set -gx HOME '$HOME'
     set -gx PATH '$PATH'
     source '$DEVBASE_UPDATE_FISH'
     __devbase_update_check_custom
   "
-  
+
   assert_failure
+  assert_output --partial "Could not fetch custom config"
+  assert_output --partial "Could not resolve host"
 }
 
-@test "devbase-update shows offline message when both checks fail" {
+@test "devbase-update fails with the git reason when the check fails" {
   local core_dir="${XDG_DATA_HOME}/devbase/core"
   create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
-  
-  # Use helper to create git mock that fails on fetch (offline mode)
-  create_git_update_mock --fetch-fails
-  
+
+  create_git_update_mock --offline
+
   run fish -c "
     set -gx HOME '$HOME'
     set -gx PATH '$PATH'
     source '$DEVBASE_UPDATE_FISH'
     devbase-update
   " </dev/null
-  
-  assert_success
-  assert_output --partial "Offline"
+
+  assert_failure
+  assert_output --partial "Could not resolve host"
+  assert_output --partial "Could not check for updates"
+  refute_output --partial "Already up to date"
+}
+
+@test "devbase-update --check stays silent when the check fails" {
+  local core_dir="${XDG_DATA_HOME}/devbase/core"
+  create_mock_git_repo "$core_dir" "v1.0.0" "https://github.com/diggsweden/devbase-core.git"
+
+  create_git_update_mock --offline
+
+  run fish -c "
+    set -gx HOME '$HOME'
+    set -gx PATH '$PATH'
+    source '$DEVBASE_UPDATE_FISH'
+    devbase-update --check
+  "
+
+  assert_failure
+  assert_output ""
 }
 
 # =============================================================================

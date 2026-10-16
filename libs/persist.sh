@@ -38,7 +38,7 @@ persist_devbase_repos() {
       else
         # Fallback: clone without branch (tag might not exist on fresh clone)
         git clone --depth 1 "$current_remote" "$core_dest"
-        git -C "$core_dest" fetch --depth 1 --tags --quiet
+        git -C "$core_dest" fetch --depth 1 --tags --force --quiet
 
         if [[ -n "${DEVBASE_CORE_REF:-}" ]]; then
           if git -C "$core_dest" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null &&
@@ -73,7 +73,7 @@ persist_devbase_repos() {
         fi
       else
         if git -C "$core_dest" fetch --depth 1 origin "$core_ref" --quiet 2>/dev/null ||
-          git -C "$core_dest" fetch --depth 1 --tags --quiet; then
+          git -C "$core_dest" fetch --depth 1 --tags --force --quiet; then
           if git -C "$core_dest" checkout "$core_ref" --quiet 2>/dev/null; then
             show_progress success "Core repo updated at $core_dest"
           else

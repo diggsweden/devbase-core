@@ -34,6 +34,18 @@ function __devbase_update_print_error
     printf "%s✗%s %s\n" (set_color red) (set_color normal) "$argv[1]" >&2
 end
 
+function __devbase_update_print_check_error --description "Print why an update check failed"
+    # argv[1] = summary, argv[2..] = captured git output (stdout+stderr)
+    # Silenced via a flag: fish does not apply a caller's 2>/dev/null to
+    # output from nested command substitutions
+    set -q __devbase_update_quiet; and return 0
+    __devbase_update_print_warning "$argv[1]" >&2
+    # git puts the reason last
+    for line in $argv[2..-1][-2..-1]
+        printf "    %s\n" "$line" >&2
+    end
+end
+
 function __devbase_update_is_snoozed
     if test -f "$__devbase_snooze_file"
         set -l now (date +%s)
@@ -74,12 +86,17 @@ function __devbase_update_get_latest_tag --description "Get latest tag from remo
     # Uses version sort (sort -V) for proper ordering
     set -l remote_url $argv[1]
 
-    # Get all tags from remote
-    set -l all_tags (git ls-remote --tags "$remote_url" 2>/dev/null | \
-        string match -rg 'refs/tags/([^\^]+)$' | \
-        string match -rv '\^{}')
+    # Get all tags from remote; on failure, print git's reason to stderr
+    set -l output (git ls-remote --tags "$remote_url" 2>&1)
+    if test $status -ne 0
+        __devbase_update_print_check_error "Could not list tags from $remote_url" $output
+        return 1
+    end
+
+    set -l all_tags (printf '%s\n' $output | string match -rg 'refs/tags/([^\^]+)$')
 
     if test -z "$all_tags"
+        __devbase_update_print_check_error "No tags found at $remote_url"
         return 1
     end
 
@@ -104,7 +121,7 @@ function __devbase_update_get_latest_tag --description "Get latest tag from remo
         return 0
     end
 
-    # No recognized tags found
+    __devbase_update_print_check_error "No release tags (vX.Y.Z, -rc.N, -beta.N) found at $remote_url"
     return 1
 end
 
@@ -145,12 +162,8 @@ function __devbase_update_check_core --description "Check if core update is avai
         return 1
     end
 
-    # Fetch tags (shallow)
-    if not git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet 2>/dev/null
-        return 1
-    end
-
-    # Get latest tag from remote (supports vX.Y.Z, vX.Y.Z-beta.N, vX.Y.Z-rc.N)
+    # Ask the remote directly instead of fetching: the check must not depend
+    # on local tag state (a tag moved upstream makes `fetch --tags` fail)
     set -l latest (__devbase_update_get_latest_tag "$CORE_REMOTE")
 
     if test -z "$latest"
@@ -176,7 +189,9 @@ function __devbase_update_check_custom --description "Check if custom config upd
     test -n "$CUSTOM_REMOTE"; or return 1
 
     # Fetch latest (shallow)
-    if not git -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>/dev/null
+    set -l fetch_output (git -C "$__devbase_custom_dir" fetch --depth 1 --quiet 2>&1)
+    if test $status -ne 0
+        __devbase_update_print_check_error "Could not fetch custom config from $CUSTOM_REMOTE" $fetch_output
         return 1
     end
 
@@ -209,9 +224,10 @@ function __devbase_update_core --description "Update core to latest version or r
 
     __devbase_update_print_info "Updating core to $target..."
 
-    # Fetch the target (branch or tag)
+    # Fetch the target (branch or tag). --force lets tags moved upstream
+    # replace stale local copies instead of failing the whole fetch.
     if not git -C "$__devbase_core_dir" fetch --depth 1 origin "$target" --quiet 2>/dev/null
-        git -C "$__devbase_core_dir" fetch --depth 1 --tags --quiet
+        git -C "$__devbase_core_dir" fetch --depth 1 --tags --force --quiet
     end
 
     # Stash any local changes
@@ -280,8 +296,11 @@ function __devbase_update_check_only --description "Run the update check only (n
     set -l core_update ""
     set -l custom_update ""
 
+    # Runs at shell start: stay silent on failure
+    set -g __devbase_update_quiet 1
     set core_update (__devbase_update_check_core 2>/dev/null); or true
     set custom_update (__devbase_update_check_custom 2>/dev/null); or true
+    set -e __devbase_update_quiet
 
     if test -n "$core_update"
         echo "$core_update"
@@ -381,8 +400,9 @@ function __devbase_update_do_update --description "Perform the update"
 
     if test "$update_core" = false -a "$update_custom" = false
         if test "$core_check_failed" = true -o "$custom_check_failed" = true
-            printf "%sOffline: Could not check for updates%s\n" (set_color yellow) (set_color normal)
-            return 0
+            # The failing check already printed git's reason above
+            __devbase_update_print_error "Could not check for updates"
+            return 1
         end
         __devbase_update_print_success "Already up to date (core: $CORE_TAG)"
         return 0

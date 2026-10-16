@@ -248,7 +248,8 @@ SCRIPT
 #   --core-tag <tag>        Tag to return for ls-remote (default: v1.0.0)
 #   --new-core-tag <tag>    Additional newer tag to simulate update available
 #   --custom-sha <sha>      SHA to return for origin/HEAD (simulates custom update)
-#   --fetch-fails           Make fetch operations fail (offline mode)
+#   --fetch-fails           Make fetch fail as on a moved tag (ls-remote still works)
+#   --offline               Make all network operations (fetch, ls-remote) fail
 #   --log                   Log git calls to ${TEST_DIR}/logs/git.log
 # Example: create_git_update_mock --core-tag v1.0.0 --new-core-tag v2.0.0 --log
 create_git_update_mock() {
@@ -256,6 +257,7 @@ create_git_update_mock() {
   local new_core_tag=""
   local custom_sha=""
   local fetch_fails="false"
+  local offline="false"
   local log_calls="false"
 
   while [[ $# -gt 0 ]]; do
@@ -276,6 +278,10 @@ create_git_update_mock() {
       fetch_fails="true"
       shift
       ;;
+    --offline)
+      offline="true"
+      shift
+      ;;
     --log)
       log_calls="true"
       shift
@@ -294,7 +300,13 @@ create_git_update_mock() {
   local custom_sha_block=""
 
   [[ "$log_calls" == "true" ]] && log_line="echo \"\$*\" >> \"${TEST_DIR}/logs/git.log\""
-  [[ "$fetch_fails" == "true" ]] && fetch_exit="exit 1"
+  local ls_remote_fail=""
+  [[ "$fetch_fails" == "true" ]] &&
+    fetch_exit="echo ' ! [rejected] v0.9.0 -> v0.9.0 (would clobber existing tag)' >&2; exit 1"
+  if [[ "$offline" == "true" ]]; then
+    fetch_exit="echo 'fatal: unable to access remote: Could not resolve host' >&2; exit 128"
+    ls_remote_fail="echo 'fatal: unable to access remote: Could not resolve host' >&2; exit 128"
+  fi
   [[ -n "$new_core_tag" ]] && new_tag_line="echo \"def456	refs/tags/${new_core_tag}\""
   [[ -n "$custom_sha" ]] && custom_sha_block="echo \"${custom_sha}\"; exit 0"
 
@@ -309,6 +321,7 @@ fi
 
 # Handle ls-remote for tags
 if [[ "\$*" == *"ls-remote"* ]]; then
+  ${ls_remote_fail}
   echo "abc123	refs/tags/${core_tag}"
   ${new_tag_line}
   exit 0
