@@ -359,9 +359,10 @@ _assert_lazyvim_not_published() {
 
 @test "install_lazyvim cleans a partial failed render without publishing" {
   _setup_lazyvim_test
+  # The colorscheme spec is rendered by devbase-theme.fish through fish.
   # shellcheck disable=SC2329
-  envsubst_preserve_undefined() {
-    echo "partial render" >"$2"
+  fish() {
+    echo "partial render"
     return 1
   }
 

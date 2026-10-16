@@ -231,39 +231,86 @@ function __devbase_theme_get_vscode_theme
     end
 end
 
-function __devbase_theme_update_nvim --description "Update Neovim colorscheme"
+function __devbase_theme_nvim_colorscheme_lua --description "Print the LazyVim colorscheme spec for a theme"
+    # Single generator for lua/plugins/colorscheme.lua: setup renders it on a
+    # fresh LazyVim install and devbase-theme rewrites it later.
     set -l theme_name $argv[1]
-    
-    if not test -d ~/.config/nvim
-        return 0
-    end
-    
+    __devbase_theme_validate $theme_name >/dev/null; or return 1
+
+    set -l background dark
+    __devbase_theme_is_light $theme_name; and set background light
+
+    set -l repo
+    set -l colorscheme
+    set -l plugin_name
+    set -l setup
     switch $theme_name
-        case everforest-dark
-            printf 'return { { "sainnhe/everforest", lazy = false, priority = 1000, config = function() vim.g.everforest_background = "hard" vim.cmd("colorscheme everforest") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case everforest-light
-            printf 'return { { "sainnhe/everforest", lazy = false, priority = 1000, config = function() vim.g.everforest_background = "soft" vim.o.background = "light" vim.cmd("colorscheme everforest") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case catppuccin-mocha
-            printf 'return { { "catppuccin/nvim", name = "catppuccin", lazy = false, priority = 1000, config = function() require("catppuccin").setup({ flavour = "mocha" }) vim.cmd("colorscheme catppuccin") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case catppuccin-latte
-            printf 'return { { "catppuccin/nvim", name = "catppuccin", lazy = false, priority = 1000, config = function() require("catppuccin").setup({ flavour = "latte" }) vim.o.background = "light" vim.cmd("colorscheme catppuccin") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case tokyonight-night
-            printf 'return { { "folke/tokyonight.nvim", lazy = false, priority = 1000, config = function() require("tokyonight").setup({ style = "night" }) vim.cmd("colorscheme tokyonight") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case tokyonight-day
-            printf 'return { { "folke/tokyonight.nvim", lazy = false, priority = 1000, config = function() require("tokyonight").setup({ style = "day" }) vim.o.background = "light" vim.cmd("colorscheme tokyonight") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case gruvbox-dark
-            printf 'return { { "ellisonleao/gruvbox.nvim", lazy = false, priority = 1000, config = function() vim.o.background = "dark" vim.cmd("colorscheme gruvbox") end } }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-        case gruvbox-light
-            printf 'return { { "sainnhe/gruvbox-material", lazy = false, priority = 1000, config = function() vim.g.gruvbox_material_background = "medium" vim.cmd("set background=light") vim.cmd("colorscheme gruvbox-material") end } }' >~/.config/nvim/lua/plugins/colorscheme.lua
+        case 'everforest-*'
+            set repo sainnhe/everforest
+            set colorscheme everforest
+            set setup 'vim.g.everforest_background = "medium"' 'vim.g.everforest_better_performance = 1'
+        case 'catppuccin-*'
+            set repo catppuccin/nvim
+            set colorscheme catppuccin
+            set plugin_name catppuccin
+            set setup 'require("catppuccin").setup({ flavour = "'(string replace 'catppuccin-' '' -- $theme_name)'" })'
+        case 'tokyonight-*'
+            set repo folke/tokyonight.nvim
+            set colorscheme tokyonight
+            set setup 'require("tokyonight").setup({ style = "'(string replace 'tokyonight-' '' -- $theme_name)'" })'
+        case 'gruvbox-*'
+            set repo ellisonleao/gruvbox.nvim
+            set colorscheme gruvbox
         case nord
-            printf 'return { { "shaunsingh/nord.nvim", lazy = false, priority = 1000, config = function() vim.cmd("colorscheme nord") end } }' >~/.config/nvim/lua/plugins/colorscheme.lua
+            set repo shaunsingh/nord.nvim
+            set colorscheme nord
         case dracula
-            printf 'return { { "Mofiqul/dracula.nvim", lazy = false, priority = 1000, config = function() vim.cmd("colorscheme dracula") end } }' >~/.config/nvim/lua/plugins/colorscheme.lua
-        case solarized-dark
-            printf 'return { { "maxmx03/solarized.nvim", lazy = false, priority = 1000, config = function() vim.o.background = "dark" vim.cmd("colorscheme solarized") end } }' >~/.config/nvim/lua/plugins/colorscheme.lua
-        case solarized-light
-            printf 'return { { "maxmx03/solarized.nvim", lazy = false, priority = 1000, config = function() vim.o.background = "light" vim.cmd("colorscheme solarized") end } }' >~/.config/nvim/lua/plugins/colorscheme.lua
+            set repo Mofiqul/dracula.nvim
+            set colorscheme dracula
+        case 'solarized-*'
+            set repo maxmx03/solarized.nvim
+            set colorscheme solarized
     end
+
+    printf '%s\n' \
+        "-- Generated by DevBase for the $theme_name theme." \
+        '-- Rerun `devbase-theme <name>` to switch; LazyVim applies opts.colorscheme.' \
+        'return {' \
+        '  {' \
+        "    \"$repo\","
+    test -n "$plugin_name"; and printf '    name = "%s",\n' $plugin_name
+    printf '%s\n' \
+        '    lazy = false,' \
+        '    priority = 1000,' \
+        '    config = function()'
+    for line in $setup
+        printf '      %s\n' $line
+    end
+    printf '%s\n' \
+        "      vim.opt.background = '$background'" \
+        '    end,' \
+        '  },' \
+        '  {' \
+        '    "LazyVim/LazyVim",' \
+        '    opts = {' \
+        "      colorscheme = \"$colorscheme\"," \
+        '    },' \
+        '  },' \
+        '}'
+end
+
+function __devbase_theme_update_nvim --description "Update the LazyVim colorscheme spec"
+    set -l theme_name $argv[1]
+    set -l config_home ~/.config
+    set -q XDG_CONFIG_HOME; and test -n "$XDG_CONFIG_HOME"; and set config_home $XDG_CONFIG_HOME
+    # Only a LazyVim-style plugin directory receives the spec. Other personal
+    # Neovim configurations are left alone.
+    set -l plugins_dir "$config_home/nvim/lua/plugins"
+    test -d "$plugins_dir"; or return 0
+
+    set -l lua (__devbase_theme_nvim_colorscheme_lua $theme_name)
+    or return 1
+    printf '%s\n' $lua >"$plugins_dir/colorscheme.lua"
 end
 
 function __devbase_theme_update_vifm --description "Update vifm colorscheme"

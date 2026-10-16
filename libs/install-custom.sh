@@ -209,15 +209,18 @@ install_lazyvim() (
   fi
   safe_rm_rf "$staged_config" "$staged_config/.git" || return 1
 
-  source "${DEVBASE_ROOT}/libs/theme-registry.sh" || return 1
-  local theme_info="${THEME_CONFIGS[${DEVBASE_THEME//-/_}]:-dark}"
-  local theme_background="${theme_info%%|*}"
-
-  local colorscheme_template="${DEVBASE_DOT}/.config/nvim/lua/plugins/colorscheme.lua.template"
+  # devbase-theme owns the colorscheme spec; render the same file it writes
+  # later so a theme switch never changes the file's shape.
+  local theme_functions="${DEVBASE_DOT}/.config/fish/functions/devbase-theme.fish"
   local colorscheme_target="$staged_config/lua/plugins/colorscheme.lua"
 
   mkdir -p -- "$staged_config/lua/plugins" || return 1
-  if ! THEME_BACKGROUND="$theme_background" envsubst_preserve_undefined "$colorscheme_template" "$colorscheme_target"; then
+  # Even with --no-config fish creates its own config and data directories;
+  # keep them inside the staging directory so nothing else is touched.
+  # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
+  if ! XDG_CONFIG_HOME="$staging_dir" XDG_DATA_HOME="$staging_dir" \
+    fish --no-config -c 'source $argv[1]; and __devbase_theme_nvim_colorscheme_lua $argv[2]' \
+    "$theme_functions" "$DEVBASE_THEME" >"$colorscheme_target" || [[ ! -s "$colorscheme_target" ]]; then
     show_progress error "Failed to configure LazyVim colorscheme"
     return 1
   fi

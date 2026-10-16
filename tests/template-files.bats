@@ -18,28 +18,51 @@ setup() {
   export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
 }
 
-@test "colorscheme.lua.template keeps its expected structure" {
-  local template="${DEVBASE_ROOT}/dot/.config/nvim/lua/plugins/colorscheme.lua.template"
-  
-  assert_file_exists "$template"
-  
-  # Check file has more than just one line (corruption check)
-  local line_count
-  line_count=$(wc -l < "$template")
-  [ "$line_count" -gt 5 ]
-  
-  # Anchored: assert_file_contains is a substring match, so "return {" also
-  # matches a corrupted "return {{".
-  run grep -cx 'return {' "$template"
-  assert_output "1"
-  assert_file_contains "$template" "colorscheme"
-  assert_file_contains "$template" "sainnhe/everforest"
-  assert_file_contains "$template" "LazyVim/LazyVim"
-  assert_file_contains "$template" "colorscheme"
-  
+_render_colorscheme() {
+  # devbase-theme is the single generator for lua/plugins/colorscheme.lua;
+  # setup renders it the same way for a fresh LazyVim install.
+  fish --no-config -c 'source $argv[1]; and __devbase_theme_nvim_colorscheme_lua $argv[2]' \
+    "${DEVBASE_ROOT}/dot/.config/fish/functions/devbase-theme.fish" "$1"
 }
 
-@test "colorscheme.lua.template parses as Lua" {
+@test "devbase-theme renders a LazyVim colorscheme spec for every theme" {
+  local theme expected_background
+  for theme in everforest-dark everforest-light catppuccin-mocha catppuccin-latte \
+    tokyonight-night tokyonight-day gruvbox-dark gruvbox-light nord dracula \
+    solarized-dark solarized-light; do
+    run _render_colorscheme "$theme"
+    assert_success
+    # One top-level table with the plugin spec and LazyVim's own colorscheme option
+    assert_line --index 2 'return {'
+    assert_equal "$(grep -cx 'return {' <<<"$output")" 1
+    assert_output --partial '    priority = 1000,'
+    assert_output --partial '    "LazyVim/LazyVim",'
+    assert_output --regexp 'colorscheme = "[a-z]+",'
+    expected_background=dark
+    [[ "$theme" == *-light || "$theme" == *-latte || "$theme" == *-day ]] && expected_background=light
+    assert_output --partial "vim.opt.background = '${expected_background}'"
+  done
+}
+
+@test "devbase-theme selects the matching Neovim plugin per theme family" {
+  run _render_colorscheme catppuccin-mocha
+  assert_output --partial '"catppuccin/nvim",'
+  assert_output --partial 'name = "catppuccin",'
+  assert_output --partial 'flavour = "mocha"'
+  run _render_colorscheme tokyonight-day
+  assert_output --partial '"folke/tokyonight.nvim",'
+  assert_output --partial 'style = "day"'
+  run _render_colorscheme everforest-dark
+  assert_output --partial '"sainnhe/everforest",'
+  assert_output --partial 'colorscheme = "everforest",'
+}
+
+@test "devbase-theme rejects an unknown theme for the colorscheme spec" {
+  run _render_colorscheme no-such-theme
+  assert_failure
+}
+
+@test "rendered colorscheme spec parses as Lua" {
   # luacheck is not installed here or in CI. nvim ships LuaJIT and is present
   # on any devbase machine; loadfile parses without executing.
   local validator=""
@@ -47,14 +70,15 @@ setup() {
   [[ -z "$validator" ]] && command -v nvim &>/dev/null && validator=nvim
   [[ -n "$validator" ]] || skip "no Lua validator available (install luacheck or nvim)"
 
-  local template="${DEVBASE_ROOT}/dot/.config/nvim/lua/plugins/colorscheme.lua.template"
-  local rendered="${BATS_TEST_TMPDIR}/colorscheme.lua"
-  sed 's/\${THEME_BACKGROUND}/dark/' "$template" >"$rendered"
-
-  if [[ "$validator" == luacheck ]]; then
-    run luacheck --no-config --codes "$rendered"
-  else
-    run nvim --headless --clean -c "lua if not loadfile('${rendered}') then vim.cmd('cq') end" -c q
-  fi
-  assert_success
+  local theme rendered
+  for theme in everforest-dark catppuccin-latte tokyonight-night gruvbox-light nord solarized-dark; do
+    rendered="${BATS_TEST_TMPDIR}/${theme}.lua"
+    _render_colorscheme "$theme" >"$rendered"
+    if [[ "$validator" == luacheck ]]; then
+      run luacheck --no-config --codes "$rendered"
+    else
+      run nvim --headless --clean -c "lua if not loadfile('${rendered}') then vim.cmd('cq') end" -c q
+    fi
+    assert_success
+  done
 }
