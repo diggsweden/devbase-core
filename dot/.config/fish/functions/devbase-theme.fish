@@ -65,9 +65,9 @@ function __devbase_theme_get_bat_theme
         case everforest-light
             echo "GitHub"
         case catppuccin-mocha
-            echo "Dracula"
+            echo "Catppuccin Mocha"
         case catppuccin-latte
-            echo "OneHalfLight"
+            echo "Catppuccin Latte"
         case tokyonight-night
             echo "Visual Studio Dark+"
         case tokyonight-day
@@ -185,7 +185,7 @@ function __devbase_theme_get_zellij_theme
         case tokyonight-night
             echo "tokyo-night"
         case tokyonight-day
-            echo "tokyo-day"
+            echo "tokyo-night-light"
         case gruvbox-dark
             echo "gruvbox-dark"
         case gruvbox-light
@@ -467,12 +467,11 @@ end
 function __devbase_theme_update_lazygit --description "Update Lazygit theme configuration"
     set -l theme_name $argv[1]
     
+    # The delta diff renderer needs an explicit mode; keep it in step with the theme
     if test -f ~/.config/lazygit/config.yml
-        if __devbase_theme_is_light $theme_name
-            sed -i 's/lightTheme: .*/lightTheme: true/' ~/.config/lazygit/config.yml
-        else
-            sed -i 's/lightTheme: .*/lightTheme: false/' ~/.config/lazygit/config.yml
-        end
+        set -l mode dark
+        __devbase_theme_is_light $theme_name; and set mode light
+        sed -i "s/command: delta --\(dark\|light\) /command: delta --$mode /" ~/.config/lazygit/config.yml
     end
 end
 

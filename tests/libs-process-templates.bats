@@ -118,10 +118,14 @@ teardown() {
   assert_output "443"
 }
 
-@test "detect_clipboard_utility returns __smart_copy when no clipboard tool available" {
+@test "detect_clipboard_utility prints nothing when no clipboard tool is available" {
+  # Only uname is reachable, so no clipboard utility can be found.
+  mkdir -p "${TEST_DIR}/nobin"
+  ln -s "$(command -v uname)" "${TEST_DIR}/nobin/uname"
+  ln -s "$(command -v grep)" "${TEST_DIR}/nobin/grep"
   run bash -c "
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
-    export PATH='/usr/bin:/bin'
+    export PATH='${TEST_DIR}/nobin'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
     source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
@@ -130,6 +134,7 @@ teardown() {
   "
   
   assert_success
+  assert_output ""
 }
 
 # Organization overrides replace staging copies, not their source templates.
@@ -157,4 +162,26 @@ _source_templates() {
   assert_output "override"
   run bash -c "find '${TEST_DIR}/vanilla' -name 'attacker-supplied.template' | wc -l"
   assert_output "0"
+}
+
+@test "process_all_templates leaves copy_command unset when no clipboard utility exists" {
+  run bash -c "
+    export DEVBASE_ROOT='${DEVBASE_ROOT}' XDG_CONFIG_HOME='${XDG_CONFIG_HOME}' HOME='${HOME}'
+    source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/validation.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/ui/ui-helpers.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/utils.sh' >/dev/null 2>&1
+    source '${DEVBASE_ROOT}/libs/process-templates.sh' >/dev/null 2>&1
+    for var in \"\${DEVBASE_REQUIRED_TEMPLATE_VARS[@]}\"; do export \"\$var=placeholder\"; done
+    detect_clipboard_utility() { :; }
+    staging='${TEST_DIR}/staging'
+    mkdir -p \"\$staging/.config/zellij\"
+    cp '${DEVBASE_ROOT}/dot/.config/zellij/config.kdl.template' \"\$staging/.config/zellij/\"
+    process_all_templates \"\$staging\" || exit 1
+    cat \"\$staging/.config/zellij/config.kdl\"
+  "
+  assert_success
+  refute_output --partial 'copy_command ""'
+  assert_output --partial '// copy_command unset'
+  assert_output --partial 'theme "placeholder"'
 }

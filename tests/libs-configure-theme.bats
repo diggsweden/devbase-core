@@ -93,8 +93,7 @@ setup() {
   apply_theme "everforest-dark"
   
   [[ "$THEME_BACKGROUND" == "dark" ]]
-  [[ "$DELTA_DARK" == "true" ]]
-  [[ "$LAZYGIT_LIGHT_THEME" == "false" ]]
+  [[ "$DELTA_MODE" == "dark" ]]
 }
 
 @test "apply_theme sets light theme variables correctly" {
@@ -103,8 +102,7 @@ setup() {
   apply_theme "everforest-light"
   
   [[ "$THEME_BACKGROUND" == "light" ]]
-  [[ "$DELTA_DARK" == "false" ]]
-  [[ "$LAZYGIT_LIGHT_THEME" == "true" ]]
+  [[ "$DELTA_MODE" == "light" ]]
 }
 
 @test "apply_theme defaults to everforest-dark when no theme specified" {
@@ -138,7 +136,7 @@ setup() {
   
   apply_theme "gruvbox-dark"
   
-  [[ "$DELTA_FEATURES" == "decorations line-numbers" ]]
+  [[ "$DELTA_FEATURES" == "line-numbers" ]]
 }
 
 @test "apply_theme sets all tool-specific variables" {
@@ -163,8 +161,8 @@ setup() {
   source "${DEVBASE_ROOT}/libs/configure-theme.sh"
 
   local theme_vars=(
-    BAT_THEME BTOP_THEME DELTA_SYNTAX_THEME DELTA_FEATURES DELTA_DARK
-    ZELLIJ_THEME THEME_BACKGROUND LAZYGIT_LIGHT_THEME VIFM_COLORSCHEME K9S_SKIN
+    BAT_THEME BTOP_THEME DELTA_SYNTAX_THEME DELTA_FEATURES DELTA_MODE
+    ZELLIJ_THEME THEME_BACKGROUND VIFM_COLORSCHEME K9S_SKIN
   )
 
   local theme var missing=()

@@ -18,12 +18,12 @@ THEME_CONFIGS[everforest_dark]="dark|Monokai Extended|everforest-dark-hard|Monok
 THEME_CONFIGS[everforest_light]="light|GitHub|everforest-light-medium|GitHub|everforest-light|everforest|everforest-light|everforest-light"
 
 # Catppuccin themes
-THEME_CONFIGS[catppuccin_mocha]="dark|Dracula|catppuccin_mocha|Dracula|catppuccin-mocha|catppuccin-mocha|solarized-dark|catppuccin-mocha"
-THEME_CONFIGS[catppuccin_latte]="light|OneHalfLight|catppuccin_latte|OneHalfLight|catppuccin-latte|catppuccin-latte|solarized-light|catppuccin-latte"
+THEME_CONFIGS[catppuccin_mocha]="dark|Catppuccin Mocha|catppuccin_mocha|Catppuccin Mocha|catppuccin-mocha|catppuccin-mocha|solarized-dark|catppuccin-mocha"
+THEME_CONFIGS[catppuccin_latte]="light|Catppuccin Latte|catppuccin_latte|Catppuccin Latte|catppuccin-latte|catppuccin-latte|solarized-light|catppuccin-latte"
 
 # Tokyo Night themes
 THEME_CONFIGS[tokyonight_night]="dark|Visual Studio Dark+|tokyo-night|Visual Studio Dark+|tokyo-night|tokyonight-night|gruvbox|gruvbox-dark"
-THEME_CONFIGS[tokyonight_day]="light|GitHub|everforest-light-medium|GitHub|tokyo-day|tokyonight-day|solarized-light|everforest-light"
+THEME_CONFIGS[tokyonight_day]="light|GitHub|everforest-light-medium|GitHub|tokyo-night-light|tokyonight-day|solarized-light|everforest-light"
 
 # Gruvbox themes
 THEME_CONFIGS[gruvbox_dark]="dark|gruvbox-dark|gruvbox_dark|gruvbox-dark|gruvbox-dark|gruvbox|gruvbox|gruvbox-dark"

@@ -17,20 +17,9 @@ if test "$EDITOR" = "nvim"; or test "$EDITOR" = "vim"; or test "$EDITOR" = "vi"
     set fish_cursor_replace_one underscore
     set fish_cursor_visual block
     
-    # Show mode indicator in prompt
-    function fish_mode_prompt
-        switch $fish_bind_mode
-            case default
-                echo -n '(N) '
-            case insert
-                echo -n '(I) '
-            case replace_one
-                echo -n '(R) '
-            case visual
-                echo -n '(V) '
-        end
-    end
-    
+    # The mode indicator comes from Starship (vimcmd_* symbols in starship.toml);
+    # `starship init` removes fish_mode_prompt, so none is defined here.
+
     # Add Alt+Y to accept autosuggestion in vi mode (for insert mode)
     bind -M insert \ey accept-autosuggestion
 else

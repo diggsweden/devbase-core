@@ -14,26 +14,19 @@ function update_ls_colors
     end
     
     # Map DEVBASE_THEME to appropriate vivid theme
+    # vivid ships every DevBase theme except Everforest (`vivid themes`)
+    set -l vivid_theme
     switch $DEVBASE_THEME
-        case "everforest-dark"
-            # Everforest doesn't exist in vivid, use jellybeans as closest match
-            set -gx LS_COLORS (vivid generate jellybeans)
-        case "gruvbox-dark"
-            set -gx LS_COLORS (vivid generate gruvbox-dark)
-        case "gruvbox-light"
-            set -gx LS_COLORS (vivid generate gruvbox-light)
-        case "catppuccin-mocha"
-            set -gx LS_COLORS (vivid generate catppuccin-mocha)
-        case "nord"
-            set -gx LS_COLORS (vivid generate nord)
-        case "dracula"
-            set -gx LS_COLORS (vivid generate dracula)
-        case "one-dark"
-            set -gx LS_COLORS (vivid generate one-dark)
+        case everforest-dark
+            set vivid_theme jellybeans
+        case everforest-light
+            set vivid_theme one-light
+        case catppuccin-mocha catppuccin-latte tokyonight-night tokyonight-day gruvbox-dark gruvbox-light solarized-dark solarized-light nord dracula
+            set vivid_theme $DEVBASE_THEME
         case '*'
-            # Default to a generic dark theme
-            set -gx LS_COLORS (vivid generate ayu)
+            set vivid_theme ayu
     end
+    set -gx LS_COLORS (vivid generate $vivid_theme)
 end
 
 # Set default theme if not already set (first run)

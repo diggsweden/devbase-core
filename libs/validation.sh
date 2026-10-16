@@ -23,17 +23,17 @@ if ! [[ -v DEVBASE_REQUIRED_TEMPLATE_VARS ]]; then
     "BTOP_THEME"
     "DELTA_SYNTAX_THEME"
     "DELTA_FEATURES"
-    "DELTA_DARK"
+    "DELTA_MODE"
     "ZELLIJ_THEME"
-    "ZELLIJ_COPY_COMMAND"
     "THEME_BACKGROUND"
-    "LAZYGIT_LIGHT_THEME"
     "VIFM_COLORSCHEME"
     "K9S_SKIN"
   )
 
   # Variables that enable optional features; a warning is emitted if unset but setup continues.
   readonly -a DEVBASE_OPTIONAL_TEMPLATE_VARS=(
+    # Empty when no clipboard utility exists; Zellij then falls back to OSC 52
+    "ZELLIJ_COPY_COMMAND"
     "DEVBASE_CUSTOM_CERTS"
     "DEVBASE_PROXY_HOST"
     "DEVBASE_PROXY_PORT"

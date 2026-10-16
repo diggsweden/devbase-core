@@ -255,9 +255,9 @@ detect_clipboard_utility() {
     echo "xclip -selection clipboard"
   elif command -v xsel &>/dev/null; then
     echo "xsel --clipboard"
-  else
-    echo "__smart_copy"
   fi
+  # No utility: print nothing so Zellij falls back to OSC 52 (a fish function
+  # cannot be used; Zellij spawns the command without a shell).
 }
 
 process_all_templates() {
@@ -275,6 +275,14 @@ process_all_templates() {
     # Safe delete: only remove files that explicitly end with .template
     [[ "$template" == *.template ]] && { rm "$template" || return 1; }
   done < <(find "${temp_dir}" -name "*.template" -type f -print0)
+
+  # An empty copy_command would run nothing; leave it unset for OSC 52 instead.
+  if [[ -z "$ZELLIJ_COPY_COMMAND" ]]; then
+    local zellij_config="${temp_dir}/.config/zellij/config.kdl"
+    if [[ -f "$zellij_config" ]]; then
+      sed -i 's|^copy_command ""$|// copy_command unset: no clipboard utility found, Zellij uses OSC 52|' "$zellij_config" || return 1
+    fi
+  fi
 
   if [[ -n "${DEVBASE_PROXY_HOST:-}" && -n "${DEVBASE_PROXY_PORT:-}" ]]; then
     local proxy_target="${temp_dir}/.config/fish/conf.d/00-proxy.fish"

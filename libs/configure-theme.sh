@@ -31,7 +31,7 @@ _apply_theme_get_fzf_colors() {
 # Params: $1 - theme name (default: everforest-dark)
 # Uses: THEME_CONFIGS, FZF_COLORS (globals)
 # Modifies: DEVBASE_THEME, BAT_THEME, BTOP_THEME, DELTA_SYNTAX_THEME, ZELLIJ_THEME,
-#           VIFM_COLORSCHEME, K9S_SKIN, DELTA_DARK, LAZYGIT_LIGHT_THEME,
+#           VIFM_COLORSCHEME, K9S_SKIN, DELTA_MODE, THEME_BACKGROUND,
 #           DELTA_FEATURES, FZF_DEFAULT_OPTS (all exported)
 # Returns: 0 always
 # Side-effects: Exports theme variables for all tools
@@ -62,16 +62,16 @@ apply_theme() {
   export VIFM_COLORSCHEME="$vifm"
   export K9S_SKIN="$k9s"
 
+  # delta wants an explicit dark/light; lazygit's renderer reuses the same word
   if [[ "$is_light" == "light" ]]; then
     export THEME_BACKGROUND="light"
-    export DELTA_DARK="false"
-    export LAZYGIT_LIGHT_THEME="true"
+    export DELTA_MODE="light"
   else
     export THEME_BACKGROUND="dark"
-    export DELTA_DARK="true"
-    export LAZYGIT_LIGHT_THEME="false"
+    export DELTA_MODE="dark"
   fi
 
-  export DELTA_FEATURES="decorations line-numbers"
+  # `decorations` is only an example feature name in delta's docs, not a built-in
+  export DELTA_FEATURES="line-numbers"
   export FZF_DEFAULT_OPTS="$(_apply_theme_get_fzf_colors "$theme")"
 }
