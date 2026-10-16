@@ -19,7 +19,7 @@ command -v gitleaks >/dev/null 2>&1 || {
 printf "→ Scanning staged files for secrets (gitleaks)...\n"
 
 # Capture gitleaks output
-output=$(gitleaks protect --staged --verbose --redact=50 2>&1)
+output=$(gitleaks git --pre-commit --staged --redact=100 --no-banner 2>&1)
 status=$?
 
 if [[ $status -eq 0 ]]; then

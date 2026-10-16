@@ -27,6 +27,22 @@ teardown() {
   common_teardown
 }
 
+@test "disabling hooks removes only DevBase-owned global values" {
+  source_core_libs
+  source "${DEVBASE_ROOT}/libs/configure-git-hooks.sh"
+  export DEVBASE_ENABLE_GIT_HOOKS=false
+  git config --file "$HOME/.gitconfig" core.hooksPath "$XDG_CONFIG_HOME/git/git-hooks"
+  git config --file "$XDG_CONFIG_HOME/git/config" --add core.hooksPath "$XDG_CONFIG_HOME/git/git-hooks"
+  git config --file "$XDG_CONFIG_HOME/git/config" --add core.hooksPath "$HOME/personal-hooks"
+  run configure_git_hooks
+  assert_success
+  run git config --file "$XDG_CONFIG_HOME/git/config" --get-all core.hooksPath
+  assert_success
+  assert_output "$HOME/personal-hooks"
+  run git config --file "$HOME/.gitconfig" --get-all core.hooksPath
+  assert_failure
+}
+
 @test "configure_git_hooks creates hooks directory" {
   run bash -c "
     export HOME='${HOME}'

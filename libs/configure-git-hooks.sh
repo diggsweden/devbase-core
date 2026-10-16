@@ -19,14 +19,23 @@ configure_git_hooks() {
   validate_var_set "DEVBASE_ROOT" || return 1
   validate_var_set "DEVBASE_BACKUP_DIR" || return 1
 
+  local hooks_dir="${XDG_CONFIG_HOME}/git/git-hooks"
   [[ "$DEVBASE_ENABLE_GIT_HOOKS" != "true" ]] && {
-    show_progress info "Git hooks disabled (skipping)"
+    # Remove only values installed by DevBase, including older XDG/global files.
+    # Personal hook paths and repository-local overrides belong to the user.
+    local config
+    for config in "$HOME/.gitconfig" "${XDG_CONFIG_HOME}/git/config"; do
+      [[ -f "$config" ]] || continue
+      if git config --file "$config" --fixed-value --get-all core.hooksPath "$hooks_dir" >/dev/null; then
+        git config --file "$config" --fixed-value --unset-all core.hooksPath "$hooks_dir" || return 1
+      fi
+    done
+    show_progress info "Git hooks disabled"
     return 0
   }
 
   show_progress info "Configuring git hooks..."
 
-  local hooks_dir="${XDG_CONFIG_HOME}/git/git-hooks"
   local templates_dir="${DEVBASE_ROOT}/devbase_files/git-hooks-templates"
   local custom_hooks_dir="${DEVBASE_CUSTOM_DIR}/git-hooks"
   local backup_dir="${DEVBASE_BACKUP_DIR}/git-hooks"
