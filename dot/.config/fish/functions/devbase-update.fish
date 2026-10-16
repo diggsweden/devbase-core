@@ -83,16 +83,9 @@ function __devbase_update_print_net_error --description "Explain a failed networ
     __devbase_update_print_check_error "$argv[1]" $details
 end
 
-function __devbase_update_is_snoozed
-    if test -f "$__devbase_snooze_file"
-        set -l now (date +%s)
-        set -l until (cat "$__devbase_snooze_file" 2>/dev/null)
-        if string match -qr '^[0-9]+$' -- "$until"; and test "$now" -lt "$until"
-            return 0
-        end
-    end
-    return 1
-end
+# __devbase_update_is_snoozed lives in its own file so the shell-start check can
+# autoload it; load it here too for callers that source this file directly.
+functions -q __devbase_update_is_snoozed; or source (dirname (status current-filename))/__devbase_update_is_snoozed.fish
 
 function __devbase_update_set_snooze --description "Snooze update prompts for N hours"
     set -l hours "$argv[1]"

@@ -5,8 +5,7 @@
 # ~/.config/fish/conf.d/00-environment.fish
 # Core environment variables - loads first due to 00- prefix
 
-# Terminal and locale
-set -gx TERM xterm-256color
+# Preserve TERM supplied by the terminal or multiplexer.
 # Locale is inherited from system settings (/etc/default/locale)
 # which is configured during devbase installation
 

@@ -13,7 +13,13 @@ function __devbase_update_check --description "Check for devbase updates on shel
         return 0
     end
 
-    # Run update check (quick, just fetches and compares)
+    # A snoozed startup must not fetch or prompt. Explicit --check stays available.
+    # The helper is autoloaded from its own file.
+    if __devbase_update_is_snoozed
+        return 0
+    end
+
+    # Run update check (fetches and compares)
     set -l result (devbase-update --check 2>/dev/null)
 
     if test -n "$result"

@@ -29,6 +29,38 @@ run_fish_update() {
   fish -c "source '$DEVBASE_UPDATE_FISH'; $*"
 }
 
+@test "snoozed shell startup never invokes the network update check" {
+  mkdir -p "$HOME/.local/share/devbase/core/.git" "$HOME/.config/devbase"
+  # A snooze written by an earlier `devbase-update --snooze`, 24 hours ahead
+  echo $(( $(date +%s) + 86400 )) >"$HOME/.config/devbase/update-snooze"
+  # Like a real shell start: nothing pre-sourced, functions autoload from the shipped directory
+  run fish --no-config -c "
+    set -gx HOME '$HOME'
+    set fish_function_path '${DEVBASE_ROOT}/dot/.config/fish/functions' \$fish_function_path
+    function devbase-update; echo UNEXPECTED_NETWORK_CHECK; end
+    __devbase_update_check
+  "
+  assert_success
+  assert_output ''
+}
+
+@test "devbase-update --snooze and the shell-start check agree on the snooze file" {
+  mkdir -p "$HOME/.local/share/devbase/core/.git"
+  # Two shells, as in real life: one sets the snooze, a fresh one reads it via autoload
+  fish --no-config -c "
+    set -gx HOME '$HOME'
+    set fish_function_path '${DEVBASE_ROOT}/dot/.config/fish/functions' \$fish_function_path
+    devbase-update --snooze 24 >/dev/null
+  "
+  run fish --no-config -c "
+    set -gx HOME '$HOME'
+    set fish_function_path '${DEVBASE_ROOT}/dot/.config/fish/functions' \$fish_function_path
+    __devbase_update_is_snoozed; and echo SNOOZED
+  "
+  assert_success
+  assert_output 'SNOOZED'
+}
+
 @test "devbase-update.fish function file exists" {
   assert_file_exists "$DEVBASE_UPDATE_FISH"
 }

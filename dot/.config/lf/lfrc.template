@@ -13,14 +13,12 @@ set smartcase
 set number
 set relativenumber
 
-# Use editor for text files
-set editor nvim
+# The native 'e' binding uses VISUAL/EDITOR from the shell environment.
 
 # Colors will be controlled via LS_COLORS environment variable
 # which is already set by DevBase theme system via eza/dircolors
 
-# Preview with bat
-set previewer bat
+# Use lf's built-in text preview (external previewers receive geometry arguments).
 
 # Commands
 cmd open $xdg-open "$f" 2>/dev/null &

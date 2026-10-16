@@ -32,9 +32,6 @@ k9s:
   
   # Logger configuration
   logger:
-    # Log level (info, warn, debug, trace, error)
-    level: info
-    
     # Number of log lines to tail
     tail: 100
     
