@@ -194,6 +194,11 @@ lint-shell-fmt-fix:
 # TEST - Unit and integration testing
 # ==================================================================================== #
 
+# Regenerate docs/tools-matrix.adoc from dot/.config/devbase/packages.yaml
+[group('docs')]
+docs-tools-matrix:
+    @./scripts/generate-tools-matrix.sh
+
 # ▪ Run all tests
 [group('test')]
 test: _ensure-bats

@@ -31,11 +31,10 @@
       "groupName": "yq"
     },
     {
-      "description": "Skip rumdl v0.1.72 — aqua attestation verification fails (upstream workflow-ref pattern mismatch)",
-      "matchDatasources": ["github-releases"],
+      "description": "Keep the rumdl pins in packages.yaml (github-releases) and .mise.toml (mise manager, github-tags) together; skip v0.1.72 (aqua attestation verification fails). The 7-day release age comes from the shared base config.",
       "matchPackageNames": ["rvben/rumdl"],
-      "allowedVersions": "!=v0.1.72",
-      "minimumReleaseAge": "7 days"
+      "groupName": "rumdl",
+      "allowedVersions": "!=v0.1.72"
     },
     {
       "description": "JetBrains versions can have four parts (2025.3.6.1), which semver cannot order",
@@ -64,7 +63,7 @@
       ],
       "description": "Track package pins while preserving the Temurin selector outside the Java version",
       "matchStrings": [
-        "(?m)^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?:temurin-)?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?\\s*$"
+        "(?m)^\\s*[a-zA-Z0-9_.-]+:\\s+\\{[^}]*?\\bversion\\s*:\\s+\"?(?:temurin-)?(?<currentValue>[^\",}]+)\"?[^}]*?\\}\\s+#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+?)(?:\\s+packageName=(?<packageName>\\S+?))?(?:\\s+extractVersion=(?<extractVersion>\\S+?))?(?:\\s+registryUrl=(?<registryUrl>\\S+?))?\\s*$"
       ]
     },
     {

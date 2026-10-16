@@ -16,198 +16,206 @@ core:
   # Packages with same name on all supported distros
   common:
     # Essential utilities
-    curl: {}
-    gettext: {} # provides envsubst
-    git: {}
-    unzip: {}
-    wget: {}
-    tar: {}
+    curl: {description: "Command line HTTP client", license: "curl"}
+    gettext: {description: "Internationalization tools; provides envsubst", license: "GPL-3.0+"} # provides envsubst
+    git: {description: "Distributed version control system", license: "GPL-2.0"}
+    unzip: {description: "ZIP extraction", license: "Info-ZIP"}
+    wget: {description: "Network downloader", license: "GPL-3.0+"}
+    tar: {description: "Archive utility", license: "GPL-3.0+"}
     # Shell and terminal
-    bash-completion: {}
-    fish: {}
-    tree: {}
-    vifm: {}
+    bash-completion: {description: "Programmable completion for bash", license: "GPL-2.0+"}
+    fish: {description: "Friendly interactive shell", license: "GPL-2.0", theme: true}
+    tree: {description: "Directory structure viewer", license: "GPL-2.0+"}
+    vifm: {description: "Vim-like file manager", license: "GPL-2.0", theme: true}
     # Container runtime
-    buildah: {}
-    podman: {}
-    skopeo: {}
+    buildah: {description: "Container image builder", license: "Apache-2.0"}
+    podman: {description: "Container runtime (Docker alternative)", license: "Apache-2.0"}
+    skopeo: {description: "Container image operations", license: "Apache-2.0"}
     # Security
-    bubblewrap: {}
-    clamav: {}
-    lynis: {}
+    bubblewrap: {description: "Unprivileged sandboxing tool", license: "LGPL-2.0+"}
+    clamav: {description: "Antivirus scanner", license: "GPL-2.0"}
+    lynis: {description: "Security auditing tool", license: "GPL-3.0"}
     # Development utilities
-    e2fsprogs: {}
-    jq: {}
-    meld: {}
-    pandoc: {}
-    parallel: {}
-    pwgen: {}
-    w3m: {}
-    yadm: {}
+    e2fsprogs: {description: "Ext2/3/4 filesystem tools", license: "GPL-2.0"}
+    jq: {description: "JSON processor", license: "MIT"}
+    meld: {description: "Visual diff and merge tool", license: "GPL-2.0+"}
+    pandoc: {description: "Universal document converter", license: "GPL-2.0+"}
+    parallel: {description: "Execute jobs in parallel", license: "GPL-3.0+"}
+    pwgen: {description: "Password generator", license: "GPL-2.0"}
+    w3m: {description: "Text-based web browser", license: "MIT"}
+    yadm: {description: "Yet Another Dotfiles Manager", license: "GPL-3.0"}
     # SSH and certificates
-    mkcert: {}
+    mkcert: {description: "Local development certificates", license: "BSD-3-Clause"}
     # Cleanup
-    bleachbit: {}
+    bleachbit: {description: "System cleaner and privacy tool", license: "GPL-3.0"}
     # Desktop
-    desktop-file-utils: {}
-    mesa-utils: {}
-    xdg-desktop-portal-gtk: {}
+    desktop-file-utils: {description: "Desktop file utilities", license: "GPL-2.0+"}
+    mesa-utils: {description: "Mesa utilities (glxinfo)", license: "MIT"}
+    xdg-desktop-portal-gtk: {description: "Desktop integration portal", license: "LGPL-2.1+"}
     # Non-WSL (smart card, power management)
-    pcscd: {tags: ["@skip-wsl"]}
-    pcsc-tools: {tags: ["@skip-wsl"]}
-    opensc: {tags: ["@skip-wsl"]}
-    tlp: {tags: ["@skip-wsl"]}
+    pcscd: {tags: ["@skip-wsl"], description: "PC/SC smart card daemon", license: "BSD-3-Clause"}
+    pcsc-tools: {tags: ["@skip-wsl"], description: "Smart card reader diagnostics", license: "GPL-2.0+"}
+    opensc: {tags: ["@skip-wsl"], description: "Smart card middleware (PKCS#11)", license: "LGPL-2.1+"}
+    tlp: {tags: ["@skip-wsl"], description: "Laptop power management", license: "GPL-2.0+"}
 
   # Ubuntu/Debian specific packages
   apt:
-    apt-utils: {}
-    locales: {}
-    software-properties-common: {}
-    build-essential: {}
-    containernetworking-plugins: {}
-    clamav-daemon: {}
-    gufw: {}
-    ufw: {}
-    unattended-upgrades: {}
-    dbus-user-session: {}
-    libfontconfig1: {}
-    libgbm1: {}
-    libgtk-3-bin: {}
-    libxi6: {}
-    libxrender1: {}
-    libxtst6: {}
-    bind9-dnsutils: {}
-    libxml2-utils: {}
-    libnss3-tools: {}
-    openssh-client: {}
-    ssh-askpass: {}
-    dislocker: {tags: ["@skip-wsl"]}
-    opensc-pkcs11: {tags: ["@skip-wsl"]}
-    libccid: {tags: ["@skip-wsl"]}
-    cardpeek: {tags: ["@skip-wsl"]}
-    tlp-rdw: {tags: ["@skip-wsl"]}
+    apt-utils: {description: "APT utility programs", license: "GPL-2.0+"}
+    locales: {description: "Locale data and configuration", license: "GPL-2.0+"}
+    software-properties-common: {description: "APT repository management", license: "GPL-2.0+"}
+    build-essential: {description: "Compiler collection (gcc, g++, make, libc-dev, dpkg-dev)", license: "Various GPL"}
+    containernetworking-plugins: {description: "CNI network plugins", license: "Apache-2.0"}
+    clamav-daemon: {description: "ClamAV daemon", license: "GPL-2.0"}
+    gufw: {description: "Graphical frontend for UFW", license: "GPL-3.0"}
+    ufw: {description: "Uncomplicated Firewall", license: "GPL-3.0"}
+    unattended-upgrades: {description: "Automatic security updates", license: "GPL-2.0+"}
+    dbus-user-session: {description: "Per-user D-Bus session bus", license: "AFL-2.1 OR GPL-2.0+"}
+    libfontconfig1: {description: "Font configuration library", license: "MIT"}
+    libgbm1: {description: "Graphics buffer manager", license: "MIT"}
+    libgtk-3-bin: {description: "GTK 3 utilities", license: "LGPL-2.1+"}
+    libxi6: {description: "X Input extension library", license: "MIT"}
+    libxrender1: {description: "X Rendering extension library", license: "MIT"}
+    libxtst6: {description: "X Test extension library", license: "MIT"}
+    bind9-dnsutils: {description: "DNS utilities (dig, nslookup)", license: "ISC"}
+    libxml2-utils: {description: "XML utilities (xmllint)", license: "MIT"}
+    libnss3-tools: {description: "NSS security tools", license: "MPL-2.0"}
+    openssh-client: {description: "SSH client", license: "BSD"}
+    ssh-askpass: {description: "SSH password GUI helper", license: "BSD"}
+    dislocker: {tags: ["@skip-wsl"], description: "BitLocker encryption for Linux", license: "GPL-2.0"}
+    opensc-pkcs11: {tags: ["@skip-wsl"], description: "OpenSC PKCS#11 module", license: "LGPL-2.1+"}
+    libccid: {tags: ["@skip-wsl"], description: "USB smart card reader driver", license: "LGPL-2.1+"}
+    cardpeek: {tags: ["@skip-wsl"], description: "Smart card content viewer", license: "GPL-3.0+"}
+    tlp-rdw: {tags: ["@skip-wsl"], description: "TLP radio device wizard", license: "GPL-2.0+"}
 
   # Fedora/RHEL specific packages
   dnf:
-    glibc-langpack-en: {}
-    "@development-tools": {}
-    containernetworking-plugins: {}
-    clamd: {}
-    firewalld: {}
-    dnf-automatic: {}
-    dbus-daemon: {}
-    fontconfig: {}
-    mesa-libgbm: {}
-    gtk3: {}
-    libXi: {}
-    libXrender: {}
-    libXtst: {}
-    bind-utils: {}
-    libxml2: {}
-    nss-tools: {}
-    openssh-clients: {}
-    openssh-askpass: {}
-    dislocker: {tags: ["@skip-wsl"]}
-    opensc: {tags: ["@skip-wsl"]}
-    ccid: {tags: ["@skip-wsl"]}
-    tlp-rdw: {tags: ["@skip-wsl"]}
+    glibc-langpack-en: {description: "English locale data (Fedora)", license: "LGPL-2.1+"}
+    "@development-tools": {description: "Fedora development tools group (gcc, make, …)", license: "Various"}
+    containernetworking-plugins: {description: "CNI network plugins", license: "Apache-2.0"}
+    clamd: {description: "ClamAV daemon (Fedora)", license: "GPL-2.0"}
+    firewalld: {description: "Firewall daemon (Fedora)", license: "GPL-2.0+"}
+    dnf-automatic: {description: "Automatic package updates (Fedora)", license: "GPL-2.0+"}
+    dbus-daemon: {description: "D-Bus message bus (Fedora)", license: "AFL-2.1 OR GPL-2.0+"}
+    fontconfig: {description: "Font configuration library", license: "MIT"}
+    mesa-libgbm: {description: "Mesa generic buffer management (Fedora)", license: "MIT"}
+    gtk3: {description: "GTK 3 toolkit (Fedora)", license: "LGPL-2.1+"}
+    libXi: {description: "X Input extension library", license: "MIT"}
+    libXrender: {description: "X Rendering extension library", license: "MIT"}
+    libXtst: {description: "X Test extension library", license: "MIT"}
+    bind-utils: {description: "DNS lookup utilities (dig, nslookup)", license: "MPL-2.0"}
+    libxml2: {description: "XML library and xmllint (Fedora)", license: "MIT"}
+    nss-tools: {description: "NSS certificate tools (certutil)", license: "MPL-2.0"}
+    openssh-clients: {description: "SSH client (Fedora)", license: "BSD"}
+    openssh-askpass: {description: "SSH passphrase dialog (Fedora)", license: "BSD"}
+    dislocker: {tags: ["@skip-wsl"], description: "BitLocker encryption for Linux", license: "GPL-2.0"}
+    opensc: {tags: ["@skip-wsl"], description: "Smart card middleware (PKCS#11)", license: "LGPL-2.1+"}
+    ccid: {tags: ["@skip-wsl"], description: "USB smart card reader driver", license: "LGPL-2.1+"}
+    tlp-rdw: {tags: ["@skip-wsl"], description: "TLP radio device wizard", license: "GPL-2.0+"}
 
   # App stores (distro-specific)
   snap:
-    chromium: {}
-    ghostty: {options: "--classic", tags: ["@skip-wsl"]}
-    microk8s: {options: "--classic"}
+    chromium: {description: "Chromium web browser", license: "BSD-3-Clause"}
+    ghostty: {options: "--classic", tags: ["@skip-wsl"], description: "GPU-accelerated terminal emulator", license: "MIT", theme: true}
+    microk8s: {options: "--classic", description: "Lightweight Kubernetes from Canonical", license: "Apache-2.0"}
 
   flatpak:
-    org.chromium.Chromium: {remote: "flathub"}
+    org.chromium.Chromium: {remote: "flathub", description: "Chromium browser (Flatpak)", license: "BSD-3-Clause"}
     # ghostty - not available on flatpak, use copr or binary
     # microk8s - not available, use k3s instead
 
   # Distro-agnostic tools installed via mise
   mise:
     # Build tools
-    just: {backend: "aqua:casey/just", version: "1.58.0"} # renovate: datasource=github-releases depName=casey/just
-    usage: {backend: "aqua:jdx/usage", version: "v6.12.1"} # renovate: datasource=github-releases depName=jdx/usage
-    jq: {version: "jq-1.8.1"} # renovate: datasource=github-releases depName=jqlang/jq
-    yq: {backend: "aqua:mikefarah/yq", version: "v4.54.1"} # renovate: datasource=github-releases depName=mikefarah/yq
-    jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
-    excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.6"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
+    just: {backend: "aqua:casey/just", version: "1.58.0", description: "Command runner", license: "CC0-1.0"} # renovate: datasource=github-releases depName=casey/just
+    usage: {backend: "aqua:jdx/usage", version: "v6.12.1", description: "CLI spec used by mise completions", license: "MIT"} # renovate: datasource=github-releases depName=jdx/usage
+    jq: {version: "jq-1.8.1", description: "JSON processor", license: "MIT"} # renovate: datasource=github-releases depName=jqlang/jq
+    yq: {backend: "aqua:mikefarah/yq", version: "v4.54.1", description: "YAML processor", license: "MIT"} # renovate: datasource=github-releases depName=mikefarah/yq
+    jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0", description: "JWT token tool", license: "MIT"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
+    excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.6", description: "Excalidraw to SVG/PNG converter", license: "MIT"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
     # Shell enhancements
-    fzf: {backend: "aqua:junegunn/fzf", version: "v0.74.4"} # renovate: datasource=github-releases depName=junegunn/fzf
-    zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.10.0"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
-    eza: {backend: "aqua:eza-community/eza", version: "v0.23.5"} # renovate: datasource=github-releases depName=eza-community/eza
-    bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1"} # renovate: datasource=github-releases depName=sharkdp/bat
-    vivid: {backend: "aqua:sharkdp/vivid", version: "v0.11.1"} # renovate: datasource=github-releases depName=sharkdp/vivid
-    starship: {backend: "aqua:starship/starship", version: "v1.26.0"} # renovate: datasource=github-releases depName=starship/starship
-    zellij: {backend: "aqua:zellij-org/zellij", version: "v0.45.1"} # renovate: datasource=github-releases depName=zellij-org/zellij
-    ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.2.0"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
-    fd: {backend: "aqua:sharkdp/fd", version: "v10.5.0"} # renovate: datasource=github-releases depName=sharkdp/fd
-    tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.13.1"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
-    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.7"} # renovate: datasource=github-releases depName=aristocratos/btop
-    lf: {backend: "aqua:gokcehan/lf", version: "r41"} # renovate: datasource=github-releases depName=gokcehan/lf
+    fzf: {backend: "aqua:junegunn/fzf", version: "v0.74.4", description: "Fuzzy finder", license: "MIT"} # renovate: datasource=github-releases depName=junegunn/fzf
+    zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.10.0", description: "Smarter cd — jump to frecent directories (`z`, `zi`)", license: "MIT"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
+    eza: {backend: "aqua:eza-community/eza", version: "v0.23.5", description: "Modern ls replacement", license: "MIT", theme: true} # renovate: datasource=github-releases depName=eza-community/eza
+    bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1", description: "Cat with syntax highlighting", license: "Apache-2.0/MIT", theme: true} # renovate: datasource=github-releases depName=sharkdp/bat
+    vivid: {backend: "aqua:sharkdp/vivid", version: "v0.11.1", description: "LS_COLORS theme generator", license: "MIT OR Apache-2.0"} # renovate: datasource=github-releases depName=sharkdp/vivid
+    starship: {backend: "aqua:starship/starship", version: "v1.26.0", description: "Cross-shell prompt", license: "ISC", theme: true} # renovate: datasource=github-releases depName=starship/starship
+    zellij: {backend: "aqua:zellij-org/zellij", version: "v0.45.1", description: "Terminal workspace multiplexer", license: "MIT", theme: true} # renovate: datasource=github-releases depName=zellij-org/zellij
+    ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.2.0", description: "Fast grep alternative", license: "MIT/Unlicense"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
+    fd: {backend: "aqua:sharkdp/fd", version: "v10.5.0", description: "Fast find alternative", license: "MIT OR Apache-2.0"} # renovate: datasource=github-releases depName=sharkdp/fd
+    tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.13.1", description: "tldr pages client (tldr command)", license: "MIT"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
+    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.7", description: "Resource monitor", license: "Apache-2.0", theme: true} # renovate: datasource=github-releases depName=aristocratos/btop
+    lf: {backend: "aqua:gokcehan/lf", version: "r41", description: "Fast file manager with vim keys", license: "MIT"} # renovate: datasource=github-releases depName=gokcehan/lf
     # Git tools
-    delta: {backend: "aqua:dandavison/delta", version: "0.20.1"} # renovate: datasource=github-releases depName=dandavison/delta
-    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.14.2"} # renovate: datasource=github-releases depName=orhun/git-cliff
-    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.65.1"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
-    gh: {backend: "aqua:cli/cli", version: "v2.102.0"} # renovate: datasource=github-releases depName=cli/cli
-    glab: {backend: "gitlab:gitlab-org/cli", version: "v1.119.0"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
+    delta: {backend: "aqua:dandavison/delta", version: "0.20.1", description: "Better git diff viewer", license: "MIT", theme: true} # renovate: datasource=github-releases depName=dandavison/delta
+    git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.14.2", description: "Changelog generator", license: "Apache-2.0/MIT"} # renovate: datasource=github-releases depName=orhun/git-cliff
+    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.65.1", description: "Terminal UI for git", license: "MIT", theme: true} # renovate: datasource=github-releases depName=jesseduffield/lazygit
+    gh: {backend: "aqua:cli/cli", version: "v2.102.0", description: "GitHub CLI", license: "MIT"} # renovate: datasource=github-releases depName=cli/cli
+    glab: {backend: "gitlab:gitlab-org/cli", version: "v1.119.0", description: "GitLab CLI", license: "MIT"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
     # Neovim
-    neovim: {backend: "aqua:neovim/neovim", version: "v0.12.6"} # renovate: datasource=github-releases depName=neovim/neovim
-    tree-sitter-cli: {backend: "aqua:tree-sitter/tree-sitter", version: "v0.27.1"} # renovate: datasource=github-releases depName=tree-sitter/tree-sitter
+    neovim: {backend: "aqua:neovim/neovim", version: "v0.12.6", description: "Modern vim editor", license: "Apache-2.0", theme: true} # renovate: datasource=github-releases depName=neovim/neovim
+    tree-sitter-cli: {backend: "aqua:tree-sitter/tree-sitter", version: "v0.27.1", description: "Tree-sitter parser CLI for Neovim", license: "MIT"} # renovate: datasource=github-releases depName=tree-sitter/tree-sitter
     # Container/Kubernetes
-    docker-compose: {backend: "aqua:docker/compose", version: "v5.5.1"} # renovate: datasource=github-releases depName=docker/compose
-    k9s: {backend: "aqua:derailed/k9s", version: "v0.51.0"} # renovate: datasource=github-releases depName=derailed/k9s
-    k6: {backend: "aqua:grafana/k6", version: "v2.3.0"} # renovate: datasource=github-releases depName=grafana/k6
-    argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.5.4"} # renovate: datasource=github-releases depName=argoproj/argo-cd
-    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.40.0"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
-    tkn: {backend: "aqua:tektoncd/cli", version: "v0.46.1"} # renovate: datasource=github-releases depName=tektoncd/cli
+    docker-compose: {backend: "aqua:docker/compose", version: "v5.5.1", description: "Docker Compose", license: "Apache-2.0"} # renovate: datasource=github-releases depName=docker/compose
+    k9s: {backend: "aqua:derailed/k9s", version: "v0.51.0", description: "Kubernetes TUI manager", license: "Apache-2.0", theme: true} # renovate: datasource=github-releases depName=derailed/k9s
+    k6: {backend: "aqua:grafana/k6", version: "v2.3.0", description: "Load testing tool", license: "AGPL-3.0"} # renovate: datasource=github-releases depName=grafana/k6
+    argocd: {backend: "aqua:argoproj/argo-cd", version: "v3.5.4", description: "Argo CD CLI", license: "Apache-2.0"} # renovate: datasource=github-releases depName=argoproj/argo-cd
+    kubeseal: {backend: "aqua:bitnami-labs/sealed-secrets", version: "v0.40.0", description: "Kubernetes sealed secrets", license: "Apache-2.0"} # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
+    tkn: {backend: "aqua:tektoncd/cli", version: "v0.46.1", description: "Tekton Pipelines CLI", license: "Apache-2.0"} # renovate: datasource=github-releases depName=tektoncd/cli
     # Code quality
-    yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0"} # renovate: datasource=github-releases depName=google/yamlfmt
-    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.12"} # renovate: datasource=github-releases depName=rhysd/actionlint
-    hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.15.1"} # renovate: datasource=github-releases depName=hadolint/hadolint
-    shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
-    shfmt: {backend: "aqua:mvdan/sh", version: "v3.14.1"} # renovate: datasource=github-releases depName=mvdan/sh
-    rumdl: {backend: "aqua:rvben/rumdl", version: "v0.2.76"} # renovate: datasource=github-releases depName=rvben/rumdl
+    yamlfmt: {backend: "aqua:google/yamlfmt", version: "v0.21.0", description: "YAML formatter", license: "Apache-2.0"} # renovate: datasource=github-releases depName=google/yamlfmt
+    actionlint: {backend: "aqua:rhysd/actionlint", version: "v1.7.12", description: "GitHub Actions linter", license: "MIT"} # renovate: datasource=github-releases depName=rhysd/actionlint
+    hadolint: {backend: "aqua:hadolint/hadolint", version: "v2.15.1", description: "Dockerfile linter", license: "GPL-3.0"} # renovate: datasource=github-releases depName=hadolint/hadolint
+    shellcheck: {backend: "aqua:koalaman/shellcheck", version: "v0.11.0", description: "Shell script linter", license: "GPL-3.0"} # renovate: datasource=github-releases depName=koalaman/shellcheck
+    shfmt: {backend: "aqua:mvdan/sh", version: "v3.14.1", description: "Shell script formatter", license: "BSD-3-Clause"} # renovate: datasource=github-releases depName=mvdan/sh
+    rumdl: {backend: "aqua:rvben/rumdl", version: "v0.2.79", description: "Documentation linter", license: "MIT"} # renovate: datasource=github-releases depName=rvben/rumdl
+    typos: {backend: "aqua:crate-ci/typos", version: "v1.51.1", description: "Source code spell checker", license: "MIT OR Apache-2.0"} # renovate: datasource=github-releases depName=crate-ci/typos
+    taplo: {backend: "aqua:tamasfe/taplo", version: "0.10.0", description: "TOML linter and formatter", license: "MIT"} # renovate: datasource=github-releases depName=tamasfe/taplo
+    editorconfig-checker: {backend: "github:editorconfig-checker/editorconfig-checker", version: "v4.0.2", description: "Verifies files against .editorconfig", license: "MIT"} # renovate: datasource=github-releases depName=editorconfig-checker/editorconfig-checker
+    lychee: {backend: "aqua:lycheeverse/lychee", version: "0.24.2", description: "Broken link checker for Markdown and AsciiDoc", license: "MIT OR Apache-2.0"} # renovate: datasource=github-releases depName=lycheeverse/lychee extractVersion=^lychee-v(?<version>.*)$
+    vale: {backend: "github:vale-cli/vale", version: "v3.24.0", description: "Prose linter for Markdown, AsciiDoc and reStructuredText", license: "MIT"} # renovate: datasource=github-releases depName=vale-cli/vale
     # Security
-    gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.1"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
-    syft: {backend: "aqua:anchore/syft", version: "v1.54.1"} # renovate: datasource=github-releases depName=anchore/syft
-    scorecard: {backend: "aqua:ossf/scorecard", version: "v5.5.0"} # renovate: datasource=github-releases depName=ossf/scorecard
-    cosign: {backend: "aqua:sigstore/cosign", version: "3.1.3"} # renovate: datasource=github-releases depName=sigstore/cosign
-    slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
+    gitleaks: {backend: "aqua:zricethezav/gitleaks", version: "v8.30.1", description: "Scan for secrets in git repos", license: "MIT"} # renovate: datasource=github-releases depName=zricethezav/gitleaks
+    syft: {backend: "aqua:anchore/syft", version: "v1.54.1", description: "SBOM generator", license: "Apache-2.0"} # renovate: datasource=github-releases depName=anchore/syft
+    scorecard: {backend: "aqua:ossf/scorecard", version: "v5.5.0", description: "Security scorecards for OSS", license: "Apache-2.0"} # renovate: datasource=github-releases depName=ossf/scorecard
+    cosign: {backend: "aqua:sigstore/cosign", version: "3.1.3", description: "Container signing and verification", license: "Apache-2.0"} # renovate: datasource=github-releases depName=sigstore/cosign
+    slsa-verifier: {backend: "github:slsa-framework/slsa-verifier", version: "v2.7.1", description: "SLSA provenance verification", license: "Apache-2.0"} # renovate: datasource=github-releases depName=slsa-framework/slsa-verifier
+    trivy: {backend: "aqua:aquasecurity/trivy", version: "v0.75.0", description: "Vulnerability and misconfiguration scanner for filesystems and images", license: "Apache-2.0"} # renovate: datasource=github-releases depName=aquasecurity/trivy
+    osv-scanner: {backend: "aqua:google/osv-scanner", version: "v2.6.0", description: "Dependency vulnerability scanner (OSV database)", license: "Apache-2.0"} # renovate: datasource=github-releases depName=google/osv-scanner
+    opengrep: {backend: "aqua:opengrep/opengrep", version: "v1.30.2", description: "SAST scanner (Semgrep-compatible rules)", license: "LGPL-2.1"} # renovate: datasource=github-releases depName=opengrep/opengrep
     # Standards
-    gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.12"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
-    publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.4.3"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
+    gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.12", description: "Git commit policy enforcement", license: "EUPL-1.2"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
+    publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.4.3", description: "publiccode.yml validator", license: "AGPL-3.0"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
     # Testing
-    bats: {backend: "aqua:bats-core/bats-core", version: "1.14.0"} # renovate: datasource=github-releases depName=bats-core/bats-core
+    bats: {backend: "aqua:bats-core/bats-core", version: "1.14.0", description: "Bash automated testing system", license: "MIT"} # renovate: datasource=github-releases depName=bats-core/bats-core
 
   # Custom installers (distro-agnostic, installers handle deb/rpm)
   custom:
-    mise: {version: "v2026.9.17", installer: "install_mise"} # renovate: datasource=github-releases depName=jdx/mise
-    gum: {version: "2.0.1", installer: "install_gum"} # renovate: datasource=github-releases depName=charmbracelet/gum
-    fisher: {version: "4.4.8", installer: "install_fisher"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
-    fzf_fish: {version: "v11.0", installer: "install_fzf_fish"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
-    lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"]} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
-    nerd_fonts: {version: "v3.5.1", installer: "install_nerd_fonts", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
-    oc: {version: "4.22.16", installer: "install_oc_kubectl"} # renovate: datasource=custom.openshift-oc depName=openshift/oc
-    k3s: {version: "v1.37.1+k3s1", installer: "install_k3s", tags: ["@optional"]} # renovate: datasource=github-releases depName=k3s-io/k3s
-    vscode: {version: "1.139.1", installer: "install_vscode", tags: ["@skip-wsl"]} # renovate: datasource=github-releases depName=microsoft/vscode
+    mise: {version: "v2026.9.17", installer: "install_mise", description: "Multi-runtime version manager", license: "MIT"} # renovate: datasource=github-releases depName=jdx/mise
+    gum: {version: "2.0.1", installer: "install_gum", description: "Shell script TUI components (setup UI)", license: "MIT"} # renovate: datasource=github-releases depName=charmbracelet/gum
+    fisher: {version: "4.4.8", installer: "install_fisher", description: "Fish plugin manager", license: "MIT"} # renovate: datasource=github-releases depName=jorgebucaran/fisher
+    fzf_fish: {version: "v11.0", installer: "install_fzf_fish", description: "Fish fzf key bindings plugin", license: "MIT"} # renovate: datasource=github-releases depName=PatrickF1/fzf.fish
+    lazyvim: {version: "803bc18", installer: "install_lazyvim", tags: ["@optional"], description: "Neovim starter configuration", license: "Apache-2.0"} # renovate: datasource=git-refs depName=https://github.com/LazyVim/starter
+    nerd_fonts: {version: "v3.5.1", installer: "install_nerd_fonts", tags: ["@skip-wsl"], description: "Patched developer fonts", license: "MIT/OFL"} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
+    oc: {version: "4.22.16", installer: "install_oc_kubectl", description: "OpenShift CLI", license: "Apache-2.0"} # renovate: datasource=custom.openshift-oc depName=openshift/oc
+    k3s: {version: "v1.37.1+k3s1", installer: "install_k3s", tags: ["@optional"], description: "Lightweight Kubernetes distribution", license: "Apache-2.0"} # renovate: datasource=github-releases depName=k3s-io/k3s
+    vscode: {version: "1.139.1", installer: "install_vscode", tags: ["@skip-wsl"], description: "Visual Studio Code", license: "Proprietary (MIT source)"} # renovate: datasource=github-releases depName=microsoft/vscode
 
   # VS Code extensions (distro-agnostic)
   vscode:
-    asciidoctor.asciidoctor-vscode: {version: "3.4.2"} # renovate: datasource=npm
-    redhat.vscode-yaml: {version: "1.17.0"} # renovate: datasource=npm
-    sonarsource.sonarlint-vscode: {version: "4.18.0"} # renovate: datasource=npm
-    MS-SarifVSCode.sarif-viewer: {version: "3.4.5"} # renovate: datasource=github-releases packageName=microsoft/sarif-vscode-extension
-    lokalise.i18n-ally: {version: "2.13.1"} # renovate: datasource=npm
-    pkief.material-icon-theme: {version: "5.20.0"} # renovate: datasource=npm
-    sainnhe.everforest: {version: "0.3.0"} # renovate: datasource=npm
-    catppuccin.catppuccin-vsc: {version: "3.20.0"} # renovate: datasource=npm
-    enkia.tokyo-night: {version: "1.0.6"} # renovate: datasource=npm
-    jdinhlife.gruvbox: {version: "1.18.0"} # renovate: datasource=npm
-    arcticicestudio.nord-visual-studio-code: {version: "0.19.0"} # renovate: datasource=npm
-    dracula-theme.theme-dracula: {version: "2.26.5"} # renovate: datasource=npm
-    ryanolsonx.solarized: {version: "2.1.0"} # renovate: datasource=npm
-    asvetliakov.vscode-neovim: {version: "1.18.13", tags: ["@optional"]} # renovate: datasource=npm
+    asciidoctor.asciidoctor-vscode: {version: "3.4.2", description: "AsciiDoc preview and tooling"} # renovate: datasource=npm
+    redhat.vscode-yaml: {version: "1.17.0", description: "YAML language support"} # renovate: datasource=npm
+    sonarsource.sonarlint-vscode: {version: "4.18.0", description: "SonarLint code quality and security"} # renovate: datasource=npm
+    MS-SarifVSCode.sarif-viewer: {version: "3.4.5", description: "SARIF results viewer"} # renovate: datasource=github-releases packageName=microsoft/sarif-vscode-extension
+    lokalise.i18n-ally: {version: "2.13.1", description: "i18n Ally translation tooling"} # renovate: datasource=npm
+    pkief.material-icon-theme: {version: "5.20.0", description: "Material icon theme"} # renovate: datasource=npm
+    sainnhe.everforest: {version: "0.3.0", description: "Everforest theme"} # renovate: datasource=npm
+    catppuccin.catppuccin-vsc: {version: "3.20.0", description: "Catppuccin theme"} # renovate: datasource=npm
+    enkia.tokyo-night: {version: "1.0.6", description: "Tokyo Night theme"} # renovate: datasource=npm
+    jdinhlife.gruvbox: {version: "1.18.0", description: "Gruvbox theme"} # renovate: datasource=npm
+    arcticicestudio.nord-visual-studio-code: {version: "0.19.0", description: "Nord theme"} # renovate: datasource=npm
+    dracula-theme.theme-dracula: {version: "2.26.5", description: "Dracula theme"} # renovate: datasource=npm
+    ryanolsonx.solarized: {version: "2.1.0", description: "Solarized theme"} # renovate: datasource=npm
+    asvetliakov.vscode-neovim: {version: "1.18.13", tags: ["@optional"], description: "Neovim integration (optional)"} # renovate: datasource=npm
 
 # ==============================================================================
 # PACKS - User selects during install (all selected by default)
@@ -217,90 +225,97 @@ packs:
     # System apps use distro-supported Java 25 LTS; mise tracks approved LTS lines.
     description: "(temurin / maven / gradle / pmd)"
     common:
-      visualvm: {}
+      visualvm: {description: "Java profiling and monitoring", license: "GPL-2.0 with Classpath"}
     apt:
-      openjdk-25-jdk: {}
-      openjdk-25-jre: {}
+      openjdk-25-jdk: {description: "System OpenJDK 25 development kit", license: "GPL-2.0 with Classpath"}
+      openjdk-25-jre: {description: "System OpenJDK 25 runtime", license: "GPL-2.0 with Classpath"}
     dnf:
-      java-25-openjdk: {}
-      java-25-openjdk-devel: {}
+      java-25-openjdk: {description: "System OpenJDK 25 runtime (Fedora)", license: "GPL-2.0 with Classpath"}
+      java-25-openjdk-devel: {description: "System OpenJDK 25 development kit (Fedora)", license: "GPL-2.0 with Classpath"}
     mise:
-      java: {version: "temurin-25.0.4+7.0.LTS"} # renovate: datasource=java-version depName=java-temurin
-      maven: {version: "3.9.16"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
-      gradle: {version: "9.8.1"} # renovate: datasource=gradle-version depName=gradle
-      pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0"} # renovate: datasource=github-releases depName=pmd/pmd
+      java: {version: "temurin-25.0.4+7.0.LTS", description: "Eclipse Temurin JDK", license: "GPL-2.0 with Classpath"} # renovate: datasource=java-version depName=java-temurin
+      maven: {version: "3.9.16", description: "Java build tool", license: "Apache-2.0"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
+      gradle: {version: "9.8.1", description: "Java build tool", license: "Apache-2.0"} # renovate: datasource=gradle-version depName=gradle
+      pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0", description: "Source code analyzer", license: "BSD-2-Clause"} # renovate: datasource=github-releases depName=pmd/pmd
+      checkstyle: {backend: "aqua:checkstyle/checkstyle", version: "14.3.0", description: "Java code style checker (google_checks.xml shipped)", license: "LGPL-2.1"} # renovate: datasource=github-releases depName=checkstyle/checkstyle extractVersion=^checkstyle-(?<version>.*)$
+      google-java-format: {backend: "aqua:google/google-java-format", version: "v1.37.0", description: "Google Java Style formatter", license: "Apache-2.0"} # renovate: datasource=github-releases depName=google/google-java-format
     custom:
-      keystore_explorer: {version: "v5.7.0", installer: "install_keystore_explorer"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
-      jdk_mission_control: {version: "9.1.2", installer: "install_jmc", tags: ["@optional"]} # renovate: datasource=github-releases depName=adoptium/jmc-build
-      dbeaver: {version: "26.2.2", installer: "install_dbeaver", tags: ["@optional"]} # renovate: datasource=github-releases depName=dbeaver/dbeaver
-      intellij_idea: {version: "2025.3.6.1", installer: "install_intellij_idea", tags: ["@optional"]} # renovate: datasource=custom.jetbrains depName=idea packageName=IIU
+      keystore_explorer: {version: "v5.7.0", installer: "install_keystore_explorer", description: "Java keystore GUI", license: "GPL-3.0"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
+      jdk_mission_control: {version: "9.1.2", installer: "install_jmc", tags: ["@optional"], description: "Java profiling and diagnostics", license: "UPL-1.0"} # renovate: datasource=github-releases depName=adoptium/jmc-build
+      dbeaver: {version: "26.2.2", installer: "install_dbeaver", tags: ["@optional"], description: "Universal database tool", license: "Apache-2.0"} # renovate: datasource=github-releases depName=dbeaver/dbeaver
+      intellij_idea: {version: "2025.3.6.1", installer: "install_intellij_idea", tags: ["@optional"], description: "IntelliJ IDEA Ultimate", license: "Proprietary"} # renovate: datasource=custom.jetbrains depName=idea packageName=IIU
     vscode:
-      redhat.java: {version: "1.40.0"} # renovate: datasource=npm
-      vscjava.vscode-java-debug: {version: "0.58.1"} # renovate: datasource=npm
-      vscjava.vscode-java-dependency: {version: "0.24.1"} # renovate: datasource=npm
-      vscjava.vscode-java-test: {version: "0.43.0"} # renovate: datasource=npm
-      vscjava.vscode-maven: {version: "0.44.0"} # renovate: datasource=npm
-      vscjava.vscode-java-pack: {version: "0.29.0"} # renovate: datasource=npm
+      redhat.java: {version: "1.40.0", description: "Java language support"} # renovate: datasource=npm
+      vscjava.vscode-java-debug: {version: "0.58.1", description: "Java debugger"} # renovate: datasource=npm
+      vscjava.vscode-java-dependency: {version: "0.24.1", description: "Java project manager"} # renovate: datasource=npm
+      vscjava.vscode-java-test: {version: "0.43.0", description: "Java test runner"} # renovate: datasource=npm
+      vscjava.vscode-maven: {version: "0.44.0", description: "Maven support"} # renovate: datasource=npm
+      vscjava.vscode-java-pack: {version: "0.29.0", description: "Java extension pack"} # renovate: datasource=npm
 
   node:
     # Keep an exact install pin; Renovate advances only to approved LTS releases.
     description: "(node / eslint / prettier / tailwindcss)"
     mise:
-      node: {version: "24.21.0"} # renovate: datasource=node-version depName=node
+      node: {version: "24.21.0", description: "JavaScript runtime (includes npm)", license: "MIT"} # renovate: datasource=node-version depName=node
+      biome: {backend: "aqua:biomejs/biome", version: "2.5.15", description: "JS/TS/JSON/CSS formatter and linter (Node pack)", license: "MIT OR Apache-2.0"} # renovate: datasource=npm depName=@biomejs/biome
     vscode:
-      dbaeumer.vscode-eslint: {version: "3.0.10"} # renovate: datasource=npm
-      esbenp.prettier-vscode: {version: "11.0.0"} # renovate: datasource=npm
-      bradlc.vscode-tailwindcss: {version: "0.14.11"} # renovate: datasource=npm
-      vue.volar: {version: "2.2.8"} # renovate: datasource=npm
+      dbaeumer.vscode-eslint: {version: "3.0.10", description: "ESLint integration"} # renovate: datasource=npm
+      esbenp.prettier-vscode: {version: "11.0.0", description: "Prettier formatter"} # renovate: datasource=npm
+      bradlc.vscode-tailwindcss: {version: "0.14.11", description: "Tailwind CSS tooling"} # renovate: datasource=npm
+      vue.volar: {version: "2.2.8", description: "Vue language support"} # renovate: datasource=npm
 
   python:
     description: "(python3 / venv / pipx)"
     common:
-      pipx: {}
+      pipx: {description: "Install Python CLI apps in isolated environments", license: "MIT"}
     apt:
-      python3: {}
-      python3-dev: {}
-      python3-venv: {}
+      python3: {description: "Python 3 interpreter (system)", license: "PSF-2.0"}
+      python3-dev: {description: "Python development headers", license: "PSF-2.0"}
+      python3-venv: {description: "Python virtual environment support", license: "PSF-2.0"}
     dnf:
-      python3: {}
-      python3-devel: {}
-      python3-pip: {}
+      python3: {description: "Python 3 interpreter (system)", license: "PSF-2.0"}
+      python3-devel: {description: "Python headers (Fedora)", license: "PSF-2.0"}
+      python3-pip: {description: "Python package installer (Fedora)", license: "MIT"}
     mise:
-      python: {version: "3.14.7"} # renovate: datasource=python-version depName=python
+      python: {version: "3.14.7", description: "Python programming language", license: "PSF-2.0"} # renovate: datasource=python-version depName=python
 
   go:
     description: "(go)"
     mise:
-      go: {version: "1.25.7"} # renovate: datasource=golang-version depName=go packageName=golang
+      go: {version: "1.25.7", description: "Go programming language", license: "BSD-3-Clause"} # renovate: datasource=golang-version depName=go packageName=golang
+      golangci-lint: {backend: "aqua:golangci/golangci-lint", version: "v2.14.0", description: "Go linter aggregator (Go pack)", license: "GPL-3.0"} # renovate: datasource=github-releases depName=golangci/golangci-lint
+      staticcheck: {backend: "aqua:dominikh/go-tools/staticcheck", version: "2026.2.1", description: "Go static analysis (Go pack)", license: "MIT"} # renovate: datasource=github-releases depName=dominikh/go-tools
+      govulncheck: {backend: "go:golang.org/x/vuln/cmd/govulncheck", version: "v1.8.0", description: "Go vulnerability scanner (Go pack)", license: "BSD-3-Clause"} # renovate: datasource=go depName=golang.org/x/vuln
 
   ruby:
     description: "(ruby / build libs)"
     apt:
-      libffi-dev: {}
-      libgdbm-dev: {}
-      libncurses-dev: {}
-      libreadline-dev: {}
-      libssl-dev: {}
-      libyaml-dev: {}
-      zlib1g-dev: {}
+      libffi-dev: {description: "FFI headers (Ruby build)", license: "MIT"}
+      libgdbm-dev: {description: "GDBM headers (Ruby build)", license: "GPL-3.0+"}
+      libncurses-dev: {description: "ncurses headers (Ruby build)", license: "MIT"}
+      libreadline-dev: {description: "Readline headers (Ruby build)", license: "GPL-3.0+"}
+      libssl-dev: {description: "OpenSSL headers (Ruby build)", license: "Apache-2.0"}
+      libyaml-dev: {description: "LibYAML headers (Ruby build)", license: "MIT"}
+      zlib1g-dev: {description: "zlib headers (Ruby build)", license: "Zlib"}
     dnf:
-      libffi-devel: {}
-      gdbm-devel: {}
-      ncurses-devel: {}
-      readline-devel: {}
-      openssl-devel: {}
-      libyaml-devel: {}
-      zlib-devel: {}
+      libffi-devel: {description: "FFI headers (Ruby build)", license: "MIT"}
+      gdbm-devel: {description: "GDBM headers (Ruby build)", license: "GPL-3.0+"}
+      ncurses-devel: {description: "ncurses headers (Ruby build)", license: "MIT"}
+      readline-devel: {description: "Readline headers (Ruby build)", license: "GPL-3.0+"}
+      openssl-devel: {description: "OpenSSL headers (Ruby build)", license: "Apache-2.0"}
+      libyaml-devel: {description: "LibYAML headers (Ruby build)", license: "MIT"}
+      zlib-devel: {description: "zlib headers (Ruby build)", license: "Zlib"}
     mise:
-      ruby: {version: "4.0.7"} # renovate: datasource=ruby-version depName=ruby
+      ruby: {version: "4.0.7", description: "Ruby programming language", license: "Ruby License"} # renovate: datasource=ruby-version depName=ruby
 
   rust:
     description: "(rustc / cargo)"
     apt:
-      libsqlite3-dev: {}
-      pkg-config: {}
+      libsqlite3-dev: {description: "SQLite headers (Rust crates)", license: "Public domain"}
+      pkg-config: {description: "Library compile flag helper", license: "GPL-2.0+"}
     dnf:
-      sqlite-devel: {}
-      pkgconf-pkg-config: {}
+      sqlite-devel: {description: "SQLite headers (Rust crates)", license: "Public domain"}
+      pkgconf-pkg-config: {description: "Library compile flag helper (Fedora)", license: "ISC"}
     mise:
-      rust: {version: "1.98.1"} # renovate: datasource=rust-version depName=rust
+      rust: {version: "1.98.1", description: "Rust programming language", license: "Apache-2.0/MIT"} # renovate: datasource=rust-version depName=rust
+      cargo-machete: {backend: "github:bnjbvr/cargo-machete", version: "v0.9.2", description: "Unused Rust dependency detector (Rust pack)", license: "MIT"} # renovate: datasource=github-releases depName=bnjbvr/cargo-machete

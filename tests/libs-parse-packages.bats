@@ -761,6 +761,9 @@ python"
   assert_equal "$(yq -p=toml '.tools."github:rvben/rumdl"' "$output_file")" null
   assert_equal "$(yq -p=toml '.tools.python' "$output_file")" "$(yq -r '.packs.python.mise.python.version' "$PACKAGES_YAML")"
   assert_equal "$(yq -p=toml '.settings.paranoid' "$output_file")" true
+  # The two pins must agree, not merely both exist
+  assert_equal "$(yq -p=toml -r '.tools."aqua:rvben/rumdl"' "${DEVBASE_ROOT}/.mise.toml")" \
+    "$(yq -r '.core.mise.rumdl.version' "${DEVBASE_ROOT}/dot/.config/devbase/packages.yaml")"
 }
 
 @test "generate_mise_config includes environment section" {

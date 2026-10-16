@@ -6,1233 +6,1803 @@
 :toc:
 :toc-placement: macro
 
-A matrix of ALL tools installed by DevBase, systematically verified from source files.
+Every tool DevBase installs, generated from `dot/.config/devbase/packages.yaml`
+by `just docs-tools-matrix`. Edit the manifest, not this file.
 
 toc::[]
 
 == Legend
 
-[cols="1,4", options="header"]
+* *Install*: `apt/dnf` distribution package (name differs per distro in the manifest), `snap`, `flatpak`,
+  `mise/aqua` (checksum-verified GitHub releases through the aqua registry), `mise/github`, `mise/gitlab`,
+  `mise/forgejo` (direct releases), `mise/go` (built with the Go toolchain), `mise/native` (mise core backend),
+  `installer (...)` (DevBase installer function), `vscode extension`.
+* *Version*: the pinned version Renovate maintains; `distro` means the distribution's current package.
+* *Notes*: `theme` = configured by `devbase-theme`; `not on WSL` = skipped in WSL; `optional` = prompted or opt-in.
+* Proxy support: every install method honours the proxy configured during setup; mise tools also honour
+  mirror replacements from the custom configuration.
+
+== Core (always installed)
+
+=== Distribution packages (all distros)
+
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Abbreviation |Description
+|Tool |Description |Install |Version |License |Notes
 
-|INST
-|Installation Method (apt, snap, snap/classic, mise/aqua, mise/ubi, mise/native, mise/github, binary/tar, binary/deb, special)
+|link:https://packages.ubuntu.com/curl[curl]
+|Command line HTTP client
+|apt/dnf
+|distro
+|curl
+|
 
-|LICENSE
-|License type (MIT, Apache-2.0, GPL, BSD, etc.)
+|link:https://packages.ubuntu.com/gettext[gettext]
+|Internationalization tools; provides envsubst
+|apt/dnf
+|distro
+|GPL-3.0+
+|
 
-|P
-|Proxy Support (✓ = supported, empty = not supported)
+|link:https://packages.ubuntu.com/git[git]
+|Distributed version control system
+|apt/dnf
+|distro
+|GPL-2.0
+|
 
-|REG
-|Registry Support (✓ = supported, empty = not supported)
+|link:https://packages.ubuntu.com/unzip[unzip]
+|ZIP extraction
+|apt/dnf
+|distro
+|Info-ZIP
+|
 
-|T
-|Theme Support (✓ = Everforest theme configurable, empty = no theme support)
+|link:https://packages.ubuntu.com/wget[wget]
+|Network downloader
+|apt/dnf
+|distro
+|GPL-3.0+
+|
 
-|XDG
-|XDG Spec Support (✓ = follows XDG Base Directory spec, empty = uses other locations)
+|link:https://packages.ubuntu.com/tar[tar]
+|Archive utility
+|apt/dnf
+|distro
+|GPL-3.0+
+|
 
-|SSF
-|OpenSSF Scorecard (security score 0-10, empty = N/A) *Note: Scores may be outdated*
+|link:https://packages.ubuntu.com/bash-completion[bash-completion]
+|Programmable completion for bash
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/fish[fish]
+|Friendly interactive shell
+|apt/dnf
+|distro
+|GPL-2.0
+|theme
+
+|link:https://packages.ubuntu.com/tree[tree]
+|Directory structure viewer
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/vifm[vifm]
+|Vim-like file manager
+|apt/dnf
+|distro
+|GPL-2.0
+|theme
+
+|link:https://packages.ubuntu.com/buildah[buildah]
+|Container image builder
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.ubuntu.com/podman[podman]
+|Container runtime (Docker alternative)
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.ubuntu.com/skopeo[skopeo]
+|Container image operations
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.ubuntu.com/bubblewrap[bubblewrap]
+|Unprivileged sandboxing tool
+|apt/dnf
+|distro
+|LGPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/clamav[clamav]
+|Antivirus scanner
+|apt/dnf
+|distro
+|GPL-2.0
+|
+
+|link:https://packages.ubuntu.com/lynis[lynis]
+|Security auditing tool
+|apt/dnf
+|distro
+|GPL-3.0
+|
+
+|link:https://packages.ubuntu.com/e2fsprogs[e2fsprogs]
+|Ext2/3/4 filesystem tools
+|apt/dnf
+|distro
+|GPL-2.0
+|
+
+|link:https://packages.ubuntu.com/jq[jq]
+|JSON processor
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/meld[meld]
+|Visual diff and merge tool
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/pandoc[pandoc]
+|Universal document converter
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/parallel[parallel]
+|Execute jobs in parallel
+|apt/dnf
+|distro
+|GPL-3.0+
+|
+
+|link:https://packages.ubuntu.com/pwgen[pwgen]
+|Password generator
+|apt/dnf
+|distro
+|GPL-2.0
+|
+
+|link:https://packages.ubuntu.com/w3m[w3m]
+|Text-based web browser
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/yadm[yadm]
+|Yet Another Dotfiles Manager
+|apt/dnf
+|distro
+|GPL-3.0
+|
+
+|link:https://packages.ubuntu.com/mkcert[mkcert]
+|Local development certificates
+|apt/dnf
+|distro
+|BSD-3-Clause
+|
+
+|link:https://packages.ubuntu.com/bleachbit[bleachbit]
+|System cleaner and privacy tool
+|apt/dnf
+|distro
+|GPL-3.0
+|
+
+|link:https://packages.ubuntu.com/desktop-file-utils[desktop-file-utils]
+|Desktop file utilities
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/mesa-utils[mesa-utils]
+|Mesa utilities (glxinfo)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/xdg-desktop-portal-gtk[xdg-desktop-portal-gtk]
+|Desktop integration portal
+|apt/dnf
+|distro
+|LGPL-2.1+
+|
+
+|link:https://packages.ubuntu.com/pcscd[pcscd]
+|PC/SC smart card daemon
+|apt/dnf
+|distro
+|BSD-3-Clause
+|not on WSL
+
+|link:https://packages.ubuntu.com/pcsc-tools[pcsc-tools]
+|Smart card reader diagnostics
+|apt/dnf
+|distro
+|GPL-2.0+
+|not on WSL
+
+|link:https://packages.ubuntu.com/opensc[opensc]
+|Smart card middleware (PKCS#11)
+|apt/dnf
+|distro
+|LGPL-2.1+
+|not on WSL
+
+|link:https://packages.ubuntu.com/tlp[tlp]
+|Laptop power management
+|apt/dnf
+|distro
+|GPL-2.0+
+|not on WSL
+
 |===
 
-== Core Development Tools
+=== Distribution packages (Ubuntu/Debian)
 
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+|Tool |Description |Install |Version |License |Notes
 
 |link:https://packages.ubuntu.com/apt-utils[apt-utils]
 |APT utility programs
-|apt
+|apt/dnf
+|distro
 |GPL-2.0+
-|✓
 |
+
+|link:https://packages.ubuntu.com/locales[locales]
+|Locale data and configuration
+|apt/dnf
+|distro
+|GPL-2.0+
 |
-|
+
+|link:https://packages.ubuntu.com/software-properties-common[software-properties-common]
+|APT repository management
+|apt/dnf
+|distro
+|GPL-2.0+
 |
 
 |link:https://packages.ubuntu.com/build-essential[build-essential]
 |Compiler collection (gcc, g++, make, libc-dev, dpkg-dev)
-|apt
+|apt/dnf
+|distro
 |Various GPL
-|✓
-|
-|
-|
 |
 
-|link:https://curl.se/[curl]
-|Command line HTTP client
-|apt
-|curl
-|✓
-|
-|
-|
+|link:https://packages.ubuntu.com/containernetworking-plugins[containernetworking-plugins]
+|CNI network plugins
+|apt/dnf
+|distro
+|Apache-2.0
 |
 
-|link:https://git-scm.com/[git]
-|Distributed version control system
-|apt
+|link:https://packages.ubuntu.com/clamav-daemon[clamav-daemon]
+|ClamAV daemon
+|apt/dnf
+|distro
 |GPL-2.0
-|✓
-|
-|
-|✓
 |
 
-|link:https://www.python.org/[python3-dev]
-|Python development headers
-|apt
-|PSF-2.0
-|✓
-|
-|
-|
+|link:https://packages.ubuntu.com/gufw[gufw]
+|Graphical frontend for UFW
+|apt/dnf
+|distro
+|GPL-3.0
 |
 
-|link:https://www.sudo.ws/[sudo]
-|Execute commands as another user
-|apt
+|link:https://packages.ubuntu.com/ufw[ufw]
+|Uncomplicated Firewall
+|apt/dnf
+|distro
+|GPL-3.0
+|
+
+|link:https://packages.ubuntu.com/unattended-upgrades[unattended-upgrades]
+|Automatic security updates
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/dbus-user-session[dbus-user-session]
+|Per-user D-Bus session bus
+|apt/dnf
+|distro
+|AFL-2.1 OR GPL-2.0+
+|
+
+|link:https://packages.ubuntu.com/libfontconfig1[libfontconfig1]
+|Font configuration library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libgbm1[libgbm1]
+|Graphics buffer manager
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libgtk-3-bin[libgtk-3-bin]
+|GTK 3 utilities
+|apt/dnf
+|distro
+|LGPL-2.1+
+|
+
+|link:https://packages.ubuntu.com/libxi6[libxi6]
+|X Input extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libxrender1[libxrender1]
+|X Rendering extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libxtst6[libxtst6]
+|X Test extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/bind9-dnsutils[bind9-dnsutils]
+|DNS utilities (dig, nslookup)
+|apt/dnf
+|distro
 |ISC
-|✓
-|
-|
-|
 |
 
-|link:https://www.gnu.org/software/wget/[wget]
-|Network downloader
-|apt
+|link:https://packages.ubuntu.com/libxml2-utils[libxml2-utils]
+|XML utilities (xmllint)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libnss3-tools[libnss3-tools]
+|NSS security tools
+|apt/dnf
+|distro
+|MPL-2.0
+|
+
+|link:https://packages.ubuntu.com/openssh-client[openssh-client]
+|SSH client
+|apt/dnf
+|distro
+|BSD
+|
+
+|link:https://packages.ubuntu.com/ssh-askpass[ssh-askpass]
+|SSH password GUI helper
+|apt/dnf
+|distro
+|BSD
+|
+
+|link:https://packages.ubuntu.com/dislocker[dislocker]
+|BitLocker encryption for Linux
+|apt/dnf
+|distro
+|GPL-2.0
+|not on WSL
+
+|link:https://packages.ubuntu.com/opensc-pkcs11[opensc-pkcs11]
+|OpenSC PKCS#11 module
+|apt/dnf
+|distro
+|LGPL-2.1+
+|not on WSL
+
+|link:https://packages.ubuntu.com/libccid[libccid]
+|USB smart card reader driver
+|apt/dnf
+|distro
+|LGPL-2.1+
+|not on WSL
+
+|link:https://packages.ubuntu.com/cardpeek[cardpeek]
+|Smart card content viewer
+|apt/dnf
+|distro
 |GPL-3.0+
-|✓
-|
-|
-|
-|
+|not on WSL
+
+|link:https://packages.ubuntu.com/tlp-rdw[tlp-rdw]
+|TLP radio device wizard
+|apt/dnf
+|distro
+|GPL-2.0+
+|not on WSL
+
 |===
 
-== Programming Languages & Runtimes
+=== Distribution packages (Fedora)
 
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+|Tool |Description |Install |Version |License |Notes
 
-|link:https://openjdk.org/[default-jdk]
-|Default Java Development Kit
-|apt
-|GPL-2.0 with Classpath
-|✓
-|
-|
-|
+|link:https://packages.fedoraproject.org/pkgs/glibc-langpack-en/[glibc-langpack-en]
+|English locale data (Fedora)
+|apt/dnf
+|distro
+|LGPL-2.1+
 |
 
-|link:https://openjdk.org/[default-jre]
-|Default Java Runtime Environment
-|apt
-|GPL-2.0 with Classpath
-|✓
-|
-|
-|
+|link:https://packages.fedoraproject.org/pkgs/development-tools/[@development-tools]
+|Fedora development tools group (gcc, make, …)
+|apt/dnf
+|distro
+|Various
 |
 
-|link:https://go.dev/[go]
-|Go programming language
-|mise/native
+|link:https://packages.fedoraproject.org/pkgs/containernetworking-plugins/[containernetworking-plugins]
+|CNI network plugins
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/clamd/[clamd]
+|ClamAV daemon (Fedora)
+|apt/dnf
+|distro
+|GPL-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/firewalld/[firewalld]
+|Firewall daemon (Fedora)
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/dnf-automatic/[dnf-automatic]
+|Automatic package updates (Fedora)
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/dbus-daemon/[dbus-daemon]
+|D-Bus message bus (Fedora)
+|apt/dnf
+|distro
+|AFL-2.1 OR GPL-2.0+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/fontconfig/[fontconfig]
+|Font configuration library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/mesa-libgbm/[mesa-libgbm]
+|Mesa generic buffer management (Fedora)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/gtk3/[gtk3]
+|GTK 3 toolkit (Fedora)
+|apt/dnf
+|distro
+|LGPL-2.1+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/libXi/[libXi]
+|X Input extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/libXrender/[libXrender]
+|X Rendering extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/libXtst/[libXtst]
+|X Test extension library
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/bind-utils/[bind-utils]
+|DNS lookup utilities (dig, nslookup)
+|apt/dnf
+|distro
+|MPL-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/libxml2/[libxml2]
+|XML library and xmllint (Fedora)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/nss-tools/[nss-tools]
+|NSS certificate tools (certutil)
+|apt/dnf
+|distro
+|MPL-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/openssh-clients/[openssh-clients]
+|SSH client (Fedora)
+|apt/dnf
+|distro
+|BSD
+|
+
+|link:https://packages.fedoraproject.org/pkgs/openssh-askpass/[openssh-askpass]
+|SSH passphrase dialog (Fedora)
+|apt/dnf
+|distro
+|BSD
+|
+
+|link:https://packages.fedoraproject.org/pkgs/dislocker/[dislocker]
+|BitLocker encryption for Linux
+|apt/dnf
+|distro
+|GPL-2.0
+|not on WSL
+
+|link:https://packages.fedoraproject.org/pkgs/opensc/[opensc]
+|Smart card middleware (PKCS#11)
+|apt/dnf
+|distro
+|LGPL-2.1+
+|not on WSL
+
+|link:https://packages.fedoraproject.org/pkgs/ccid/[ccid]
+|USB smart card reader driver
+|apt/dnf
+|distro
+|LGPL-2.1+
+|not on WSL
+
+|link:https://packages.fedoraproject.org/pkgs/tlp-rdw/[tlp-rdw]
+|TLP radio device wizard
+|apt/dnf
+|distro
+|GPL-2.0+
+|not on WSL
+
+|===
+
+=== Snap
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://snapcraft.io/chromium[chromium]
+|Chromium web browser
+|snap
+|distro
 |BSD-3-Clause
-|✓
-|✓
-|
-|✓
 |
 
-|link:https://adoptium.net/[java]
-|Eclipse Temurin JDK
-|mise/native
-|GPL-2.0 with Classpath
-|✓
-|✓
-|
-|✓
-|
+|link:https://snapcraft.io/ghostty[ghostty]
+|GPU-accelerated terminal emulator
+|snap/classic
+|distro
+|MIT
+|theme,not on WSL
 
-|link:https://maven.apache.org/[maven]
-|Java build tool
-|mise/native
+|link:https://snapcraft.io/microk8s[microk8s]
+|Lightweight Kubernetes from Canonical
+|snap/classic
+|distro
 |Apache-2.0
-|✓
-|✓
-|
-|✓
 |
 
-|link:https://nodejs.org/[node]
-|JavaScript runtime (includes npm)
-|mise/native
-|MIT
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://www.python.org/[python]
-|Python programming language
-|mise/native
-|PSF-2.0
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://www.python.org/[python3]
-|Python 3 interpreter (system)
-|apt
-|PSF-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.python.org/[python3-venv]
-|Python virtual environment support
-|apt
-|PSF-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.ruby-lang.org/[ruby]
-|Ruby programming language
-|mise/native
-|Ruby License
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://github.com/astral-sh/uv[uv]
-|Fast Python package installer and resolver (10-100x faster than pip/pipx)
-|mise/aqua
-|MIT/Apache-2.0
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://www.rust-lang.org/[rust]
-|Rust programming language
-|mise/native
-|Apache-2.0/MIT
-|✓
-|✓
-|
-|✓
-|
 |===
 
-== Shell & Terminal Tools
+=== Flatpak
 
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+|Tool |Description |Install |Version |License |Notes
 
-|link:https://github.com/scop/bash-completion[bash-completion]
-|Programmable completion for bash
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|
+|link:https://flathub.org/apps/org.chromium.Chromium[org.chromium.Chromium]
+|Chromium browser (Flatpak)
+|flatpak
+|distro
+|BSD-3-Clause
 |
 
-|link:https://fishshell.com/[fish]
-|Friendly interactive shell
-|apt
-|GPL-2.0
-|✓
-|
-|✓
-|✓
-|
-
-|link:https://github.com/gokcehan/lf[lf]
-|Fast file manager with vim keys
-|mise/aqua
-|MIT
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://vifm.info/[vifm]
-|Vim-like file manager
-|apt
-|GPL-2.0
-|✓
-|
-|
-|✓
-|
-
-|link:https://starship.rs/[starship]
-|Cross-shell prompt
-|mise/aqua
-|ISC
-|✓
-|✓
-|✓
-|✓
-|8.0
-
-|link:http://mama.indstate.edu/users/ice/tree/[tree]
-|Directory structure viewer
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|
-|
-
-|link:https://zellij.dev/[zellij]
-|Terminal workspace multiplexer
-|mise/aqua
-|MIT
-|✓
-|✓
-|✓
-|✓
-|7.3
-
-|link:https://github.com/ryanoasis/nerd-fonts[Monaspace Nerd Font]
-|Nerd Font patched Monaspace with 3,600+ glyphs (icons, powerline, devicons). Native Ubuntu only (WSL users manage fonts on Windows).
-|binary/zip
-|SIL OFL 1.1
-|✓
-|
-|
-|✓
-|7.3
 |===
 
-== Modern CLI Tools
+=== mise tools
 
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://github.com/sharkdp/bat[bat]
-|Cat with syntax highlighting
-|mise/aqua
-|Apache-2.0/MIT
-|✓
-|✓
-|✓
-|✓
-|8.3
-
-|link:https://github.com/aristocratos/btop[btop]
-|Resource monitor
-|mise/aqua
-|Apache-2.0
-|✓
-|✓
-|✓
-|✓
-|7.7
-
-|link:https://github.com/dandavison/delta[delta]
-|Better git diff viewer
-|mise/aqua
-|MIT
-|✓
-|✓
-|✓
-|✓
-|7.7
-
-|link:https://github.com/eza-community/eza[eza]
-|Modern ls replacement
-|mise/aqua
-|MIT
-|✓
-|✓
-|
-|✓
-|7.7
-
-|link:https://github.com/junegunn/fzf[fzf]
-|Fuzzy finder
-|mise/aqua
-|MIT
-|✓
-|✓
-|
-|✓
-|8.3
-
-|link:https://github.com/jorgebucaran/fisher[fisher]
-|Fish plugin manager
-|Fish function
-|MIT
-|✓
-|✓
-|
-|✓
-|6.0
-
-|link:https://github.com/PatrickF1/fzf.fish[fzf.fish]
-|FZF Fish integration with keybindings (Ctrl+R history, Ctrl+Alt+F files, Ctrl+Alt+L git log, etc)
-|Fisher plugin
-|MIT
-|✓
-|
-|
-|✓
-|
-
-|link:https://jqlang.github.io/jq/[jq]
-|JSON processor
-|mise/native
-|MIT
-|✓
-|✓
-|
-|✓
-|8.0
+|Tool |Description |Install |Version |License |Notes
 
 |link:https://github.com/casey/just[just]
 |Command runner
 |mise/aqua
+|1.58.0
 |CC0-1.0
-|✓
-|✓
 |
+
+|link:https://github.com/jdx/usage[usage]
+|CLI spec used by mise completions
+|mise/aqua
+|v6.12.1
+|MIT
 |
-|7.7
+
+|link:https://mise.jdx.dev/registry.html[jq]
+|JSON processor
+|mise/native
+|jq-1.8.1
+|MIT
+|
+
+|link:https://github.com/mikefarah/yq[yq]
+|YAML processor
+|mise/aqua
+|v4.54.1
+|MIT
+|
 
 |link:https://github.com/mike-engel/jwt-cli[jwt-cli]
 |JWT token tool
 |mise/aqua
+|6.2.0
 |MIT
-|✓
-|✓
 |
-|✓
+
+|link:https://github.com/sindrel/excalidraw-converter[excalidraw-converter]
+|Excalidraw to SVG/PNG converter
+|mise/github
+|v1.5.6
+|MIT
+|
+
+|link:https://github.com/junegunn/fzf[fzf]
+|Fuzzy finder
+|mise/aqua
+|v0.74.4
+|MIT
+|
+
+|link:https://github.com/ajeetdsouza/zoxide[zoxide]
+|Smarter cd — jump to frecent directories (`z`, `zi`)
+|mise/aqua
+|v0.10.0
+|MIT
+|
+
+|link:https://github.com/eza-community/eza[eza]
+|Modern ls replacement
+|mise/aqua
+|v0.23.5
+|MIT
+|theme
+
+|link:https://github.com/sharkdp/bat[bat]
+|Cat with syntax highlighting
+|mise/aqua
+|v0.26.1
+|Apache-2.0/MIT
+|theme
+
+|link:https://github.com/sharkdp/vivid[vivid]
+|LS_COLORS theme generator
+|mise/aqua
+|v0.11.1
+|MIT OR Apache-2.0
+|
+
+|link:https://github.com/starship/starship[starship]
+|Cross-shell prompt
+|mise/aqua
+|v1.26.0
+|ISC
+|theme
+
+|link:https://github.com/zellij-org/zellij[zellij]
+|Terminal workspace multiplexer
+|mise/aqua
+|v0.45.1
+|MIT
+|theme
+
+|link:https://github.com/BurntSushi/ripgrep[ripgrep]
+|Fast grep alternative
+|mise/aqua
+|15.2.0
+|MIT/Unlicense
+|
+
+|link:https://github.com/sharkdp/fd[fd]
+|Fast find alternative
+|mise/aqua
+|v10.5.0
+|MIT OR Apache-2.0
+|
+
+|link:https://github.com/tldr-pages/tlrc[tlrc]
+|tldr pages client (tldr command)
+|mise/aqua
+|v1.13.1
+|MIT
+|
+
+|link:https://github.com/aristocratos/btop[btop]
+|Resource monitor
+|mise/aqua
+|v1.4.7
+|Apache-2.0
+|theme
+
+|link:https://github.com/gokcehan/lf[lf]
+|Fast file manager with vim keys
+|mise/aqua
+|r41
+|MIT
+|
+
+|link:https://github.com/dandavison/delta[delta]
+|Better git diff viewer
+|mise/aqua
+|0.20.1
+|MIT
+|theme
+
+|link:https://github.com/orhun/git-cliff[git-cliff]
+|Changelog generator
+|mise/aqua
+|v2.14.2
+|Apache-2.0/MIT
 |
 
 |link:https://github.com/jesseduffield/lazygit[lazygit]
 |Terminal UI for git
 |mise/aqua
+|v0.65.1
 |MIT
-|✓
-|✓
-|✓
-|✓
-|8.3
+|theme
 
-|link:https://pandoc.org/[pandoc]
-|Universal document converter
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|✓
-|
-
-|link:https://www.gnu.org/software/parallel/[parallel]
-|Execute jobs in parallel
-|apt
-|GPL-3.0+
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/BurntSushi/ripgrep[ripgrep]
-|Fast grep alternative
+|link:https://github.com/cli/cli[gh]
+|GitHub CLI
 |mise/aqua
-|MIT/Unlicense
-|✓
-|✓
-|
-|✓
-|9.0
-
-|link:https://www.shellcheck.net/[shellcheck]
-|Shell script linter
-|mise/aqua
-|GPL-3.0
-|✓
-|✓
-|
-|✓
-|7.5
-
-|link:https://github.com/mikefarah/yq[yq]
-|YAML processor
-|mise/aqua
+|v2.102.0
 |MIT
-|✓
-|✓
 |
-|✓
-|7.3
 
-|link:https://github.com/ajeetdsouza/zoxide[zoxide]
-|Smarter cd — jump to frecent directories (`z`, `zi`)
-|mise/aqua
+|link:https://gitlab.com/gitlab-org/cli[glab]
+|GitLab CLI
+|mise/gitlab
+|v1.119.0
 |MIT
-|✓
-|✓
 |
-|✓
-|
-|===
 
-== Container & Kubernetes Tools
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://argo-cd.readthedocs.io/[argo]
-|ArgoCD CLI
+|link:https://github.com/neovim/neovim[neovim]
+|Modern vim editor
 |mise/aqua
+|v0.12.6
 |Apache-2.0
-|✓
-|✓
-|
-|✓
-|7.5
+|theme
 
-|link:https://buildah.io/[buildah]
-|Container image builder
-|apt
-|Apache-2.0
-|✓
-|
-|
-|✓
-|
-
-|link:https://github.com/containernetworking/plugins[containernetworking-plugins]
-|CNI network plugins
-|apt
-|Apache-2.0
-|✓
-|
-|
-|
+|link:https://github.com/tree-sitter/tree-sitter[tree-sitter-cli]
+|Tree-sitter parser CLI for Neovim
+|mise/aqua
+|v0.27.1
+|MIT
 |
 
 |link:https://github.com/docker/compose[docker-compose]
 |Docker Compose
 |mise/aqua
+|v5.5.1
 |Apache-2.0
-|✓
-|✓
-|
-|✓
 |
 
-|link:https://k6.io/[k6]
-|Load testing tool
-|mise/aqua
-|AGPL-3.0
-|✓
-|✓
-|
-|
-|7.7
-
-|link:https://k9scli.io/[k9s]
+|link:https://github.com/derailed/k9s[k9s]
 |Kubernetes TUI manager
 |mise/aqua
+|v0.51.0
 |Apache-2.0
-|✓
-|✓
-|
-|✓
-|7.3
+|theme
 
-|link:https://k3s.io/[k3s]
-|Lightweight Kubernetes distribution
-|script
-|Apache-2.0
-|✓
-|
-|
-|✓
+|link:https://github.com/grafana/k6[k6]
+|Load testing tool
+|mise/aqua
+|v2.3.0
+|AGPL-3.0
 |
 
-|link:https://microk8s.io/[microk8s]
-|Lightweight Kubernetes from Canonical
-|apt
+|link:https://github.com/argoproj/argo-cd[argocd]
+|Argo CD CLI
+|mise/aqua
+|v3.5.4
 |Apache-2.0
-|✓
-|
-|
-|
 |
 
-|link:https://kubernetes.io/docs/reference/kubectl/[kubectl]
-|Kubernetes CLI (extracted from oc)
-|binary/tar
-|Apache-2.0
-|✓
-|
-|
-|✓
-|
-
-|link:https://sealed-secrets.netlify.app/[kubeseal]
+|link:https://github.com/bitnami-labs/sealed-secrets[kubeseal]
 |Kubernetes sealed secrets
 |mise/aqua
+|v0.40.0
 |Apache-2.0
-|✓
-|✓
-|
-|
-|6.3
-
-|link:https://www.openshift.com/[oc]
-|OpenShift CLI
-|binary/tar
-|Apache-2.0
-|✓
-|
-|
-|✓
 |
 
-|link:https://podman.io/[podman]
-|Container runtime (Docker alternative)
-|apt
-|Apache-2.0
-|✓
-|
-|
-|✓
-|
-
-|link:https://github.com/containers/skopeo[skopeo]
-|Container image operations
-|apt
-|Apache-2.0
-|✓
-|
-|
-|✓
-|
-
-|link:https://tekton.dev/[tkn]
+|link:https://github.com/tektoncd/cli[tkn]
 |Tekton Pipelines CLI
 |mise/aqua
+|v0.46.1
 |Apache-2.0
-|✓
-|✓
-|
-|
-|7.3
-|===
-
-== Security & Quality Tools
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://github.com/rhysd/actionlint[actionlint]
-|GitHub Actions linter
-|mise/aqua
-|MIT
-|✓
-|✓
-|
-|
-|7.0
-
-|link:https://checkstyle.org/[checkstyle]
-|Java code style checker
-|mise/ubi
-|LGPL-2.1
-|✓
-|✓
-|
-|
-|7.0
-
-|link:https://www.clamav.net/[clamav]
-|Antivirus scanner
-|apt
-|GPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.clamav.net/[clamav-daemon]
-|ClamAV daemon
-|apt
-|GPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://codeberg.org/itiquette/gommitlint[gommitlint]
-|Git commit policy enforcement
-|mise/forgejo
-|EUPL-1.2
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://github.com/sigstore/cosign[cosign]
-|Container signing and verification
-|mise/aqua
-|Apache-2.0
-|✓
-|✓
-|
-|✓
-|8.7
-
-|link:https://github.com/gitleaks/gitleaks[gitleaks]
-|Scan for secrets in git repos
-|mise/aqua
-|MIT
-|✓
-|✓
-|
-|✓
-|7.7
-
-|link:https://github.com/hadolint/hadolint[hadolint]
-|Dockerfile linter
-|mise/aqua
-|GPL-3.0
-|✓
-|✓
-|
-|✓
-|7.3
-
-|link:https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS[libnss3-tools]
-|NSS security tools
-|apt
-|MPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://cisofy.com/lynis/[lynis]
-|Security auditing tool
-|apt
-|GPL-3.0
-|✓
-|
-|
-|
-|
-
-|link:https://launchpad.net/ufw[ufw]
-|Uncomplicated Firewall
-|apt
-|GPL-3.0
-|✓
-|
-|
-|
-|
-
-|link:http://gufw.org/[gufw]
-|Graphical frontend for UFW
-|apt
-|GPL-3.0
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/FiloSottile/mkcert[mkcert]
-|Local development certificates
-|apt
-|BSD-3-Clause
-|✓
-|
-|
-|
-|
-
-|link:https://www.openssh.com/[openssh-client]
-|SSH client
-|apt
-|BSD
-|✓
-|
-|
-|
-|
-
-|link:https://pmd.github.io/[pmd]
-|Source code analyzer
-|mise/github
-|BSD-2-Clause
-|✓
-|✓
-|
-|
-|6.7
-
-|link:https://github.com/italia/publiccode-parser-go[publiccode-parser-go]
-|PublicCode.yml validator
-|mise/github
-|BSD-3-Clause
-|✓
-|✓
-|
-|
-|
-
-|link:https://github.com/fsfe/reuse-tool[reuse]
-|License compliance tool implementing REUSE specification (SPDX headers, DEP5)
-|mise/pipx
-|GPL-3.0+
-|✓
-|✓
-|
-|✓
-|
-
-|link:https://github.com/ossf/scorecard[scorecard]
-|Security scorecards for OSS
-|mise/aqua
-|Apache-2.0
-|✓
-|✓
-|
-|✓
-|8.3
-
-|link:https://github.com/slsa-framework/slsa-verifier[slsa-verifier]
-|SLSA provenance verification
-|mise/github
-|Apache-2.0
-|✓
-|✓
-|
-|✓
-|7.7
-
-|link:https://github.com/theseal/ssh-askpass[ssh-askpass]
-|SSH password GUI helper
-|apt
-|BSD
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/anchore/syft[syft]
-|SBOM generator
-|mise/aqua
-|Apache-2.0
-|✓
-|✓
-|
-|✓
-|8.3
-
-|link:https://wiki.debian.org/UnattendedUpgrades[unattended-upgrades]
-|Automatic security updates
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|
 |
 
 |link:https://github.com/google/yamlfmt[yamlfmt]
 |YAML formatter
 |mise/aqua
+|v0.21.0
 |Apache-2.0
-|✓
-|✓
 |
-|✓
-|
-|===
 
-== Version Control & Git Tools
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://cli.github.com/[gh]
-|GitHub CLI
+|link:https://github.com/rhysd/actionlint[actionlint]
+|GitHub Actions linter
 |mise/aqua
+|v1.7.12
 |MIT
-|✓
-|✓
 |
-|✓
-|8.3
 
-|link:https://github.com/orhun/git-cliff[git-cliff]
-|Changelog generator
+|link:https://github.com/hadolint/hadolint[hadolint]
+|Dockerfile linter
 |mise/aqua
-|Apache-2.0/MIT
-|✓
-|✓
+|v2.15.1
+|GPL-3.0
 |
-|✓
-|7.3
 
-|link:https://gitlab.com/gitlab-org/cli[glab]
-|GitLab CLI
-|mise/ubi
-|MIT
-|✓
-|✓
+|link:https://github.com/koalaman/shellcheck[shellcheck]
+|Shell script linter
+|mise/aqua
+|v0.11.0
+|GPL-3.0
 |
-|✓
-|7.0
+
+|link:https://github.com/mvdan/sh[shfmt]
+|Shell script formatter
+|mise/aqua
+|v3.14.1
+|BSD-3-Clause
+|
 
 |link:https://github.com/rvben/rumdl[rumdl]
 |Documentation linter
-|mise/ubi
-|MIT
-|✓
-|✓
-|
-|
-|
-
-|link:https://yadm.io/[yadm]
-|Yet Another Dotfiles Manager
-|apt
-|GPL-3.0
-|✓
-|
-|
-|✓
-|6.7
-
-|link:http://w3m.sourceforge.net/[w3m]
-|Text-based web browser
-|apt
-|MIT
-|✓
-|
-|
-|
-|
-|===
-
-== Java Development Tools
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://dbeaver.io/[dbeaver]
-|Universal database tool
-|binary/deb
-|Apache-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.jetbrains.com/toolbox-app/[jetbrains-toolbox]
-|JetBrains IDE manager
-|binary/tar
-|Proprietary
-|✓
-|
-|
-|
-|6.3
-
-|link:https://www.oracle.com/java/technologies/jdk-mission-control.html[jmc]
-|JDK Mission Control (optional)
-|special
-|UPL-1.0
-|✓
-|
-|
-|
-|
-
-|link:https://keystore-explorer.org/[keystore-explorer] (kse)
-|Java KeyStore GUI manager
-|binary/deb
-|GPL-3.0
-|✓
-|
-|
-|
-|
-
-|link:https://visualvm.github.io/[visualvm]
-|Java profiling and monitoring
-|apt
-|GPL-2.0 with Classpath
-|✓
-|
-|
-|
-|
-|===
-
-== Editor & IDE Tools
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://neovim.io/[neovim]
-|Modern vim editor
 |mise/aqua
+|v0.2.79
+|MIT
+|
+
+|link:https://github.com/crate-ci/typos[typos]
+|Source code spell checker
+|mise/aqua
+|v1.51.1
+|MIT OR Apache-2.0
+|
+
+|link:https://github.com/tamasfe/taplo[taplo]
+|TOML linter and formatter
+|mise/aqua
+|0.10.0
+|MIT
+|
+
+|link:https://github.com/editorconfig-checker/editorconfig-checker[editorconfig-checker]
+|Verifies files against .editorconfig
+|mise/github
+|v4.0.2
+|MIT
+|
+
+|link:https://github.com/lycheeverse/lychee[lychee]
+|Broken link checker for Markdown and AsciiDoc
+|mise/aqua
+|0.24.2
+|MIT OR Apache-2.0
+|
+
+|link:https://github.com/vale-cli/vale[vale]
+|Prose linter for Markdown, AsciiDoc and reStructuredText
+|mise/github
+|v3.24.0
+|MIT
+|
+
+|link:https://github.com/zricethezav/gitleaks[gitleaks]
+|Scan for secrets in git repos
+|mise/aqua
+|v8.30.1
+|MIT
+|
+
+|link:https://github.com/anchore/syft[syft]
+|SBOM generator
+|mise/aqua
+|v1.54.1
 |Apache-2.0
-|✓
-|✓
-|✓
-|✓
-|7.7
-|===
-
-== Snap Packages
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://chromium.woolyss.com/[chromium]
-|Chromium web browser
-|snap
-|BSD-3-Clause
-|✓
-|
-|
-|
 |
 
-|link:https://www.mozilla.org/firefox/[firefox]
-|Firefox web browser (Mozilla APT repo, not snap, for smart card support)
-|apt (Mozilla)
-|MPL-2.0
-|✓
-|
-|
-|
+|link:https://github.com/ossf/scorecard[scorecard]
+|Security scorecards for OSS
+|mise/aqua
+|v5.5.0
+|Apache-2.0
 |
 
-|link:https://ghostty.org/[ghostty]
-|GPU-accelerated terminal emulator
-|snap/classic
+|link:https://github.com/sigstore/cosign[cosign]
+|Container signing and verification
+|mise/aqua
+|3.1.3
+|Apache-2.0
+|
+
+|link:https://github.com/slsa-framework/slsa-verifier[slsa-verifier]
+|SLSA provenance verification
+|mise/github
+|v2.7.1
+|Apache-2.0
+|
+
+|link:https://github.com/aquasecurity/trivy[trivy]
+|Vulnerability and misconfiguration scanner for filesystems and images
+|mise/aqua
+|v0.75.0
+|Apache-2.0
+|
+
+|link:https://github.com/google/osv-scanner[osv-scanner]
+|Dependency vulnerability scanner (OSV database)
+|mise/aqua
+|v2.6.0
+|Apache-2.0
+|
+
+|link:https://github.com/opengrep/opengrep[opengrep]
+|SAST scanner (Semgrep-compatible rules)
+|mise/aqua
+|v1.30.2
+|LGPL-2.1
+|
+
+|link:https://codeberg.org/itiquette/gommitlint[gommitlint]
+|Git commit policy enforcement
+|mise/forgejo
+|0.9.12
+|EUPL-1.2
+|
+
+|link:https://github.com/italia/publiccode-parser-go[publiccode-parser]
+|publiccode.yml validator
+|mise/github
+|v5.4.3
+|AGPL-3.0
+|
+
+|link:https://github.com/bats-core/bats-core[bats]
+|Bash automated testing system
+|mise/aqua
+|1.14.0
 |MIT
-|✓
 |
-|✓
-|✓
-|
+
 |===
 
-== System Utilities
+=== Custom installers
 
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
+[cols="2,3,1,1,2,1", options="header"]
 |===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
+|Tool |Description |Install |Version |License |Notes
 
-|link:https://github.com/Aorimn/dislocker[dislocker]
-|BitLocker encryption for Linux
-|apt
-|GPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.isc.org/bind/[bind9-dnsutils]
-|DNS utilities (dig, nslookup)
-|apt
-|ISC
-|✓
-|
-|
-|
-|
-
-|link:http://e2fsprogs.sourceforge.net/[e2fsprogs]
-|Ext2/3/4 filesystem tools
-|apt
-|GPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://sourceforge.net/projects/pwgen/[pwgen]
-|Password generator
-|apt
-|GPL-2.0
-|✓
-|
-|
-|
-|
-
-|link:https://www.bleachbit.org/[bleachbit]
-|System cleaner and privacy tool
-|apt
-|GPL-3.0
-|✓
-|
-|
-|
-|
-|===
-
-== GUI/Desktop Integration
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://www.freedesktop.org/wiki/Software/desktop-file-utils/[desktop-file-utils]
-|Desktop file utilities
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|
-|
-
-|link:https://gitlab.freedesktop.org/mesa/mesa[libgbm1]
-|Graphics buffer manager
-|apt
-|MIT
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/bugaevc/wl-clipboard[wl-clipboard]
-|Wayland clipboard utilities (conditional on Wayland display server)
-|apt
-|GPL-3.0
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/astrand/xclip[xclip]
-|X11 clipboard tool (conditional on X11 display server)
-|apt
-|GPL-2.0+
-|✓
-|
-|
-|
-|
-
-|link:https://github.com/flatpak/xdg-desktop-portal-gtk[xdg-desktop-portal-gtk]
-|Desktop integration portal
-|apt
-|LGPL-2.1+
-|✓
-|
-|
-|
-|
-
-|link:http://www.vergenet.net/~conrad/software/xsel/[xsel]
-|X11 selection tool (conditional on X11 display server)
-|apt
-|MIT
-|✓
-|
-|
-|
-|
-|===
-
-== Version Management
-
-[cols="2,3,1,2,1,1,1,1,1", options="header"]
-|===
-|Tool |Description |INST |LICENSE |P |REG |T |XDG |SSF
-
-|link:https://mise.jdx.dev/[mise]
+|mise
 |Multi-runtime version manager
-|special
+|installer (install_mise)
+|v2026.9.17
 |MIT
-|✓
-|✓
 |
-|✓
-|7.7
+
+|gum
+|Shell script TUI components (setup UI)
+|installer (install_gum)
+|2.0.1
+|MIT
+|
+
+|fisher
+|Fish plugin manager
+|installer (install_fisher)
+|4.4.8
+|MIT
+|
+
+|fzf_fish
+|Fish fzf key bindings plugin
+|installer (install_fzf_fish)
+|v11.0
+|MIT
+|
+
+|lazyvim
+|Neovim starter configuration
+|installer (install_lazyvim)
+|803bc18
+|Apache-2.0
+|optional
+
+|nerd_fonts
+|Patched developer fonts
+|installer (install_nerd_fonts)
+|v3.5.1
+|MIT/OFL
+|not on WSL
+
+|oc
+|OpenShift CLI
+|installer (install_oc_kubectl)
+|4.22.16
+|Apache-2.0
+|
+
+|k3s
+|Lightweight Kubernetes distribution
+|installer (install_k3s)
+|v1.37.1+k3s1
+|Apache-2.0
+|optional
+
+|vscode
+|Visual Studio Code
+|installer (install_vscode)
+|1.139.1
+|Proprietary (MIT source)
+|not on WSL
+
 |===
 
-=== Source Verification
-Every tool listed has been systematically verified from:
-* `dot/.config/devbase/packages.yaml` - Unified package configuration (APT, Snap, mise, VS Code, custom tools)
-* `libs/install-apt.sh` - APT package installation
-* `libs/install-snap.sh` - Snap package installation
-* `libs/install-mise.sh` - Mise tool installation
-* `libs/install-custom.sh` - Custom installations (LazyVim, JMC, etc.)
-* `libs/setup-vscode.sh` - VS Code extension installation
+=== VS Code extensions
 
-=== Conditional Installations
-Some tools are installed conditionally based on the display server:
-* **Wayland**: `wl-clipboard` is installed if Wayland display server is detected
-* **X11**: `xclip` and `xsel` are installed if X11 display server is detected
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
 
+|link:https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode[asciidoctor.asciidoctor-vscode]
+|AsciiDoc preview and tooling
+|vscode extension
+|3.4.2
+|
+|
 
+|link:https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml[redhat.vscode-yaml]
+|YAML language support
+|vscode extension
+|1.17.0
+|
+|
 
-=== Installation Methods Detail
-* **apt**: System package manager (respects APT proxy configuration)
-* **snap**: Snap package (respects snap proxy configuration)
-* **snap/classic**: Snap package with classic confinement
-* **mise/aqua**: Installed via mise using aqua backend (GitHub releases)
-* **mise/ubi**: Installed via mise using ubi backend (Universal Binary Installer)
-* **mise/native**: Installed via mise native backends (node, python, java, go, maven, jq)
-* **mise/github**: Installed via mise directly from GitHub
-* **binary/tar**: Downloaded as tar archive and extracted to ~/.local/bin
-* **binary/deb**: Downloaded as .deb package and installed via dpkg
-* **special**: Custom installation logic (mise self-install, jmc with prompt, lazyvim git clone)
+|link:https://marketplace.visualstudio.com/items?itemName=sonarsource.sonarlint-vscode[sonarsource.sonarlint-vscode]
+|SonarLint code quality and security
+|vscode extension
+|4.18.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer[MS-SarifVSCode.sarif-viewer]
+|SARIF results viewer
+|vscode extension
+|3.4.5
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=lokalise.i18n-ally[lokalise.i18n-ally]
+|i18n Ally translation tooling
+|vscode extension
+|2.13.1
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=pkief.material-icon-theme[pkief.material-icon-theme]
+|Material icon theme
+|vscode extension
+|5.20.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=sainnhe.everforest[sainnhe.everforest]
+|Everforest theme
+|vscode extension
+|0.3.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=catppuccin.catppuccin-vsc[catppuccin.catppuccin-vsc]
+|Catppuccin theme
+|vscode extension
+|3.20.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=enkia.tokyo-night[enkia.tokyo-night]
+|Tokyo Night theme
+|vscode extension
+|1.0.6
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=jdinhlife.gruvbox[jdinhlife.gruvbox]
+|Gruvbox theme
+|vscode extension
+|1.18.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=arcticicestudio.nord-visual-studio-code[arcticicestudio.nord-visual-studio-code]
+|Nord theme
+|vscode extension
+|0.19.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=dracula-theme.theme-dracula[dracula-theme.theme-dracula]
+|Dracula theme
+|vscode extension
+|2.26.5
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=ryanolsonx.solarized[ryanolsonx.solarized]
+|Solarized theme
+|vscode extension
+|2.1.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=asvetliakov.vscode-neovim[asvetliakov.vscode-neovim]
+|Neovim integration (optional)
+|vscode extension
+|1.18.13
+|
+|optional
+
+|===
+
+== Packs (selected during setup)
+
+=== java (temurin / maven / gradle / pmd)
+
+==== Distribution packages (all distros)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/visualvm[visualvm]
+|Java profiling and monitoring
+|apt/dnf
+|distro
+|GPL-2.0 with Classpath
+|
+
+|===
+
+==== Distribution packages (Ubuntu/Debian)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/openjdk-25-jdk[openjdk-25-jdk]
+|System OpenJDK 25 development kit
+|apt/dnf
+|distro
+|GPL-2.0 with Classpath
+|
+
+|link:https://packages.ubuntu.com/openjdk-25-jre[openjdk-25-jre]
+|System OpenJDK 25 runtime
+|apt/dnf
+|distro
+|GPL-2.0 with Classpath
+|
+
+|===
+
+==== Distribution packages (Fedora)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.fedoraproject.org/pkgs/java-25-openjdk/[java-25-openjdk]
+|System OpenJDK 25 runtime (Fedora)
+|apt/dnf
+|distro
+|GPL-2.0 with Classpath
+|
+
+|link:https://packages.fedoraproject.org/pkgs/java-25-openjdk-devel/[java-25-openjdk-devel]
+|System OpenJDK 25 development kit (Fedora)
+|apt/dnf
+|distro
+|GPL-2.0 with Classpath
+|
+
+|===
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[java]
+|Eclipse Temurin JDK
+|mise/native
+|temurin-25.0.4+7.0.LTS
+|GPL-2.0 with Classpath
+|
+
+|link:https://mise.jdx.dev/registry.html[maven]
+|Java build tool
+|mise/native
+|3.9.16
+|Apache-2.0
+|
+
+|link:https://mise.jdx.dev/registry.html[gradle]
+|Java build tool
+|mise/native
+|9.8.1
+|Apache-2.0
+|
+
+|link:https://github.com/pmd/pmd[pmd]
+|Source code analyzer
+|mise/github
+|pmd_releases/7.17.0
+|BSD-2-Clause
+|
+
+|link:https://github.com/checkstyle/checkstyle[checkstyle]
+|Java code style checker (google_checks.xml shipped)
+|mise/aqua
+|14.3.0
+|LGPL-2.1
+|
+
+|link:https://github.com/google/google-java-format[google-java-format]
+|Google Java Style formatter
+|mise/aqua
+|v1.37.0
+|Apache-2.0
+|
+
+|===
+
+==== Custom installers
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|keystore_explorer
+|Java keystore GUI
+|installer (install_keystore_explorer)
+|v5.7.0
+|GPL-3.0
+|
+
+|jdk_mission_control
+|Java profiling and diagnostics
+|installer (install_jmc)
+|9.1.2
+|UPL-1.0
+|optional
+
+|dbeaver
+|Universal database tool
+|installer (install_dbeaver)
+|26.2.2
+|Apache-2.0
+|optional
+
+|intellij_idea
+|IntelliJ IDEA Ultimate
+|installer (install_intellij_idea)
+|2025.3.6.1
+|Proprietary
+|optional
+
+|===
+
+==== VS Code extensions
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://marketplace.visualstudio.com/items?itemName=redhat.java[redhat.java]
+|Java language support
+|vscode extension
+|1.40.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug[vscjava.vscode-java-debug]
+|Java debugger
+|vscode extension
+|0.58.1
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-dependency[vscjava.vscode-java-dependency]
+|Java project manager
+|vscode extension
+|0.24.1
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-test[vscjava.vscode-java-test]
+|Java test runner
+|vscode extension
+|0.43.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-maven[vscjava.vscode-maven]
+|Maven support
+|vscode extension
+|0.44.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack[vscjava.vscode-java-pack]
+|Java extension pack
+|vscode extension
+|0.29.0
+|
+|
+
+|===
+
+=== node (node / eslint / prettier / tailwindcss)
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[node]
+|JavaScript runtime (includes npm)
+|mise/native
+|24.21.0
+|MIT
+|
+
+|link:https://github.com/biomejs/biome[biome]
+|JS/TS/JSON/CSS formatter and linter (Node pack)
+|mise/aqua
+|2.5.15
+|MIT OR Apache-2.0
+|
+
+|===
+
+==== VS Code extensions
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint[dbaeumer.vscode-eslint]
+|ESLint integration
+|vscode extension
+|3.0.10
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode[esbenp.prettier-vscode]
+|Prettier formatter
+|vscode extension
+|11.0.0
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss[bradlc.vscode-tailwindcss]
+|Tailwind CSS tooling
+|vscode extension
+|0.14.11
+|
+|
+
+|link:https://marketplace.visualstudio.com/items?itemName=vue.volar[vue.volar]
+|Vue language support
+|vscode extension
+|2.2.8
+|
+|
+
+|===
+
+=== python (python3 / venv / pipx)
+
+==== Distribution packages (all distros)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/pipx[pipx]
+|Install Python CLI apps in isolated environments
+|apt/dnf
+|distro
+|MIT
+|
+
+|===
+
+==== Distribution packages (Ubuntu/Debian)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/python3[python3]
+|Python 3 interpreter (system)
+|apt/dnf
+|distro
+|PSF-2.0
+|
+
+|link:https://packages.ubuntu.com/python3-dev[python3-dev]
+|Python development headers
+|apt/dnf
+|distro
+|PSF-2.0
+|
+
+|link:https://packages.ubuntu.com/python3-venv[python3-venv]
+|Python virtual environment support
+|apt/dnf
+|distro
+|PSF-2.0
+|
+
+|===
+
+==== Distribution packages (Fedora)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.fedoraproject.org/pkgs/python3/[python3]
+|Python 3 interpreter (system)
+|apt/dnf
+|distro
+|PSF-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/python3-devel/[python3-devel]
+|Python headers (Fedora)
+|apt/dnf
+|distro
+|PSF-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/python3-pip/[python3-pip]
+|Python package installer (Fedora)
+|apt/dnf
+|distro
+|MIT
+|
+
+|===
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[python]
+|Python programming language
+|mise/native
+|3.14.7
+|PSF-2.0
+|
+
+|===
+
+=== go (go)
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[go]
+|Go programming language
+|mise/native
+|1.25.7
+|BSD-3-Clause
+|
+
+|link:https://github.com/golangci/golangci-lint[golangci-lint]
+|Go linter aggregator (Go pack)
+|mise/aqua
+|v2.14.0
+|GPL-3.0
+|
+
+|link:https://github.com/dominikh/go-tools[staticcheck]
+|Go static analysis (Go pack)
+|mise/aqua
+|2026.2.1
+|MIT
+|
+
+|link:https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck[govulncheck]
+|Go vulnerability scanner (Go pack)
+|mise/go
+|v1.8.0
+|BSD-3-Clause
+|
+
+|===
+
+=== ruby (ruby / build libs)
+
+==== Distribution packages (Ubuntu/Debian)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/libffi-dev[libffi-dev]
+|FFI headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libgdbm-dev[libgdbm-dev]
+|GDBM headers (Ruby build)
+|apt/dnf
+|distro
+|GPL-3.0+
+|
+
+|link:https://packages.ubuntu.com/libncurses-dev[libncurses-dev]
+|ncurses headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/libreadline-dev[libreadline-dev]
+|Readline headers (Ruby build)
+|apt/dnf
+|distro
+|GPL-3.0+
+|
+
+|link:https://packages.ubuntu.com/libssl-dev[libssl-dev]
+|OpenSSL headers (Ruby build)
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.ubuntu.com/libyaml-dev[libyaml-dev]
+|LibYAML headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.ubuntu.com/zlib1g-dev[zlib1g-dev]
+|zlib headers (Ruby build)
+|apt/dnf
+|distro
+|Zlib
+|
+
+|===
+
+==== Distribution packages (Fedora)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.fedoraproject.org/pkgs/libffi-devel/[libffi-devel]
+|FFI headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/gdbm-devel/[gdbm-devel]
+|GDBM headers (Ruby build)
+|apt/dnf
+|distro
+|GPL-3.0+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/ncurses-devel/[ncurses-devel]
+|ncurses headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/readline-devel/[readline-devel]
+|Readline headers (Ruby build)
+|apt/dnf
+|distro
+|GPL-3.0+
+|
+
+|link:https://packages.fedoraproject.org/pkgs/openssl-devel/[openssl-devel]
+|OpenSSL headers (Ruby build)
+|apt/dnf
+|distro
+|Apache-2.0
+|
+
+|link:https://packages.fedoraproject.org/pkgs/libyaml-devel/[libyaml-devel]
+|LibYAML headers (Ruby build)
+|apt/dnf
+|distro
+|MIT
+|
+
+|link:https://packages.fedoraproject.org/pkgs/zlib-devel/[zlib-devel]
+|zlib headers (Ruby build)
+|apt/dnf
+|distro
+|Zlib
+|
+
+|===
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[ruby]
+|Ruby programming language
+|mise/native
+|4.0.7
+|Ruby License
+|
+
+|===
+
+=== rust (rustc / cargo)
+
+==== Distribution packages (Ubuntu/Debian)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.ubuntu.com/libsqlite3-dev[libsqlite3-dev]
+|SQLite headers (Rust crates)
+|apt/dnf
+|distro
+|Public domain
+|
+
+|link:https://packages.ubuntu.com/pkg-config[pkg-config]
+|Library compile flag helper
+|apt/dnf
+|distro
+|GPL-2.0+
+|
+
+|===
+
+==== Distribution packages (Fedora)
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://packages.fedoraproject.org/pkgs/sqlite-devel/[sqlite-devel]
+|SQLite headers (Rust crates)
+|apt/dnf
+|distro
+|Public domain
+|
+
+|link:https://packages.fedoraproject.org/pkgs/pkgconf-pkg-config/[pkgconf-pkg-config]
+|Library compile flag helper (Fedora)
+|apt/dnf
+|distro
+|ISC
+|
+
+|===
+
+==== mise tools
+
+[cols="2,3,1,1,2,1", options="header"]
+|===
+|Tool |Description |Install |Version |License |Notes
+
+|link:https://mise.jdx.dev/registry.html[rust]
+|Rust programming language
+|mise/native
+|1.98.1
+|Apache-2.0/MIT
+|
+
+|link:https://github.com/bnjbvr/cargo-machete[cargo-machete]
+|Unused Rust dependency detector (Rust pack)
+|mise/github
+|v0.9.2
+|MIT
+|
+
+|===
+
+== Not in the manifest
+
+* `kubectl` is installed by the `oc` installer from the OpenShift mirror.
+* `wl-clipboard`, `xclip` and `xsel` are installed for the detected display server.
+* Fisher plugins (`fzf.fish`) are installed through Fisher, see the custom installers above.

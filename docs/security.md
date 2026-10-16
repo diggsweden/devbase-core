@@ -78,7 +78,7 @@ can override these defaults.
 Not covered: snap, flatpak, apt/dnf and VS Code extensions provide no equivalent
 mechanism.
 
-#### Aqua Registry (35 tools)
+#### Aqua Registry (50 tools)
 
 - Automatic checksum verification
 - SLSA attestation support
@@ -223,7 +223,7 @@ When K3s (Kubernetes) is installed, DevBase automatically configures firewall ru
 
 ```bash
 # API Server access
-sudo ufw allow 6443/tcp comment 'k3s apiserver'
+sudo ufw allow from 127.0.0.1 to any port 6443 proto tcp comment 'k3s apiserver (localhost)'
 
 # Pod network (Flannel default CIDR)
 sudo ufw allow from 10.42.0.0/16 to any comment 'k3s pods'
@@ -671,7 +671,7 @@ tail -f /var/log/clamav/daily-scan.log
 **Examples**:
 
 ```bash
-gitleaks detect --source . --verbose
+gitleaks git . --verbose
 syft scan dir:. -o spdx-json > sbom.json
 scorecard --repo=github.com/owner/repo
 cosign sign --key cosign.key image:tag
@@ -790,7 +790,7 @@ No open high-priority issues.
 
 ```bash
 # 1. No secrets
-gitleaks detect --source . --verbose
+gitleaks git . --verbose
 
 # 2. No dangerous patterns
 grep -rn "curl.*|.*sh\|rm -rf /\|chmod 777" libs/
