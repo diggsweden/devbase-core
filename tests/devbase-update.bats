@@ -1440,3 +1440,70 @@ _run_update_fish() {
   assert_success
   assert_output "tag=untagged $(git -C "$CORE" rev-parse --short HEAD)"
 }
+
+# A git wrapper that fails the first $FLAKY_FAILS network calls with $FLAKY_MSG,
+# then hands everything to the real git. Calls are counted in $FLAKY_LOG.
+_install_flaky_git() {
+  local real_git
+  real_git=$(command -v git)
+  mkdir -p "${TEST_DIR}/flaky-bin"
+  cat >"${TEST_DIR}/flaky-bin/git" <<SCRIPT
+#!/usr/bin/env bash
+case " \$* " in
+  *" ls-remote "*|*" fetch "*)
+    echo "\$*" >>"${TEST_DIR}/flaky.log"
+    n=\$(wc -l <"${TEST_DIR}/flaky.log")
+    if [ "\$n" -le "${1}" ]; then echo "${2}" >&2; exit 128; fi ;;
+esac
+exec "${real_git}" "\$@"
+SCRIPT
+  chmod +x "${TEST_DIR}/flaky-bin/git"
+}
+
+_run_with_flaky_git() {
+  _run_update_fish "set -gx PATH '${TEST_DIR}/flaky-bin' \$PATH; set -g __devbase_update_net_retry_delay 0; $1"
+}
+
+@test "a dropped connection is retried and the update completes" {
+  _make_upstream_and_core
+  _install_flaky_git 1 "fatal: unable to access 'x': Could not resolve host: github.com"
+  _run_with_flaky_git "devbase-update --yes"
+  assert_success
+  assert_output --partial "Attempt 1/3 failed, retrying"
+  assert_output --partial "setup v2.0.0 args: --keep-preferences"
+}
+
+@test "an authentication failure is not retried" {
+  _make_upstream_and_core
+  _install_flaky_git 9 "git@github.com: Permission denied (publickey)."
+  _run_with_flaky_git "devbase-update --yes"
+  assert_failure
+  refute_output --partial "retrying"
+  assert_equal "$(wc -l <"${TEST_DIR}/flaky.log")" 1
+}
+
+@test "retries stop after three attempts and say so" {
+  _make_upstream_and_core
+  _install_flaky_git 9 "ssh: connect to host github.com port 22: Connection timed out"
+  _run_with_flaky_git "devbase-update --yes"
+  assert_failure
+  assert_output --partial "Gave up after 3 attempts"
+  assert_equal "$(wc -l <"${TEST_DIR}/flaky.log")" 3
+}
+
+@test "a normal update asks the provider for tags once" {
+  _make_upstream_and_core
+  _install_flaky_git 0 ""
+  _run_with_flaky_git "devbase-update --yes"
+  assert_success
+  assert_equal "$(grep -c 'ls-remote' "${TEST_DIR}/flaky.log")" 1
+}
+
+@test "the silent shell-start check does not retry" {
+  _make_upstream_and_core
+  _install_flaky_git 9 "ssh: connect to host github.com port 22: Connection timed out"
+  _run_with_flaky_git "devbase-update --check; true"
+  assert_success
+  refute_output --partial "retrying"
+  assert_equal "$(wc -l <"${TEST_DIR}/flaky.log")" 1
+}
