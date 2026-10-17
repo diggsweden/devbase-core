@@ -37,7 +37,7 @@ jobs:
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends bash curl ca-certificates
       - name: Install yq from the repo's Aqua pin
-        uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           install_args: aqua:mikefarah/yq
       - name: Every apt/common package name has an install candidate
