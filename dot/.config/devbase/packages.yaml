@@ -277,7 +277,7 @@ packs:
       python3-devel: {description: "Python headers (Fedora)", license: "PSF-2.0"}
       python3-pip: {description: "Python package installer (Fedora)", license: "MIT"}
     mise:
-      python: {version: "3.14.7", description: "Python programming language", license: "PSF-2.0"} # renovate: datasource=python-version depName=python
+      python: {version: "3.15.0", description: "Python programming language", license: "PSF-2.0"} # renovate: datasource=python-version depName=python
 
   go:
     description: "(go)"
