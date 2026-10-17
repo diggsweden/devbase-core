@@ -243,7 +243,7 @@ packs:
       keystore_explorer: {version: "v5.7.0", installer: "install_keystore_explorer", description: "Java keystore GUI", license: "GPL-3.0"} # renovate: datasource=github-releases depName=kaikramer/keystore-explorer
       jdk_mission_control: {version: "9.1.2", installer: "install_jmc", tags: ["@optional"], description: "Java profiling and diagnostics", license: "UPL-1.0"} # renovate: datasource=github-releases depName=adoptium/jmc-build
       dbeaver: {version: "26.2.2", installer: "install_dbeaver", tags: ["@optional"], description: "Universal database tool", license: "Apache-2.0"} # renovate: datasource=github-releases depName=dbeaver/dbeaver
-      intellij_idea: {version: "2025.3.6.1", installer: "install_intellij_idea", tags: ["@optional"], description: "IntelliJ IDEA Ultimate", license: "Proprietary"} # renovate: datasource=custom.jetbrains depName=idea packageName=IIU
+      intellij_idea: {version: "2026.2.3", installer: "install_intellij_idea", tags: ["@optional"], description: "IntelliJ IDEA Ultimate", license: "Proprietary"} # renovate: datasource=custom.jetbrains depName=idea packageName=IIU
     vscode:
       redhat.java: {version: "1.40.0", description: "Java language support"} # renovate: datasource=npm
       vscjava.vscode-java-debug: {version: "0.58.1", description: "Java debugger"} # renovate: datasource=npm
