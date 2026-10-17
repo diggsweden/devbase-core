@@ -243,7 +243,8 @@ Fish is the interactive shell; Bash stays the login shell and hands over to Fish
 
 ### Containers and Kubernetes
 
-- **Podman** is rootless; `docker` is an alias, `DOCKER_HOST` points at `podman.socket` (user service enabled by setup),
+- **Podman** is rootless; `docker` is an alias, `DOCKER_HOST` points at `podman.socket` (user service enabled by setup).
+  Setup and updates never touch your containers, images or volumes,
   and `docker compose` / `podman compose` use the mise Compose binary as provider. Testcontainers reads
   `~/.testcontainers.properties`. `podman generate systemd` is deprecated; use Quadlet units in
   `~/.config/containers/systemd/`.

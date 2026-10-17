@@ -231,8 +231,6 @@ cleanup() {
 
   show_progress info "Cleaning up installation..."
 
-  local files_cleaned=0
-
   local config_files=(
     "${DEVBASE_FILES}/unattended-upgrades-debian/50unattended-upgrades:/etc/apt/apt.conf.d/50unattended-upgrades"
   )
@@ -246,16 +244,7 @@ cleanup() {
 
   # DEVBASE_BACKUP_DIR already created by ensure_user_dirs()
 
-  if command -v podman >/dev/null 2>&1; then
-    if [[ -d "${XDG_DATA_HOME}/containers/storage" ]]; then
-      local podman_size
-      podman_size=$(du -sm "${XDG_DATA_HOME}/containers/storage" 2>/dev/null | cut -f1)
-      show_progress warning "Removing all Podman containers, images, and volumes"
-      podman system reset --force || true
-      files_cleaned=$((files_cleaned + ${podman_size:-0}))
-
-    fi
-  fi
+  # Containers, images and volumes are the user's work; setup never touches them.
 
   pkg_cleanup
 

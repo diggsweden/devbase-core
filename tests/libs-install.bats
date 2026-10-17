@@ -646,3 +646,30 @@ SCRIPT
   assert_line '--no-config which yq --tool aqua:mikefarah/yq@v4.54.1'
   refute_output --partial 'use -g'
 }
+
+_setup_cleanup_test() {
+  export DEVBASE_ROOT="${BATS_TEST_DIRNAME}/.."
+  source "${DEVBASE_ROOT}/libs/define-colors.sh"
+  source "${DEVBASE_ROOT}/libs/validation.sh"
+  source "${DEVBASE_ROOT}/libs/ui/ui-helpers.sh"
+  source <(sed -n '/^cleanup()/,/^}/p' "${DEVBASE_ROOT}/libs/install.sh")
+  export DEVBASE_FILES="${TEST_DIR}/files" DEVBASE_DOT="${TEST_DIR}/dot"
+  mkdir -p "$DEVBASE_FILES" "$DEVBASE_DOT" "${XDG_DATA_HOME}/containers/storage" "${TEST_DIR}/bin"
+  cat > "${TEST_DIR}/bin/podman" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "podman $*" >> "${TEST_DIR}/podman.log"
+SCRIPT
+  chmod +x "${TEST_DIR}/bin/podman"
+  export PATH="${TEST_DIR}/bin:${PATH}"
+  pkg_cleanup() { :; }
+  sudo() { :; }
+}
+
+@test "cleanup never touches Podman storage" {
+  _setup_cleanup_test
+
+  run cleanup
+  assert_success
+  refute_output --partial "Podman"
+  assert_not_exists "${TEST_DIR}/podman.log"
+}
