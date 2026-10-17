@@ -69,9 +69,9 @@ install_method() {
 # Params: $1 = yq path, $2 = kind
 emit_rows() {
   local path="$1" kind="$2"
-  yq -r "${path} // {} | to_entries[] | [.key, (.value.description // \"\"), (.value.license // \"\"), (.value.backend // \"\"), (.value.version // \"\"), (.value.installer // \"\"), (.value.options // \"\"), ((.value.theme // false) | tostring), ((.value.tags // []) | join(\" \"))] | join(strenv(FIELD_SEP))" "$manifest" |
+  yq -r "${path} // {} | to_entries[] | [.key, (.value.description // \"\"), (.value.license // \"\"), (.value.backend // \"\"), (.value.installer // \"\"), (.value.options // \"\"), ((.value.theme // false) | tostring), ((.value.tags // []) | join(\" \"))] | join(strenv(FIELD_SEP))" "$manifest" |
     # Tab is IFS whitespace and would collapse empty fields; the unit separator does not
-    while IFS="$FIELD_SEP" read -r name description license backend version installer options theme tags; do
+    while IFS="$FIELD_SEP" read -r name description license backend installer options theme tags; do
       local url
       url=$(tool_url "$kind" "$name" "$backend")
       local shown="$name"
@@ -80,7 +80,7 @@ emit_rows() {
       [[ "$theme" == true ]] && notes+=("theme")
       [[ "$tags" == *@skip-wsl* ]] && notes+=("not on WSL")
       [[ "$tags" == *@optional* ]] && notes+=("optional")
-      printf '|%s\n|%s\n|%s\n|%s\n|%s\n|%s\n\n' "$shown" "$description" "$(install_method "$kind" "$backend" "$installer" "$options")" "${version:-distro}" "${license:-}" "$(
+      printf '|%s\n|%s\n|%s\n|%s\n|%s\n\n' "$shown" "$description" "$(install_method "$kind" "$backend" "$installer" "$options")" "${license:-}" "$(
         IFS=,
         printf '%s' "${notes[*]}"
       )"
@@ -94,7 +94,7 @@ emit_section() {
   local count
   count=$(yq -r "${path} // {} | length" "$manifest")
   [[ "$count" -gt 0 ]] || return 0
-  printf '%s %s\n\n[cols="2,3,1,1,2,1", options="header"]\n|===\n|Tool |Description |Install |Version |License |Notes\n\n' "$marker" "$title"
+  printf '%s %s\n\n[cols="2,3,1,2,1", options="header"]\n|===\n|Tool |Description |Install |License |Notes\n\n' "$marker" "$title"
   emit_rows "$path" "$kind"
   printf '|===\n\n'
 }
@@ -134,7 +134,7 @@ toc::[]
   `mise/aqua` (checksum-verified GitHub releases through the aqua registry), `mise/github`, `mise/gitlab`,
   `mise/forgejo` (direct releases), `mise/go` (built with the Go toolchain), `mise/native` (mise core backend),
   `installer (...)` (DevBase installer function), `vscode extension`.
-* *Version*: the pinned version Renovate maintains; `distro` means the distribution's current package.
+* Versions are not listed: Renovate keeps them current in `packages.yaml`, the single place to look them up.
 * *Notes*: `theme` = configured by `devbase-theme`; `not on WSL` = skipped in WSL; `optional` = prompted or opt-in.
 * Proxy support: every install method honours the proxy configured during setup; mise tools also honour
   mirror replacements from the custom configuration.

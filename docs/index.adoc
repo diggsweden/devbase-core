@@ -38,7 +38,7 @@ DevBase works in two modes:
 
 == Reference
 
-* link:tools-matrix.adoc[*Tools Matrix*] - Every installed tool with install method, version pin and license, generated from the manifest
+* link:tools-matrix.adoc[*Tools Matrix*] - Every installed tool with install method and license, generated from the manifest (versions live in `packages.yaml`)
 * link:security.md[*Security Overview*] - Comprehensive security documentation and verification
 * https://canonical.com/academy/self-study[Ubuntu and Linux learning Resources] - If just learning, or a bit rusty in Linux basics
 
