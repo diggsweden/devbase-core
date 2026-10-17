@@ -76,7 +76,7 @@ devbase-theme gruvbox-light
 
 Affects: bat, delta, btop, eza, FZF, Neovim, vifm, K9s, Lazygit, Zellij, Windows Terminal (WSL), Ghostty (Linux), VSCode
 
-**devbase-update** - Update DevBase core and re-run setup. The rerun applies your saved preferences without asking again (`setup.sh --keep-preferences`); the only prompts left are the update confirmation and sudo:
+**devbase-update** - Update DevBase core and re-run setup. The rerun applies your saved preferences without asking again (`setup.sh --keep-preferences`); the only prompts left are the update confirmation (skipped with `--yes`) and sudo:
 
 ```bash
 # Update to latest tag
@@ -90,6 +90,9 @@ devbase-update --snooze 24
 
 # Clear update snooze
 devbase-update --unsnooze
+
+# Apply an available update without the confirmation prompt
+devbase-update --yes
 ```
 
 Note: when `--ref` is used, the persisted core repo at `~/.local/share/devbase/core` is pinned to that ref during the setup run. SHA refs are not supported.

@@ -735,7 +735,8 @@ SCRIPT
   assert_success
 
   run cat "${TEST_DIR}/logs/git_calls.log"
-  assert_output --partial "fetch --depth 1 origin feature/test-branch"
+  # The requested ref is fetched explicitly, then checked out
+  assert_output --partial "fetch --depth 1 origin +refs/tags/feature/test-branch:refs/tags/feature/test-branch"
   assert_output --partial "checkout feature/test-branch"
 }
 
@@ -785,7 +786,8 @@ SCRIPT
   assert_success
 
   run cat "${TEST_DIR}/logs/git_calls.log"
-  assert_output --partial "fetch --depth 1 origin feature/test-sha"
+  # The requested ref is fetched explicitly, then checked out
+  assert_output --partial "fetch --depth 1 origin +refs/tags/feature/test-sha:refs/tags/feature/test-sha"
   assert_output --partial "checkout feature/test-sha"
 }
 
@@ -1273,3 +1275,168 @@ SCRIPT
   refute_output --partial "DevBase Update Available"
 }
 
+
+# --- Real git against a local bare repo acting as the provider (no network) ---
+
+_git_quiet() { git -c commit.gpgsign=false -c tag.gpgsign=false -c user.name=Test -c user.email=t@t "$@"; }
+
+_make_upstream_and_core() {
+  export GIT_CONFIG_NOSYSTEM=1
+  PROVIDER="${TEST_DIR}/provider.git"
+  WORK="${TEST_DIR}/work"
+  CORE="${HOME}/.local/share/devbase/core"
+  _git_quiet init --quiet --bare --initial-branch=main "$PROVIDER"
+  _git_quiet init --quiet --initial-branch=main "$WORK"
+  _git_quiet -C "$WORK" remote add origin "file://${PROVIDER}"
+  # Each release carries a setup.sh that records how it was called
+  printf '%s\n' '#!/usr/bin/env bash' '# accepts: --keep-preferences' \
+    'echo "setup $(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD) args: $*"' >"$WORK/setup.sh"
+  chmod +x "$WORK/setup.sh"
+  _git_quiet -C "$WORK" add setup.sh && _git_quiet -C "$WORK" commit -qm one
+  _git_quiet -C "$WORK" tag -a v1.0.0 -m v1.0.0
+  _git_quiet -C "$WORK" push -q origin main v1.0.0
+  # Like persist.sh: shallow, single-branch, pinned to the release tag
+  git -c advice.detachedHead=false clone --quiet --depth 1 --branch v1.0.0 "file://${PROVIDER}" "$CORE"
+  # The provider moves on after the install: a new release and a feature branch
+  echo two >"$WORK/notes" && _git_quiet -C "$WORK" add notes && _git_quiet -C "$WORK" commit -qm two
+  _git_quiet -C "$WORK" tag -a v2.0.0 -m v2.0.0
+  _git_quiet -C "$WORK" switch -qc feat/x
+  echo three >"$WORK/notes" && _git_quiet -C "$WORK" commit -qam three
+  _git_quiet -C "$WORK" push -q origin main v2.0.0 feat/x
+}
+
+_run_update_fish() {
+  # Shipped functions on the autoload path, nothing else from the host
+  run fish --no-config -c "
+    set -gx HOME '$HOME'
+    set fish_function_path '${DEVBASE_ROOT}/dot/.config/fish/functions' \$fish_function_path
+    function mise; end
+    function __devbase_ubuntu_too_old; return 1; end
+    source '$DEVBASE_UPDATE_FISH'
+    $1
+  " </dev/null
+}
+
+@test "update_core fetches a release tag a single-branch clone has never seen" {
+  _make_upstream_and_core
+  _run_update_fish "__devbase_update_core v2.0.0"
+  assert_success
+  assert_output --partial "Core updated to v2.0.0"
+  assert_equal "$(git -C "$CORE" rev-parse HEAD)" "$(git -C "$PROVIDER" rev-parse 'v2.0.0^{commit}')"
+}
+
+@test "update_core fetches a branch a single-branch clone has never seen" {
+  _make_upstream_and_core
+  _run_update_fish "__devbase_update_core feat/x"
+  assert_success
+  assert_equal "$(git -C "$CORE" rev-parse HEAD)" "$(git -C "$PROVIDER" rev-parse feat/x)"
+}
+
+@test "update_core reports a ref that exists neither as tag nor branch" {
+  _make_upstream_and_core
+  _run_update_fish "__devbase_update_core v9.9.9"
+  assert_failure
+  assert_output --partial "Ref not found in core repo: v9.9.9"
+  # The installed version is left untouched
+  assert_equal "$(git -C "$CORE" rev-parse HEAD)" "$(git -C "$PROVIDER" rev-parse 'v1.0.0^{commit}')"
+}
+
+@test "an untagged core shows its commit instead of unknown" {
+  _make_upstream_and_core
+  git -C "$CORE" fetch -q --depth 1 origin "+refs/heads/feat/x:refs/remotes/origin/feat/x"
+  git -C "$CORE" -c advice.detachedHead=false checkout -q origin/feat/x
+  _run_update_fish '__devbase_update_get_core_info; and echo "tag=$CORE_TAG"'
+  assert_success
+  assert_output "tag=untagged $(git -C "$CORE" rev-parse --short HEAD)"
+}
+
+@test "devbase-update --yes updates to the latest release end to end without a second prompt" {
+  _make_upstream_and_core
+  _run_update_fish "devbase-update --yes"
+  assert_success
+  assert_output --partial "devbase-core: v1.0.0 → v2.0.0"
+  assert_output --partial "Proceeding with update"
+  refute_output --partial "Proceed with update?"
+  # The new release's own setup.sh ran, with saved preferences kept
+  assert_output --partial "setup v2.0.0 args: --keep-preferences"
+  assert_equal "$(git -C "$CORE" rev-parse HEAD)" "$(git -C "$PROVIDER" rev-parse 'v2.0.0^{commit}')"
+}
+
+@test "devbase-update reports up to date against the provider when already on the latest release" {
+  _make_upstream_and_core
+  git -C "$CORE" fetch -q --depth 1 origin "+refs/tags/v2.0.0:refs/tags/v2.0.0"
+  git -C "$CORE" -c advice.detachedHead=false checkout -q v2.0.0
+  _run_update_fish "devbase-update --yes"
+  assert_success
+  assert_output --partial "Already up to date (core: v2.0.0)"
+  refute_output --partial "setup "
+}
+
+@test "devbase-update passes --yes to the update and nothing leaks into later calls" {
+  run fish --no-config -c "
+    source '$DEVBASE_UPDATE_FISH'
+    function __devbase_update_do_update; echo \"assume=[\$argv[2]]\"; end
+    devbase-update --yes
+    devbase-update
+    set -q __devbase_update_assume_yes; and echo LEAKED
+    true
+  "
+  assert_success
+  assert_line --index 0 "assume=[yes]"
+  assert_line --index 1 "assume=[]"
+  refute_output --partial LEAKED
+}
+
+@test "update_core refreshes a branch the clone already has instead of using the stale copy" {
+  _make_upstream_and_core
+  # A core installed from the main branch: the clone has a local `main` that falls behind
+  rm -rf "$CORE"
+  git clone --quiet --depth 1 --branch main "file://${PROVIDER}" "$CORE"
+  _git_quiet -C "$WORK" switch -q main
+  echo four >"$WORK/notes" && _git_quiet -C "$WORK" commit -qam four
+  _git_quiet -C "$WORK" push -q origin main
+  _run_update_fish "__devbase_update_core main"
+  assert_success
+  assert_equal "$(git -C "$CORE" rev-parse HEAD)" "$(git -C "$PROVIDER" rev-parse main)"
+}
+
+@test "update_core keeps local changes in place when the ref does not exist" {
+  _make_upstream_and_core
+  echo local >"$CORE/local-change"
+  git -C "$CORE" add local-change
+  _run_update_fish "__devbase_update_core no-such-ref"
+  assert_failure
+  assert_file_exists "$CORE/local-change"
+  run git -C "$CORE" stash list
+  assert_output ""
+}
+
+@test "update_core reports an unreachable provider as a fetch failure, not a missing ref" {
+  _make_upstream_and_core
+  git -C "$CORE" remote set-url origin "file://${TEST_DIR}/gone.git"
+  _run_update_fish "set -g CORE_REMOTE file://${TEST_DIR}/gone.git; __devbase_update_core v2.0.0"
+  assert_failure
+  assert_output --partial "Could not fetch v2.0.0"
+  refute_output --partial "Ref not found"
+}
+
+@test "update_core rejects short and full SHAs as refs" {
+  _make_upstream_and_core
+  _run_update_fish "__devbase_update_core abc1234"
+  assert_failure
+  assert_output --partial "SHA refs are not supported"
+}
+
+@test "a full-history core ahead of its last tag is untagged, not that tag" {
+  _make_upstream_and_core
+  rm -rf "$CORE"
+  git clone --quiet "file://${PROVIDER}" "$CORE"
+  # main moves one commit past v2.0.0
+  _git_quiet -C "$WORK" switch -q main
+  echo five >"$WORK/notes" && _git_quiet -C "$WORK" commit -qam five
+  _git_quiet -C "$WORK" push -q origin main
+  git -C "$CORE" pull -q
+  _run_update_fish '__devbase_update_get_core_info; and echo "tag=$CORE_TAG"'
+  assert_success
+  assert_output "tag=untagged $(git -C "$CORE" rev-parse --short HEAD)"
+}

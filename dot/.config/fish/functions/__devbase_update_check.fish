@@ -45,7 +45,8 @@ function __devbase_update_check --description "Check for devbase updates on shel
             printf "\n"
 
             if string match -qi 'y' -- $response
-                devbase-update
+                # The user just confirmed; do not ask a second time
+                devbase-update --yes
             else
                 printf "%sRun 'devbase-update' later to update.%s\n" (set_color --dim) (set_color normal)
             end

@@ -160,8 +160,9 @@ function __devbase_update_get_core_info --description "Get core version info fro
     if not test -d "$__devbase_core_dir/.git"
         return 1
     end
-    set -g CORE_TAG (git -C "$__devbase_core_dir" describe --tags --abbrev=0 2>/dev/null; or echo "unknown")
     set -g CORE_SHA (git -C "$__devbase_core_dir" rev-parse --short HEAD 2>/dev/null; or echo "unknown")
+    # A core installed from a branch has no tag; name the commit instead
+    set -g CORE_TAG (git -C "$__devbase_core_dir" describe --tags --exact-match 2>/dev/null; or echo "untagged $CORE_SHA")
     set -g CORE_REMOTE (git -C "$__devbase_core_dir" remote get-url origin 2>/dev/null; or echo "")
     return 0
 end
@@ -253,44 +254,58 @@ function __devbase_update_core --description "Update core to latest version or r
         # Get latest tag (supports vX.Y.Z, alpha-N, beta-N, rc-N)
         set target (__devbase_update_get_latest_tag "$CORE_REMOTE")
     end
+    if test -z "$target"
+        __devbase_update_print_error "Could not determine the release to update to"
+        return 1
+    end
+    if string match -qr '^[0-9a-f]{7,40}$' -- "$target"
+        __devbase_update_print_error "SHA refs are not supported: $target"
+        __devbase_update_print_info "Use a branch or tag name instead"
+        return 1
+    end
 
     __devbase_update_print_info "Updating core to $target..."
 
-    # Fetch the target (branch or tag). --force lets tags moved upstream
-    # replace stale local copies instead of failing the whole fetch.
-    if not git -C "$__devbase_core_dir" fetch --depth 1 origin "$target" --quiet 2>/dev/null
-        git -C "$__devbase_core_dir" fetch --depth 1 --tags --force --quiet
+    # A single-branch shallow clone stores neither new tags nor other
+    # branches, and a local copy may be stale, so always fetch the ref
+    # explicitly: tag first (releases), then branch. The forced refspec also
+    # replaces a tag that moved upstream. A successful fetch is checked to
+    # have produced the ref before it is used.
+    set -l checkout_target ""
+    # git's messages are localized; the missing-ref check below reads them in English
+    set -lx LC_ALL C
+    set -l output (__devbase_update_git_net -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/tags/$target:refs/tags/$target" 2>&1)
+    set -l rc $status
+    if test $rc -eq 0; and git -C "$__devbase_core_dir" cat-file -e "$target^{commit}" 2>/dev/null
+        set checkout_target "$target"
+    else if not string match -qi '*couldn*t find remote ref*' -- $output
+        # Not a missing ref: network, auth or timeout. Say so instead of "not found".
+        __devbase_update_print_net_error "Could not fetch $target from $CORE_REMOTE" $rc "$CORE_REMOTE" $output
+        return 1
+    else
+        set output (__devbase_update_git_net -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/heads/$target:refs/remotes/origin/$target" 2>&1)
+        set rc $status
+        if test $rc -eq 0; and git -C "$__devbase_core_dir" cat-file -e "origin/$target^{commit}" 2>/dev/null
+            set checkout_target "origin/$target"
+        else if not string match -qi '*couldn*t find remote ref*' -- $output
+            __devbase_update_print_net_error "Could not fetch $target from $CORE_REMOTE" $rc "$CORE_REMOTE" $output
+            return 1
+        end
     end
 
-    # Stash any local changes
+    if test -z "$checkout_target"
+        __devbase_update_print_error "Ref not found in core repo: $target"
+        __devbase_update_print_info "Ensure the ref exists on the remote (branch/tag) and try again"
+        return 1
+    end
+
+    # Stash local changes only once the target is known to exist, so a
+    # failed update never leaves them hidden in the stash
     git -C "$__devbase_core_dir" stash --quiet 2>/dev/null; or true
 
-    set -l checkout_target "$target"
-
-    # Ensure the ref exists locally after fetch (branch refs aren't created by default)
-    if not git -C "$__devbase_core_dir" cat-file -e "$checkout_target^{commit}" 2>/dev/null
-        if string match -qr '^[0-9a-f]{40}$' -- "$target"
-            __devbase_update_print_error "SHA refs are not supported: $target"
-            __devbase_update_print_info "Use a branch or tag name instead"
-            return 1
-        end
-
-        if git -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/heads/*:refs/remotes/origin/*" --quiet 2>/dev/null
-            set checkout_target "origin/$target"
-        else if git -C "$__devbase_core_dir" fetch --depth 1 origin "+refs/tags/$target:refs/tags/$target" --quiet 2>/dev/null
-            set checkout_target "$target"
-        end
-
-        if not git -C "$__devbase_core_dir" cat-file -e "$checkout_target^{commit}" 2>/dev/null
-            __devbase_update_print_error "Ref not found in core repo: $target"
-            __devbase_update_print_info "Ensure the ref exists on the remote (branch/tag) and try again"
-            return 1
-        end
-    end
-
-    # Checkout the target ref
-    if not git -C "$__devbase_core_dir" checkout "$checkout_target" --quiet
+    if not git -C "$__devbase_core_dir" -c advice.detachedHead=false checkout "$checkout_target" --quiet
         __devbase_update_print_error "Failed to checkout core ref: $target"
+        git -C "$__devbase_core_dir" stash pop --quiet 2>/dev/null; or true
         return 1
     end
 
@@ -373,7 +388,9 @@ function __devbase_update_show_version --description "Show current version info"
 end
 
 function __devbase_update_do_update --description "Perform the update"
+    # argv[1] = ref to update to (empty: latest release), argv[2] = "yes" to skip confirming
     set -l target_ref "$argv[1]"
+    set -l assume_yes "$argv[2]"
     set -l force_ref false
     if test -n "$target_ref"
         set force_ref true
@@ -454,6 +471,9 @@ function __devbase_update_do_update --description "Perform the update"
     # Prompt user (unless non-interactive or ref forced)
     if test "$force_ref" = true
         __devbase_update_print_info "Updating core to requested ref"
+    else if test "$assume_yes" = yes
+        # Already confirmed, e.g. by the shell-start prompt
+        __devbase_update_print_info "Proceeding with update"
     else if status --is-interactive
         read -l -P "Proceed with update? [y/N] " response
         echo
@@ -508,10 +528,11 @@ function __devbase_update_usage --description "Show usage information"
     echo "Check for and apply DevBase updates."
     echo ""
     echo "Options:"
-    echo "  --ref <ref>  Update core to a specific git ref (branch, tag, or SHA)"
+    echo "  --ref <ref>  Update core to a specific branch or tag"
     echo "  --snooze <h> Snooze update prompts for N hours"
     echo "  --unsnooze   Clear update snooze"
     echo "  --check     Check for updates without prompting (for shell integration)"
+    echo "  --yes, -y    Apply an available update without asking to confirm"
     echo "  --version   Show current version information"
     echo "  --help      Show this help message"
     echo ""
@@ -524,6 +545,7 @@ end
 
 function devbase-update --description "Check for and apply DevBase updates"
     set -l ref ""
+    set -l assume_yes ""
     set -l mode ""
     set -l snooze_hours ""
 
@@ -538,6 +560,9 @@ function devbase-update --description "Check for and apply DevBase updates"
                 set mode "snooze"
             case --check
                 set mode "check"
+            case --yes -y
+                # Skip the confirmation; the caller has already asked
+                set assume_yes yes
             case --version -v
                 set mode "version"
             case --unsnooze
@@ -569,7 +594,7 @@ function devbase-update --description "Check for and apply DevBase updates"
             __devbase_update_usage
             return 1
         end
-        __devbase_update_do_update "$ref"
+        __devbase_update_do_update "$ref" "$assume_yes"
         return $status
     end
 
@@ -607,5 +632,5 @@ function devbase-update --description "Check for and apply DevBase updates"
         return 0
     end
 
-    __devbase_update_do_update
+    __devbase_update_do_update "" "$assume_yes"
 end
