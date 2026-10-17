@@ -28,6 +28,16 @@ run_fish_citrix() {
   fish --no-config -c "source '$DEVBASE_CITRIX_FISH'; $*"
 }
 
+# Citrix installs on Debian/Ubuntu amd64 only. Tests that stop before any
+# package is read can use stand-ins, so they also run on Fedora runners.
+_fake_debian_amd64_tools() {
+  mkdir -p "$TEST_DIR/fakebin"
+  printf '#!/bin/sh\n[ "$1" = --print-architecture ] && echo amd64\n' >"$TEST_DIR/fakebin/dpkg"
+  printf '#!/bin/sh\nexit 1\n' >"$TEST_DIR/fakebin/dpkg-deb"
+  chmod +x "$TEST_DIR/fakebin/dpkg" "$TEST_DIR/fakebin/dpkg-deb"
+  export PATH="$TEST_DIR/fakebin:$PATH"
+}
+
 @test "devbase-citrix.fish function file exists" {
   assert_file_exists "$DEVBASE_CITRIX_FISH"
 }
@@ -193,6 +203,7 @@ _citrix_urls_from_fixture() {
 }
 
 @test "Citrix removes its private download directory after failure" {
+  _fake_debian_amd64_tools
   run run_fish_citrix "
     function __citrix_configure_install_options; end
     function __citrix_download_and_install
@@ -210,6 +221,8 @@ _citrix_urls_from_fixture() {
 }
 
 @test "Citrix verifies package identity and all downloads before installing" {
+  # Builds and inspects a real .deb
+  command -v dpkg-deb >/dev/null || skip "dpkg-deb is Debian/Ubuntu only"
   mkdir -p "$TEST_DIR/package/DEBIAN" "$TEST_DIR/downloads"
   printf 'Package: icaclient\nVersion: 26.04.10.1\nArchitecture: amd64\nMaintainer: Fixture <fixture@example.test>\nDescription: offline test\n' >"$TEST_DIR/package/DEBIAN/control"
   dpkg-deb --build "$TEST_DIR/package" "$TEST_DIR/package.deb"
@@ -231,6 +244,7 @@ _citrix_urls_from_fixture() {
 }
 
 @test "Citrix stops before downloading when private directory creation fails" {
+  _fake_debian_amd64_tools
   run run_fish_citrix '
     function __citrix_configure_install_options; end
     function mktemp; return 1; end
