@@ -12,12 +12,27 @@ load 'libs/bats-assert/load'
 load 'libs/bats-file/load'
 load 'test_helper'
 
+# Only basic system commands, so tools the host happens to have (CI runners
+# ship gh, for example) never decide what these tests see.
+_make_system_bin() {
+  local dir="${TEST_DIR}/sysbin" cmd
+  mkdir -p "$dir"
+  for cmd in bash env cat cp mkdir mktemp mv rm ls sort grep sed head tr wc \
+    dirname basename find id uname date chmod timeout sleep true false; do
+    ln -sf "$(command -v "$cmd")" "$dir/$cmd"
+  done
+  printf '%s' "$dir"
+}
+
 setup() {
   common_setup_isolated
   mkdir -p "${XDG_CONFIG_HOME}/fish/completions"
   mkdir -p "${TEST_DIR}/bin"
 
-  export PATH="${TEST_DIR}/bin:/usr/bin:/bin"
+  export ORIGINAL_PATH="$PATH"
+  SYSTEM_BIN=$(_make_system_bin)
+  export SYSTEM_BIN
+  export PATH="${TEST_DIR}/bin:${SYSTEM_BIN}"
   export XDG_CACHE_HOME="${TEST_DIR}/cache"
   source_core_libs
   # run_mise_from_home_dir, used for the mise fallback, lives in utils.sh
@@ -26,6 +41,8 @@ setup() {
 }
 
 teardown() {
+  # The minimal PATH lives in TEST_DIR; bats still needs rm after cleanup
+  export PATH="$ORIGINAL_PATH"
   common_teardown
 }
 
@@ -135,7 +152,7 @@ SCRIPT
   chmod +x "${TEST_DIR}/bin/kubectl"
 
   run bash -c "
-    export PATH='${TEST_DIR}/bin:/usr/bin:/bin'
+    export PATH='${TEST_DIR}/bin:${SYSTEM_BIN}'
     export DEVBASE_ROOT='${DEVBASE_ROOT}'
     export XDG_CONFIG_HOME='${TEST_DIR}/.config2'
     source '${DEVBASE_ROOT}/libs/define-colors.sh' >/dev/null 2>&1
