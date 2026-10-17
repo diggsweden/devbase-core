@@ -937,7 +937,8 @@ if [[ "$*" == *"ls-remote --tags"* ]]; then
   echo "def456	refs/tags/v2.0.0"
   exit 0
 fi
-if [[ "$*" == *"describe --tags --abbrev=0"* ]]; then
+# Any describe form: the installed version is v1.0.0, even though v2.0.0 is tagged locally
+if [[ "$*" == *"describe --tags"* ]]; then
   echo "v1.0.0"
   exit 0
 fi
