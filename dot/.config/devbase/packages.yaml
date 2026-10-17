@@ -146,7 +146,7 @@ core:
     btop: {backend: "aqua:aristocratos/btop", version: "v1.4.7"} # renovate: datasource=github-releases depName=aristocratos/btop
     lf: {backend: "aqua:gokcehan/lf", version: "r41"} # renovate: datasource=github-releases depName=gokcehan/lf
     # Git tools
-    delta: {backend: "aqua:dandavison/delta", version: "0.19.2"} # renovate: datasource=github-releases depName=dandavison/delta
+    delta: {backend: "aqua:dandavison/delta", version: "0.20.1"} # renovate: datasource=github-releases depName=dandavison/delta
     git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.14.2"} # renovate: datasource=github-releases depName=orhun/git-cliff
     lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.65.1"} # renovate: datasource=github-releases depName=jesseduffield/lazygit
     gh: {backend: "aqua:cli/cli", version: "v2.102.0"} # renovate: datasource=github-releases depName=cli/cli
