@@ -148,7 +148,7 @@ core:
     # Git tools
     delta: {backend: "aqua:dandavison/delta", version: "0.20.1", description: "Better git diff viewer", license: "MIT", theme: true} # renovate: datasource=github-releases depName=dandavison/delta
     git-cliff: {backend: "aqua:orhun/git-cliff", version: "v2.14.2", description: "Changelog generator", license: "Apache-2.0/MIT"} # renovate: datasource=github-releases depName=orhun/git-cliff
-    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.65.1", description: "Terminal UI for git", license: "MIT", theme: true} # renovate: datasource=github-releases depName=jesseduffield/lazygit
+    lazygit: {backend: "aqua:jesseduffield/lazygit", version: "v0.66.1", description: "Terminal UI for git", license: "MIT", theme: true} # renovate: datasource=github-releases depName=jesseduffield/lazygit
     gh: {backend: "aqua:cli/cli", version: "v2.102.0", description: "GitHub CLI", license: "MIT"} # renovate: datasource=github-releases depName=cli/cli
     glab: {backend: "gitlab:gitlab-org/cli", version: "v1.122.0", description: "GitLab CLI", license: "MIT"} # renovate: datasource=gitlab-releases depName=gitlab-org/cli
     # Neovim
