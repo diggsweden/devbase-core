@@ -133,7 +133,7 @@ core:
     jwt-cli: {backend: "aqua:mike-engel/jwt-cli", version: "6.2.0", description: "JWT token tool", license: "MIT"} # renovate: datasource=github-releases depName=mike-engel/jwt-cli
     excalidraw-converter: {backend: "github:sindrel/excalidraw-converter", version: "v1.5.6", description: "Excalidraw to SVG/PNG converter", license: "MIT"} # renovate: datasource=github-releases depName=sindrel/excalidraw-converter
     # Shell enhancements
-    fzf: {backend: "aqua:junegunn/fzf", version: "v0.74.4", description: "Fuzzy finder", license: "MIT"} # renovate: datasource=github-releases depName=junegunn/fzf
+    fzf: {backend: "aqua:junegunn/fzf", version: "v0.74.5", description: "Fuzzy finder", license: "MIT"} # renovate: datasource=github-releases depName=junegunn/fzf
     zoxide: {backend: "aqua:ajeetdsouza/zoxide", version: "v0.10.0", description: "Smarter cd — jump to frecent directories (`z`, `zi`)", license: "MIT"} # renovate: datasource=github-releases depName=ajeetdsouza/zoxide
     eza: {backend: "aqua:eza-community/eza", version: "v0.23.5", description: "Modern ls replacement", license: "MIT", theme: true} # renovate: datasource=github-releases depName=eza-community/eza
     bat: {backend: "aqua:sharkdp/bat", version: "v0.26.1", description: "Cat with syntax highlighting", license: "Apache-2.0/MIT", theme: true} # renovate: datasource=github-releases depName=sharkdp/bat
