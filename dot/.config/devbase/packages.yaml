@@ -198,7 +198,7 @@ core:
     nerd_fonts: {version: "v3.5.1", installer: "install_nerd_fonts", tags: ["@skip-wsl"], description: "Patched developer fonts", license: "MIT/OFL"} # renovate: datasource=github-releases depName=ryanoasis/nerd-fonts
     oc: {version: "4.22.16", installer: "install_oc_kubectl", description: "OpenShift CLI", license: "Apache-2.0"} # renovate: datasource=custom.openshift-oc depName=openshift/oc
     k3s: {version: "v1.37.1+k3s1", installer: "install_k3s", tags: ["@optional"], description: "Lightweight Kubernetes distribution", license: "Apache-2.0"} # renovate: datasource=github-releases depName=k3s-io/k3s
-    vscode: {version: "1.139.1", installer: "install_vscode", tags: ["@skip-wsl"], description: "Visual Studio Code", license: "Proprietary (MIT source)"} # renovate: datasource=github-releases depName=microsoft/vscode
+    vscode: {version: "1.141.0", installer: "install_vscode", tags: ["@skip-wsl"], description: "Visual Studio Code", license: "Proprietary (MIT source)"} # renovate: datasource=github-releases depName=microsoft/vscode
 
   # VS Code extensions (distro-agnostic)
   vscode:
