@@ -282,7 +282,7 @@ packs:
   go:
     description: "(go)"
     mise:
-      go: {version: "1.25.7", description: "Go programming language", license: "BSD-3-Clause"} # renovate: datasource=golang-version depName=go packageName=golang
+      go: {version: "1.27.2", description: "Go programming language", license: "BSD-3-Clause"} # renovate: datasource=golang-version depName=go packageName=golang
       golangci-lint: {backend: "aqua:golangci/golangci-lint", version: "v2.14.0", description: "Go linter aggregator (Go pack)", license: "GPL-3.0"} # renovate: datasource=github-releases depName=golangci/golangci-lint
       staticcheck: {backend: "aqua:dominikh/go-tools/staticcheck", version: "2026.2.1", description: "Go static analysis (Go pack)", license: "MIT"} # renovate: datasource=github-releases depName=dominikh/go-tools
       govulncheck: {backend: "go:golang.org/x/vuln/cmd/govulncheck", version: "v1.8.0", description: "Go vulnerability scanner (Go pack)", license: "BSD-3-Clause"} # renovate: datasource=go depName=golang.org/x/vuln
