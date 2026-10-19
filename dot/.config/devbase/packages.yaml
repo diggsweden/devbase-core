@@ -234,7 +234,7 @@ packs:
       java-25-openjdk-devel: {description: "System OpenJDK 25 development kit (Fedora)", license: "GPL-2.0 with Classpath"}
     mise:
       java: {version: "temurin-25.0.4+7.0.LTS", description: "Eclipse Temurin JDK", license: "GPL-2.0 with Classpath"} # renovate: datasource=java-version depName=java-temurin
-      maven: {version: "3.9.16", description: "Java build tool", license: "Apache-2.0"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
+      maven: {version: "3.10.0", description: "Java build tool", license: "Apache-2.0"} # renovate: datasource=maven depName=org.apache.maven:apache-maven
       gradle: {version: "9.8.1", description: "Java build tool", license: "Apache-2.0"} # renovate: datasource=gradle-version depName=gradle
       pmd: {backend: "github:pmd/pmd", version: "pmd_releases/7.17.0", description: "Source code analyzer", license: "BSD-2-Clause"} # renovate: datasource=github-releases depName=pmd/pmd
       checkstyle: {backend: "aqua:checkstyle/checkstyle", version: "14.3.0", description: "Java code style checker (google_checks.xml shipped)", license: "LGPL-2.1"} # renovate: datasource=github-releases depName=checkstyle/checkstyle extractVersion=^checkstyle-(?<version>.*)$
