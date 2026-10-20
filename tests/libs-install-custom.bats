@@ -905,10 +905,10 @@ _capture_bootstrap_gum_url() {
 
 @test "bootstrap_gum requests the published v2 deb asset name" {
   _capture_bootstrap_gum_url ubuntu amd64 x86_64
-  assert_output --partial "/v2.0.1/gum_2.0.1_amd64.deb"
+  assert_output --partial "/v2.0.2/gum_2.0.2_amd64.deb"
 }
 
 @test "bootstrap_gum requests the published v2 arm64 rpm asset name" {
   _capture_bootstrap_gum_url fedora arm64 aarch64
-  assert_output --partial "/v2.0.1/gum-2.0.1-1.aarch64.rpm"
+  assert_output --partial "/v2.0.2/gum-2.0.2-1.aarch64.rpm"
 }

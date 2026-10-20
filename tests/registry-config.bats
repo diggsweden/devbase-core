@@ -204,7 +204,7 @@ teardown() {
   local mirror expected
   for mirror in '' 'https://registry.example/github'; do
     export DEVBASE_GITHUB_REGISTRY="$mirror"
-    expected="${mirror:-https://github.com}/charmbracelet/gum/releases/download/v2.0.1/gum_2.0.1_amd64.deb"
+    expected="${mirror:-https://github.com}/charmbracelet/gum/releases/download/v2.0.2/gum_2.0.2_amd64.deb"
     run bootstrap_gum
     assert_failure
     run cat "$TEST_DIR/gum-request"
