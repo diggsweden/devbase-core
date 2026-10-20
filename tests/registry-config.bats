@@ -22,6 +22,7 @@ setup() {
   unset DEVBASE_GO_REGISTRY DEVBASE_GO_SUMDB DEVBASE_RUSTUP_DIST_SERVER DEVBASE_RUSTUP_UPDATE_ROOT
   unset DEVBASE_NPM_REGISTRY DEVBASE_CYPRESS_REGISTRY DEVBASE_CARGO_REGISTRY DEVBASE_RUBYGEMS_REGISTRY
   unset CARGO_HOME BUNDLE_CONFIG BUNDLE_USER_HOME BUNDLE_USER_CONFIG
+  unset GEMRC UV_DEFAULT_INDEX
   source "${DEVBASE_LIBS}/bootstrap/bootstrap-apply.sh"
   source "${DEVBASE_LIBS}/handle-network.sh"
   source "${DEVBASE_LIBS}/pkg/pkg-apt.sh"
@@ -44,6 +45,7 @@ teardown() {
   export MISE_URL_REPLACEMENTS='{"https://personal.example/":"https://personal-mirror.example/"}'
   apply_environment_settings
   assert_equal "$MISE_URL_REPLACEMENTS" '{"https://personal.example/":"https://personal-mirror.example/"}'
+  [[ ! -v UV_DEFAULT_INDEX ]]
   generate_mise_config "$TEST_DIR/mise.toml"
   assert_equal "$(yq -p=toml '.settings.url_replacements' "$TEST_DIR/mise.toml")" null
   assert_equal "$(yq -p=toml '.tools.rust' "$TEST_DIR/mise.toml")" 1.98.1
@@ -455,6 +457,63 @@ EOF
   run fish --no-config -c 'source $argv[1]; printf "%s\n" $CYPRESS_DOWNLOAD_MIRROR' "$TEST_DIR/registry.fish"
   assert_success
   assert_output "$DEVBASE_CYPRESS_REGISTRY"
+}
+
+@test "pip and uv share the opt-in PyPI index at install time and in Fish" {
+  command -v fish >/dev/null || skip 'fish required'
+  export DEVBASE_PYPI_REGISTRY='https://registry.example/pypi/simple/'
+  apply_environment_settings
+  assert_equal "$PIP_INDEX_URL" "$DEVBASE_PYPI_REGISTRY"
+  assert_equal "$UV_DEFAULT_INDEX" "$DEVBASE_PYPI_REGISTRY"
+  generate_fish_registry_config "$TEST_DIR/registry.fish"
+  run fish --no-config -c 'source $argv[1]; printf "%s\n" $PIP_INDEX_URL $UV_DEFAULT_INDEX' "$TEST_DIR/registry.fish"
+  assert_success
+  assert_output "$DEVBASE_PYPI_REGISTRY"$'\n'"$DEVBASE_PYPI_REGISTRY"
+}
+
+@test "without org registries core does not install Gradle or container mirror configuration" {
+  export DEVBASE_REGISTRY_URL='' DEVBASE_REGISTRY_HOST=''
+  process_gradle_templates
+  process_container_templates
+  assert_file_not_exists "$HOME/.gradle/init.gradle"
+  assert_file_not_exists "$XDG_CONFIG_HOME/containers/registries.conf"
+}
+
+@test "RubyGems template uses the same org input as Bundler and preserves personal config" {
+  printf ':sources:\n  - "${DEVBASE_RUBYGEMS_REGISTRY}/"\n' >"$TEST_DIR/gemrc.template"
+  process_template_file "$TEST_DIR/gemrc.template" gemrc.template
+  assert_file_not_exists "$HOME/.gemrc"
+  DEVBASE_RUBYGEMS_REGISTRY='https://registry.example/gems'
+  process_template_file "$TEST_DIR/gemrc.template" gemrc.template
+  run cat "$HOME/.gemrc"
+  assert_line '  - "https://registry.example/gems/"'
+  printf '# personal RubyGems settings\n' >"$HOME/.gemrc"
+  process_template_file "$TEST_DIR/gemrc.template" gemrc.template
+  assert_equal "$(cat "$HOME/.gemrc")" '# personal RubyGems settings'
+}
+
+@test "RubyGems respects existing XDG config and explicit GEMRC without creating a competing file" {
+  DEVBASE_RUBYGEMS_REGISTRY='https://registry.example/gems'
+  printf ':sources:\n  - "${DEVBASE_RUBYGEMS_REGISTRY}/"\n' >"$TEST_DIR/gemrc.template"
+  mkdir -p "$XDG_CONFIG_HOME/gem"
+  printf '# personal XDG settings\n' >"$XDG_CONFIG_HOME/gem/gemrc"
+  process_template_file "$TEST_DIR/gemrc.template" gemrc.template
+  assert_equal "$(cat "$XDG_CONFIG_HOME/gem/gemrc")" '# personal XDG settings'
+  assert_file_not_exists "$HOME/.gemrc"
+  export GEMRC="$TEST_DIR/personal-gemrc"
+  process_template_file "$TEST_DIR/gemrc.template" gemrc.template
+  assert_file_not_exists "$GEMRC"
+  assert_file_not_exists "$HOME/.gemrc"
+}
+
+@test "container mirrors use the shared endpoint without Nexus repository path namespaces" {
+  export DEVBASE_REGISTRY_CONTAINER='registry.example:5050'
+  envsubst_preserve_undefined "$DEVBASE_FILES/container-templates/registries.conf.template" "$TEST_DIR/registries.conf"
+  run grep 'location = "registry.example:5050"' "$TEST_DIR/registries.conf"
+  assert_success
+  assert_equal "${#lines[@]}" 5
+  run grep '/repository/' "$TEST_DIR/registries.conf"
+  assert_failure
 }
 
 @test "Cargo and Bundler templates are opt-in and preserve existing user files" {
