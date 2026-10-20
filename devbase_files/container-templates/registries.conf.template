@@ -18,6 +18,7 @@
 #
 # The internal registry is a Docker group registry that aggregates
 # all proxy repositories, allowing unqualified pulls to check cached images first.
+# Mirrors use that group endpoint, without Nexus HTTP repository path prefixes.
 #
 # RECOMMENDATION: Use qualified registry names when you know the source:
 #   - docker.io/library/nginx    (for Docker Hub images)
@@ -53,7 +54,7 @@ insecure = false
   # First pull: Fetches from docker.io and caches
   # Subsequent pulls: Serves from cache (fast, internal network)
   [[registry.mirror]]
-  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/dockerhub-docker-registry"
+   location = "${DEVBASE_REGISTRY_CONTAINER}"
   insecure = false
 
 # GitHub Container Registry Configuration
@@ -67,7 +68,7 @@ insecure = false
 
   # Internal mirror/cache for GitHub Container Registry
   [[registry.mirror]]
-  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/github-docker-registry"
+   location = "${DEVBASE_REGISTRY_CONTAINER}"
   insecure = false
 
 # Quay.io Configuration
@@ -81,7 +82,7 @@ insecure = false
 
   # Internal mirror/cache for Quay.io
   [[registry.mirror]]
-  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/quay-docker-registry"
+   location = "${DEVBASE_REGISTRY_CONTAINER}"
   insecure = false
 
 # Red Hat Container Catalog Configuration
@@ -96,14 +97,14 @@ insecure = false
 
   # Internal mirror/cache for Red Hat Container Catalog
   [[registry.mirror]]
-  location = "${DEVBASE_REGISTRY_CONTAINER}/repository/redhat-docker-registry"
+   location = "${DEVBASE_REGISTRY_CONTAINER}"
   insecure = false
 
 # Usage Examples:
 #
 # 1. Docker Hub pull (tries internal mirror first, falls back to docker.io)
 #    $ podman pull docker.io/library/nginx
-#    Tries: registry.digg.se/repository/dockerhub-docker-registry/library/nginx
+#    Tries: <internal-container-endpoint>/library/nginx
 #    Falls back: docker.io/library/nginx
 #
 # 2. Unqualified pull (searches docker.io → quay.io → registry.redhat.io → ghcr.io)
@@ -112,17 +113,17 @@ insecure = false
 #
 # 3. Quay.io pull (tries internal mirror first)
 #    $ podman pull quay.io/argoproj/argocd:latest
-#    Tries: registry.digg.se/repository/quay-docker-registry/argoproj/argocd:latest
+#    Tries: <internal-container-endpoint>/argoproj/argocd:latest
 #    Falls back: quay.io/argoproj/argocd:latest
 #
 # 4. GitHub Container Registry pull (tries internal mirror first)
 #    $ podman pull ghcr.io/aquaproj/aqua:latest
-#    Tries: registry.digg.se/repository/github-docker-registry/aquaproj/aqua:latest
+#    Tries: <internal-container-endpoint>/aquaproj/aqua:latest
 #    Falls back: ghcr.io/aquaproj/aqua:latest
 #
 # 5. Red Hat image pull (tries internal mirror first)
 #    $ podman pull registry.redhat.io/ubi9/ubi:latest
-#    Tries: registry.digg.se/repository/redhat-docker-registry/ubi9/ubi:latest
+#    Tries: <internal-container-endpoint>/ubi9/ubi:latest
 #    Falls back: registry.redhat.io/ubi9/ubi:latest
 #    Note: May require login - use: podman login registry.redhat.io
 #
