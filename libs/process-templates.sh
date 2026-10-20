@@ -514,11 +514,12 @@ EOF
     has_config=true
   fi
 
-  # Python pip/pipx registry
+  # Python pip/pipx and uv share the same package index.
   if [[ -n "${DEVBASE_PYPI_REGISTRY:-}" ]]; then
     cat >>"$target" <<EOF
-# Python pip/pipx registry configuration
+# Python pip/pipx and uv registry configuration
 set -gx PIP_INDEX_URL "${DEVBASE_PYPI_REGISTRY}"
+set -gx UV_DEFAULT_INDEX "${DEVBASE_PYPI_REGISTRY}"
 
 EOF
     has_config=true
@@ -618,6 +619,21 @@ process_template_file() {
     local -x DEVBASE_RUBYGEMS_REGISTRY="$DEVBASE_RUBYGEMS_REGISTRY"
     target_file="${BUNDLE_CONFIG:-${BUNDLE_USER_CONFIG:-${BUNDLE_USER_HOME:-${HOME}/.bundle}/config}}"
     registry_client=Bundler
+    ;;
+  gemrc)
+    [[ -n "${DEVBASE_RUBYGEMS_REGISTRY:-}" ]] || return 0
+    # GEMRC may name several files. Do not guess which user-owned override to edit.
+    if [[ -n "${GEMRC:-}" ]]; then
+      show_progress info "Preserving GEMRC override; apply RubyGems registry changes manually"
+      return 0
+    fi
+    local -x DEVBASE_RUBYGEMS_REGISTRY="$DEVBASE_RUBYGEMS_REGISTRY"
+    target_file="${HOME}/.gemrc"
+    if [[ ! -e "$target_file" && ! -L "$target_file" &&
+      (-e "${XDG_CONFIG_HOME}/gem/gemrc" || -L "${XDG_CONFIG_HOME}/gem/gemrc") ]]; then
+      target_file="${XDG_CONFIG_HOME}/gem/gemrc"
+    fi
+    registry_client=RubyGems
     ;;
   gradle.properties)
     target_file="${GRADLE_USER_HOME:-${HOME}/.gradle}/gradle.properties"
