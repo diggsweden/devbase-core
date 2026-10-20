@@ -205,7 +205,7 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 
 | `DEVBASE_CARGO_REGISTRY`, `DEVBASE_RUBYGEMS_REGISTRY`
 | _(none)_
-| URLs used by optional custom `cargo-config.toml.template` and `bundle-config.template`. Seed native user config files without replacing existing files. Respect `CARGO_HOME` (including legacy `config` precedence) and Bundler's `BUNDLE_CONFIG`, `BUNDLE_USER_CONFIG`, `BUNDLE_USER_HOME` precedence.
+| URLs used by optional custom `cargo-config.toml.template`, `bundle-config.template` and `gemrc.template`. Seed native user config files without replacing existing files. Respect `CARGO_HOME` (including legacy `config` precedence), Bundler's `BUNDLE_CONFIG`, `BUNDLE_USER_CONFIG`, `BUNDLE_USER_HOME` precedence, and existing RubyGems/XDG config or a `GEMRC` override. RubyGems has no native source-URL environment variable; `DEVBASE_RUBYGEMS_REGISTRY` supplies the `:sources` value in `gemrc`.
 
 | `DEVBASE_EXTRA_FORGES`
 | _(none)_
@@ -213,6 +213,10 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 |===
 
 These inputs configure installation; supported client settings are also written to generated configuration or exported under their native names in Fish.
+
+`DEVBASE_PYPI_REGISTRY` sets both `PIP_INDEX_URL` and `UV_DEFAULT_INDEX` during
+installation and in Fish. This routes Python packages, not Python distributions
+downloaded by `uv python install`.
 
 Registry integrations are opt-in independently: setting only `DEVBASE_REGISTRY_URL` does not redirect APT, mise or installer downloads. Without the specific settings, core retains its upstream behaviour. Put organization endpoints in `org.env`, not in core or project manifests.
 

@@ -14,6 +14,7 @@ apply_environment_settings() {
 
   if [[ -n "${DEVBASE_PYPI_REGISTRY}" ]]; then
     export PIP_INDEX_URL="${DEVBASE_PYPI_REGISTRY}"
+    export UV_DEFAULT_INDEX="${DEVBASE_PYPI_REGISTRY}"
   fi
 
   # Optional organization registries use the clients' native environment.
