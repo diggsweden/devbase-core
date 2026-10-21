@@ -17,6 +17,9 @@ setup() {
   common_setup_isolated
   source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
+  source "${DEVBASE_ROOT}/libs/handle-network.sh"
+  unset DEVBASE_GITHUB_CODELOAD_REGISTRY
+  unset DEVBASE_GITHUB_REGISTRY INSTALL_K3S_PR INSTALL_K3S_COMMIT
 }
 
 teardown() {
@@ -102,6 +105,62 @@ FISH
   assert_success
   assert_output --partial "Fisher already installed"
   assert_equal "$(cat "$TEST_DIR/plugin")" 'PatrickF1/fzf.fish@v11.0'
+}
+
+@test "Fisher bootstrap uses a pinned archive when codeload is configured" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  mkdir -p "$TEST_DIR/source/fisher-4.4.8/functions"
+  printf 'function fisher; end\n' >"$TEST_DIR/source/fisher-4.4.8/functions/fisher.fish"
+  tar -czf "$TEST_DIR/fixture.tar.gz" -C "$TEST_DIR/source" fisher-4.4.8
+  command_exists() { [[ "$1" == fish ]]; }
+  git() { touch "$TEST_DIR/git-invoked"; return 1; }
+  download_file() {
+    printf '%s\n' "$1" >"$TEST_DIR/download-url"
+    cp "$TEST_DIR/fixture.tar.gz" "$2"
+  }
+  fish() {
+    case "$2" in
+      'source $argv[1]; and fisher install'*)
+        [[ -s "$3" && "$4" == 'jorgebucaran/fisher@4.4.8' ]] ;;
+      *'fisher list |'*) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
+  run install_fisher
+  assert_success
+  assert_output --partial 'Fisher installed (4.4.8)'
+  assert_equal "$(cat "$TEST_DIR/download-url")" 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+  assert_file_exists "$TEST_DIR/fisher/functions/fisher.fish"
+  assert_file_not_exists "$TEST_DIR/git-invoked"
+}
+
+@test "Fisher does not fall back to Git when the mirrored archive fails" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  command_exists() { [[ "$1" == fish ]]; }
+  fish() { return 1; }
+  git() { touch "$TEST_DIR/git-invoked"; }
+  download_file() { return 1; }
+  run install_fisher
+  assert_failure
+  assert_output --partial 'Failed to fetch Fisher source archive'
+  assert_file_not_exists "$TEST_DIR/git-invoked"
+}
+
+@test "Fisher codeload bootstrap refuses floating source versions" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="HEAD")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  command_exists() { [[ "$1" == fish ]]; }
+  fish() { return 1; }
+  download_file() { touch "$TEST_DIR/download-invoked"; }
+  run install_fisher
+  assert_failure
+  assert_output --partial 'Pin an exact Fisher release version'
+  assert_file_not_exists "$TEST_DIR/download-invoked"
 }
 
 @test "get_vscode_checksum fetches a pinned release checksum from versioned API" {
@@ -847,6 +906,47 @@ _capture_download_args() {
     "install_k3s"
 
   assert_output --partial "deadbeefk3s"
+}
+
+@test "k3s uses the native release artifact override without disabling checksum verification" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases/'
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  download_file() { printf 'INSTALL_K3S_ARTIFACT_URL=${INSTALL_K3S_ARTIFACT_URL:-https://github.com/k3s-io/k3s/releases/download}\n' >"$2"; }
+  tui_run_cmd() { printf '%s\n' "$@" >"$TEST_DIR/installer-args"; }
+  run install_k3s
+  assert_success
+  run cat "$TEST_DIR/installer-args"
+  assert_line 'INSTALL_K3S_VERSION=v1.37.1+k3s1'
+  assert_line 'INSTALL_K3S_ARTIFACT_URL=https://registry.example/releases/k3s-io/k3s/releases/download'
+  refute_output --partial 'SKIP_DOWNLOAD'
+  refute_output --partial 'SKIP_SELINUX'
+}
+
+@test "mirrored k3s refuses old installers rather than downloading from upstream" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases'
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  download_file() { printf '#!/bin/sh\n' >"$2"; }
+  tui_run_cmd() { touch "$TEST_DIR/installer-started"; }
+  run install_k3s
+  assert_failure
+  assert_output --partial 'does not support INSTALL_K3S_ARTIFACT_URL'
+  assert_file_not_exists "$TEST_DIR/installer-started"
+}
+
+@test "mirrored k3s refuses PR artifact downloads" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases' INSTALL_K3S_PR=123
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  download_file() { touch "$TEST_DIR/download-started"; }
+  run install_k3s
+  assert_failure
+  assert_output --partial 'not PR or commit builds'
+  assert_file_not_exists "$TEST_DIR/download-started"
 }
 
 @test "install_k3s downloads the installer unverified when nothing is pinned" {

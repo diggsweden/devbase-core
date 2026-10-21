@@ -18,6 +18,7 @@ setup() {
   export DEVBASE_BACKUP_DIR="${XDG_DATA_HOME}/devbase/backup"
   export DEVBASE_REGISTRY_HOST='' DEVBASE_PYPI_REGISTRY='' DEVBASE_PROXY_HOST=''
   unset DEVBASE_APT_REGISTRY DEVBASE_GITHUB_REGISTRY DEVBASE_MISE_URL_REPLACEMENTS
+  unset DEVBASE_GITHUB_RAW_REGISTRY DEVBASE_GITHUB_CODELOAD_REGISTRY DEVBASE_OPENSHIFT_REGISTRY
   unset DEVBASE_MISE_PYTHON_COMPILE
   unset DEVBASE_GO_REGISTRY DEVBASE_GO_SUMDB DEVBASE_RUSTUP_DIST_SERVER DEVBASE_RUSTUP_UPDATE_ROOT
   unset DEVBASE_NPM_REGISTRY DEVBASE_CYPRESS_REGISTRY DEVBASE_CARGO_REGISTRY DEVBASE_RUBYGEMS_REGISTRY
@@ -175,6 +176,19 @@ teardown() {
   done
 }
 
+@test "checksum exceptions cover only the selected source archives, not binaries or arbitrary repositories" {
+  run _checksum_allowlisted 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.9'
+  assert_success
+  run _checksum_allowlisted 'https://codeload.github.com/PatrickF1/fzf.fish/tar.gz/refs/tags/v12.0'
+  assert_success
+  run _checksum_allowlisted 'https://codeload.github.com/other/plugin/tar.gz/refs/tags/v1'
+  assert_failure
+  run _checksum_allowlisted 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/heads/main'
+  assert_failure
+  run _checksum_allowlisted 'https://github.com/k3s-io/k3s/releases/download/v1.37.1+k3s1/k3s'
+  assert_failure
+}
+
 @test "GitHub mirrors require HTTPS before invoking either download client" {
   curl() { touch "$TEST_DIR/client-invoked"; }
   wget() { touch "$TEST_DIR/client-invoked"; }
@@ -188,6 +202,65 @@ teardown() {
       assert_file_not_exists "$TEST_DIR/client-invoked"
     done
   done
+}
+
+@test "raw, codeload and OpenShift downloads use only their explicit mirrors" {
+  export DEVBASE_GITHUB_RAW_REGISTRY='https://registry.example/raw/'
+  export DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  export DEVBASE_OPENSHIFT_REGISTRY='https://registry.example/openshift/'
+  local client
+  for client in devbase_curl devbase_wget; do
+    run "$client" 'https://raw.githubusercontent.com/k3s-io/k3s/v1/install.sh'
+    assert_success
+    assert_output 'https://registry.example/raw/k3s-io/k3s/v1/install.sh'
+    run "$client" 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+    assert_success
+    assert_output 'https://registry.example/codeload/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+    run "$client" 'https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.22.16/sha256sum.txt'
+    assert_success
+    assert_output 'https://registry.example/openshift/4.22.16/sha256sum.txt'
+    run "$client" 'https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.22.16/openshift-client-linux.tar.gz'
+    assert_success
+    assert_output 'https://registry.example/openshift/4.22.16/openshift-client-linux.tar.gz'
+    run "$client" 'https://raw.githubusercontent.com.example.org/owner/repo/file'
+    assert_output 'https://raw.githubusercontent.com.example.org/owner/repo/file'
+    run "$client" 'https://mirror.openshift.com/pub/other/file'
+    assert_output 'https://mirror.openshift.com/pub/other/file'
+  done
+  unset DEVBASE_GITHUB_RAW_REGISTRY DEVBASE_GITHUB_CODELOAD_REGISTRY DEVBASE_OPENSHIFT_REGISTRY
+  run devbase_curl 'https://raw.githubusercontent.com/k3s-io/k3s/v1/install.sh'
+  assert_output 'https://raw.githubusercontent.com/k3s-io/k3s/v1/install.sh'
+  run devbase_curl 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+  assert_output 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+  run devbase_curl 'https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.22.16/sha256sum.txt'
+  assert_output 'https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.22.16/sha256sum.txt'
+}
+
+@test "new download mirrors reject non-HTTPS URLs before invoking curl or wget" {
+  curl() { touch "$TEST_DIR/client-invoked"; }
+  wget() { touch "$TEST_DIR/client-invoked"; }
+  local name client
+  for name in DEVBASE_GITHUB_RAW_REGISTRY DEVBASE_GITHUB_CODELOAD_REGISTRY DEVBASE_OPENSHIFT_REGISTRY; do
+    export "$name=http://registry.example/files"
+    for client in devbase_curl devbase_wget; do
+      run "$client" 'https://example.org/file'
+      assert_failure
+      assert_output --partial "$name must be an HTTPS repository URL"
+      assert_file_not_exists "$TEST_DIR/client-invoked"
+    done
+    unset "$name"
+  done
+}
+
+@test "download mirrors preserve non-URL curl arguments byte for byte" {
+  export DEVBASE_GITHUB_REGISTRY='https://registry.example/github'
+  curl() { printf '%s\0' "$@" >"$TEST_DIR/arguments"; }
+  devbase_curl --data-binary $'payload\n' 'https://github.com/owner/repo/releases/download/v1/file'
+  local -a arguments
+  mapfile -d '' -t arguments <"$TEST_DIR/arguments"
+  assert_equal "${arguments[0]}" --data-binary
+  assert_equal "${arguments[1]}" $'payload\n'
+  assert_equal "${arguments[2]}" 'https://registry.example/github/owner/repo/releases/download/v1/file'
 }
 
 @test "early Gum bootstrap uses the optional GitHub mirror" {

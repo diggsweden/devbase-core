@@ -534,14 +534,27 @@ install_k3s() {
   local install_url="${DEVBASE_URL_K3S_RAW}/${k3s_version}/install.sh"
   local install_script="${_DEVBASE_TEMP}/k3s-install.sh"
   local expected_checksum="${DEVBASE_K3S_INSTALL_SHA256:-}"
+  local installer_env=("INSTALL_K3S_VERSION=$k3s_version")
+  if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" ]]; then
+    _validate_download_registries || return 1
+    if [[ -n "${INSTALL_K3S_PR:-}${INSTALL_K3S_COMMIT:-}" ]]; then
+      show_progress error "Mirrored k3s installation supports pinned releases, not PR or commit builds"
+      return 1
+    fi
+    installer_env+=("INSTALL_K3S_ARTIFACT_URL=${DEVBASE_GITHUB_REGISTRY%/}/k3s-io/k3s/releases/download")
+  fi
 
   if [[ -n "$expected_checksum" ]]; then
     show_progress info "Verifying k3s installer checksum"
   fi
 
   if download_file "$install_url" "$install_script" "" "$expected_checksum"; then
+    if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" ]] && ! grep -q '^INSTALL_K3S_ARTIFACT_URL=' "$install_script"; then
+      show_progress error "Pinned k3s installer does not support INSTALL_K3S_ARTIFACT_URL; refusing upstream downloads"
+      return 1
+    fi
     chmod +x "$install_script"
-    if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
+    if tui_run_cmd "Installing k3s" env "${installer_env[@]}" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
     else
       add_install_warning "k3s installation failed - skipping"
@@ -553,11 +566,33 @@ install_k3s() {
   fi
 }
 
+# Keep the download adapter scoped to Fisher, including the child Fish processes
+# it spawns. Native Fisher and the user's PATH are left unchanged after setup.
+_run_fisher() {
+  if [[ -z "${DEVBASE_GITHUB_CODELOAD_REGISTRY:-}" ]]; then
+    fish "$@"
+    return
+  fi
+  _validate_download_registries || return 1
+  local client_dir="${_DEVBASE_TEMP}/fisher-client" curl_bin
+  curl_bin=$(type -P curl) || return 1
+  mkdir -p "$client_dir" || return 1
+  printf '#!/usr/bin/env bash\nexec bash %q "$@"\n' "${DEVBASE_ROOT}/scripts/fisher-curl.sh" >"$client_dir/curl" || return 1
+  chmod 700 "$client_dir/curl" || return 1
+  PATH="$client_dir:$PATH" DEVBASE_FISHER_CURL_BIN="$curl_bin" \
+    DEVBASE_ROOT="$DEVBASE_ROOT" \
+    DEVBASE_STRICT_CHECKSUMS="${DEVBASE_STRICT_CHECKSUMS:-fail}" \
+    DEVBASE_STRICT_CHECKSUMS_ALLOWLIST="${DEVBASE_STRICT_CHECKSUMS_ALLOWLIST:-}" \
+    DEVBASE_GITHUB_CODELOAD_REGISTRY="$DEVBASE_GITHUB_CODELOAD_REGISTRY" \
+    DEVBASE_FISHER_VERSION="${TOOL_VERSIONS[fisher]:-}" \
+    DEVBASE_FZF_FISH_VERSION="${TOOL_VERSIONS[fzf_fish]:-}" fish "$@"
+}
+
 # Brief: Install Fisher plugin manager for Fish shell with fzf.fish
 # Params: None
 # Uses: _DEVBASE_TEMP, TOOL_VERSIONS, validate_var_set, command_exists, show_progress (globals/functions)
 # Returns: 0 on success, 1 on failure
-# Side-effects: Clones Fisher repo, installs Fisher and fzf.fish plugin
+# Side-effects: Fetches Fisher source, installs Fisher and fzf.fish plugin
 install_fisher() {
   validate_var_set "_DEVBASE_TEMP" || return 1
 
@@ -583,18 +618,33 @@ install_fisher() {
   local load_fisher='test -f $argv[1]; and source $argv[1]; functions -q fisher'
 
   # Preserve an existing plugin manager, but still reconcile required plugins.
-  if fish -c "$load_fisher" "$fisher_function" 2>/dev/null; then
+  if _run_fisher -c "$load_fisher" "$fisher_function" 2>/dev/null; then
     show_progress success "Fisher already installed"
   else
     local fisher_version="${TOOL_VERSIONS[fisher]}"
     local fisher_dir="${_DEVBASE_TEMP}/fisher"
-    if ! git clone --quiet --depth 1 --branch "$fisher_version" "$DEVBASE_URL_FISHER_REPO" "$fisher_dir"; then
-      show_progress error "Failed to clone Fisher repository"
-      return 1
+    if [[ -n "${DEVBASE_GITHUB_CODELOAD_REGISTRY:-}" ]]; then
+      # Version-pinned source over HTTPS, like the previous tagged Git clone.
+      local archive="${_DEVBASE_TEMP}/fisher.tar.gz"
+      if [[ ! "$fisher_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        show_progress error "Pin an exact Fisher release version for codeload installation"
+        return 1
+      fi
+      if ! download_file "https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/${fisher_version}" "$archive" ||
+        ! mkdir -p "$fisher_dir" ||
+        ! tar -xzf "$archive" -C "$fisher_dir" --strip-components=1; then
+        show_progress error "Failed to fetch Fisher source archive"
+        return 1
+      fi
+    else
+      if ! git clone --quiet --depth 1 --branch "$fisher_version" "$DEVBASE_URL_FISHER_REPO" "$fisher_dir"; then
+        show_progress error "Failed to clone Fisher repository"
+        return 1
+      fi
     fi
     # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
-    if ! fish -c 'source $argv[1]; and fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
-      "$fisher_dir/functions/fisher.fish" "jorgebucaran/fisher@${fisher_version}" >/dev/null 2>&1; then
+    if ! _run_fisher -c 'source $argv[1]; and fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
+      "$fisher_dir/functions/fisher.fish" "jorgebucaran/fisher@${fisher_version}" >/dev/null; then
       show_progress error "Fisher installation failed"
       return 1
     fi
@@ -602,7 +652,7 @@ install_fisher() {
   fi
 
   # Existing plugin versions are personal choices; seed a pinned plugin if absent.
-  if fish -c "$load_fisher"'; or exit 1; fisher list | string match -rqi "^patrickf1/fzf[.]fish(@.*)?\$"' \
+  if _run_fisher -c "$load_fisher"'; or exit 1; fisher list | string match -rqi "^patrickf1/fzf[.]fish(@.*)?\$"' \
     "$fisher_function" 2>/dev/null; then
     show_progress success "fzf.fish already installed"
     return 0
@@ -611,8 +661,8 @@ install_fisher() {
   [[ -n "$fzf_fish_version" ]] || return 1
   show_progress info "Installing fzf.fish plugin ($fzf_fish_version)..."
   # shellcheck disable=SC2016 # Fish expands argv, not the calling Bash shell.
-  if ! fish -c "$load_fisher"'; or exit 1; fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
-    "$fisher_function" "PatrickF1/fzf.fish@${fzf_fish_version}" >/dev/null 2>&1; then
+  if ! _run_fisher -c "$load_fisher"'; or exit 1; fisher install $argv[2]; and contains -- (string lower $argv[2]) (fisher list)' \
+    "$fisher_function" "PatrickF1/fzf.fish@${fzf_fish_version}" >/dev/null; then
     add_install_warning "fzf.fish plugin installation failed"
     return 1
   fi
