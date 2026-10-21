@@ -176,6 +176,19 @@ teardown() {
   done
 }
 
+@test "checksum exceptions cover only the selected source archives, not binaries or arbitrary repositories" {
+  run _checksum_allowlisted 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.9'
+  assert_success
+  run _checksum_allowlisted 'https://codeload.github.com/PatrickF1/fzf.fish/tar.gz/refs/tags/v12.0'
+  assert_success
+  run _checksum_allowlisted 'https://codeload.github.com/other/plugin/tar.gz/refs/tags/v1'
+  assert_failure
+  run _checksum_allowlisted 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/heads/main'
+  assert_failure
+  run _checksum_allowlisted 'https://github.com/k3s-io/k3s/releases/download/v1.37.1+k3s1/k3s'
+  assert_failure
+}
+
 @test "GitHub mirrors require HTTPS before invoking either download client" {
   curl() { touch "$TEST_DIR/client-invoked"; }
   wget() { touch "$TEST_DIR/client-invoked"; }

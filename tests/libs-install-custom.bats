@@ -18,6 +18,7 @@ setup() {
   source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
   source "${DEVBASE_ROOT}/libs/handle-network.sh"
+  unset DEVBASE_GITHUB_CODELOAD_REGISTRY
   unset DEVBASE_GITHUB_REGISTRY INSTALL_K3S_PR INSTALL_K3S_COMMIT
 }
 
@@ -104,6 +105,73 @@ FISH
   assert_success
   assert_output --partial "Fisher already installed"
   assert_equal "$(cat "$TEST_DIR/plugin")" 'PatrickF1/fzf.fish@v11.0'
+}
+
+@test "Fisher bootstrap uses a pinned archive when codeload is configured" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  mkdir -p "$TEST_DIR/source/fisher-4.4.8/functions"
+  printf 'function fisher; end\n' >"$TEST_DIR/source/fisher-4.4.8/functions/fisher.fish"
+  tar -czf "$TEST_DIR/fixture.tar.gz" -C "$TEST_DIR/source" fisher-4.4.8
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  command_exists() { [[ "$1" == fish ]]; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  git() { touch "$TEST_DIR/git-invoked"; return 1; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  download_file() {
+    printf '%s\n' "$1" >"$TEST_DIR/download-url"
+    cp "$TEST_DIR/fixture.tar.gz" "$2"
+  }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  fish() {
+    case "$2" in
+      'source $argv[1]; and fisher install'*)
+        [[ -s "$3" && "$4" == 'jorgebucaran/fisher@4.4.8' ]] ;;
+      *'fisher list |'*) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
+  run install_fisher
+  assert_success
+  assert_output --partial 'Fisher installed (4.4.8)'
+  assert_equal "$(cat "$TEST_DIR/download-url")" 'https://codeload.github.com/jorgebucaran/fisher/tar.gz/refs/tags/4.4.8'
+  assert_file_exists "$TEST_DIR/fisher/functions/fisher.fish"
+  assert_file_not_exists "$TEST_DIR/git-invoked"
+}
+
+@test "Fisher does not fall back to Git when the mirrored archive fails" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="4.4.8" [fzf_fish]="v11.0")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  command_exists() { [[ "$1" == fish ]]; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  fish() { return 1; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  git() { touch "$TEST_DIR/git-invoked"; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  download_file() { return 1; }
+  run install_fisher
+  assert_failure
+  assert_output --partial 'Failed to fetch Fisher source archive'
+  assert_file_not_exists "$TEST_DIR/git-invoked"
+}
+
+@test "Fisher codeload bootstrap refuses floating source versions" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  TOOL_VERSIONS=([fisher]="HEAD")
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_CODELOAD_REGISTRY='https://registry.example/codeload'
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  command_exists() { [[ "$1" == fish ]]; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  fish() { return 1; }
+  # shellcheck disable=SC2329 # Called by install_fisher.
+  download_file() { touch "$TEST_DIR/download-invoked"; }
+  run install_fisher
+  assert_failure
+  assert_output --partial 'Pin an exact Fisher release version'
+  assert_file_not_exists "$TEST_DIR/download-invoked"
 }
 
 @test "get_vscode_checksum fetches a pinned release checksum from versioned API" {
