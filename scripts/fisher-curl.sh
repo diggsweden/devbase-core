@@ -9,36 +9,41 @@ set -Eeuo pipefail
 output='' url=''
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -o)
-      output="$2"
-      shift 2 ;;
-    -w)
-      [[ "$2" == '%{http_code}' ]] || exit 1
-      shift 2 ;;
-    -q | --silent | -L) shift ;;
-    https://*)
-      [[ -z "$url" ]] || exit 1
-      url="$1"
-      shift ;;
-    *)
-      printf 'Unsupported Fisher curl argument: %s\n' "$1" >&2
-      exit 1 ;;
+  -o)
+    output="$2"
+    shift 2
+    ;;
+  -w)
+    [[ "$2" == '%{http_code}' ]] || exit 1
+    shift 2
+    ;;
+  -q | --silent | -L) shift ;;
+  https://*)
+    [[ -z "$url" ]] || exit 1
+    url="$1"
+    shift
+    ;;
+  *)
+    printf 'Unsupported Fisher curl argument: %s\n' "$1" >&2
+    exit 1
+    ;;
   esac
 done
 [[ -n "$output" && -n "$url" ]] || exit 1
 
 case "$url" in
-  "https://api.github.com/repos/jorgebucaran/fisher/tarball/${DEVBASE_FISHER_VERSION:?}")
-    version="$DEVBASE_FISHER_VERSION"
-    path="jorgebucaran/fisher/tar.gz/refs/tags/${DEVBASE_FISHER_VERSION}"
-    ;;
-  "https://api.github.com/repos/patrickf1/fzf.fish/tarball/${DEVBASE_FZF_FISH_VERSION:?}")
-    version="$DEVBASE_FZF_FISH_VERSION"
-    path="PatrickF1/fzf.fish/tar.gz/refs/tags/${DEVBASE_FZF_FISH_VERSION}"
-    ;;
-  *)
-    printf 'Fisher archive is not configured for mirrored installation: %s\n' "$url" >&2
-    exit 1 ;;
+"https://api.github.com/repos/jorgebucaran/fisher/tarball/${DEVBASE_FISHER_VERSION:?}")
+  version="$DEVBASE_FISHER_VERSION"
+  path="jorgebucaran/fisher/tar.gz/refs/tags/${DEVBASE_FISHER_VERSION}"
+  ;;
+"https://api.github.com/repos/patrickf1/fzf.fish/tarball/${DEVBASE_FZF_FISH_VERSION:?}")
+  version="$DEVBASE_FZF_FISH_VERSION"
+  path="PatrickF1/fzf.fish/tar.gz/refs/tags/${DEVBASE_FZF_FISH_VERSION}"
+  ;;
+*)
+  printf 'Fisher archive is not configured for mirrored installation: %s\n' "$url" >&2
+  exit 1
+  ;;
 esac
 mirror="${DEVBASE_GITHUB_CODELOAD_REGISTRY:?}"
 [[ "$mirror" == https://* && "$version" =~ ^v?[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || {
@@ -52,10 +57,11 @@ mirror="${DEVBASE_GITHUB_CODELOAD_REGISTRY:?}"
 source "${DEVBASE_ROOT:?}/libs/handle-network.sh"
 if ! _checksum_allowlisted "https://codeload.github.com/${path}"; then
   case "$(_normalize_strict_mode "${DEVBASE_STRICT_CHECKSUMS:-fail}")" in
-    fail)
-      echo 'Checksum required for Fisher source: no matching source exception.' >&2
-      exit 1 ;;
-    warn) echo 'WARNING: No checksum configured for Fisher source.' >&2 ;;
+  fail)
+    echo 'Checksum required for Fisher source: no matching source exception.' >&2
+    exit 1
+    ;;
+  warn) echo 'WARNING: No checksum configured for Fisher source.' >&2 ;;
   esac
 fi
 

@@ -70,14 +70,22 @@ _validate_download_registries() {
 _devbase_download_url() {
   local url="$1" mirror='' prefix=''
   case "$url" in
-    https://github.com/*/releases/download/*)
-      mirror="${DEVBASE_GITHUB_REGISTRY:-}"; prefix='https://github.com/' ;;
-    https://raw.githubusercontent.com/*)
-      mirror="${DEVBASE_GITHUB_RAW_REGISTRY:-}"; prefix='https://raw.githubusercontent.com/' ;;
-    https://codeload.github.com/*)
-      mirror="${DEVBASE_GITHUB_CODELOAD_REGISTRY:-}"; prefix='https://codeload.github.com/' ;;
-    https://mirror.openshift.com/pub/openshift-v4/clients/ocp/*)
-      mirror="${DEVBASE_OPENSHIFT_REGISTRY:-}"; prefix='https://mirror.openshift.com/pub/openshift-v4/clients/ocp/' ;;
+  https://github.com/*/releases/download/*)
+    mirror="${DEVBASE_GITHUB_REGISTRY:-}"
+    prefix='https://github.com/'
+    ;;
+  https://raw.githubusercontent.com/*)
+    mirror="${DEVBASE_GITHUB_RAW_REGISTRY:-}"
+    prefix='https://raw.githubusercontent.com/'
+    ;;
+  https://codeload.github.com/*)
+    mirror="${DEVBASE_GITHUB_CODELOAD_REGISTRY:-}"
+    prefix='https://codeload.github.com/'
+    ;;
+  https://mirror.openshift.com/pub/openshift-v4/clients/ocp/*)
+    mirror="${DEVBASE_OPENSHIFT_REGISTRY:-}"
+    prefix='https://mirror.openshift.com/pub/openshift-v4/clients/ocp/'
+    ;;
   esac
   if [[ -n "$mirror" ]]; then
     printf '%s/%s' "${mirror%/}" "${url#"$prefix"}"
