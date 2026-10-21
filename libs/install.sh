@@ -778,6 +778,7 @@ bootstrap_for_configuration() {
     fi
 
     # Ensure common mise paths are available in this shell session.
+    # shellcheck disable=SC2031 # Cross-file false positive: the subshell export lives in configure-opencode.sh
     local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
