@@ -8,7 +8,7 @@
 # Params: None
 # Uses: DEVBASE_ROOT, DEVBASE_CUSTOM_DIR, _DEVBASE_FROM_GIT, XDG_DATA_HOME (globals)
 # Returns: 0 on success
-# Side-effects: Clones/updates repos to ~/.local/share/devbase/{core,custom}
+# Side-effects: Clones/updates inactive repos in ~/.local/share/devbase/{core,custom}
 persist_devbase_repos() {
   require_env XDG_DATA_HOME DEVBASE_ROOT _DEVBASE_FROM_GIT || return 1
 
@@ -17,8 +17,11 @@ persist_devbase_repos() {
 
   mkdir -p "$(dirname "$core_dest")"
 
-  # Persist core repo
-  if [[ "$_DEVBASE_FROM_GIT" == "true" ]]; then
+  # Never change a checkout whose code/configuration this run already loaded.
+  # -ef also recognises the active checkout through symlinks or relative paths.
+  if [[ "$_DEVBASE_FROM_GIT" == "true" && "$DEVBASE_ROOT" -ef "$core_dest" ]]; then
+    show_progress info "Using persistent core checkout - skipping update during setup"
+  elif [[ "$_DEVBASE_FROM_GIT" == "true" ]]; then
     local current_remote
     local current_tag
     local core_ref
@@ -87,7 +90,9 @@ persist_devbase_repos() {
   fi
 
   # Persist custom config repo (if it's a git repo)
-  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && git -C "$DEVBASE_CUSTOM_DIR" rev-parse --git-dir &>/dev/null; then
+  if [[ -n "${DEVBASE_CUSTOM_DIR:-}" && "$DEVBASE_CUSTOM_DIR" -ef "$custom_dest" ]]; then
+    show_progress info "Using persistent custom configuration - skipping update during setup"
+  elif [[ -n "${DEVBASE_CUSTOM_DIR:-}" ]] && git -C "$DEVBASE_CUSTOM_DIR" rev-parse --git-dir &>/dev/null; then
     local custom_remote
     custom_remote=$(git -C "$DEVBASE_CUSTOM_DIR" remote get-url origin 2>/dev/null || echo "")
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# shellcheck disable=SC1078,SC1079,SC1090,SC2016,SC2027,SC2030,SC2031,SC2046,SC2123,SC2140,SC2155,SC2218
+# shellcheck disable=SC1078,SC1079,SC1090,SC2016,SC2027,SC2030,SC2031,SC2046,SC2123,SC2140,SC2155,SC2218,SC2329
 # SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
 #
 # SPDX-License-Identifier: MIT
@@ -647,6 +647,84 @@ teardown() {
   
   assert_success
   assert_output --partial "custom_created=yes"
+}
+
+@test "persist_devbase_repos leaves the active core checkout unchanged through a symlink" {
+  source "$DEVBASE_ROOT/libs/persist.sh"
+  local upstream="$TEST_DIR/core-upstream" destination="$XDG_DATA_HOME/devbase/core"
+  local custom="$TEST_DIR/custom-upstream"
+  create_mock_git_repo "$upstream" v1.0.0 "file://$upstream"
+  create_mock_git_repo "$custom" v1.0.0 "file://$custom"
+  mkdir -p "$XDG_DATA_HOME/devbase"
+  git clone --quiet "file://$upstream" "$destination"
+  printf 'new version\n' >"$upstream/README.md"
+  git -C "$upstream" add README.md
+  git -C "$upstream" commit --quiet -m 'New version'
+  git -C "$upstream" tag v2.0.0
+  ln -s "$destination" "$TEST_DIR/active-core"
+  export DEVBASE_ROOT="$TEST_DIR/active-core" _DEVBASE_FROM_GIT=true DEVBASE_CORE_REF=v2.0.0 DEVBASE_CUSTOM_DIR="$custom"
+  require_env() { :; }
+  show_progress() { :; }
+
+  run persist_devbase_repos
+  assert_success
+  run git -C "$destination" describe --tags --exact-match
+  assert_output v1.0.0
+  assert_dir_exists "$XDG_DATA_HOME/devbase/custom/.git"
+}
+
+@test "persist_devbase_repos preserves the custom revision already loaded by setup" {
+  source "$DEVBASE_ROOT/libs/persist.sh"
+  local upstream="$TEST_DIR/custom-upstream" destination="$XDG_DATA_HOME/devbase/custom"
+  create_mock_git_repo "$upstream" v1.0.0 "file://$upstream"
+  mkdir -p "$upstream/config" "$XDG_DATA_HOME/devbase"
+  printf 'export DEVBASE_RUSTUP_DIST_SERVER=old\n' >"$upstream/config/org.env"
+  git -C "$upstream" add config/org.env
+  git -C "$upstream" commit --quiet -m 'Old settings'
+  git clone --quiet "file://$upstream" "$destination"
+  local loaded_revision
+  loaded_revision=$(git -C "$destination" rev-parse HEAD)
+  source "$destination/config/org.env"
+  printf 'local changes\n' >"$destination/README.md"
+  printf 'export DEVBASE_RUSTUP_DIST_SERVER=new\n' >"$upstream/config/org.env"
+  git -C "$upstream" add config/org.env
+  git -C "$upstream" commit --quiet -m 'New settings'
+  ln -s "$destination" "$TEST_DIR/active-custom"
+  export DEVBASE_CUSTOM_DIR="$TEST_DIR/active-custom" _DEVBASE_FROM_GIT=false
+  require_env() { :; }
+  show_progress() { :; }
+
+  run persist_devbase_repos
+  assert_success
+  assert_equal "$(git -C "$destination" rev-parse HEAD)" "$loaded_revision"
+  assert_equal "$(cat "$destination/config/org.env")" 'export DEVBASE_RUSTUP_DIST_SERVER=old'
+  assert_equal "$DEVBASE_RUSTUP_DIST_SERVER" old
+  assert_equal "$(cat "$destination/README.md")" 'local changes'
+}
+
+@test "persist_devbase_repos still updates separate core and custom copies" {
+  source "$DEVBASE_ROOT/libs/persist.sh"
+  local core="$TEST_DIR/core-upstream" custom="$TEST_DIR/custom-upstream"
+  create_mock_git_repo "$core" v1.0.0 "file://$core"
+  create_mock_git_repo "$custom" v1.0.0 "file://$custom"
+  mkdir -p "$XDG_DATA_HOME/devbase"
+  git clone --quiet "file://$core" "$XDG_DATA_HOME/devbase/core"
+  git clone --quiet "file://$custom" "$XDG_DATA_HOME/devbase/custom"
+  printf 'new core\n' >"$core/README.md"
+  git -C "$core" add README.md
+  git -C "$core" commit --quiet -m 'New core'
+  git -C "$core" tag v2.0.0
+  printf 'new custom\n' >"$custom/README.md"
+  git -C "$custom" add README.md
+  git -C "$custom" commit --quiet -m 'New custom'
+  export DEVBASE_ROOT="$core" DEVBASE_CUSTOM_DIR="$custom" _DEVBASE_FROM_GIT=true DEVBASE_CORE_REF=v2.0.0
+  require_env() { :; }
+  show_progress() { :; }
+
+  run persist_devbase_repos
+  assert_success
+  assert_equal "$(git -C "$XDG_DATA_HOME/devbase/core" describe --tags --exact-match)" v2.0.0
+  assert_equal "$(cat "$XDG_DATA_HOME/devbase/custom/README.md")" 'new custom'
 }
 
 # mask_url_credentials is what keeps proxy credentials out of installation
