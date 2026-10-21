@@ -812,6 +812,36 @@ SCRIPT
   refute_output --partial 'use -g'
 }
 
+@test "install_mise selects the upgraded executable before configuring the AI launcher and activation" {
+  _setup_managed_mise_install
+  mkdir -p "$TEST_DIR/old"
+  mv "$XDG_BIN_HOME/mise" "$TEST_DIR/old/mise"
+  export PATH="$TEST_DIR/old:$XDG_BIN_HOME:$PATH"
+  export DEVBASE_SELECTED_PACKS=ai
+  cat >"$PACKAGES_YAML" <<'EOF'
+core: {}
+packs:
+  ai:
+    mise:
+      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.0"}
+      nono: {version: "0.80.0"}
+    custom:
+      nono_opencode_pack: {version: "0.1.0", installer: "install_nono_opencode_pack"}
+EOF
+  # Match the updater's destination without downloading a binary. An old mise
+  # remains first on PATH and the destination directory is already later on it.
+  update_mise_if_needed() {
+    cp "$TEST_DIR/old/mise" "$XDG_BIN_HOME/mise"
+  }
+  run install_mise
+  assert_success
+  assert_output --partial "Mise ready at $XDG_BIN_HOME/mise"
+  run jq -r '.mise' "$XDG_DATA_HOME/devbase/opencode/runtime.json"
+  assert_output "$XDG_BIN_HOME/mise"
+  run cat "$TEST_DIR/mise-calls"
+  assert_line 'env -s bash'
+}
+
 @test "install_mise regenerates after pack selection and skips backups for unchanged config" {
   _setup_managed_mise_install
   rm "${XDG_CONFIG_HOME}/mise/config.toml"

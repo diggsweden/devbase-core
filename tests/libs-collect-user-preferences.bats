@@ -604,6 +604,43 @@ EOF
   assert_equal "$is_fresh_install" "true"
 }
 
+_check_pack_defaults() {
+  local ui="$1"
+  source "${DEVBASE_ROOT}/libs/collect-user-preferences-${ui}.sh"
+  export DEVBASE_DEFAULT_PACKS="java go"
+  unset DEVBASE_SELECTED_PACKS
+  get_available_packs() { printf '%s\n' 'ai|AI' 'java|Java' 'go|Go' 'rust|Rust'; }
+  _gum_section() { :; }
+  _gum_warning() { :; }
+  _gum_choose_multi() { printf '%s\n' "$1" >"$TEST_DIR/preselected"; }
+  _wt_checklist() {
+    shift 2
+    while (($#)); do
+      printf '%s=%s\n' "$1" "$3" >>"$TEST_DIR/preselected"
+      shift 3
+    done
+  }
+  collect_pack_preferences
+  assert_equal "$DEVBASE_SELECTED_PACKS" 'java go'
+  run cat "$TEST_DIR/preselected"
+  if [[ "$ui" == gum ]]; then
+    assert_output 'java - Java,go - Go'
+  else
+    assert_line 'ai=OFF'
+    assert_line 'rust=OFF'
+    assert_line 'java=ON'
+    assert_line 'go=ON'
+  fi
+}
+
+@test "gum uses configured defaults for preselection and empty-selection fallback" {
+  _check_pack_defaults gum
+}
+
+@test "whiptail uses configured defaults for preselection and empty-selection fallback" {
+  _check_pack_defaults whiptail
+}
+
 @test "update with existing selection asks to keep current" {
   # Simulate update detection
   export DEVBASE_SELECTED_PACKS="java node python"

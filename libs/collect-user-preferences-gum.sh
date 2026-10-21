@@ -597,12 +597,9 @@ collect_pack_preferences() {
 
   require_env DEVBASE_DEFAULT_PACKS || return 1
 
-  # Pre-select based on saved preferences, or all packs (except rust) if none saved
+  # Use the same configured defaults as non-interactive setup.
   local default_packs=()
-  for pack in "${packs[@]}"; do
-    [[ "$pack" == "rust" ]] && continue
-    default_packs+=("$pack")
-  done
+  read -r -a default_packs <<<"$DEVBASE_DEFAULT_PACKS"
   local preselected=""
   local saved_packs=" ${DEVBASE_SELECTED_PACKS:-${default_packs[*]}} "
   for i in "${!packs[@]}"; do
@@ -627,10 +624,10 @@ collect_pack_preferences() {
   # Trim trailing space
   DEVBASE_SELECTED_PACKS="${DEVBASE_SELECTED_PACKS% }"
 
-  # Default to all (except rust) if nothing selected
+  # Fall back to configured defaults if nothing selected.
   if [[ -z "$DEVBASE_SELECTED_PACKS" ]]; then
     DEVBASE_SELECTED_PACKS="${default_packs[*]}"
-    _gum_warning "No packs selected, defaulting to all except rust"
+    _gum_warning "No packs selected, using configured defaults"
   fi
 
   export DEVBASE_SELECTED_PACKS

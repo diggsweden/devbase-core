@@ -11,6 +11,16 @@
   },
   "packageRules": [
     {
+      "description": "The nono opencode-v1 pack and launcher require OpenCode 1.x; review major migrations together",
+      "matchPackageNames": ["anomalyco/opencode"],
+      "allowedVersions": "<2.0.0"
+    },
+    {
+      "description": "Review nono 1.x CLI and pack compatibility before changing the launcher contract",
+      "matchPackageNames": ["nolabs-ai/nono"],
+      "allowedVersions": "<1.0.0"
+    },
+    {
       "description": "Allow current and announced Java LTS lines, requiring Adoptium's LTS marker",
       "matchDatasources": ["java-version"],
       "matchPackageNames": ["java-temurin"],

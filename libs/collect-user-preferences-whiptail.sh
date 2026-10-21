@@ -506,12 +506,9 @@ collect_pack_preferences() {
 
   require_env DEVBASE_DEFAULT_PACKS || return 1
 
-  # Current selection (space-separated) - default to all except rust
+  # Use the same configured defaults as non-interactive setup.
   local default_packs=()
-  for pack in "${packs[@]}"; do
-    [[ "$pack" == "rust" ]] && continue
-    default_packs+=("$pack")
-  done
+  read -r -a default_packs <<<"$DEVBASE_DEFAULT_PACKS"
   local current_selection=" ${DEVBASE_SELECTED_PACKS:-${default_packs[*]}} "
 
   # Build checklist
@@ -541,7 +538,7 @@ collect_pack_preferences() {
   # Convert newline-separated to space-separated
   DEVBASE_SELECTED_PACKS=$(echo "$selected" | tr '\n' ' ' | sed 's/ $//')
 
-  # Default to all except rust if nothing selected
+  # Fall back to configured defaults if nothing selected.
   [[ -z "$DEVBASE_SELECTED_PACKS" ]] && DEVBASE_SELECTED_PACKS="${default_packs[*]}"
   export DEVBASE_SELECTED_PACKS
 }

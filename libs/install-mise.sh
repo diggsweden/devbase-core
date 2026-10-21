@@ -463,6 +463,29 @@ install_mise() {
       die "Generated mise config is not valid TOML"
       return 1
     fi
+    # Upgrade before publishing native wrappers (older mise cannot parse them).
+    # Install the fail-closed entry point before activating the raw mise tool.
+    if ! update_mise_if_needed; then
+      rm -f "$staged_config"
+      die "Failed to update mise"
+      return 1
+    fi
+    # The updater may have installed into XDG_BIN_HOME while an older mise is
+    # still first on PATH. Use the resulting binary for configuration and activation.
+    if [[ -x "${XDG_BIN_HOME}/mise" ]]; then
+      mise_path="${XDG_BIN_HOME}/mise"
+    fi
+    # Preserve the bootstrap tools ahead of any broken system/user yq.
+    PATH="${_DEVBASE_BOOTSTRAP_BINS:+${_DEVBASE_BOOTSTRAP_BINS}:}${mise_path%/*}:$PATH"
+    export PATH
+    hash -r
+    # shellcheck source=configure-opencode.sh
+    source "${DEVBASE_LIBS}/configure-opencode.sh"
+    if ! configure_opencode_launcher; then
+      rm -f "$staged_config"
+      die "Failed to configure sandboxed OpenCode"
+      return 1
+    fi
     if cmp -s "$staged_config" "$mise_config"; then
       rm -f "$staged_config"
     else
@@ -778,9 +801,12 @@ install_mise_and_tools() {
     source "${DEVBASE_LIBS}/parse-packages.sh" || die "Failed to load package parser (is yq installed?)"
   fi
 
-  update_mise_if_needed || die "Failed to update mise"
-
   install_mise_tools || die "Failed to install mise tools"
+
+  install_nono_opencode_pack || {
+    die "Failed to install nono OpenCode pack"
+    return 1
+  }
 
   return 0
 }

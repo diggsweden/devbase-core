@@ -221,6 +221,15 @@ core:
 # PACKS - User selects during install (all selected by default)
 # ==============================================================================
 packs:
+  ai:
+    description: "(opencode / nono sandbox)"
+    mise:
+      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.0", description: "AI coding agent (launched through nono)", license: "MIT"} # renovate: datasource=github-releases depName=anomalyco/opencode
+      nono: {version: "0.80.0", description: "Kernel-enforced sandbox for OpenCode", license: "Apache-2.0"} # renovate: datasource=github-releases depName=nolabs-ai/nono
+    custom:
+      # Registry pack pins are reviewed together with the OpenCode major version.
+      nono_opencode_pack: {version: "0.1.0", installer: "install_nono_opencode_pack", description: "Official nolabs-ai/opencode-v1 profile, plugin and skill", license: "Apache-2.0"}
+
   java:
     # System apps use distro-supported Java 25 LTS; mise tracks approved LTS lines.
     description: "(temurin / maven / gradle / pmd)"

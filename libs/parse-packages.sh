@@ -492,6 +492,18 @@ EOF
     fi
   done <<<"$packages" >>"$output_file" || return 1
 
+  # A native mise wrapper wins over the raw tool in activated shells and mise exec.
+  # Keep it conditional: unselected packs must not expose an auto-installing shim.
+  if grep -q '^aqua:anomalyco/opencode|' <<<"$packages"; then
+    if ! grep -q '^nono|' <<<"$packages"; then
+      show_progress error "OpenCode requires the nono package"
+      return 1
+    fi
+    local launcher="${XDG_DATA_HOME:-$HOME/.local/share}/devbase/opencode/launcher" launcher_json
+    launcher_json=$(jq -nrc --arg path "$launcher" '$path | tojson') || return 1
+    printf '\n[wrappers.opencode]\ncommand = %s\n' "$launcher_json" >>"$output_file" || return 1
+  fi
+
   _apply_mise_registry_settings "$output_file"
 }
 
