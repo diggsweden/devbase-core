@@ -187,6 +187,14 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 | _(none)_
 | HTTPS GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap. Non-HTTPS mirror URLs are rejected before invoking curl or wget.
 
+| `DEVBASE_GITHUB_RAW_REGISTRY`
+| _(none)_
+| HTTPS mirror of `raw.githubusercontent.com`, preserving paths. Routes installer source files such as k3s's `install.sh`; use `DEVBASE_GITHUB_REGISTRY` for k3s's subsequent binary and checksum downloads.
+
+| `DEVBASE_OPENSHIFT_REGISTRY`
+| _(none)_
+| HTTPS mirror of `mirror.openshift.com/pub/openshift-v4/clients/ocp/`. Routes both the checksum manifest and the oc/kubectl client archive.
+
 | `DEVBASE_MISE_URL_REPLACEMENTS`
 | _(none)_
 | JSON map of upstream URL prefixes to mirrors. Exported as `MISE_URL_REPLACEMENTS` during bootstrap and persisted as global mise settings. Installation-statistics POSTs are disabled when configured.

@@ -54,12 +54,36 @@ declare -ag DEVBASE_CURL_PROXY_ARGS=()
 declare -ag DEVBASE_WGET_PROXY_ARGS=()
 
 # Bootstrap checksums come from this mirror too, so require authenticated transport.
-_validate_github_registry() {
-  if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" && ! "$DEVBASE_GITHUB_REGISTRY" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
-    show_progress error "DEVBASE_GITHUB_REGISTRY must be an HTTPS repository URL" >&2
-    return 1
-  fi
+_validate_download_registries() {
+  local name value
+  for name in DEVBASE_GITHUB_REGISTRY DEVBASE_GITHUB_RAW_REGISTRY DEVBASE_GITHUB_CODELOAD_REGISTRY DEVBASE_OPENSHIFT_REGISTRY; do
+    value="${!name:-}"
+    if [[ -n "$value" && ! "$value" =~ ^https://[^[:space:]\"\'\?#]+$ ]]; then
+      show_progress error "$name must be an HTTPS repository URL" >&2
+      return 1
+    fi
+  done
   return 0
+}
+
+# Only explicit download sources are rewritten. Git clones and API calls are not.
+_devbase_download_url() {
+  local url="$1" mirror='' prefix=''
+  case "$url" in
+    https://github.com/*/releases/download/*)
+      mirror="${DEVBASE_GITHUB_REGISTRY:-}"; prefix='https://github.com/' ;;
+    https://raw.githubusercontent.com/*)
+      mirror="${DEVBASE_GITHUB_RAW_REGISTRY:-}"; prefix='https://raw.githubusercontent.com/' ;;
+    https://codeload.github.com/*)
+      mirror="${DEVBASE_GITHUB_CODELOAD_REGISTRY:-}"; prefix='https://codeload.github.com/' ;;
+    https://mirror.openshift.com/pub/openshift-v4/clients/ocp/*)
+      mirror="${DEVBASE_OPENSHIFT_REGISTRY:-}"; prefix='https://mirror.openshift.com/pub/openshift-v4/clients/ocp/' ;;
+  esac
+  if [[ -n "$mirror" ]]; then
+    printf '%s/%s' "${mirror%/}" "${url#"$prefix"}"
+  else
+    printf '%s' "$url"
+  fi
 }
 
 # Brief: Wrapper for curl with proxy-safe options
@@ -69,14 +93,11 @@ _validate_github_registry() {
 # Note: Some corporate proxies have problems with persistent connections
 #       These options avoid connection reuse when proxies are configured.
 devbase_curl() {
-  _validate_github_registry || return 1
+  _validate_download_registries || return 1
   local arg
   local -a args=()
   for arg in "$@"; do
-    # Only release downloads (including checksums); Git/API URLs are separate.
-    if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" && "$arg" == https://github.com/*/releases/download/* ]]; then
-      arg="${DEVBASE_GITHUB_REGISTRY%/}/${arg#https://github.com/}"
-    fi
+    [[ "$arg" != https://* ]] || arg="$(_devbase_download_url "$arg")"
     args+=("$arg")
   done
   curl "${DEVBASE_CURL_PROXY_ARGS[@]}" "${args[@]}"
@@ -87,13 +108,11 @@ devbase_curl() {
 # Returns: wget exit code
 # Side-effects: None
 devbase_wget() {
-  _validate_github_registry || return 1
+  _validate_download_registries || return 1
   local arg
   local -a args=()
   for arg in "$@"; do
-    if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" && "$arg" == https://github.com/*/releases/download/* ]]; then
-      arg="${DEVBASE_GITHUB_REGISTRY%/}/${arg#https://github.com/}"
-    fi
+    [[ "$arg" != https://* ]] || arg="$(_devbase_download_url "$arg")"
     args+=("$arg")
   done
   wget "${DEVBASE_WGET_PROXY_ARGS[@]}" "${args[@]}"
