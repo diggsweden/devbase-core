@@ -185,11 +185,15 @@ Set in `devbase-custom-config/config/org.env` - affects installation behavior:
 
 | `DEVBASE_GITHUB_REGISTRY`
 | _(none)_
-| HTTPS GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap. Non-HTTPS mirror URLs are rejected before invoking curl or wget.
+| HTTPS GitHub release mirror with the same owner/repository paths. Used for installer downloads and checksums, including mise and Gum bootstrap. Also sets k3s's native `INSTALL_K3S_ARTIFACT_URL` for its binary and checksum manifest; requires an installer supporting that override. Non-HTTPS mirror URLs are rejected before invoking curl or wget.
 
 | `DEVBASE_GITHUB_RAW_REGISTRY`
 | _(none)_
 | HTTPS mirror of `raw.githubusercontent.com`, preserving paths. Routes installer source files such as k3s's `install.sh`; use `DEVBASE_GITHUB_REGISTRY` for k3s's subsequent binary and checksum downloads.
+
+| `DEVBASE_K3S_INSTALL_SHA256`
+| _(none)_
+| Optional SHA-256 of the selected k3s version's installer script for organizations requiring an independent pin. Without it, the existing source-path exception trusts the version-tagged script over HTTPS. The binary is always verified against the release's checksum manifest. Mirrored releases do not support PR/commit builds. SELinux RPM repositories and running-cluster image pulls are separate integrations, not redirected by the artifact mirror.
 
 | `DEVBASE_OPENSHIFT_REGISTRY`
 | _(none)_

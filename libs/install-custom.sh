@@ -534,14 +534,27 @@ install_k3s() {
   local install_url="${DEVBASE_URL_K3S_RAW}/${k3s_version}/install.sh"
   local install_script="${_DEVBASE_TEMP}/k3s-install.sh"
   local expected_checksum="${DEVBASE_K3S_INSTALL_SHA256:-}"
+  local installer_env=("INSTALL_K3S_VERSION=$k3s_version")
+  if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" ]]; then
+    _validate_download_registries || return 1
+    if [[ -n "${INSTALL_K3S_PR:-}${INSTALL_K3S_COMMIT:-}" ]]; then
+      show_progress error "Mirrored k3s installation supports pinned releases, not PR or commit builds"
+      return 1
+    fi
+    installer_env+=("INSTALL_K3S_ARTIFACT_URL=${DEVBASE_GITHUB_REGISTRY%/}/k3s-io/k3s/releases/download")
+  fi
 
   if [[ -n "$expected_checksum" ]]; then
     show_progress info "Verifying k3s installer checksum"
   fi
 
   if download_file "$install_url" "$install_script" "" "$expected_checksum"; then
+    if [[ -n "${DEVBASE_GITHUB_REGISTRY:-}" ]] && ! grep -q '^INSTALL_K3S_ARTIFACT_URL=' "$install_script"; then
+      show_progress error "Pinned k3s installer does not support INSTALL_K3S_ARTIFACT_URL; refusing upstream downloads"
+      return 1
+    fi
     chmod +x "$install_script"
-    if tui_run_cmd "Installing k3s" env INSTALL_K3S_VERSION="$k3s_version" sh "$install_script"; then
+    if tui_run_cmd "Installing k3s" env "${installer_env[@]}" sh "$install_script"; then
       show_progress success "k3s installed and started ($k3s_version)"
     else
       add_install_warning "k3s installation failed - skipping"

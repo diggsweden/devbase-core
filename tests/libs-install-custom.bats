@@ -17,6 +17,8 @@ setup() {
   common_setup_isolated
   source_core_libs
   source "${DEVBASE_ROOT}/libs/utils.sh"
+  source "${DEVBASE_ROOT}/libs/handle-network.sh"
+  unset DEVBASE_GITHUB_REGISTRY INSTALL_K3S_PR INSTALL_K3S_COMMIT
 }
 
 teardown() {
@@ -847,6 +849,58 @@ _capture_download_args() {
     "install_k3s"
 
   assert_output --partial "deadbeefk3s"
+}
+
+@test "k3s uses the native release artifact override without disabling checksum verification" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases/'
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  download_file() { printf 'INSTALL_K3S_ARTIFACT_URL=${INSTALL_K3S_ARTIFACT_URL:-https://github.com/k3s-io/k3s/releases/download}\n' >"$2"; }
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  tui_run_cmd() { printf '%s\n' "$@" >"$TEST_DIR/installer-args"; }
+  run install_k3s
+  assert_success
+  run cat "$TEST_DIR/installer-args"
+  assert_line 'INSTALL_K3S_VERSION=v1.37.1+k3s1'
+  assert_line 'INSTALL_K3S_ARTIFACT_URL=https://registry.example/releases/k3s-io/k3s/releases/download'
+  refute_output --partial 'SKIP_DOWNLOAD'
+  refute_output --partial 'SKIP_SELINUX'
+}
+
+@test "mirrored k3s refuses old installers rather than downloading from upstream" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases'
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  download_file() { printf '#!/bin/sh\n' >"$2"; }
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  tui_run_cmd() { touch "$TEST_DIR/installer-started"; }
+  run install_k3s
+  assert_failure
+  assert_output --partial 'does not support INSTALL_K3S_ARTIFACT_URL'
+  assert_file_not_exists "$TEST_DIR/installer-started"
+}
+
+@test "mirrored k3s refuses PR artifact downloads" {
+  source "${DEVBASE_ROOT}/libs/install-custom.sh"
+  # shellcheck disable=SC2154 # TOOL_VERSIONS is associative, declared in install-custom.sh
+  TOOL_VERSIONS=([k3s]='v1.37.1+k3s1')
+  export _DEVBASE_TEMP="$TEST_DIR" DEVBASE_GITHUB_REGISTRY='https://registry.example/releases' INSTALL_K3S_PR=123
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  command() { [[ "$*" == '-v k3s' ]] && return 1; builtin command "$@"; }
+  # shellcheck disable=SC2329 # Called by install_k3s.
+  download_file() { touch "$TEST_DIR/download-started"; }
+  run install_k3s
+  assert_failure
+  assert_output --partial 'not PR or commit builds'
+  assert_file_not_exists "$TEST_DIR/download-started"
 }
 
 @test "install_k3s downloads the installer unverified when nothing is pinned" {
