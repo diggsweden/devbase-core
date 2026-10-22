@@ -26,7 +26,7 @@ function __devbase_ubuntu_upgrade_notice --description "Explain the Ubuntu upgra
 
     printf "\n"
     printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
-    printf "%s  DevBase updates require Ubuntu %s%s\n" (set_color yellow) "$min" (set_color normal)
+    printf "%s%s%s\n" (set_color yellow) "  DevBase updates require Ubuntu $min" (set_color normal)
     printf "%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n" (set_color yellow) (set_color normal)
     printf "  You are on Ubuntu %s. Your current setup keeps working,\n" "$current"
     printf "  but new DevBase versions cannot be installed until you upgrade.\n"
