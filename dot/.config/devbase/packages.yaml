@@ -257,7 +257,7 @@ packs:
     description: "(node / eslint / prettier / tailwindcss)"
     mise:
       node: {version: "24.21.0", description: "JavaScript runtime (includes npm)", license: "MIT"} # renovate: datasource=node-version depName=node
-      biome: {backend: "aqua:biomejs/biome", version: "2.5.15", description: "JS/TS/JSON/CSS formatter and linter (Node pack)", license: "MIT OR Apache-2.0"} # renovate: datasource=npm depName=@biomejs/biome
+      biome: {backend: "aqua:biomejs/biome", version: "2.6.2", description: "JS/TS/JSON/CSS formatter and linter (Node pack)", license: "MIT OR Apache-2.0"} # renovate: datasource=npm depName=@biomejs/biome
     vscode:
       dbaeumer.vscode-eslint: {version: "3.0.10", description: "ESLint integration"} # renovate: datasource=npm
       esbenp.prettier-vscode: {version: "11.0.0", description: "Prettier formatter"} # renovate: datasource=npm
