@@ -183,7 +183,7 @@ core:
     osv-scanner: {backend: "aqua:google/osv-scanner", version: "v2.7.0", description: "Dependency vulnerability scanner (OSV database)", license: "Apache-2.0"} # renovate: datasource=github-releases depName=google/osv-scanner
     opengrep: {backend: "aqua:opengrep/opengrep", version: "v1.30.2", description: "SAST scanner (Semgrep-compatible rules)", license: "LGPL-2.1"} # renovate: datasource=github-releases depName=opengrep/opengrep
     # Standards
-    gommitlint: {backend: "forgejo:itiquette/gommitlint", version: "0.9.12", description: "Git commit policy enforcement", license: "EUPL-1.2"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codeberg.org
+    gommitlint: {backend: "forgejo:itiquette/gommitlint[api_url=https://codefloe.com/api/v1]", version: "0.93.0", description: "Git commit policy enforcement", license: "EUPL-1.2"} # renovate: datasource=forgejo-releases depName=itiquette/gommitlint registryUrl=https://codefloe.com
     publiccode-parser: {backend: "github:italia/publiccode-parser-go", version: "v5.4.3", description: "publiccode.yml validator", license: "AGPL-3.0"} # renovate: datasource=github-releases depName=italia/publiccode-parser-go
     # Testing
     bats: {backend: "aqua:bats-core/bats-core", version: "1.14.0", description: "Bash automated testing system", license: "MIT"} # renovate: datasource=github-releases depName=bats-core/bats-core

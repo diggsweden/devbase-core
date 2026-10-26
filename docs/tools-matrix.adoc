@@ -880,7 +880,7 @@ toc::[]
 |LGPL-2.1
 |
 
-|link:https://codeberg.org/itiquette/gommitlint[gommitlint]
+|link:https://codefloe.com/itiquette/gommitlint[gommitlint]
 |Git commit policy enforcement
 |mise/forgejo
 |EUPL-1.2

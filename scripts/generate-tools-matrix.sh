@@ -30,7 +30,13 @@ tool_url() {
   aqua:*/*/*) printf 'https://github.com/%s' "$(cut -d: -f2 <<<"$backend" | cut -d/ -f1,2)" ;;
   aqua:* | github:*) printf 'https://github.com/%s' "${backend#*:}" ;;
   gitlab:*) printf 'https://gitlab.com/%s' "${backend#*:}" ;;
-  forgejo:*) printf 'https://codeberg.org/%s' "${backend#*:}" ;;
+  forgejo:*)
+    local host="https://codeberg.org" repo="${backend#*:}"
+    if [[ "$backend" =~ api_url=(https?://[^],]+) ]]; then
+      host="${BASH_REMATCH[1]%/api/v1}"
+    fi
+    printf '%s/%s' "$host" "${repo%%\[*}"
+    ;;
   go:*) printf 'https://pkg.go.dev/%s' "${backend#*:}" ;;
   esac
   [[ -n "$backend" ]] && return 0
