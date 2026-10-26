@@ -126,7 +126,7 @@ core:
   # Distro-agnostic tools installed via mise
   mise:
     # Build tools
-    just: {backend: "aqua:casey/just", version: "1.58.0", description: "Command runner", license: "CC0-1.0"} # renovate: datasource=github-releases depName=casey/just
+    just: {backend: "aqua:casey/just", version: "1.59.0", description: "Command runner", license: "CC0-1.0"} # renovate: datasource=github-releases depName=casey/just
     usage: {backend: "aqua:jdx/usage", version: "v6.12.1", description: "CLI spec used by mise completions", license: "MIT"} # renovate: datasource=github-releases depName=jdx/usage
     jq: {version: "jq-1.8.1", description: "JSON processor", license: "MIT"} # renovate: datasource=github-releases depName=jqlang/jq
     yq: {backend: "aqua:mikefarah/yq", version: "v4.54.1", description: "YAML processor", license: "MIT"} # renovate: datasource=github-releases depName=mikefarah/yq
