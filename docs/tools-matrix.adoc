@@ -1056,7 +1056,7 @@ toc::[]
 
 == Packs (selected during setup)
 
-=== ai (opencode / nono sandbox)
+=== ai (opencode / codex / nono sandbox)
 
 ==== mise tools
 
@@ -1068,6 +1068,12 @@ toc::[]
 |AI coding agent (launched through nono)
 |mise/aqua
 |MIT
+|
+
+|link:https://github.com/openai/codex[codex]
+|OpenAI Codex CLI (sandbox via nono-wrapper)
+|mise/aqua
+|Apache-2.0
 |
 
 |link:https://mise.jdx.dev/registry.html[nono]

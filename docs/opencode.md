@@ -1,7 +1,20 @@
 # OpenCode through nono
 
-Select the **ai** pack during setup to install OpenCode and nono through mise.
-The pack is optional and is not added to the default pack selection.
+Select the **ai** pack during setup to install OpenCode, Codex and nono through
+mise. The pack is optional and is not added to the default pack selection.
+
+DevBase owns the host agent versions in `dot/.config/devbase/packages.yaml`:
+
+| Tool | Stable release pin | Launch path |
+| --- | --- | --- |
+| OpenCode | `v1.19.4` | Managed nono launcher described below. |
+| Codex | `0.164.0` (upstream tag `rust-v0.164.0`) | Host CLI; use `nono-wrapper codex` when the separate nono-wrapper is installed. |
+| nono | `0.80.0` | Sandbox runtime. |
+
+The nono-wrapper checkout does not install or pin host OpenCode/Codex versions.
+Its container-test archives have independent pins for reproducibility. This AI
+pack supplies the host binaries; Codex sandbox setup and launch remain the
+separate wrapper's responsibility.
 
 DevBase installs and pins the signed upstream **`nolabs-ai/opencode-v1@0.1.0`**
 pack with nono. It supplies the sandbox profile, first-run directory hook,
@@ -83,8 +96,11 @@ separate managed-machine policy.
 
 ## Updates and troubleshooting
 
-- OpenCode and nono use exact manifest pins and the seven-day release-age policy.
-  Major upgrades are held for a joint launcher/pack compatibility review.
+- AI tools use exact manifest pins. Renovate follows stable agent releases
+  under the shared seven-day release-age policy; prereleases are excluded.
+  OpenCode major upgrades are held for a joint launcher/pack compatibility
+  review. Renovate extracts Codex versions from stable `rust-v` release tags;
+  Aqua uses the resulting numeric version pin.
 - The nono pack version is recorded as `nono_opencode_pack` in `packages.yaml`.
   Review registry publication/provenance dates and release notes before changing
   it; Renovate does not currently advance this registry pin. Version 0.1.0 was
@@ -107,7 +123,7 @@ separate managed-machine policy.
 argument forwarding, failed sandbox startup, pack pinning, and workspace guards.
 Set `DEVBASE_TEST_MISE_BIN` to the pinned mise binary for native shell dispatch
 tests. Set `DEVBASE_TEST_NONO_BIN` to nono 0.80.0 for kernel enforcement tests;
-also set `DEVBASE_TEST_OPENCODE_BIN` to OpenCode 1.19.0 for startup/configuration
+also set `DEVBASE_TEST_OPENCODE_BIN` to OpenCode 1.19.4 for startup/configuration
 validation. Native nono tests download the signed pack into isolated test homes
 and require network access and kernel sandbox support. They do not call an AI
 provider. Native test homes are created temporarily in the checkout because the

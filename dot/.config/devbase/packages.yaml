@@ -222,9 +222,10 @@ core:
 # ==============================================================================
 packs:
   ai:
-    description: "(opencode / nono sandbox)"
+    description: "(opencode / codex / nono sandbox)"
     mise:
-      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.0", description: "AI coding agent (launched through nono)", license: "MIT"} # renovate: datasource=github-releases depName=anomalyco/opencode
+      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.4", description: "AI coding agent (launched through nono)", license: "MIT"} # renovate: datasource=github-releases depName=anomalyco/opencode
+      codex: {backend: "aqua:openai/codex", version: "0.164.0", description: "OpenAI Codex CLI (sandbox via nono-wrapper)", license: "Apache-2.0"} # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>[0-9]+\.[0-9]+\.[0-9]+)$
       nono: {version: "0.80.0", description: "Kernel-enforced sandbox for OpenCode", license: "Apache-2.0"} # renovate: datasource=github-releases depName=nolabs-ai/nono
     custom:
       # Registry pack pins are reviewed together with the OpenCode major version.

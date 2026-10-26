@@ -77,6 +77,26 @@ _strip_char_classes() {
   assert_equal "$(printf '%s\n' "$updated" | yq -r '.java.version')" 'temurin-25.0.5+8.0.LTS'
 }
 
+@test "AI update rules extract stable Codex tags into Aqua version pins" {
+  local regex line manager
+  manager=$(jq -r '.customManagers[] | select(any(.managerFilePatterns[]; contains("packages"))) | .matchStrings[0]' \
+    "${DEVBASE_ROOT}/renovate.json")
+  line=$(jq -Rr 'select(contains("depName=openai/codex"))' "${DEVBASE_ROOT}/dot/.config/devbase/packages.yaml")
+  regex=$(printf '%s\n' "$line" | jq -Rr --arg manager "$manager" 'capture($manager).extractVersion')
+  run jq -ne --arg regex "$regex" \
+    'all(["rust-v0.164.0", "rust-v0.165.0"][]; test($regex)) and
+     all(["rust-v0.165.0-alpha.1", "rust-v0.165.0-nightly", "v0.164.0", "nightly"][]; test($regex) | not)'
+  assert_success
+  run jq -e '[.packageRules[] | select(.matchPackageNames == ["openai/codex"] or .matchPackageNames == ["anomalyco/opencode"])] |
+    length == 2 and all(.[]; .ignoreUnstable == true)' "${DEVBASE_ROOT}/renovate.json"
+  assert_success
+
+  run jq -ne --arg line "$line" --arg manager "$manager" --arg regex "$regex" \
+    '($line | capture($manager) | .currentValue == "0.164.0" and .depName == "openai/codex") and
+     ("rust-v0.165.0" | capture($regex).version == "0.165.0")'
+  assert_success
+}
+
 @test "every customManagers matchString with ^/\$ anchors also declares (?m)" {
   local offenders=()
   local total=0

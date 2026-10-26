@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # SPDX-FileCopyrightText: 2026 Digg - Agency for Digital Government
 # SPDX-License-Identifier: MIT
-# shellcheck disable=SC1090,SC2016,SC2030,SC2031,SC2154,SC2329
+# shellcheck disable=SC1090,SC1091,SC2016,SC2030,SC2031,SC2154,SC2329
 
 bats_require_minimum_version 1.13.0
 load "${BATS_TEST_DIRNAME}/libs/bats-support/load.bash"
@@ -31,14 +31,14 @@ setup() {
   source "$DEVBASE_LIBS/parse-packages.sh"
   source "$DEVBASE_LIBS/configure-opencode.sh"
   export ROOT="$XDG_DATA_HOME/devbase/opencode"
-  export TEST_OPENCODE_DIR="$MISE_DATA_DIR/installs/opencode/1.19.0"
+  export TEST_OPENCODE_DIR="$MISE_DATA_DIR/installs/opencode/1.19.4"
   export TEST_NONO_DIR="$MISE_DATA_DIR/installs/nono/0.80.0"
   mkdir -p "$TEST_DIR/bin" "$TEST_OPENCODE_DIR" "$TEST_NONO_DIR" "$HOME/project with spaces"
   cat >"$TEST_DIR/bin/mise" <<'EOF'
 #!/bin/bash
 [[ "$1" == --no-config && "$2" == where ]] || { printf 'unexpected lookup: %s\n' "$*" >&2; exit 90; }
 case "$3" in
-  aqua:anomalyco/opencode@v1.19.0) printf '%s\n' "$TEST_OPENCODE_DIR" ;;
+  aqua:anomalyco/opencode@v1.19.4) printf '%s\n' "$TEST_OPENCODE_DIR" ;;
   nono@0.80.0) printf '%s\n' "$TEST_NONO_DIR" ;;
   *) exit 91 ;;
 esac
@@ -93,9 +93,18 @@ teardown() {
   run yq -p=toml -o=yaml -r '.wrappers.opencode.command' "$TEST_DIR/config.toml"
   assert_success
   assert_output "$ROOT/launcher"
+  run yq -p=toml -o=yaml -r '.tools."aqua:anomalyco/opencode"' "$TEST_DIR/config.toml"
+  assert_success
+  assert_output v1.19.4
+  run yq -p=toml -o=yaml -r '.tools."aqua:openai/codex"' "$TEST_DIR/config.toml"
+  assert_success
+  assert_output 0.164.0
   SELECTED_PACKS=go
   generate_mise_config "$TEST_DIR/config.toml"
   run yq -p=toml -o=yaml -r '.wrappers.opencode // "absent"' "$TEST_DIR/config.toml"
+  assert_output absent
+  run yq -p=toml -o=yaml -r '.tools."aqua:openai/codex" // "absent"' "$TEST_DIR/config.toml"
+  assert_success
   assert_output absent
 }
 
@@ -213,7 +222,8 @@ teardown() {
   printf '[wrappers.opencode]\ncommand = %s\n' "$(jq -nrc --arg p "$ROOT/launcher" '$p | tojson')" >"$MISE_CONFIG_DIR/config.toml"
   cd "$HOME/project with spaces"
   # Put an executable that would bypass nono on PATH: the wrapper must win.
-  export PATH="$(dirname "$DEVBASE_TEST_MISE_BIN"):$TEST_OPENCODE_DIR:$PATH"
+  PATH="$(dirname "$DEVBASE_TEST_MISE_BIN"):$TEST_OPENCODE_DIR:$PATH"
+  export PATH
   "$DEVBASE_TEST_MISE_BIN" reshim
   run "$DEVBASE_TEST_MISE_BIN" exec -- opencode --version
   assert_success

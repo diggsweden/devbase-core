@@ -13,7 +13,13 @@
     {
       "description": "The nono opencode-v1 pack and launcher require OpenCode 1.x; review major migrations together",
       "matchPackageNames": ["anomalyco/opencode"],
+      "ignoreUnstable": true,
       "allowedVersions": "<2.0.0"
+    },
+    {
+      "description": "Track stable Codex releases; the manifest extracts semver from upstream rust-v tags for Aqua",
+      "matchPackageNames": ["openai/codex"],
+      "ignoreUnstable": true
     },
     {
       "description": "Review nono 1.x CLI and pack compatibility before changing the launcher contract",
