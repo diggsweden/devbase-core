@@ -211,7 +211,7 @@ EOF
           line="${tool_key} = \"${version}\""
         fi
 
-        if ! grep -q "^${line}$" "$output_file"; then
+        if ! grep -Fxq "$line" "$output_file"; then
           echo "MISSING: ${line}" >&2
           missing=1
         fi
