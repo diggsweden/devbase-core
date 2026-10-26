@@ -11,7 +11,7 @@
   },
   "packageRules": [
     {
-      "description": "The nono opencode-v1 pack and launcher require OpenCode 1.x; review major migrations together",
+      "description": "nono-wrapper currently uses the OpenCode v1 pack; review major migrations with its profiles",
       "matchPackageNames": ["anomalyco/opencode"],
       "ignoreUnstable": true,
       "allowedVersions": "<2.0.0"
@@ -22,7 +22,7 @@
       "ignoreUnstable": true
     },
     {
-      "description": "Review nono 1.x CLI and pack compatibility before changing the launcher contract",
+      "description": "Review nono 1.x CLI and pack compatibility with nono-wrapper before upgrading",
       "matchPackageNames": ["nolabs-ai/nono"],
       "allowedVersions": "<1.0.0"
     },

@@ -464,7 +464,7 @@ install_mise() {
       return 1
     fi
     # Upgrade before publishing native wrappers (older mise cannot parse them).
-    # Install the fail-closed entry point before activating the raw mise tool.
+    # Native wrappers delegate sandbox policy to the installed nono-wrapper.
     if ! update_mise_if_needed; then
       rm -f "$staged_config"
       die "Failed to update mise"
@@ -479,13 +479,6 @@ install_mise() {
     PATH="${_DEVBASE_BOOTSTRAP_BINS:+${_DEVBASE_BOOTSTRAP_BINS}:}${mise_path%/*}:$PATH"
     export PATH
     hash -r
-    # shellcheck source=configure-opencode.sh
-    source "${DEVBASE_LIBS}/configure-opencode.sh"
-    if ! configure_opencode_launcher; then
-      rm -f "$staged_config"
-      die "Failed to configure sandboxed OpenCode"
-      return 1
-    fi
     if cmp -s "$staged_config" "$mise_config"; then
       rm -f "$staged_config"
     else
@@ -802,11 +795,6 @@ install_mise_and_tools() {
   fi
 
   install_mise_tools || die "Failed to install mise tools"
-
-  install_nono_opencode_pack || {
-    die "Failed to install nono OpenCode pack"
-    return 1
-  }
 
   return 0
 }

@@ -1065,7 +1065,7 @@ toc::[]
 |Tool |Description |Install |License |Notes
 
 |link:https://github.com/anomalyco/opencode[opencode]
-|AI coding agent (launched through nono)
+|AI coding agent (sandbox via nono-wrapper)
 |mise/aqua
 |MIT
 |
@@ -1077,22 +1077,8 @@ toc::[]
 |
 
 |link:https://mise.jdx.dev/registry.html[nono]
-|Kernel-enforced sandbox for OpenCode
+|Kernel-enforced sandbox runtime
 |mise/native
-|Apache-2.0
-|
-
-|===
-
-==== Custom installers
-
-[cols="2,3,1,2,1", options="header"]
-|===
-|Tool |Description |Install |License |Notes
-
-|nono_opencode_pack
-|Official nolabs-ai/opencode-v1 profile, plugin and skill
-|installer (install_nono_opencode_pack)
 |Apache-2.0
 |
 

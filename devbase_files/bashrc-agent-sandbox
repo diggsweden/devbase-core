@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# Managed agent entry points: use the same delegate as Fish and Mise.
+__devbase_sandboxed_agent() {
+  if ! type -P nono-wrapper >/dev/null; then
+    printf '%s\n' "$1: nono-wrapper is required; the agent was not started." \
+      'Install nono-wrapper and its profiles: https://codefloe.com/itiquette/nono-wrapper' >&2
+    return 127
+  fi
+  command nono-wrapper "$@"
+}
+opencode() { __devbase_sandboxed_agent opencode "$@"; }
+codex() { __devbase_sandboxed_agent codex "$@"; }

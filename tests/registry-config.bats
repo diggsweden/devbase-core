@@ -30,7 +30,7 @@ setup() {
   source "${DEVBASE_LIBS}/parse-packages.sh"
   source "${DEVBASE_LIBS}/utils.sh"
   source "${DEVBASE_LIBS}/process-templates.sh"
-  get_mise_packages() { printf 'node|24.21.0\nrust|1.98.1\n'; }
+  _get_mise_entries() { printf 'node|node|24.21.0\nrust|rust|1.98.1\n'; }
   # Only fixture paths are passed to the APT configuration helper in this suite.
   sudo() { "$@"; }
   curl() { printf '%s\n' "$@"; }
@@ -130,11 +130,11 @@ teardown() {
 @test "Rust mirrors do not add an unselected Rust tool" {
   export DEVBASE_RUSTUP_DIST_SERVER='https://registry.example/rust'
   export DEVBASE_RUSTUP_UPDATE_ROOT='https://registry.example/rust/rustup'
-  get_mise_packages() { printf 'node|24.21.0\n'; }
+  _get_mise_entries() { printf 'node|node|24.21.0\n'; }
   generate_mise_config "$TEST_DIR/mise.toml"
   assert_equal "$(yq -p=toml '.tools | keys | length' "$TEST_DIR/mise.toml")" 1
   assert_equal "$(yq -p=toml '.tools.node' "$TEST_DIR/mise.toml")" 24.21.0
-  get_mise_packages() { printf 'core:rust|1.98.1\n'; }
+  _get_mise_entries() { printf 'rust|core:rust|1.98.1\n'; }
   generate_mise_config "$TEST_DIR/mise.toml"
   assert_equal "$(yq -p=toml '.tools."core:rust".install_env.RUSTUP_DIST_SERVER' "$TEST_DIR/mise.toml")" "$DEVBASE_RUSTUP_DIST_SERVER"
 }

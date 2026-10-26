@@ -196,6 +196,70 @@ EOF
   assert_files_equal "$TEST_DIR/bashrc.append" "$HOME/.bashrc"
 }
 
+@test "Bash agent entry points preserve configuration and delegate without Mise activation" {
+  source "$DEVBASE_LIBS/configure-shell.sh"
+  printf '# Personal shell configuration\n' >"$HOME/.bashrc"
+  chmod 640 "$HOME/.bashrc"
+  mkdir -p "$TEST_DIR/agents"
+  cat >"$TEST_DIR/agents/nono-wrapper" <<'SH'
+#!/bin/sh
+printf '%s\0' "$@" >"$TEST_DIR/delegated"
+printf 'DELEGATED\n'
+printf 'DELEGATE-STDERR\n' >&2
+exit 23
+SH
+  cat >"$TEST_DIR/agents/opencode" <<'SH'
+#!/bin/sh
+printf 'RAW-AGENT\n'
+exit 99
+SH
+  cp "$TEST_DIR/agents/opencode" "$TEST_DIR/agents/codex"
+  chmod +x "$TEST_DIR/agents/nono-wrapper" "$TEST_DIR/agents/opencode" "$TEST_DIR/agents/codex"
+  export PATH="$TEST_DIR/agents:/usr/bin:/bin"
+  configure_bash_agent_sandbox
+  cp "$HOME/.bashrc" "$TEST_DIR/after"
+  configure_bash_agent_sandbox
+  assert_files_equal "$TEST_DIR/after" "$HOME/.bashrc"
+  assert_equal "$(stat -c %a "$HOME/.bashrc")" 640
+  local agent
+  for agent in opencode codex; do
+    export TEST_AGENT="$agent"
+    run bash --noprofile --norc -c 'source "$HOME/.bashrc"; nono-wrapper() { printf "SHADOWED\n"; return 99; }; "$TEST_AGENT" --model "a b" "" "*" --help'
+    assert_failure 23
+    assert_output $'DELEGATED\nDELEGATE-STDERR'
+    local -a args=()
+    mapfile -d '' -t args <"$TEST_DIR/delegated"
+    assert_equal "${#args[@]}" 6
+    assert_equal "${args[0]}" "$agent"
+    assert_equal "${args[1]}" --model
+    assert_equal "${args[2]}" 'a b'
+    assert_equal "${args[3]}" ''
+    assert_equal "${args[4]}" '*'
+    assert_equal "${args[5]}" --help
+  done
+  rm "$TEST_DIR/agents/nono-wrapper"
+  for agent in opencode codex; do
+    export TEST_AGENT="$agent"
+    run -127 bash --noprofile --norc -c 'source "$HOME/.bashrc"; nono-wrapper() { printf "SHADOWED\n"; }; "$TEST_AGENT" --version'
+    assert_failure 127
+    assert_output --partial 'nono-wrapper is required'
+    refute_output --partial RAW-AGENT
+    refute_output --partial SHADOWED
+    refute_output --partial unsandboxed
+  done
+}
+
+@test "Bash agent entry points are installed before an existing Fish handoff" {
+  _setup_bashrc_with_fish_handoff
+  configure_bash_agent_sandbox
+  local content
+  content=$(<"$HOME/.bashrc")
+  [[ "$content" == *'__devbase_sandboxed_agent()'*'# Launch Fish for interactive sessions'* ]]
+  cp "$HOME/.bashrc" "$TEST_DIR/after"
+  configure_bash_agent_sandbox
+  assert_files_equal "$TEST_DIR/after" "$HOME/.bashrc"
+}
+
 @test "bashrc append preserves links and rejects unsupported append destinations" {
   echo 'export ORG_SETTING=enabled' >"$TEST_DIR/bashrc.append"
   ln -s "$TEST_DIR/personal-bashrc" "$HOME/.bashrc"

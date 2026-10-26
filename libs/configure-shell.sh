@@ -38,6 +38,13 @@ _upgrade_fish_handoff() (
   mv -T -- "$candidate" "$target_file"
 )
 
+# Configure Bash entry points before the Fish handoff. This also covers Bash
+# sessions without Mise activation; shell functions never run a raw agent.
+configure_bash_agent_sandbox() {
+  validate_var_set "DEVBASE_FILES" || return 1
+  append_bashrc_once "${DEVBASE_FILES}/bashrc-agent-sandbox"
+}
+
 # Brief: Configure Fish shell as interactive default shell
 # Params: None
 # Uses: HOME, DEVBASE_BACKUP_DIR (globals)

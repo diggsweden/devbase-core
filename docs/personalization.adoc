@@ -57,6 +57,10 @@ DevBase provides these default aliases:
 - `top` → `btop` (better top)
 - `grep` → `grep --color=auto` (colored output)
 
+The `opencode` and `codex` functions delegate to `nono-wrapper` and refuse to
+start when it is missing. Setup also adds these entry points to `.bashrc`
+before the Fish handoff. See link:ai.md[Sandboxed AI tools] for setup and policy.
+
 === Custom Aliases
 
 [source,bash]

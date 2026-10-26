@@ -159,10 +159,11 @@ _process_snap() {
 
 # Brief: Process packages from a yq path for mise type
 # Params: $1=yaml content, $2=yq path
+# Output: logical_name|tool_key|version, preserving identity across backends
 # Returns: 0 on success, 1 on a YAML query failure
 _process_mise() {
   local yaml="$1" path="$2"
-  local tools
+  local tools tool
   tools=$(printf '%s\n' "$yaml" | yq -r "$path // {} | keys | .[]") || return 1
   while IFS= read -r tool; do
     [[ -z "$tool" ]] && continue
@@ -180,7 +181,7 @@ _process_mise() {
     else
       tool_key="$tool"
     fi
-    echo "${tool_key}|${version}"
+    printf '%s|%s|%s\n' "$tool" "$tool_key" "$version"
   done <<<"$tools"
 }
 
@@ -314,16 +315,27 @@ get_app_store_packages() {
   esac
 }
 
-# Brief: Get mise tools from core + selected packs
-# Output: Lines of "tool_key|version"
-get_mise_packages() {
-  local yaml
+# Brief: Get selected mise entries without losing logical tool identity
+# Output: Lines of "logical_name|tool_key|version"
+_get_mise_entries() {
+  local yaml pack
   yaml=$(_get_merged_packages) || return 1
   # A later successful pack must not hide a failed core or pack query.
   _process_mise "$yaml" ".core.mise" || return 1
   for pack in $SELECTED_PACKS; do
     _process_mise "$yaml" ".packs.${pack}.mise" || return 1
   done
+}
+
+# Brief: Get mise installation specs from core + selected packs
+# Output: Lines of "tool_key|version"
+get_mise_packages() {
+  local entries name tool_key version
+  entries=$(_get_mise_entries) || return 1
+  while IFS='|' read -r name tool_key version; do
+    [[ -n "$name" ]] && printf '%s|%s\n' "$tool_key" "$version"
+  done <<<"$entries"
+  return 0
 }
 
 # Brief: Get custom tools from core + selected packs
@@ -444,8 +456,8 @@ generate_mise_config() {
   fi
 
   # Resolve packages before writing so a failed parser cannot truncate output.
-  local packages
-  packages=$(get_mise_packages) || return 1
+  local packages name tool_key version
+  packages=$(_get_mise_entries) || return 1
   local template_config="${DEVBASE_DOT}/.config/mise/config.toml"
   local managed_header="# Managed by DevBase - generated from packages.yaml; do not edit."
   if ! grep -Fxq "$managed_header" "$template_config" 2>/dev/null; then
@@ -483,7 +495,7 @@ EOF
   fi
 
   printf "\n[tools]\n" >>"$output_file" || return 1
-  while IFS='|' read -r tool_key version; do
+  while IFS='|' read -r name tool_key version; do
     [[ -z "$tool_key" || -z "$version" ]] && continue
     if [[ "$tool_key" == *:* || "$tool_key" == *[* ]]; then
       echo "\"$tool_key\" = \"$version\""
@@ -492,17 +504,19 @@ EOF
     fi
   done <<<"$packages" >>"$output_file" || return 1
 
-  # A native mise wrapper wins over the raw tool in activated shells and mise exec.
-  # Keep it conditional: unselected packs must not expose an auto-installing shim.
-  if grep -q '^aqua:anomalyco/opencode|' <<<"$packages"; then
-    if ! grep -q '^nono|' <<<"$packages"; then
-      show_progress error "OpenCode requires the nono package"
-      return 1
+  # Mise removes its wrapper from command lookup before invoking the delegate.
+  # nono-wrapper then selects the real agent, applying one sandbox and policy.
+  # A missing delegate is an error, never a fallback to the raw agent.
+  local agent
+  for agent in opencode codex; do
+    if grep -q "^${agent}|" <<<"$packages"; then
+      if ! grep -q '^nono|' <<<"$packages"; then
+        show_progress error "$agent requires the nono package"
+        return 1
+      fi
+      printf '\n[wrappers.%s]\ncommand = "nono-wrapper"\nargs = ["%s"]\n' "$agent" "$agent" >>"$output_file" || return 1
     fi
-    local launcher="${XDG_DATA_HOME:-$HOME/.local/share}/devbase/opencode/launcher" launcher_json
-    launcher_json=$(jq -nrc --arg path "$launcher" '$path | tojson') || return 1
-    printf '\n[wrappers.opencode]\ncommand = %s\n' "$launcher_json" >>"$output_file" || return 1
-  fi
+  done
 
   _apply_mise_registry_settings "$output_file"
 }

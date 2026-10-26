@@ -812,7 +812,7 @@ SCRIPT
   refute_output --partial 'use -g'
 }
 
-@test "install_mise selects the upgraded executable before configuring the AI launcher and activation" {
+@test "install_mise selects the upgraded executable before native AI wrapper activation" {
   _setup_managed_mise_install
   mkdir -p "$TEST_DIR/old"
   mv "$XDG_BIN_HOME/mise" "$TEST_DIR/old/mise"
@@ -823,10 +823,9 @@ core: {}
 packs:
   ai:
     mise:
-      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.0"}
+      opencode: {backend: "aqua:anomalyco/opencode", version: "v1.19.4"}
+      codex: {backend: "aqua:openai/codex", version: "0.164.0"}
       nono: {version: "0.80.0"}
-    custom:
-      nono_opencode_pack: {version: "0.1.0", installer: "install_nono_opencode_pack"}
 EOF
   # Match the updater's destination without downloading a binary. An old mise
   # remains first on PATH and the destination directory is already later on it.
@@ -836,8 +835,10 @@ EOF
   run install_mise
   assert_success
   assert_output --partial "Mise ready at $XDG_BIN_HOME/mise"
-  run jq -r '.mise' "$XDG_DATA_HOME/devbase/opencode/runtime.json"
-  assert_output "$XDG_BIN_HOME/mise"
+  run yq -p=toml -o=yaml -r '.wrappers.opencode.command, .wrappers.codex.command' "$XDG_CONFIG_HOME/mise/config.toml"
+  assert_success
+  assert_output $'nono-wrapper\nnono-wrapper'
+  assert_dir_not_exists "$XDG_DATA_HOME/devbase/opencode"
   run cat "$TEST_DIR/mise-calls"
   assert_line 'env -s bash'
 }

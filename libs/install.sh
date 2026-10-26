@@ -581,7 +581,7 @@ apply_configurations() {
 
 # Brief: Configure system services, shell, and Windows Terminal themes (WSL)
 # Params: None
-# Uses: configure_podman_service, configure_podman_compose_provider, configure_clamav_service, configure_ufw, configure_wayland_service, disable_kubernetes_services, set_system_limits, configure_fish_interactive, configure_completions, seed_tldr_cache, DEVBASE_LIBS, die, show_progress (functions/globals)
+# Uses: configure_podman_service, configure_podman_compose_provider, configure_clamav_service, configure_ufw, configure_wayland_service, disable_kubernetes_services, set_system_limits, configure_bash_agent_sandbox, configure_fish_interactive, configure_completions, seed_tldr_cache, DEVBASE_LIBS, die, show_progress (functions/globals)
 # Returns: 0 always (critical failures call die)
 # Side-effects: Enables services, configures shell, installs WT themes on WSL
 configure_system_and_shell() {
@@ -600,6 +600,7 @@ configure_system_and_shell() {
 
   set_system_limits || die "Failed to set system limits"
 
+  configure_bash_agent_sandbox || die "Failed to configure Bash agent entry points"
   configure_fish_interactive || die "Failed to setup fish for interactive use"
   configure_completions || die "Failed to configure shell completions"
   seed_tldr_cache || show_progress warning "tldr page cache not seeded; run 'tldr --update' later (continuing)"
@@ -778,7 +779,6 @@ bootstrap_for_configuration() {
     fi
 
     # Ensure common mise paths are available in this shell session.
-    # shellcheck disable=SC2031 # Cross-file false positive: the subshell export lives in configure-opencode.sh
     local mise_shims="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
     [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]] && export PATH="${HOME}/.local/bin:${PATH}"
     [[ -d "$mise_shims" && ":${PATH}:" != *":${mise_shims}:"* ]] && export PATH="${mise_shims}:${PATH}"
