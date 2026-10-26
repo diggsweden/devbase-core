@@ -10,9 +10,6 @@
   gc-aggressive = !git stash clear && git reflog expire --expire=now --all && git gc --prune=now --aggressive
   date-now = commit --amend --date=now --no-edit
 
-[apply]
-	whitespace = nowarn
-
 [core]
 	# Global ignores live in the default XDG location ~/.config/git/ignore
 	editor = ${EDITOR}
@@ -40,22 +37,11 @@
 [merge] # Conflict style with the common ancestor, minus lines both sides changed
 	conflictstyle = zdiff3
 
-[mergetool] # don't autocreate .orig files on merge
-	keepBackup = false
-
 [difftool] # dont enable the prompt on every diff call
 	prompt = false
 
 [push] # only push the current branch, and refuse to push if upstreams branch differs from current one
 	default = simple
-	autoSetupRemote = true
-
-[rerere] # remember how conflicts were resolved and replay the resolution
-	enabled = true
-
-[rebase] # stash local changes around a rebase and move dependent branches with it
-	autoStash = true
-	updateRefs = true
 
 # instead of gpg key, use ssh key for signing (needs git.2.34+ which should come with Ubuntu 22.+)
 # Saves the user of setting up an extra gpg key for signing

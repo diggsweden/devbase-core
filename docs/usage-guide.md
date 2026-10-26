@@ -213,8 +213,11 @@ Fish is the interactive shell; Bash stays the login shell and hands over to Fish
 
 - **Config** (`~/.config/git/config`, managed; personal settings go in `~/.gitconfig`):
   delta as pager with side-by-side diffs and `n`/`N` section navigation, `zdiff3` conflict style,
-  `rerere` enabled, `rebase.autoStash` and `rebase.updateRefs`, `push.default simple` with `autoSetupRemote`,
+  `push.default simple`,
   default branch `main`, global ignores in `~/.config/git/ignore`, editor from the setup choice.
+  DevBase does not enable `rebase.updateRefs`, so backup branches stay at their original commits during rebases.
+  Automatic rebase stashing, conflict-resolution reuse (`rerere`), and upstream setup on push are opt-in through
+  personal Git settings. Git's defaults for merge-tool backups and patch whitespace warnings are preserved.
 - **Aliases**: `cs` (commit --signoff), `retris` (rebase -i --signoff --gpg-sign), `pull-re`, `push-force`
   (--force-with-lease), `gc-aggressive`, `date-now`.
 - **Signing**: SSH signing with the DevBase key, `allowed_signers` in `~/.config/ssh/`. Signing is required only when a
