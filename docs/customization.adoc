@@ -650,6 +650,10 @@ Git hooks use a **dispatcher pattern** - each hook runs all scripts in its corre
 ├── post-commit                    # Dispatcher
 ├── post-commit.d/
 │   └── 01-conventional-commits.sh # Active: Conventional commits via gommitlint defaults
+├── post-rewrite                   # Dispatcher, replays stdin to each script
+├── post-rewrite.d/
+│   └── 01-conventional-commits.sh # Active: Validate completed rebases
+├── commit-validation.sh           # Shared committed-object validation
 ├── prepare-commit-msg             # Dispatcher
 ├── prepare-commit-msg.d/
 │   └── 01-add-issue-ref.sh       # Active: Auto-add Refs: from branch
@@ -663,7 +667,27 @@ DevBase Core provides minimal hooks focused on security and workflow automation.
 
 * **01-secrets-scan.sh** - Scans staged changes for secrets with `gitleaks git --pre-commit --staged` before commit. Prevents accidentally committing API keys, passwords, and tokens.
 * **01-conventional-commits.sh** - Validates commit policy using gommitlint. Uses gommitlint defaults automatically, and applies project-specific rules from `.gommitlint.yaml` when present.
+  Ordinary commits and amendments are validated by `post-commit`; rebases are validated by `post-rewrite` once their final commit messages exist.
 * **01-add-issue-ref.sh** - Automatically adds `Refs: ISSUE-123` footer to commit messages when the branch name contains an issue reference (e.g., `feature/PROJ-456-add-feature`).
+
+==== Secret Scanner Configuration
+
+The secret-scanning hook respects Gitleaks configuration in this order:
+
+. `GITLEAKS_CONFIG` (an explicit configuration file path).
+. `GITLEAKS_CONFIG_TOML` (inline TOML configuration).
+. `.gitleaks.toml` in the repository root.
+. `development/gitleaks/gitleaks.toml` in the repository root (tool-owned configuration layout).
+. Gitleaks' built-in default configuration.
+
+Git runs the pre-commit hook at the worktree root, so the same relative paths work in linked worktrees.
+Without an environment override, the hook supplies `--config` for the first discovered path, preferring the root configuration over the tool-owned path.
+Broken symlinks and invalid configuration files are passed explicitly to Gitleaks so they produce an error rather than silently selecting defaults.
+Empty environment values are treated as unset.
+A nonzero scanner result blocks the commit; the hook does not retry with defaults after a configuration error.
+If Gitleaks is not installed, the hook prints a skip message and permits the commit.
+Custom configurations should include `[extend]` with `useDefault = true` when they add allowlists without replacing the built-in detectors.
+These are hook defaults; an organization-specific replacement hook can choose different behavior.
 
 === How It Works
 
@@ -675,6 +699,17 @@ When you run `git commit`:
 4. User edits commit message
 5. Git creates the commit
 6. **post-commit** dispatcher validates commit policy non-blocking, using gommitlint defaults and optional project config
+
+When you run `git rebase`:
+
+1. Commit validation is deferred while Git's per-worktree rebase state exists, avoiding warnings about temporary squash messages.
+2. After a completed rewrite, `post-rewrite` validates every unique new commit from Git's rewrite mapping, including commits earlier than `HEAD` and root commits.
+3. Squashed commits are validated once, and amendments are not validated a second time by `post-rewrite`.
+
+Both validation hooks are advisory: findings and tool errors are reported but cannot undo a completed operation.
+An interrupted or aborted rebase does not print a successful final-validation summary.
+CI must enforce commit policy; local hooks can be bypassed.
+Custom `post-rewrite.d/` scripts receive Git's rewrite type as their first argument and the complete rewrite mapping on standard input.
 
 When you run `git push`:
 

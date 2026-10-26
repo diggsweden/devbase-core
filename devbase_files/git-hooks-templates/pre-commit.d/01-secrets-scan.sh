@@ -18,8 +18,19 @@ command -v gitleaks >/dev/null 2>&1 || {
 
 printf "→ Scanning staged files for secrets (gitleaks)...\n"
 
+# Git runs pre-commit hooks at the worktree root. Preserve environment overrides,
+# then select discovered paths explicitly so broken configs cannot fall back.
+config_args=()
+if [[ -z "${GITLEAKS_CONFIG:-}" && -z "${GITLEAKS_CONFIG_TOML:-}" ]]; then
+  if [[ -e .gitleaks.toml || -L .gitleaks.toml ]]; then
+    config_args=(--config .gitleaks.toml)
+  elif [[ -e development/gitleaks/gitleaks.toml || -L development/gitleaks/gitleaks.toml ]]; then
+    config_args=(--config development/gitleaks/gitleaks.toml)
+  fi
+fi
+
 # Capture gitleaks output
-output=$(gitleaks git --pre-commit --staged --redact=100 --no-banner 2>&1)
+output=$(gitleaks git --pre-commit --staged --redact=100 --no-banner "${config_args[@]}" 2>&1)
 status=$?
 
 if [[ $status -eq 0 ]]; then
@@ -28,7 +39,7 @@ if [[ $status -eq 0 ]]; then
   exit 0
 else
   # Failure - show full gitleaks output
-  printf "%b✗%b Secret detected! Commit blocked.\n" "${RED}" "${NC}" >&2
+  printf "%b✗%b Secret scan failed. Commit blocked.\n" "${RED}" "${NC}" >&2
   printf "%s\n" "$output" >&2
   printf "   Fix the issue or use 'git commit --no-verify' to bypass\n" >&2
   exit 1

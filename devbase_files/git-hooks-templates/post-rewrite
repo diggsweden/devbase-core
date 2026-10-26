@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2025 Digg - Agency for Digital Government
+#
+# SPDX-License-Identifier: MIT
+
+# Post-rewrite dispatcher. Every script receives the rewrite type and the
+# complete old/new object mapping on stdin, including organization hooks.
+set -uo pipefail
+
+script_dir="$(cd -- "$(dirname -- "$0")" >/dev/null 2>&1 && pwd -P)" || exit 0
+hooks_dir="$script_dir/post-rewrite.d"
+[[ -d "$hooks_dir" ]] || exit 0
+
+shopt -s nullglob
+scripts=("$hooks_dir"/*.sh)
+shopt -u nullglob
+[[ ${#scripts[@]} -gt 0 ]] || exit 0
+
+umask 077
+mapping=$(mktemp) || {
+  printf '⚠ Cannot capture rewritten commits for post-rewrite hooks (non-blocking)\n' >&2
+  exit 0
+}
+trap 'rm -f -- "$mapping"' EXIT
+if ! cat >"$mapping"; then
+  printf '⚠ Cannot read rewritten commits for post-rewrite hooks (non-blocking)\n' >&2
+  exit 0
+fi
+
+# Bash pathname expansion orders the scripts just like the other dispatchers.
+for script in "${scripts[@]}"; do
+  if [[ -x "$script" ]]; then
+    "$script" "$@" <"$mapping" || printf '⚠ Post-rewrite hook failed (non-blocking): %s\n' "$(basename "$script")" >&2
+  fi
+done
+exit 0

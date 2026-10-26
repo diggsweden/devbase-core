@@ -88,6 +88,9 @@ teardown() {
   
   assert_success
   assert_output --partial "DISPATCHERS_COPIED"
+  assert_file_exists "${XDG_CONFIG_HOME}/git/git-hooks/commit-validation.sh"
+  assert_file_executable "${XDG_CONFIG_HOME}/git/git-hooks/post-rewrite"
+  assert_file_executable "${XDG_CONFIG_HOME}/git/git-hooks/post-rewrite.d/01-conventional-commits.sh"
 }
 
 @test "configure_git_hooks makes hook scripts executable" {

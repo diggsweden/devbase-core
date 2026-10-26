@@ -224,6 +224,8 @@ Fish is the interactive shell; Bash stays the login shell and hands over to Fish
   `pre-commit.d/01-secrets-scan.sh` runs `gitleaks git --pre-commit --staged` and blocks on findings;
   `prepare-commit-msg.d/01-add-issue-ref.sh` adds `Refs: PROJ-123` from the branch name;
   `post-commit.d/01-conventional-commits.sh` validates the message with gommitlint (non-blocking).
+  The secret scanner honors `GITLEAKS_CONFIG`, then `GITLEAKS_CONFIG_TOML`, then root `.gitleaks.toml`, then
+  `development/gitleaks/gitleaks.toml`, falling back to built-in rules when none is configured.
   `commit-msg.d/` and `pre-push.d/` are empty extension points. Disabling and per-repository overrides are in
   [Customization](customization.adoc#git-hooks).
 - **lazygit**: diffs render through delta in the theme's dark or light mode (`git.diffRenderers`), the editor follows
