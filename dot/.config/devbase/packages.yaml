@@ -143,7 +143,7 @@ core:
     ripgrep: {backend: "aqua:BurntSushi/ripgrep", version: "15.2.0", description: "Fast grep alternative", license: "MIT/Unlicense"} # renovate: datasource=github-releases depName=BurntSushi/ripgrep
     fd: {backend: "aqua:sharkdp/fd", version: "v10.5.0", description: "Fast find alternative", license: "MIT OR Apache-2.0"} # renovate: datasource=github-releases depName=sharkdp/fd
     tlrc: {backend: "aqua:tldr-pages/tlrc", version: "v1.13.1", description: "tldr pages client (tldr command)", license: "MIT"} # renovate: datasource=github-releases depName=tldr-pages/tlrc
-    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.7", description: "Resource monitor", license: "Apache-2.0", theme: true} # renovate: datasource=github-releases depName=aristocratos/btop
+    btop: {backend: "aqua:aristocratos/btop", version: "v1.4.8", description: "Resource monitor", license: "Apache-2.0", theme: true} # renovate: datasource=github-releases depName=aristocratos/btop
     lf: {backend: "aqua:gokcehan/lf", version: "r41", description: "Fast file manager with vim keys", license: "MIT"} # renovate: datasource=github-releases depName=gokcehan/lf
     # Git tools
     delta: {backend: "aqua:dandavison/delta", version: "0.20.1", description: "Better git diff viewer", license: "MIT", theme: true} # renovate: datasource=github-releases depName=dandavison/delta
