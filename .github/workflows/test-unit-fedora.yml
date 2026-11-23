@@ -29,7 +29,7 @@ jobs:
   test-fedora:
     runs-on: ubuntu-26.04
     container:
-      image: fedora:46@sha256:a9bab18d01cf2c2cf62f3e79c72623405bce14ac062995cc6651a3073c802e41 # renovate: datasource=docker depName=fedora
+      image: fedora:46@sha256:78bb31de333664aa76c4bf54306791cd294c0bd4fbcfc4346e2286261de544c4 # renovate: datasource=docker depName=fedora
     steps:
       - name: Install prerequisites
         run: |
